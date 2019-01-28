@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Events;
 
 namespace MS.Microservice
 {
@@ -14,11 +12,21 @@ namespace MS.Microservice
     {
         public static void Main(string[] args)
         {
-            CreateWebHostBuilder(args).Build().Run();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Information) // 将Microsoft前缀的日志 最小输出级别改成 Information
+                .Enrich.FromLogContext()
+                .WriteTo.File(@"logs/log.txt", rollingInterval: RollingInterval.Day) // 将日志输出到目标路径，文件的生成方式为每天生成一个文件
+                .WriteTo.Console()
+                .CreateLogger();
+
+            CreateWebHostBuilder(args).Run();
         }
 
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
+        public static IWebHost CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .UseSerilog()
+                .Build();
     }
 }
