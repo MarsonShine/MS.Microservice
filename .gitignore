@@ -1,0 +1,9 @@
+# 忽略.xx 文件
+*.suo
+*.user
+
+# 忽略指定文件下所有文件
+.vscode/
+.vs/
+[Bb]in/
+[Oo]bj/
