@@ -11,12 +11,12 @@ namespace MS.Microservice.Web.AutofacModules
     {
         protected override void Load(ContainerBuilder builder)
         {
-            //builder.RegisterType<IOrderService>()
-            //    .As<OrderService>()
-            //    .InstancePerDependency();
-
-            builder.RegisterAssemblyTypes(typeof(IOrderService).Assembly)
+            builder.RegisterType<OrderService>()
+                .As<IOrderService>()
                 .InstancePerDependency();
+
+            //builder.RegisterAssemblyTypes(typeof(IOrderService).Assembly)
+            //    .InstancePerDependency();
         }
     }
 }

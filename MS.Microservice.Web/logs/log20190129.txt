@@ -55,3 +55,208 @@ System.IO.IOException: The handshake failed due to an unexpected packet format.
    at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
    at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
    at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:36:47.046 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:36:47.791 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: Authentication failed because the remote party has closed the transport stream.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslStream.BeginAuthenticateAsServer(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_0(SslServerAuthenticationOptions arg1, CancellationToken arg2, AsyncCallback callback, Object state)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncImpl[TArg1,TArg2](Func`5 beginMethod, Func`2 endFunction, Action`1 endAction, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
+   at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:36:47.792 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: Authentication failed because the remote party has closed the transport stream.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslStream.BeginAuthenticateAsServer(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_0(SslServerAuthenticationOptions arg1, CancellationToken arg2, AsyncCallback callback, Object state)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncImpl[TArg1,TArg2](Func`5 beginMethod, Func`2 endFunction, Action`1 endAction, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
+   at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:36:48.476 +08:00 [INF] Request starting HTTP/1.1 GET https://localhost:5001/  
+2019-01-29 00:36:48.594 +08:00 [INF] Request finished in 119.705ms 404 
+2019-01-29 00:36:53.707 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: The handshake failed due to an unexpected packet format.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.PartialFrameCallback(AsyncProtocolRequest asyncRequest)
+--- End of stack trace from previous location where exception was thrown ---
+   at System.Net.Security.SslState.ThrowIfExceptional()
+   at System.Net.Security.SslState.InternalEndProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslState.EndProcessAuthentication(IAsyncResult result)
+   at System.Net.Security.SslStream.EndAuthenticateAsServer(IAsyncResult asyncResult)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_1(IAsyncResult iar)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncCoreLogic(IAsyncResult iar, Func`2 endFunction, Action`1 endAction, Task`1 promise, Boolean requiresSynchronization)
+--- End of stack trace from previous location where exception was thrown ---
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:37:31.165 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: The handshake failed due to an unexpected packet format.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslStream.BeginAuthenticateAsServer(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_0(SslServerAuthenticationOptions arg1, CancellationToken arg2, AsyncCallback callback, Object state)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncImpl[TArg1,TArg2](Func`5 beginMethod, Func`2 endFunction, Action`1 endAction, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
+   at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:40:44.919 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:40:45.796 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: Authentication failed because the remote party has closed the transport stream.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslStream.BeginAuthenticateAsServer(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_0(SslServerAuthenticationOptions arg1, CancellationToken arg2, AsyncCallback callback, Object state)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncImpl[TArg1,TArg2](Func`5 beginMethod, Func`2 endFunction, Action`1 endAction, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
+   at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:40:46.501 +08:00 [INF] Request starting HTTP/1.1 GET https://localhost:5001/  
+2019-01-29 00:40:46.638 +08:00 [INF] Request finished in 137.1193ms 404 
+2019-01-29 00:40:53.913 +08:00 [INF] Connection id "0HLK57TCUKP20" bad request data: "Invalid request line: '\x16\x03\x01\x02\x00\x01\x00\x01\xFC\x03\x03%\x93\xAEJ\x92^\xC8B\xD8\xD1\xFA\xCD6\xE3\xEFR\x0A'"
+Microsoft.AspNetCore.Server.Kestrel.Core.BadHttpRequestException: Invalid request line: '\x16\x03\x01\x02\x00\x01\x00\x01\xFC\x03\x03%\x93\xAEJ\x92^\xC8B\xD8\xD1\xFA\xCD6\xE3\xEFR\x0A'
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.RejectRequestLine(Byte* requestLine, Int32 length)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.GetUnknownMethod(Byte* data, Int32 length, Int32& methodLength)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.ParseRequestLine(TRequestHandler handler, Byte* data, Int32 length)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.ParseRequestLine(TRequestHandler handler, ReadOnlySequence`1& buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.IHttpParser<TRequestHandler>.ParseRequestLine(TRequestHandler handler, ReadOnlySequence`1& buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TakeStartLine(ReadOnlySequence`1 buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.ParseRequest(ReadOnlySequence`1 buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TryParseRequest(ReadResult result, Boolean& endConnection)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequests[TContext](IHttpApplication`1 application)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequestsAsync[TContext](IHttpApplication`1 application)
+2019-01-29 00:40:53.913 +08:00 [INF] Connection id "0HLK57TCUKP21" bad request data: "Invalid request line: '\x16\x03\x01\x02\x00\x01\x00\x01\xFC\x03\x03qRz\xCA&\xCB2\xEAb\xA0\x93\xB0\xAEgH\xF0\xC9y\x92TEfY\x0A'"
+Microsoft.AspNetCore.Server.Kestrel.Core.BadHttpRequestException: Invalid request line: '\x16\x03\x01\x02\x00\x01\x00\x01\xFC\x03\x03qRz\xCA&\xCB2\xEAb\xA0\x93\xB0\xAEgH\xF0\xC9y\x92TEfY\x0A'
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.RejectRequestLine(Byte* requestLine, Int32 length)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.GetUnknownMethod(Byte* data, Int32 length, Int32& methodLength)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.ParseRequestLine(TRequestHandler handler, Byte* data, Int32 length)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.ParseRequestLine(TRequestHandler handler, ReadOnlySequence`1& buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.IHttpParser<TRequestHandler>.ParseRequestLine(TRequestHandler handler, ReadOnlySequence`1& buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TakeStartLine(ReadOnlySequence`1 buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.ParseRequest(ReadOnlySequence`1 buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TryParseRequest(ReadResult result, Boolean& endConnection)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequests[TContext](IHttpApplication`1 application)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequestsAsync[TContext](IHttpApplication`1 application)
+2019-01-29 00:40:54.033 +08:00 [INF] Connection id "0HLK57TCUKP22" bad request data: "Invalid request line: '\x16\x03\x01\x00\xC3\x01\x00\x00\xBF\x03\x03$\x10\x1A\xD2\xA0\xAA\x80\x9D{\x96\x15\xB0b\x1A\x98\xEE\xA52\xC5\x06\x7F\x87\xA7\x13\xE3\x0E\x0BG\x9C\xF2zs\x00\x00\x1C\x0A'"
+Microsoft.AspNetCore.Server.Kestrel.Core.BadHttpRequestException: Invalid request line: '\x16\x03\x01\x00\xC3\x01\x00\x00\xBF\x03\x03$\x10\x1A\xD2\xA0\xAA\x80\x9D{\x96\x15\xB0b\x1A\x98\xEE\xA52\xC5\x06\x7F\x87\xA7\x13\xE3\x0E\x0BG\x9C\xF2zs\x00\x00\x1C\x0A'
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.RejectRequestLine(Byte* requestLine, Int32 length)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.GetUnknownMethod(Byte* data, Int32 length, Int32& methodLength)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.ParseRequestLine(TRequestHandler handler, Byte* data, Int32 length)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.ParseRequestLine(TRequestHandler handler, ReadOnlySequence`1& buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpParser`1.Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.IHttpParser<TRequestHandler>.ParseRequestLine(TRequestHandler handler, ReadOnlySequence`1& buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TakeStartLine(ReadOnlySequence`1 buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.ParseRequest(ReadOnlySequence`1 buffer, SequencePosition& consumed, SequencePosition& examined)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.Http1Connection.TryParseRequest(ReadResult result, Boolean& endConnection)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequests[TContext](IHttpApplication`1 application)
+   at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpProtocol.ProcessRequestsAsync[TContext](IHttpApplication`1 application)
+2019-01-29 00:49:45.072 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:49:45.911 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: Authentication failed because the remote party has closed the transport stream.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslStream.BeginAuthenticateAsServer(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_0(SslServerAuthenticationOptions arg1, CancellationToken arg2, AsyncCallback callback, Object state)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncImpl[TArg1,TArg2](Func`5 beginMethod, Func`2 endFunction, Action`1 endAction, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
+   at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:49:51.188 +08:00 [INF] Request starting HTTP/1.1 GET https://localhost:5001/  
+2019-01-29 00:49:51.275 +08:00 [INF] Request finished in 88.1157ms 404 
+2019-01-29 00:49:57.385 +08:00 [DBG] Failed to authenticate HTTPS connection.
+System.IO.IOException: The handshake failed due to an unexpected packet format.
+   at System.Net.Security.SslState.StartReadFrame(Byte[] buffer, Int32 readBytes, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.StartReceiveBlob(Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Net.Security.SslStream.BeginAuthenticateAsServer(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.Security.SslStream.<>c.<AuthenticateAsServerAsync>b__51_0(SslServerAuthenticationOptions arg1, CancellationToken arg2, AsyncCallback callback, Object state)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncImpl[TArg1,TArg2](Func`5 beginMethod, Func`2 endFunction, Action`1 endAction, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state, TaskCreationOptions creationOptions)
+   at System.Threading.Tasks.TaskFactory.FromAsync[TArg1,TArg2](Func`5 beginMethod, Action`1 endMethod, TArg1 arg1, TArg2 arg2, Object state)
+   at System.Net.Security.SslStream.AuthenticateAsServerAsync(SslServerAuthenticationOptions sslServerAuthenticationOptions, CancellationToken cancellationToken)
+   at Microsoft.AspNetCore.Server.Kestrel.Https.Internal.HttpsConnectionAdapter.InnerOnConnectionAsync(ConnectionAdapterContext context)
+2019-01-29 00:51:33.127 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:51:34.138 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 00:51:34.296 +08:00 [INF] Request finished in 161.9944ms 404 
+2019-01-29 00:51:44.296 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 00:51:44.335 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 00:51:44.351 +08:00 [INF] Executing action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) - Validation state: "Valid"
+2019-01-29 00:51:44.375 +08:00 [INF] Executed action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web), returned result Microsoft.AspNetCore.Mvc.ObjectResult in 4.6775ms.
+2019-01-29 00:51:44.398 +08:00 [INF] Executing ObjectResult, writing value of type 'System.String'.
+2019-01-29 00:51:44.411 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 67.0612ms
+2019-01-29 00:51:44.425 +08:00 [INF] Request finished in 129.4483ms 200 text/plain; charset=utf-8
+2019-01-29 00:51:44.450 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/favicon.ico  
+2019-01-29 00:51:44.458 +08:00 [INF] Request finished in 8.2416ms 404 
+2019-01-29 00:53:20.192 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:53:21.098 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 00:53:21.254 +08:00 [INF] Request finished in 165.0956ms 404 
+2019-01-29 00:53:23.936 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 00:53:23.972 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 00:53:23.987 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 5.4202ms
+2019-01-29 00:53:24.002 +08:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Unable to resolve service for type 'MS.Microservice.Web.ApplicationServices.IOrderService' while attempting to activate 'MS.Microservice.Web.Controllers.ValuesController'.
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.GetService(IServiceProvider sp, Type type, Type requiredBy, Boolean isDefaultParameterRequired)
+   at lambda_method(Closure , IServiceProvider , Object[] )
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerActivatorProvider.<>c__DisplayClass4_0.<CreateActivator>b__0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerFactoryProvider.<>c__DisplayClass5_0.<CreateControllerFactory>g__CreateController|0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Internal.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Internal.ControllerActionInvoker.InvokeInnerFilterAsync()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeNextResourceFilter()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.Rethrow(ResourceExecutedContext context)
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeFilterPipelineAsync()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeAsync()
+   at Microsoft.AspNetCore.Builder.RouterMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware.Invoke(HttpContext context)
+2019-01-29 00:53:24.165 +08:00 [INF] Request finished in 227.8576ms 500 text/html; charset=utf-8
+2019-01-29 00:54:35.060 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:54:36.265 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 00:54:36.433 +08:00 [INF] Request finished in 173.4037ms 404 
+2019-01-29 00:54:40.941 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 00:54:40.975 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 00:54:40.993 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 6.2583ms
+2019-01-29 00:54:41.011 +08:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Unable to resolve service for type 'MS.Microservice.Web.ApplicationServices.IOrderService' while attempting to activate 'MS.Microservice.Web.Controllers.ValuesController'.
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.GetService(IServiceProvider sp, Type type, Type requiredBy, Boolean isDefaultParameterRequired)
+   at lambda_method(Closure , IServiceProvider , Object[] )
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerActivatorProvider.<>c__DisplayClass4_0.<CreateActivator>b__0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerFactoryProvider.<>c__DisplayClass5_0.<CreateControllerFactory>g__CreateController|0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Internal.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Internal.ControllerActionInvoker.InvokeInnerFilterAsync()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeNextResourceFilter()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.Rethrow(ResourceExecutedContext context)
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeFilterPipelineAsync()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeAsync()
+   at Microsoft.AspNetCore.Builder.RouterMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware.Invoke(HttpContext context)
+2019-01-29 00:54:41.127 +08:00 [INF] Request finished in 185.6665ms 500 text/html; charset=utf-8
+2019-01-29 00:57:33.449 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 00:57:34.534 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 00:57:34.681 +08:00 [INF] Request finished in 149.0476ms 404 
+2019-01-29 00:57:37.292 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 00:57:37.335 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 00:57:37.355 +08:00 [INF] Executing action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) - Validation state: "Valid"
+2019-01-29 00:57:47.044 +08:00 [INF] Executed action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web), returned result Microsoft.AspNetCore.Mvc.ObjectResult in 9644.5584ms.
+2019-01-29 00:57:47.061 +08:00 [INF] Executing ObjectResult, writing value of type 'System.String'.
+2019-01-29 00:57:47.074 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 9700.9049000000014ms
+2019-01-29 00:57:47.087 +08:00 [INF] Request finished in 9770.3417ms 200 text/plain; charset=utf-8
+2019-01-29 01:00:01.505 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 01:00:02.742 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 01:00:02.916 +08:00 [INF] Request finished in 178.8457ms 404 

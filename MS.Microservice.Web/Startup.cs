@@ -38,7 +38,8 @@ namespace MS.Microservice
                 config.AddProfiles(typeof(OrderAutoMapperProfiles).Assembly);
             });
 
-            builder.RegisterAssemblyModules(typeof(ApplicationAutoModule));
+            builder.RegisterAssemblyModules(typeof(ApplicationAutoModule).Assembly);
+            //builder.RegisterModule<ApplicationAutoModule>();  //success
 
             return new AutofacServiceProvider(builder.Build());
         }
@@ -50,7 +51,6 @@ namespace MS.Microservice
             {
                 app.UseDeveloperExceptionPage();
             }
-
             app.UseMvc();
         }
     }

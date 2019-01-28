@@ -25,6 +25,8 @@ namespace MS.Microservice
 
         public static IWebHost CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .UseKestrel()
+                .UseIISIntegration()
                 .UseStartup<Startup>()
                 .UseSerilog()
                 .Build();
