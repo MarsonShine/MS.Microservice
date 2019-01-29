@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AutoMapper;
+using MassTransit;
+using MassTransit.Util;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -54,13 +56,14 @@ namespace MS.Microservice
 
             //builder.RegisterModule<ApplicationAutoModule>();  //success
             builder.Populate(services);
+
             builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
 
             return new AutofacServiceProvider(builder.Build());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env,IApplicationLifetime lifetime)
         {
             if (env.IsDevelopment())
             {
@@ -72,6 +75,10 @@ namespace MS.Microservice
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", SwaggerConsts.API_NAME);
                 });
+
+            var bus = app.ApplicationServices.GetService<IBusControl>();
+            var busHandle = TaskUtil.Await(() => bus.StartAsync());
+            lifetime.ApplicationStopping.Register(() => busHandle.Stop());
         }
     }
 }
