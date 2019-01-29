@@ -1,13 +1,15 @@
 ﻿using Autofac;
 using MediatR;
+using MS.Microservice.Web.Apps.Commands;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace MS.Microservice.Web.AutofacModules
 {
-    public class MediatorModule : Module
+    public class MediatorModule : Autofac.Module
     {
         protected override void Load(ContainerBuilder builder)
         {
@@ -16,13 +18,14 @@ namespace MS.Microservice.Web.AutofacModules
                 .As<IMediator>()
                 .InstancePerLifetimeScope();
 
+            builder.RegisterAssemblyTypes(typeof(CreateOrderHandler).GetTypeInfo().Assembly).AsImplementedInterfaces();// or
+            //builder.RegisterType<CreateOrderHandler>().AsImplementedInterfaces().InstancePerDependency();
+
             builder.Register<ServiceFactory>(context =>
             {
                 var c = context.Resolve<IComponentContext>();
                 return t => c.Resolve(t);
             });
-
-
         }
     }
 }

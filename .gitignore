@@ -1,4 +1,4 @@
-# 忽略.xx 文件
+﻿# 忽略.xx 文件
 *.suo
 *.user
 
@@ -7,3 +7,5 @@
 .vs/
 [Bb]in/
 [Oo]bj/
+logs/
+logs

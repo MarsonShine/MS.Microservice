@@ -22,11 +22,11 @@ namespace MS.Microservice.Web.Apps.Commands
         private readonly IOrderRepository _orderRepository;
         private readonly ILogger _logger;
         private readonly IMapper _mapper;
-        public CreateOrderHandler(IOrderRepository orderRepository, ILogger logger,
+        public CreateOrderHandler(IOrderRepository orderRepository, ILoggerFactory logger,
             IMapper mapper)
         {
             _orderRepository = orderRepository;
-            _logger = logger;
+            _logger = logger.CreateLogger<CreateOrderHandler>();
             _mapper = mapper;
         }
         public async Task<Unit> Handle(CreateOrderCmd request, CancellationToken cancellationToken)

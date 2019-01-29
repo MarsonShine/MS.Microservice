@@ -17,6 +17,7 @@ namespace MS.Microservice.Web.Controllers
         public ValuesController(IOrderService orderService) {
             _orderService = orderService;
         }
+        [HttpGet]
         public async Task<string> Get()
         {
             return await Task.FromResult("marson shine");
