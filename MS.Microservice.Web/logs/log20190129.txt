@@ -260,3 +260,104 @@ System.InvalidOperationException: Unable to resolve service for type 'MS.Microse
 2019-01-29 01:00:01.505 +08:00 [INF] User profile is available. Using 'C:\Users\summer\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
 2019-01-29 01:00:02.742 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
 2019-01-29 01:00:02.916 +08:00 [INF] Request finished in 178.8457ms 404 
+2019-01-29 10:29:20.682 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 10:29:20.749 +08:00 [INF] Creating key "b3dea0a0-9017-4371-b1aa-7cd221428ff9" with creation date "2019-01-29T02:29:20.7472444+00:00", activation date "2019-01-29T02:29:20.7433315+00:00", and expiration date "2019-04-29T02:29:20.7433315+00:00".
+2019-01-29 10:29:20.822 +08:00 [INF] Writing data to file 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys\key-b3dea0a0-9017-4371-b1aa-7cd221428ff9.xml'.
+2019-01-29 10:29:21.849 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 10:29:21.946 +08:00 [INF] Request finished in 97.3096ms 404 
+2019-01-29 10:29:34.701 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 10:29:34.731 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 10:29:34.741 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 5.8119000000000005ms
+2019-01-29 10:29:34.743 +08:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Unable to resolve service for type 'MS.Microservice.Web.ApplicationServices.IOrderService' while attempting to activate 'MS.Microservice.Web.Controllers.ValuesController'.
+   at Microsoft.Extensions.DependencyInjection.ActivatorUtilities.GetService(IServiceProvider sp, Type type, Type requiredBy, Boolean isDefaultParameterRequired)
+   at lambda_method(Closure , IServiceProvider , Object[] )
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerActivatorProvider.<>c__DisplayClass4_0.<CreateActivator>b__0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Controllers.ControllerFactoryProvider.<>c__DisplayClass5_0.<CreateControllerFactory>g__CreateController|0(ControllerContext controllerContext)
+   at Microsoft.AspNetCore.Mvc.Internal.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Internal.ControllerActionInvoker.InvokeInnerFilterAsync()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeNextResourceFilter()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.Rethrow(ResourceExecutedContext context)
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeFilterPipelineAsync()
+   at Microsoft.AspNetCore.Mvc.Internal.ResourceInvoker.InvokeAsync()
+   at Microsoft.AspNetCore.Builder.RouterMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware.Invoke(HttpContext context)
+2019-01-29 10:29:34.868 +08:00 [INF] Request finished in 166.6249ms 500 text/html; charset=utf-8
+2019-01-29 10:29:34.923 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/favicon.ico  
+2019-01-29 10:29:34.924 +08:00 [INF] Request finished in 0.9723ms 404 
+2019-01-29 10:46:25.258 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 10:46:26.181 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 10:46:26.282 +08:00 [INF] Request finished in 104.9251ms 404 
+2019-01-29 10:46:32.097 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 10:46:32.120 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 10:46:39.102 +08:00 [INF] Executing action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) - Validation state: "Valid"
+2019-01-29 10:46:39.125 +08:00 [INF] Executed action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web), returned result Microsoft.AspNetCore.Mvc.ObjectResult in 14.6669ms.
+2019-01-29 10:46:39.134 +08:00 [INF] Executing ObjectResult, writing value of type 'System.String'.
+2019-01-29 10:46:39.139 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 7014.6883000000007ms
+2019-01-29 10:46:39.144 +08:00 [INF] Request finished in 7046.9593ms 200 text/plain; charset=utf-8
+2019-01-29 14:58:37.693 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 14:58:38.954 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 14:58:38.987 +08:00 [INF] Request finished in 35.8025ms 404 
+2019-01-29 14:59:56.700 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/order/create  
+2019-01-29 14:59:56.704 +08:00 [INF] Request finished in 3.9822ms 404 
+2019-01-29 15:00:24.071 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/Order/Create  
+2019-01-29 15:00:24.074 +08:00 [INF] Request finished in 3.2542ms 404 
+2019-01-29 15:01:18.233 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 15:01:19.025 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 15:01:19.067 +08:00 [INF] Request finished in 44.5488ms 404 
+2019-01-29 15:01:29.126 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/Order/Create  
+2019-01-29 15:01:29.131 +08:00 [INF] Executing endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:01:29.160 +08:00 [INF] Route matched with {action = "Create", controller = "Order"}. Executing action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)
+2019-01-29 15:01:29.183 +08:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2019-01-29 15:01:29.261 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web) in 96.393300000000011ms
+2019-01-29 15:01:29.268 +08:00 [INF] Executed endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:01:29.272 +08:00 [INF] Request finished in 145.135ms 415 application/problem+json; charset=utf-8
+2019-01-29 15:03:02.800 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 15:03:03.582 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 15:03:03.631 +08:00 [INF] Request finished in 50.5047ms 404 
+2019-01-29 15:03:07.571 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/values  
+2019-01-29 15:03:07.575 +08:00 [INF] Executing endpoint 'MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)'
+2019-01-29 15:03:07.593 +08:00 [INF] Route matched with {action = "Get", controller = "Values"}. Executing action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)
+2019-01-29 15:03:09.086 +08:00 [INF] Executing action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) - Validation state: "Valid"
+2019-01-29 15:03:09.096 +08:00 [INF] Executed action method MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web), returned result Microsoft.AspNetCore.Mvc.ObjectResult in 1.4020000000000001ms.
+2019-01-29 15:03:09.105 +08:00 [INF] Executing ObjectResult, writing value of type 'System.String'.
+2019-01-29 15:03:09.110 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web) in 1512.5909000000001ms
+2019-01-29 15:03:09.111 +08:00 [INF] Executed endpoint 'MS.Microservice.Web.Controllers.ValuesController.Get (MS.Microservice.Web)'
+2019-01-29 15:03:09.114 +08:00 [INF] Request finished in 1542.8594ms 200 text/plain; charset=utf-8
+2019-01-29 15:03:18.755 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/order/create  
+2019-01-29 15:03:18.760 +08:00 [INF] Executing endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:03:18.776 +08:00 [INF] Route matched with {action = "Create", controller = "Order"}. Executing action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)
+2019-01-29 15:03:18.789 +08:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2019-01-29 15:03:18.836 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web) in 58.9787ms
+2019-01-29 15:03:18.838 +08:00 [INF] Executed endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:03:18.839 +08:00 [INF] Request finished in 84.8949ms 415 application/json; charset=utf-8
+2019-01-29 15:03:55.972 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 15:03:56.744 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 15:03:56.793 +08:00 [INF] Request finished in 49.8753ms 404 
+2019-01-29 15:04:05.006 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/order/create  
+2019-01-29 15:04:05.010 +08:00 [INF] Executing endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:04:05.038 +08:00 [INF] Route matched with {action = "Create", controller = "Order"}. Executing action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)
+2019-01-29 15:04:05.058 +08:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2019-01-29 15:04:05.107 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web) in 65.6318ms
+2019-01-29 15:04:05.113 +08:00 [INF] Executed endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:04:05.117 +08:00 [INF] Request finished in 111.0286ms 415 application/json; charset=utf-8
+2019-01-29 15:06:40.878 +08:00 [INF] User profile is available. Using 'C:\Users\maos\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2019-01-29 15:06:41.643 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/  
+2019-01-29 15:06:41.686 +08:00 [INF] Request finished in 43.9107ms 404 
+2019-01-29 15:06:52.746 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/order  
+2019-01-29 15:06:52.751 +08:00 [INF] Request finished in 4.3341ms 404 
+2019-01-29 15:07:00.067 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/order/create  
+2019-01-29 15:07:00.071 +08:00 [INF] Executing endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:07:00.105 +08:00 [INF] Route matched with {action = "Create", controller = "Order"}. Executing action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)
+2019-01-29 15:07:00.132 +08:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2019-01-29 15:07:00.182 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web) in 72.4794ms
+2019-01-29 15:07:00.189 +08:00 [INF] Executed endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:07:00.194 +08:00 [INF] Request finished in 127.5393ms 415 application/json; charset=utf-8
+2019-01-29 15:07:00.300 +08:00 [INF] Request starting HTTP/1.1 GET http://localhost:5000/api/order/create  
+2019-01-29 15:07:00.302 +08:00 [INF] Executing endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:07:00.303 +08:00 [INF] Route matched with {action = "Create", controller = "Order"}. Executing action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)
+2019-01-29 15:07:00.305 +08:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2019-01-29 15:07:00.306 +08:00 [INF] Executed action MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web) in 1.5352000000000001ms
+2019-01-29 15:07:00.307 +08:00 [INF] Executed endpoint 'MS.Microservice.Web.Controllers.OrderController.Create (MS.Microservice.Web)'
+2019-01-29 15:07:00.308 +08:00 [INF] Request finished in 8.4135ms 415 application/json; charset=utf-8

@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using MS.Microservice.Domain;
+using MS.Microservice.Web.Apps.Commands;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +12,7 @@ namespace MS.Microservice.Web.AutoMappers.Profiles
     {
         public OrderAutoMapperProfiles()
         {
-            
+            CreateMap<CreateOrderCmd, Order>();
         }
     }
 }

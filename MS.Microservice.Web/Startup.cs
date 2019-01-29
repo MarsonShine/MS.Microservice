@@ -32,15 +32,16 @@ namespace MS.Microservice
             //integrate autofac
             var builder = new ContainerBuilder();
             builder.Populate(services);
-
+            //integrate automapper
             services.AddAutoMapper(config =>
             {
                 config.AddProfiles(typeof(OrderAutoMapperProfiles).Assembly);
             });
 
-            builder.RegisterAssemblyModules(typeof(ApplicationAutoModule).Assembly);
-            //builder.RegisterModule<ApplicationAutoModule>();  //success
+            
 
+            //builder.RegisterModule<ApplicationAutoModule>();  //success
+            builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
             return new AutofacServiceProvider(builder.Build());
         }
 
