@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
@@ -10,6 +11,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.PlatformAbstractions;
+using MS.Microservice.Web;
 using MS.Microservice.Web.AutofacModules;
 using MS.Microservice.Web.AutoMappers.Profiles;
 
@@ -31,17 +34,28 @@ namespace MS.Microservice
             services.AddMvc().SetCompatibilityVersion(Microsoft.AspNetCore.Mvc.CompatibilityVersion.Latest);
             //integrate autofac
             var builder = new ContainerBuilder();
-            builder.Populate(services);
             //integrate automapper
             services.AddAutoMapper(config =>
             {
                 config.AddProfiles(typeof(OrderAutoMapperProfiles).Assembly);
             });
 
-            
+            //integrate swagger
+            services.AddSwaggerGen(options =>
+            {
+                options.DescribeAllEnumsAsStrings();
+                options.SwaggerDoc(SwaggerConsts.DOC_VERSION, 
+                    new Swashbuckle.AspNetCore.Swagger.Info{
+                        Title = SwaggerConsts.DOC_TITLE,
+                        Version = SwaggerConsts.DOC_VERSION
+                    });
+                options.DocInclusionPredicate((docName, description) => true);
+            });
 
             //builder.RegisterModule<ApplicationAutoModule>();  //success
+            builder.Populate(services);
             builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
+
             return new AutofacServiceProvider(builder.Build());
         }
 
@@ -52,7 +66,12 @@ namespace MS.Microservice
             {
                 app.UseDeveloperExceptionPage();
             }
-            app.UseMvc();
+            app.UseMvcWithDefaultRoute();
+            app.UseSwagger()
+                .UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", SwaggerConsts.API_NAME);
+                });
         }
     }
 }
