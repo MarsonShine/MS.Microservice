@@ -19,6 +19,7 @@ namespace MS.Microservice.Web.Controllers
             _mediator = mediator;
         }
         [Route("Create")]
+        [HttpPost]
         public async Task<string> Create([FromBody]CreateOrderCmd createOrder)
         {
             await _mediator.Send(createOrder);
