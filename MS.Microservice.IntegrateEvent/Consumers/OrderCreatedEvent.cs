@@ -1,11 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MS.Microservice.IntegrateEvent.Consumers
+﻿namespace MS.Microservice.IntegrateEvent.Consumers
 {
-    public class OrderCreatedEvent : IIntegrateEvent
+    using MS.Microservice.IntegrateEvent.Contracts;
+    using System;
+    public class OrderCreatedEvent : IOrderCreatedEvent
     {
+        public OrderCreatedEvent(string orderNumber, string orderName) {
+            OrderNumber = OrderNumber;
+            OrderName = orderName;
+            CreationTime = DateTime.UtcNow;
+        }
+        public string OrderNumber { get; }
 
+        public string OrderName { get; }
+
+        public DateTime CreationTime { get; }
     }
 }

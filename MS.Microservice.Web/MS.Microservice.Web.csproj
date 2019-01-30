@@ -18,13 +18,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit.Autofac" Version="5.2.3" />
     <PackageReference Include="MediatR" Version="6.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="AutoMapper" Version="8.0.0" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Autofac" Version="4.8.0" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="4.3.1" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="5.1.5" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="5.2.3" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="2.1.1" />
@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
+    <ProjectReference Include="..\MS.Microservice.IntegrateEvent\MS.Microservice.IntegrateEvent.csproj" />
   </ItemGroup>
 
 </Project>
