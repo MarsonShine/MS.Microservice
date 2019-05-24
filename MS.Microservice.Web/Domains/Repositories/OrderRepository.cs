@@ -1,12 +1,10 @@
-﻿using MS.Microservice.Domain;
-using MS.Microservice.Web.Repositories.Contracts;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace MS.Microservice.Web.Repositories
+﻿namespace MS.Microservice.Web.Domains.Repositories
 {
+    using MS.Microservice.Domain;
+    using MS.Microservice.Web.Domains.Repositories.Contracts;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
     public class OrderRepository : IOrderRepository
     {
         public static HashSet<Order> Orders = new HashSet<Order>();
