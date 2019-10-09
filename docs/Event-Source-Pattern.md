@@ -1,0 +1,42 @@
+# 事件溯源模式
+
+// TODO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[Event Sourcing Pattern]: https://docs.microsoft.com/en-us/previous-versions/msp-n-p/dn589792(v=pandp.10)?redirectedfrom=MSDN	"事件溯源模式"
+
+
+
