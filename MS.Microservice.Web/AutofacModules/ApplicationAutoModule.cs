@@ -1,11 +1,7 @@
 ﻿using Autofac;
 using MS.Microservice.Web.ApplicationServices;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Autofac.Extensions;
-using MS.Microservice.Web.Repositories.Contracts;
+using MS.Microservice.Web.Domains.Repositories.Contracts;
 
 namespace MS.Microservice.Web.AutofacModules
 {
