@@ -1,0 +1,33 @@
+# 领域命令模式处理程序
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+translated from https://jimmybogard.com/domain-command-patterns-handlers/
