@@ -1,0 +1,31 @@
+# 边界上下文
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+translated from https://martinfowler.com/bliki/BoundedContext.html
