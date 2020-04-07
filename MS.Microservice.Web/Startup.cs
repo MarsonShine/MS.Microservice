@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.PlatformAbstractions;
 using MS.Microservice.Web;
 using MS.Microservice.Web.AutofacModules;
@@ -37,20 +38,17 @@ namespace MS.Microservice
             //integrate autofac
             var builder = new ContainerBuilder();
             //integrate automapper
-            services.AddAutoMapper(config =>
-            {
-                config.AddProfiles(typeof(OrderAutoMapperProfiles).Assembly);
-            });
+            services.AddAutoMapper(new System.Reflection.Assembly[] { typeof(OrderAutoMapperProfiles).Assembly });
 
             //integrate swagger
             services.AddSwaggerGen(options =>
             {
-                options.DescribeAllEnumsAsStrings();
-                options.SwaggerDoc(SwaggerConsts.DOC_VERSION, 
-                    new Swashbuckle.AspNetCore.Swagger.Info{
-                        Title = SwaggerConsts.DOC_TITLE,
-                        Version = SwaggerConsts.DOC_VERSION
-                    });
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = SwaggerConsts.DOC_TITLE,
+                    Version = SwaggerConsts.DOC_VERSION
+                });
+                //options.DescribeAllEnumsAsStrings();
                 options.DocInclusionPredicate((docName, description) => true);
             });
 
@@ -63,18 +61,28 @@ namespace MS.Microservice
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env,IApplicationLifetime lifetime)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHostApplicationLifetime lifetime)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-            app.UseMvcWithDefaultRoute();
+
+            app.UseStaticFiles();
+            app.UseRouting();
+
+            app.UseCors();
+
             app.UseSwagger()
                 .UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/swagger/v1/swagger.json", SwaggerConsts.API_NAME);
                 });
+
+            app.UseEndpoints(cfg =>
+            {
+                cfg.MapDefaultControllerRoute();
+            });
 
             var bus = app.ApplicationServices.GetService<IBusControl>();
             var busHandle = TaskUtil.Await(() => bus.StartAsync());
