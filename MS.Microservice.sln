@@ -13,9 +13,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{8EC4A02C-9
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.Microservice.IntegrateEvent", "MS.Microservice.IntegrateEvent\MS.Microservice.IntegrateEvent.csproj", "{84B4B955-801B-4A89-A6B7-003F26CC610D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MS.Infrastructure.Util", "MS.Infrastructure.Util\MS.Infrastructure.Util.csproj", "{CB878172-BEB9-4D05-890D-C648ACEF603F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.Infrastructure.Util", "MS.Infrastructure.Util\MS.Infrastructure.Util.csproj", "{CB878172-BEB9-4D05-890D-C648ACEF603F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MS.Extensions", "MS.Extensions\MS.Extensions.csproj", "{A088A4A9-6CC4-419D-9C22-AEE3F6F785EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.Extensions", "MS.Extensions\MS.Extensions.csproj", "{A088A4A9-6CC4-419D-9C22-AEE3F6F785EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MS.Microservice.Core", "MS.Microservice.Core\MS.Microservice.Core.csproj", "{46BB73BF-AD5D-4D92-B027-572CEB26FEC9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MS.MicroService.MongoDb", "MS.MicroService.MongoDb\MS.MicroService.MongoDb.csproj", "{1E972E59-E966-4D36-9A98-D811B4057F67}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,6 +51,14 @@ Global
 		{A088A4A9-6CC4-419D-9C22-AEE3F6F785EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A088A4A9-6CC4-419D-9C22-AEE3F6F785EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A088A4A9-6CC4-419D-9C22-AEE3F6F785EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46BB73BF-AD5D-4D92-B027-572CEB26FEC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46BB73BF-AD5D-4D92-B027-572CEB26FEC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46BB73BF-AD5D-4D92-B027-572CEB26FEC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46BB73BF-AD5D-4D92-B027-572CEB26FEC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E972E59-E966-4D36-9A98-D811B4057F67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E972E59-E966-4D36-9A98-D811B4057F67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E972E59-E966-4D36-9A98-D811B4057F67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E972E59-E966-4D36-9A98-D811B4057F67}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

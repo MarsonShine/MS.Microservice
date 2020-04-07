@@ -7,7 +7,7 @@ namespace MS.Microservice.Domain
     public abstract class BaseEntity : IAggregateRoot
     {
         private int id;
-        public virtual int ID
+        public virtual int Id
         {
             get
             {
