@@ -18,4 +18,4 @@
 - [接口隔离原则](docs/Separated-Interface.md) 
 - [快照模式](docs/Snapshot.md)
 
-​     
+​             
