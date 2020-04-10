@@ -34,28 +34,28 @@
 
 ```java
 public class Customer {
-	private TemporalCollection addresses = new SingleTemporalCollection();
-	public Address getAddress(MfDate date) {
-		return (Address) addresses.get(date);
-	}
-	public Address getAddress() {
-    return getAddress(MfDate.today());
-  }
-  public void putAddress(MfDate date, Address value) {
-    addresses.put(date, value);
-  }
+    private TemporalCollection addresses = new SingleTemporalCollection();
+    public Address getAddress(MfDate date) {
+        return (Address) addresses.get(date);
+    }
+    public Address getAddress() {
+    	return getAddress(MfDate.today());
+    }
+    public void putAddress(MfDate date, Address value) {
+    	addresses.put(date, value);
+    }
 }
 
 public class CustomerSnapshot {
-	private Customer base;
-  private MfDate validDate;
-  public CustomerSnapshot (Customer base, MfDate validDate) {
-    this.base = base;
-    this.validDate = validDate;
-  }
-  public Address getAddress() {
-    return base.getAddress(validDate);
-  }
+    private Customer base;
+    private MfDate validDate;
+    public CustomerSnapshot (Customer base, MfDate validDate) {
+        this.base = base;
+        this.validDate = validDate;
+    }
+    public Address getAddress() {
+	    return base.getAddress(validDate);
+    }
 }
 ```
 
@@ -67,5 +67,5 @@ public class CustomerSnapshot {
 
 # C# 代码实现
 
-详见 https://github.com/MarsonShine/Books/tree/master/DesignPattern/DesignPatternCore
+详见 https://github.com/MarsonShine/Books/tree/master/DesignPattern/DesignPatternCore/MementoShapshot
 
