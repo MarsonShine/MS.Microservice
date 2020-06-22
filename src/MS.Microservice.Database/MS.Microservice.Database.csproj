@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
   </ItemGroup>
 
 </Project>
