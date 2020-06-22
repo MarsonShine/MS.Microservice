@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-namespace MS.Microservice.Web.Domains.Services
+﻿namespace MS.Microservice.Web.Domains.Services
 {
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
     using MS.Microservice.Web.Domains.Repositories.Contracts;
     /// <summary>

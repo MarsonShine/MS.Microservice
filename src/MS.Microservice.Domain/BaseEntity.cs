@@ -42,7 +42,7 @@ namespace MS.Microservice.Domain
             protected set { isDelete = value; }
         }
         //逻辑删除
-        protected void Delete()
+        public void Delete()
         {
             this.IsDelete = true;
         }

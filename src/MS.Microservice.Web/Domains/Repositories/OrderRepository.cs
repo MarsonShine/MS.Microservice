@@ -14,7 +14,6 @@
                 return 0;
             Orders.Add(order);
             await Task.CompletedTask;
-            order.SetID(1);
             return order.Id;
         }
     }

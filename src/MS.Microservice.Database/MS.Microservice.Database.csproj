@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Repostitory\MS.Microservice.Repostitory.csproj" />
   </ItemGroup>
 
 </Project>

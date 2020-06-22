@@ -14,9 +14,7 @@ namespace MS.Microservice.Domain
         {
             CreationTime = DateTime.UtcNow;
         }
-        public new void SetID(int id)
-        {
-            base.SetID(id);
-        }
+
+        public void Remove() => Delete();
     }
 }
