@@ -51,8 +51,8 @@ namespace MS.Microservice.Domain
         {
             this.id = id;
         }
-        private DateTime creationTime;
-        public virtual DateTime CreationTime
+        private DateTimeOffset creationTime;
+        public virtual DateTimeOffset CreationTime
         {
             get { return creationTime; }
             protected set { creationTime = value; }

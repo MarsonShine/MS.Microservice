@@ -5,4 +5,8 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

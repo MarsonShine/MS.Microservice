@@ -1,8 +1,9 @@
-﻿namespace MS.Microservice.Web.Domains.Services
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using MS.Microservice.Repostitory.Contracts;
+
+namespace MS.Microservice.Web.Domains.Services
 {
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Logging.Abstractions;
-    using MS.Microservice.Web.Domains.Repositories.Contracts;
     /// <summary>
     /// 领域服务层，专职处理领域操作和业务规则的
     /// 并且最好是无状态的

@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Google.Protobuf.WellKnownTypes;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MS.Microservice.Core.Data;
@@ -36,6 +37,11 @@ namespace MS.Microservice.Database
         public IDbContextTransaction GetCurrentTransaction => _currentTransaction;
         public bool HasActiveTransaction => _currentTransaction != null;
 
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseMySQL("Server=192.168.3.125;Database=marsonshine_dev;uid=root;pwd=123456;charset='utf8';SslMode=None");
+            base.OnConfiguring(optionsBuilder);
+        }
 
         // 配置表结构
         protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,7 +1,7 @@
 ﻿using Autofac;
+using MS.Microservice.Repostitory.Contracts;
 using MS.Microservice.Web.ApplicationServices;
 using System.Linq;
-using MS.Microservice.Web.Domains.Repositories.Contracts;
 
 namespace MS.Microservice.Web.AutofacModules
 {

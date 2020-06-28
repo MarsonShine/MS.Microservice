@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MS.Microservice.Domain;
 using MS.Microservice.IntegrateEvent.Consumers;
 using MS.Microservice.IntegrateEvent.Contracts;
-using MS.Microservice.Web.Domains.Repositories.Contracts;
+using MS.Microservice.Repostitory.Contracts;
 using System.Threading;
 using System.Threading.Tasks;
 

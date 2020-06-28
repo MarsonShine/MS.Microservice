@@ -6,18 +6,22 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using AutoMapper;
+using Google.Protobuf.WellKnownTypes;
 using MassTransit;
 using MassTransit.Util;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.PlatformAbstractions;
+using MS.Microservice.Database;
 using MS.Microservice.Web;
 using MS.Microservice.Web.AutofacModules;
 using MS.Microservice.Web.AutoMappers.Profiles;
+using MySql.Data.EntityFrameworkCore.Extensions;
 
 namespace MS.Microservice
 {
@@ -34,7 +38,13 @@ namespace MS.Microservice
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
+            services.AddEntityFrameworkMySQL()
+                .AddDbContext<OrderingContext>(options =>
+                {
+                    options.UseMySQL(Configuration.GetConnectionString("DefaultConnection"));
+                });
             services.AddMvc().SetCompatibilityVersion(Microsoft.AspNetCore.Mvc.CompatibilityVersion.Latest);
+
             //integrate autofac
             var builder = new ContainerBuilder();
             //integrate automapper

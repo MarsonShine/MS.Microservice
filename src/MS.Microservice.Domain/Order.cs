@@ -9,10 +9,10 @@ namespace MS.Microservice.Domain
         public string OrderNumber { get; private set; }
         public string OrderName { get; protected set; }
         public decimal Price { get; set; }
-        public DateTime? UpdationTime { get; set; }
+        public DateTimeOffset? UpdationTime { get; set; }
         public Order()
         {
-            CreationTime = DateTime.UtcNow;
+            CreationTime = DateTimeOffset.UtcNow;
         }
 
         public void Remove() => Delete();
