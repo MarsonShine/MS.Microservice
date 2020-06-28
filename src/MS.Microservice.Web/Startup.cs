@@ -21,6 +21,7 @@ using MS.Microservice.Database;
 using MS.Microservice.Web;
 using MS.Microservice.Web.AutofacModules;
 using MS.Microservice.Web.AutoMappers.Profiles;
+using MS.Microservice.Web.Swagger;
 using MySql.Data.EntityFrameworkCore.Extensions;
 
 namespace MS.Microservice
@@ -58,6 +59,7 @@ namespace MS.Microservice
                     Title = SwaggerConsts.DOC_TITLE,
                     Version = SwaggerConsts.DOC_VERSION
                 });
+                options.ApplyBearerAuthorication();
                 //options.DescribeAllEnumsAsStrings();
                 options.DocInclusionPredicate((docName, description) => true);
             });
