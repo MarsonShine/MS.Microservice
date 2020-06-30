@@ -16,5 +16,7 @@ namespace MS.Microservice.Domain
         }
 
         public void Remove() => Delete();
+
+        public Address Address { get; private set; }
     }
 }

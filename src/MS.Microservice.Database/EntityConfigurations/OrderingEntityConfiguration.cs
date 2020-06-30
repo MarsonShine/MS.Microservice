@@ -28,6 +28,9 @@ namespace MS.Microservice.Database.EntityConfigurations
             builder.Property(p => p.Price)
                 .HasColumnType("decimal(5,3)")
                 .IsRequired();
+
+            builder.OwnsOne(p => p.Address);
+                
         }
 
         private void SettingSoftDelete(EntityTypeBuilder<Order> builder)
