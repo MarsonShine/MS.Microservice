@@ -7,7 +7,8 @@ namespace MS.Microservice.Test.Etos
 {
     public class UserEto : EventBase
     {
-        public UserEto(string userName,int age,bool enabled)
+        public UserEto() { }
+        public UserEto(string userName, int age, bool enabled)
         {
             UserName = userName;
             Age = age;
