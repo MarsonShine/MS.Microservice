@@ -1,4 +1,5 @@
-﻿using MS.Microservice.Core.Reflection.FastMember;
+﻿using FastMember;
+using MS.Microservice.Core.Reflection.FastMember;
 using MS.Microservice.Test.Etos;
 using System;
 using System.Collections.Generic;
