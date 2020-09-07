@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MS.Microservice.Domain.Events;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -15,7 +16,12 @@ namespace MS.Microservice.Domain
             CreationTime = DateTimeOffset.UtcNow;
         }
 
-        public void Remove() => Delete();
+        public void Remove()
+        {
+            DomainEvent.Raise(new UpdatingNameEvent(1, "newName")).GetAwaiter()
+                .GetResult();
+            Delete();
+        }
 
         public Address Address { get; private set; }
     }
