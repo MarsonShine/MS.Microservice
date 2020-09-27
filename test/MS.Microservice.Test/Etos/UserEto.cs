@@ -14,7 +14,7 @@ namespace MS.Microservice.Test.Etos
             Age = age;
             Enabled = enabled;
         }
-        public string UserName { get; }
+        public string UserName { get; } = null!;
         public int Age { get; }
         public bool Enabled { get; set; }
     }

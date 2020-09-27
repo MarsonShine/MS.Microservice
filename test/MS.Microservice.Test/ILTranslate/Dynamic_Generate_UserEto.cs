@@ -9,7 +9,7 @@ namespace MS.Microservice.Test.ILTranslate {
             int number) {
             _map = map;
             _number = number;
-            string name = "marsonshine";
+            //string name = "marsonshine";
         }
     }
 }

@@ -31,7 +31,7 @@
             context.Response.Body = originBody;
             if (IsApiRequest(context))
             {
-                var objActionResult = JsonConvert.DeserializeObject(strActionResult);
+                var objActionResult = JsonConvert.DeserializeObject(strActionResult)!;
                 var responseModel = new ResultDto<object>(objActionResult);
 
                 context.Response.StatusCode = (int)HttpStatusCode.OK;

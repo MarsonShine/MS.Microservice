@@ -21,13 +21,13 @@ namespace MS.Microservice.Core.Data
             return GetConnStringName(typeof(T));
         }
 
-        public static string GetConnStringName(Type type)
+        public static string GetConnStringName([NotNull]Type type)
         {
             var nameAttribute = type.GetTypeInfo().GetCustomAttribute<DatabaseNameStringAttribute>();
 
             if (nameAttribute == null)
             {
-                return type.FullName;
+                return type.FullName!;
             }
 
             return nameAttribute.Name;

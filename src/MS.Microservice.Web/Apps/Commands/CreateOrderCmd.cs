@@ -14,7 +14,7 @@ namespace MS.Microservice.Web.Apps.Commands
 {
     public class CreateOrderCmd : IRequest
     {
-        public string OrderName { get; set; }
+        public string? OrderName { get; set; }
         public decimal Price { get; set; }
     }
 

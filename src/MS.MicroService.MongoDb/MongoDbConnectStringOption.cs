@@ -2,6 +2,6 @@
 {
     public class MongoDbConnectStringOption
     {
-        public string MongoDbServer { get; set; }
+        public string MongoDbServer { get; set; } = null!;
     }
 }

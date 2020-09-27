@@ -31,7 +31,7 @@ namespace MS.Microservice.Core.EventEntity
                 var handleInstance = _serviceProvider.GetService(eventHandleType);
                 if (handleInstance == null) continue;
 
-                ((Task)concreteType.GetMethod("Handle").Invoke(handleInstance, new object[] { @event }))
+                ((Task)concreteType.GetMethod("Handle")!.Invoke(handleInstance, new object[] { @event })!)
                     .ConfigureAwait(false)
                     .GetAwaiter()
                     .GetResult();

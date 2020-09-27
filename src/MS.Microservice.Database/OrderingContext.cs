@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using MS.Microservice.Core.Data;
 using MS.Microservice.Database.EntityConfigurations;
 using MS.Microservice.Domain;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,14 +15,9 @@ namespace MS.Microservice.Database
     public class OrderingContext : DbContext, IUnitOfWork
     {
         public const string DEFAULT_SCHEMA = "ordering";
-        public DbSet<Order> Orders { get; set; }
+        public DbSet<Order> Orders { get; set; } = null!;
 
         private readonly IMediator _mediator;
-        private IDbContextTransaction _currentTransaction;
-        public OrderingContext(DbContextOptions<OrderingContext> options) : base(options)
-        {
-
-        }
 
         public OrderingContext(DbContextOptions<OrderingContext> options, IMediator mediator)
         {
@@ -29,13 +25,12 @@ namespace MS.Microservice.Database
             Check.NotNull(mediator, nameof(mediator));
 
             _mediator = mediator;
-
             // 分析
             System.Diagnostics.Debug.WriteLine("OrderingContext::ctor ->" + this.GetHashCode());
         }
 
-        public IDbContextTransaction GetCurrentTransaction => _currentTransaction;
-        public bool HasActiveTransaction => _currentTransaction != null;
+        public IDbContextTransaction GetCurrentTransaction => Database.BeginTransaction();
+        public bool HasActiveTransaction => GetCurrentTransaction != null;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

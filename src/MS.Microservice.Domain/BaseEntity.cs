@@ -16,8 +16,8 @@ namespace MS.Microservice.Domain
             }
         }
 
-        private List<INotification> _domainEvents;
-        public IReadOnlyCollection<INotification> DomainEvents => _domainEvents?.AsReadOnly();
+        private List<INotification>? _domainEvents;
+        public IReadOnlyCollection<INotification>? DomainEvents => _domainEvents?.AsReadOnly();
 
         public void AddDomainEvent(INotification eventItem)
         {

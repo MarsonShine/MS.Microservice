@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -15,8 +16,6 @@ namespace MS.Microservice.Domain.Enumerations
     {
         private readonly int _value;
         private readonly string _name;
-
-        protected Enumeration() { }
 
         protected Enumeration(int value, string name)
         {
@@ -45,7 +44,7 @@ namespace MS.Microservice.Domain.Enumerations
             }
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals([AllowNull]object obj)
         {
             if (!(obj is Enumeration otherValue))
                 return false;
@@ -77,7 +76,7 @@ namespace MS.Microservice.Domain.Enumerations
         {
             var matchingItem = GetAll<T>().FirstOrDefault(predicate);
 
-            if(matchingItem == null)
+            if(matchingItem == null!)
             {
                 var message = string.Format("'{0}' is not a valid {1} in {2}", value, name, typeof(T));
                 throw new ApplicationException(message);
@@ -86,7 +85,7 @@ namespace MS.Microservice.Domain.Enumerations
             return matchingItem;
         }
 
-        public int CompareTo(object obj) => Value.CompareTo(((Enumeration)obj).Value);
+        public int CompareTo(object? obj) => Value.CompareTo(((Enumeration)obj!).Value);
 
         public static bool operator ==(Enumeration left, Enumeration right)
         {
@@ -182,9 +181,9 @@ namespace MS.Microservice.Domain.Enumerations
             get { return _displayName; }
         }
 
-        public int CompareTo(TEnumeration other)
+        public int CompareTo([AllowNull]TEnumeration other)
         {
-            return Value.CompareTo(other == default(TEnumeration) ? default : other.Value);
+            return Value.CompareTo(other! == default(TEnumeration)! ? default : other.Value);
         }
 
         public override sealed string ToString()
@@ -208,14 +207,14 @@ namespace MS.Microservice.Domain.Enumerations
                 .ToArray();
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals([AllowNull]object obj)
         {
             return Equals(obj as TEnumeration);
         }
 
-        public bool Equals(TEnumeration other)
+        public bool Equals([AllowNull]TEnumeration other)
         {
-            return other != null && ValueEquals(other.Value);
+            return other! != null! && ValueEquals(other.Value);
         }
 
         public override int GetHashCode()
@@ -223,12 +222,12 @@ namespace MS.Microservice.Domain.Enumerations
             return Value.GetHashCode();
         }
 
-        public static bool operator ==(Enumeration<TEnumeration, TValue> left, Enumeration<TEnumeration, TValue> right)
+        public static bool operator ==(Enumeration<TEnumeration, TValue>? left, Enumeration<TEnumeration, TValue>? right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(Enumeration<TEnumeration, TValue> left, Enumeration<TEnumeration, TValue> right)
+        public static bool operator !=(Enumeration<TEnumeration, TValue>? left, Enumeration<TEnumeration, TValue>? right)
         {
             return !Equals(left, right);
         }

@@ -7,8 +7,8 @@ namespace MS.Microservice.Domain
 {
     public class Order : BaseEntity, IAggregateRoot
     {
-        public string OrderNumber { get; private set; }
-        public string OrderName { get; protected set; }
+        public string OrderNumber { get; private set; } = null!;
+        public string OrderName { get; protected set; } = null!;
         public decimal Price { get; set; }
         public DateTimeOffset? UpdationTime { get; set; }
         public Order()
@@ -23,6 +23,6 @@ namespace MS.Microservice.Domain
             Delete();
         }
 
-        public Address Address { get; private set; }
+        public Address? Address { get; private set; }
     }
 }

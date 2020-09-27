@@ -2,6 +2,13 @@
 {
     public class ResultDto
     {
+        public ResultDto(bool success, string message, int code)
+        {
+            Success = success;
+            Message = message;
+            Code = code;
+        }
+
         public bool Success { get; set; }
         public string Message { get; set; }
         public int Code { get; set; }
@@ -9,14 +16,16 @@
 
     public class ResultDto<T> : ResultDto
     {
-        public ResultDto(T data) : this(true, "")
+        public ResultDto(T data) : this(data, true, "", 200)
         {
-            Data = data;
+
         }
-        public ResultDto(bool success, string error)
+        public ResultDto(T data, bool success, string message, int code) : base(success, message, code)
         {
             Success = success;
-            Message = error;
+            Message = message;
+            Code = code;
+            Data = data;
         }
 
         public T Data { get; set; }

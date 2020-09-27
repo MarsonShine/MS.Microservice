@@ -6,7 +6,7 @@
     [Serializable]
     public class PagedResultDto<TResult>
     {
-        public PagedResultDto()
+        public PagedResultDto() : this(0, new List<TResult>())
         {
 
         }

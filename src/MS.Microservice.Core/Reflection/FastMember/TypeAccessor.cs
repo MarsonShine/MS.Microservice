@@ -8,6 +8,7 @@ using System.Dynamic;
 using System.Linq;
 using MS.Microservice.Core.Reflection.FastMember;
 using System.Runtime.CompilerServices;
+using System.Diagnostics.CodeAnalysis;
 
 namespace FastMember
 {
@@ -55,13 +56,13 @@ namespace FastMember
         {
             if (type == null) throw new ArgumentNullException("type");
             var lookup = allowNonPublicAccessors ? nonPublicAccessors : publicAccessorsOnly;
-            TypeAccessor obj = (TypeAccessor)lookup[type];
+            TypeAccessor obj = (TypeAccessor)lookup[type]!;
             if (obj != null) return obj;
 
             lock (lookup)
             {
                 // double-check
-                obj = (TypeAccessor)lookup[type];
+                obj = (TypeAccessor)lookup[type]!;
                 if (obj != null) return obj;
 
                 obj = CreateNew(type, allowNonPublicAccessors);
@@ -80,9 +81,10 @@ namespace FastMember
                 set { CallSiteCache.SetValue(name, target, value); }
             }
         }
-
-        private static AssemblyBuilder assembly;
-        private static ModuleBuilder module;
+        [AllowNull]
+        private static AssemblyBuilder assembly = null;
+        [AllowNull]
+        private static ModuleBuilder module = null;
         private static int counter;
 
         private static int GetNextCounterValue()
@@ -90,7 +92,7 @@ namespace FastMember
             return Interlocked.Increment(ref counter);
         }
 
-        static readonly MethodInfo tryGetValue = typeof(Dictionary<string, int>).GetMethod("TryGetValue");
+        static readonly MethodInfo tryGetValue = typeof(Dictionary<string, int>).GetMethod("TryGetValue")!;
         private static void WriteMapImpl(ILGenerator il, Type type, List<MemberInfo> members, FieldBuilder mapField, bool allowNonPublicAccessors, bool isGet)
         {
             OpCode obj, index, value;
@@ -125,7 +127,7 @@ namespace FastMember
             il.Emit(OpCodes.Switch, labels);
             il.MarkLabel(fail);
             il.Emit(OpCodes.Ldstr, "name");
-            il.Emit(OpCodes.Newobj, typeof(ArgumentOutOfRangeException).GetConstructor(new Type[] { typeof(string) }));
+            il.Emit(OpCodes.Newobj, typeof(ArgumentOutOfRangeException).GetConstructor(new Type[] { typeof(string) })!);
             il.Emit(OpCodes.Throw);
             for (int i = 0; i < labels.Length; i++)
             {
@@ -176,7 +178,7 @@ namespace FastMember
                     {
                         // No getter/setter, use backing field instead if it exists
                         var backingField = $"<{prop.Name}>k__BackingField";
-                        field = prop.DeclaringType?.GetField(backingField, BindingFlags.Instance | BindingFlags.NonPublic);
+                        field = prop.DeclaringType?.GetField(backingField, BindingFlags.Instance | BindingFlags.NonPublic)!;
 
                         if (field != null)
                         {
@@ -191,8 +193,8 @@ namespace FastMember
                         if (isGet)
                         {
                             il.EmitCall(type.IsValueType ? OpCodes.Call : OpCodes.Callvirt, accessor, null);
-                            if (isByRef) il.Emit(OpCodes.Ldobj, propType); // defererence if needed
-                            if (propType.IsValueType) il.Emit(OpCodes.Box, propType); // box the value if needed
+                            if (isByRef) il.Emit(OpCodes.Ldobj, propType!); // defererence if needed
+                            if (propType!.IsValueType) il.Emit(OpCodes.Box, propType); // box the value if needed
                         }
                         else
                         {
@@ -201,11 +203,11 @@ namespace FastMember
 
                             // load the new value, and type it
                             il.Emit(value);
-                            Cast(il, propType, false);
+                            Cast(il, propType!, false);
 
                             if (isByRef)
                             {   // assign to the managed pointer
-                                il.Emit(OpCodes.Stobj, propType);
+                                il.Emit(OpCodes.Stobj, propType!);
                             }
                             else
                             {   // call the setter
@@ -220,7 +222,7 @@ namespace FastMember
             }
         }
 
-        private static readonly MethodInfo strinqEquals = typeof(string).GetMethod("op_Equality", new Type[] { typeof(string), typeof(string) });
+        private static readonly MethodInfo strinqEquals = typeof(string).GetMethod("op_Equality", new Type[] { typeof(string), typeof(string) })!;
 
         /// <summary>
         /// A TypeAccessor based on a Type implementation, with available member metadata
@@ -236,7 +238,8 @@ namespace FastMember
             /// Can this type be queried for member availability?
             /// </summary>
             public override bool GetMembersSupported { get { return true; } }
-            private MemberSet members;
+            [AllowNull]
+            private MemberSet members = null;
             /// <summary>
             /// Query the members available for this type
             /// </summary>
@@ -287,7 +290,7 @@ namespace FastMember
         }
         private static bool IsFullyPublic(Type type, PropertyInfo[] props, bool allowNonPublicAccessors)
         {
-            while (type.IsNestedPublic) type = type.DeclaringType;
+            while (type.IsNestedPublic) type = type.DeclaringType!;
             if (!type.IsPublic) return false;
 
             if (allowNonPublicAccessors)
@@ -323,7 +326,7 @@ namespace FastMember
             }
             foreach (var field in fields) if (!map.ContainsKey(field.Name)) { map.Add(field.Name, i++); members.Add(field); }
 
-            ConstructorInfo ctor = null;
+            ConstructorInfo? ctor = null;
             if (type.IsClass && !type.IsAbstract)
             {
                 ctor = type.GetConstructor(Type.EmptyTypes);
@@ -333,9 +336,9 @@ namespace FastMember
             {
                 DynamicMethod dynGetter = new DynamicMethod(type.FullName + "_get", typeof(object), new Type[] { typeof(int), typeof(object) }, type, true),
                               dynSetter = new DynamicMethod(type.FullName + "_set", null, new Type[] { typeof(int), typeof(object), typeof(object) }, type, true);
-                WriteMapImpl(dynGetter.GetILGenerator(), type, members, null, allowNonPublicAccessors, true);
-                WriteMapImpl(dynSetter.GetILGenerator(), type, members, null, allowNonPublicAccessors, false);
-                DynamicMethod dynCtor = null;
+                WriteMapImpl(dynGetter.GetILGenerator(), type, members, null!, allowNonPublicAccessors, true);
+                WriteMapImpl(dynSetter.GetILGenerator(), type, members, null!, allowNonPublicAccessors, false);
+                DynamicMethod? dynCtor = null;
                 if (ctor != null)
                 {
                     dynCtor = new DynamicMethod(type.FullName + "_ctor", typeof(object), Type.EmptyTypes, type, true);
@@ -347,7 +350,7 @@ namespace FastMember
                     map,
                     (Func<int, object, object>)dynGetter.CreateDelegate(typeof(Func<int, object, object>)),
                     (Action<int, object, object>)dynSetter.CreateDelegate(typeof(Action<int, object, object>)),
-                    dynCtor == null ? null : (Func<object>)dynCtor.CreateDelegate(typeof(Func<object>)), type);
+                    dynCtor == null ? null! : (Func<object>)dynCtor.CreateDelegate(typeof(Func<object>)), type);
             }
 
             // note this region is synchronized; only one is being created at a time so we don't need to stress about the builders
@@ -355,7 +358,7 @@ namespace FastMember
             {
                 AssemblyName name = new AssemblyName("FastMember_dynamic");
                 assembly = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
-                module = assembly.DefineDynamicModule(name.Name);
+                module = assembly.DefineDynamicModule(name.Name!);
             }
             TypeAttributes attribs = typeof(TypeAccessor).Attributes;
             TypeBuilder tb = module.DefineType("FastMember_dynamic." + type.Name + "_" + GetNextCounterValue(),
@@ -371,9 +374,9 @@ namespace FastMember
             il.Emit(OpCodes.Ret);
 
 
-            PropertyInfo indexer = typeof(TypeAccessor).GetProperty("Item");
-            MethodInfo baseGetter = indexer.GetGetMethod(), baseSetter = indexer.GetSetMethod();
-            MethodBuilder body = tb.DefineMethod(baseGetter.Name, baseGetter.Attributes & ~MethodAttributes.Abstract, typeof(object), new Type[] { typeof(object), typeof(string) });
+            PropertyInfo indexer = typeof(TypeAccessor).GetProperty("Item")!;
+            MethodInfo baseGetter = indexer.GetGetMethod()!, baseSetter = indexer.GetSetMethod()!;
+            MethodBuilder body = tb.DefineMethod(baseGetter.Name!, baseGetter.Attributes & ~MethodAttributes.Abstract, typeof(object), new Type[] { typeof(object), typeof(string) });
             il = body.GetILGenerator();
             WriteMapImpl(il, type, members, mapField, allowNonPublicAccessors, true);
             tb.DefineMethodOverride(body, baseGetter);
@@ -386,14 +389,14 @@ namespace FastMember
             MethodInfo baseMethod;
             if (ctor != null)
             {
-                baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported").GetGetMethod();
+                baseMethod = typeof(TypeAccessor).GetProperty("CreateNewSupported")!.GetGetMethod()!;
                 body = tb.DefineMethod(baseMethod.Name, baseMethod.Attributes, baseMethod.ReturnType, Type.EmptyTypes);
                 il = body.GetILGenerator();
                 il.Emit(OpCodes.Ldc_I4_1);
                 il.Emit(OpCodes.Ret);
                 tb.DefineMethodOverride(body, baseMethod);
 
-                baseMethod = typeof(TypeAccessor).GetMethod("CreateNew");
+                baseMethod = typeof(TypeAccessor).GetMethod("CreateNew")!;
                 body = tb.DefineMethod(baseMethod.Name, baseMethod.Attributes, baseMethod.ReturnType, Type.EmptyTypes);
                 il = body.GetILGenerator();
                 il.Emit(OpCodes.Newobj, ctor);
@@ -401,15 +404,15 @@ namespace FastMember
                 tb.DefineMethodOverride(body, baseMethod);
             }
 
-            baseMethod = typeof(RuntimeTypeAccessor).GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance).GetGetMethod(true);
+            baseMethod = typeof(RuntimeTypeAccessor).GetProperty("Type", BindingFlags.NonPublic | BindingFlags.Instance)!.GetGetMethod(true)!;
             body = tb.DefineMethod(baseMethod.Name, baseMethod.Attributes & ~MethodAttributes.Abstract, baseMethod.ReturnType, Type.EmptyTypes);
             il = body.GetILGenerator();
             il.Emit(OpCodes.Ldtoken, type);
-            il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle"));
+            il.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle")!);
             il.Emit(OpCodes.Ret);
             tb.DefineMethodOverride(body, baseMethod);
 
-            var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo().AsType(), map);
+            var accessor = (TypeAccessor)Activator.CreateInstance(tb.CreateTypeInfo()!.AsType(), map)!;
             return accessor;
         }
 

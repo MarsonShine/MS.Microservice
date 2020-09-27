@@ -13,8 +13,8 @@
     {
         private readonly ReceiverCollection _receivers;
         private Sender sender;
-        private MailMessage message;
-        private string subject;
+        private MailMessage? message;
+        private string? subject;
         public PostOffice(List<Receiver> receivers)
         {
             sender = new Sender();
@@ -54,7 +54,7 @@
             mimeMessage.From.Add(sender.ToFrom());
             mimeMessage.To.AddRange(_receivers.ToMailAddresses());
             mimeMessage.Subject = subject;
-            mimeMessage.Body = message.Body;
+            mimeMessage.Body = message?.Body;
             //简历链接，发送
             using (var client = new SmtpClient())
             {

@@ -16,14 +16,14 @@ namespace MS.MicroService.MongoDb
     public interface IMongoEntityModel
     {
         Type EntityType { get; }
-        string CollectionName { get; set; }
+        string? CollectionName { get; set; }
     }
 
     public class MongoEntityModel<TEntity> : IMongoEntityModel
     {
         public Type EntityType { get; }
 
-        public string CollectionName { get; set; }
+        public string? CollectionName { get; set; }
 
         public MongoEntityModel()
         {
@@ -35,9 +35,9 @@ namespace MS.MicroService.MongoDb
     {
         public Type EntityType { get; }
 
-        public string CollectionName { get; set; }
+        public string? CollectionName { get; set; }
 
-        public MongoEntityModel(Type entityType, string collectionName)
+        public MongoEntityModel(Type entityType, string? collectionName)
         {
             EntityType = entityType;
             CollectionName = collectionName;

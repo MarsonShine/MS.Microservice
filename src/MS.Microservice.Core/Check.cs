@@ -63,7 +63,7 @@ namespace MS.Microservice
                 throw new ArgumentException(parameterName + " can not be null or empty!", parameterName);
             }
 
-            return value;
+            return value!;
         }
     }
 }

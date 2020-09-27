@@ -33,8 +33,7 @@ namespace MS.Microservice.Web.AutofacModules
                         cf.Username(eventBus.UserName);
                         cf.Password(eventBus.Password);
                     });
-
-                    cfg.ReceiveEndpoint(host, "MassTransit.Inventory.Api", e =>
+                    cfg.ReceiveEndpoint("MassTransit.Inventory.Api", e =>
                     {
                         // 立即重试
                         //e.UseRetry(retryConfig => retryConfig.Immediate(5));
@@ -51,10 +50,9 @@ namespace MS.Microservice.Web.AutofacModules
 
                         //e.UseRetry(retryConfig => retryConfig.Immediate(5)); //立即重试
                         //e.LoadFrom(context); // 自动通过反射 加载消费者
-                        
-                        e.Consumer< IConsumer<IOrderCreatedEvent>>(context); // 指定消费者
-                    });
 
+                        e.Consumer<IConsumer<IOrderCreatedEvent>>(context); // 指定消费者
+                    });
                 });
                 return busControl;
             })

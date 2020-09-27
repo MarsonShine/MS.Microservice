@@ -109,7 +109,7 @@ namespace MS.Microservice.Core.Reflection.FastMember
         /// Getting Attribute Type
         /// </summary>
         public Attribute GetAttribute(Type attributeType, bool inherit)
-            => Attribute.GetCustomAttribute(member, attributeType, inherit);
+            => Attribute.GetCustomAttribute(member, attributeType, inherit)!;
 
         /// <summary>
         /// Property Can Write

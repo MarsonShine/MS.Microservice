@@ -12,10 +12,6 @@ namespace MS.Microservice.Domain.Enumerations
             = new EmployeeType(1, "Servant");
         public static readonly EmployeeType AssistantToTheRegionalManager
             = new EmployeeType(2, "Assistant to the Regional Manager");
-        private readonly int _value;
-        private readonly string _name;
-
-        private EmployeeType() { }
         private EmployeeType(int value, string name) : base(value, name) { }
     }
 
@@ -25,7 +21,6 @@ namespace MS.Microservice.Domain.Enumerations
         public static readonly SuperEmployeeType Manager
         = new ManagerType();
 
-        protected SuperEmployeeType() { }
         protected SuperEmployeeType(int value, string name) : base(value, name) { }
 
         public abstract decimal BonusSize { get; }
