@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MS.MicroService.MongoDb.Log
 {
-    public class MongoDbLogger:ILogger
+    public class MongoDbLogger : ILogger
     {
         private readonly string _categoryName;
         private readonly IMongoDbLogRepository _mongoDbLogRepository;
@@ -19,7 +19,7 @@ namespace MS.MicroService.MongoDb.Log
 
         public IDisposable BeginScope<TState>(TState state)
         {
-            return null;
+            return default!;
         }
 
         public bool IsEnabled(LogLevel logLevel)
@@ -33,9 +33,8 @@ namespace MS.MicroService.MongoDb.Log
                 return;
 
             // TODO 这里做 db 操作
-            if (state is MongoDbLogEntity)
+            if (state is MongoDbLogEntity model)
             {
-                var model = state as MongoDbLogEntity;
                 model.LogDateTime = DateTime.Now;
                 model.CategoryName = _categoryName;
                 _mongoDbLogRepository.CreateAsync(model).ConfigureAwait(false).GetAwaiter().GetResult();

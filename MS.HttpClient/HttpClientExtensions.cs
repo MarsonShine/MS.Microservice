@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -40,7 +41,7 @@ namespace MS.WebHttpClient
                 // 判断是否枚举
                 if (IsNullable(property.PropertyType))
                 {
-                    var enumType = Nullable.GetUnderlyingType(property.PropertyType);
+                    var enumType = Nullable.GetUnderlyingType(property.PropertyType)!;
                     if (enumType.IsEnum)
                     {
                         var enumValue = Convert.ChangeType(value, Enum.GetUnderlyingType(enumType));
@@ -51,7 +52,7 @@ namespace MS.WebHttpClient
                 {
                     var arrayObj = value as IEnumerable;
                     var subQueryStrings = new Queue<string>();
-                    foreach (var item in arrayObj)
+                    foreach (var item in arrayObj!)
                     {
                         subQueryStrings.Enqueue($"{property.Name}={item}");
                     }
@@ -70,7 +71,7 @@ namespace MS.WebHttpClient
         {
             try
             {
-                if (null != message || message.IsSuccessStatusCode)
+                if (null != message && message.IsSuccessStatusCode)
                 {
                     if (message.Content is object && message.Content.Headers.ContentType.MediaType == "application/json")
                     {
@@ -86,7 +87,7 @@ namespace MS.WebHttpClient
                     }
                 }
 
-                return default;
+                return default!;
             }
             catch (Exception ex)
             {

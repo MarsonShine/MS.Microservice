@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\MS.Infrastructure.Util\MS.Infrastructure.Util.csproj" />
     <ProjectReference Include="..\..\src\MS.Microservice.Core\MS.Microservice.Core.csproj" />
   </ItemGroup>
 

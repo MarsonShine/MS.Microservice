@@ -65,25 +65,25 @@ namespace MS.MicroService.MongoDb.Repository
 
         public override async Task<TEntity> InsertAsync([NotNull] TEntity entity, CancellationToken cancellationToken = default)
         {
-            await InsertAsync(entity, null, cancellationToken);
+            await InsertAsync(entity, null!, cancellationToken);
             return entity;
         }
 
-        private async Task InsertAsync([NotNull] TEntity entity, InsertOneOptions options = default, CancellationToken cancellationToken = default)
+        private async Task InsertAsync([NotNull] TEntity entity, [AllowNull]InsertOneOptions options = default!, CancellationToken cancellationToken = default)
         {
             await Collection.InsertOneAsync(entity, options, cancellationToken);
         }
 
         public override async Task<TEntity> UpdateAsync([NotNull] TEntity entity, CancellationToken cancellationToken = default)
         {
-            return await ReplaceAsync(CreateEntityFilter(entity), entity, null, cancellationToken);
+            return await ReplaceAsync(CreateEntityFilter(entity), entity, null!, cancellationToken);
         }
 
-        private async Task<TEntity> ReplaceAsync(FilterDefinition<TEntity> filter, [NotNull] TEntity entity, ReplaceOptions options = default, CancellationToken cancellationToken = default)
+        private async Task<TEntity> ReplaceAsync(FilterDefinition<TEntity> filter, [NotNull] TEntity entity, ReplaceOptions options = default!, CancellationToken cancellationToken = default)
         {
             var result = await Collection.ReplaceOneAsync(filter, entity, options, cancellationToken);
 
-            return result.IsAcknowledged ? entity : null;
+            return result.IsAcknowledged ? entity : null!;
         }
 
         protected virtual FilterDefinition<TEntity> CreateEntityFilter(TEntity entity)

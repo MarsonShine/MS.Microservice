@@ -6,9 +6,9 @@ namespace MS.MicroService.MongoDb
 {
     public abstract class MongoDbContext : IMongoDbContext
     {
-        protected virtual IMongoDbContextModelSource MongoDbContextModelSource { get; set; }
+        protected virtual IMongoDbContextModelSource MongoDbContextModelSource { get; set; } = null!;
 
-        public IMongoDatabase Database { get; private set; }
+        public IMongoDatabase Database { get; private set; } = null!;
 
         public virtual IMongoCollection<T> Collection<T>()
         {

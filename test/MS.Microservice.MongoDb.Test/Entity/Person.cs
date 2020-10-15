@@ -7,6 +7,6 @@ namespace MS.Microservice.MongoDb.Test.Entity
 {
     public class Person : BaseEntity
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
     }
 }

@@ -31,7 +31,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.Microservice.MongoDb.Tes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.Microservice.Database", "src\MS.Microservice.Database\MS.Microservice.Database.csproj", "{8E798B3D-C318-4CA4-A9A4-FEA0F73D47CB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MS.WebHttpClient", "MS.HttpClient\MS.WebHttpClient.csproj", "{A07E143B-55A1-4118-B869-449318DFD733}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.WebHttpClient", "MS.HttpClient\MS.WebHttpClient.csproj", "{A07E143B-55A1-4118-B869-449318DFD733}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D5505EA7-2FB3-4124-8AAA-BAB3F87ADF9C}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

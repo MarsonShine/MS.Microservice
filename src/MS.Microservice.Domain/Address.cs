@@ -11,7 +11,6 @@ namespace MS.Microservice.Domain
         public string State { get; private set; }
         public string Country { get; private set; }
         public string ZipCode { get; private set; }
-        public Address() { }
 
         public Address(string street, string city, string state, string country, string zipcode)
         {
