@@ -1,6 +1,8 @@
 # MS.Microservice
 微服务架构设计
 
+Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com/articles/microservices.html#SmartEndpointsAndDumbPipes)
+
 - [上下文边界](docs/Context-Bounded.md)
 - [领域命令模式处理程序](docs/Domain-Command-Patterns-Handlers.md)
 - [领域命令验证](docs/Domain-Command-Validation.md)
