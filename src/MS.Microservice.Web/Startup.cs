@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,6 +29,8 @@ namespace MS.Microservice
 {
     public class Startup
     {
+        [MaybeNull]
+        public ILifetimeScope AutofacContainer { get; private set; }
         public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
@@ -37,7 +40,7 @@ namespace MS.Microservice
 
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-        public IServiceProvider ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services)
         {
             services.AddEntityFrameworkMySQL()
                 .AddDbContext<OrderingContext>(options =>
@@ -46,8 +49,6 @@ namespace MS.Microservice
                 });
             services.AddMvc().SetCompatibilityVersion(Microsoft.AspNetCore.Mvc.CompatibilityVersion.Latest);
 
-            //integrate autofac
-            var builder = new ContainerBuilder();
             //integrate automapper
             services.AddAutoMapper(new System.Reflection.Assembly[] { typeof(OrderAutoMapperProfiles).Assembly });
 
@@ -65,12 +66,26 @@ namespace MS.Microservice
             });
 
             //builder.RegisterModule<ApplicationAutoModule>();  //success
-            builder.Populate(services);
+            //builder.Populate(services);
 
-            builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
+            //builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
 
-            return new AutofacServiceProvider(builder.Build());
+            //return new AutofacServiceProvider(builder.Build());
         }
+
+        // ConfigureContainer is where you can register things directly
+        // with Autofac. This runs after ConfigureServices so the things
+        // here will override registrations made in ConfigureServices.
+        // Don't build the container; that gets done for you by the factory.
+        public void ConfigureContainer(ContainerBuilder builder)
+        {
+            // Register your own things directly with Autofac here. Don't
+            // call builder.Populate(), that happens in AutofacServiceProviderFactory
+            // for you.
+            builder.RegisterModule<ApplicationAutoModule>();  //success
+            builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
+        }
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHostApplicationLifetime lifetime)
@@ -79,7 +94,13 @@ namespace MS.Microservice
             {
                 app.UseDeveloperExceptionPage();
             }
+            this.AutofacContainer = app.ApplicationServices.GetAutofacRoot();
 
+            app.Use(async (context, next) =>
+            {
+                context.Request.Headers.Remove("Connection");
+                await next();
+            });
             app.UseStaticFiles();
             app.UseRouting();
 
@@ -96,9 +117,9 @@ namespace MS.Microservice
                 cfg.MapDefaultControllerRoute();
             });
 
-            var bus = app.ApplicationServices.GetService<IBusControl>();
-            var busHandle = TaskUtil.Await(() => bus.StartAsync());
-            lifetime.ApplicationStopping.Register(() => busHandle.Stop());
+            //var bus = app.ApplicationServices.GetService<IBusControl>();
+            //var busHandle = TaskUtil.Await(() => bus.StartAsync());
+            //lifetime.ApplicationStopping.Register(() => busHandle.Stop());
         }
     }
 }
