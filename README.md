@@ -73,3 +73,7 @@ ENTRYPOINT ["dotnet", "MS.Microservice.Web.dll"]
 </configuration>
 ```
 
+# 关于微服务的架构组成知识点
+
+- [Grpc](docs/grpc/README.md)
+- [Consul](docs/consul/README.md)

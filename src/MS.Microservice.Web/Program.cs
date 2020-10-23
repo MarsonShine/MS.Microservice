@@ -33,6 +33,12 @@ namespace MS.Microservice
                 .ConfigureWebHostDefaults(webHostBuilder => {
                     webHostBuilder.UseContentRoot(Directory.GetCurrentDirectory())
                     .UseStartup<Startup>()
+                    .ConfigureKestrel((context,kestrelServerOptions) => {
+                        kestrelServerOptions.ListenLocalhost(5000, listenOptions =>
+                        {
+                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                        });
+                    })
                     .UseSerilog();
                 })
                 .Build();
