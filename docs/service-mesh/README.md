@@ -31,6 +31,7 @@
 1. [linkerd](https://github.com/linkerd/linkerd2)，官网：https://linkerd.io/
 2. [Envoy](https://github.com/envoyproxy/envoy)，官网：https://www.envoyproxy.io/
 3. [Istio](https://github.com/istio/istio)，官网：https://istio.io
+4. [Consul](https://www.github.com/hashicorp/consul)，官网：https://www.consul.io/
 
 # 新的问题
 
