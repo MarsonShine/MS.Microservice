@@ -294,7 +294,153 @@ consul connet proxy -sidecar-for socat
 
 ### 注册一个依赖服务和代理
 
+接下来注册一个下游服务，命名为 “web”。就像 socat 定义的服务一样，web 的配置文件还包含一个指定 sidecar 的 `connect` 结点，但是又不像上面一样是个空的，而是在 socat 上指定一个 web 上游依赖，代理将监听这个 9191 端口。
 
+```shell
+echo '{
+  "service": {
+    "name": "web",
+    "connect": {
+      "sidecar_service": {
+        "proxy": {
+          "upstreams": [
+            {
+              "destination_name": "socat",
+              "local_bind_port": 9191
+            }
+          ]
+        }
+      }
+    }
+  }
+}' > ./consul.d/web.json
+```
+
+如果我们运行一个真正的web服务，它将在一个回路地址上与它的代理通信。代理会加密通信（traffic）并发送到 sidecar 代理上的 socat 服务。Socat 服务将会解密通信并发送给本地端口号 8181 的回路地址的 socat。因为这里没有服务运行，您将通过详装是web服务与我们指定的端口(9191)上的web服务的代理进行通信。
+
+在开始代理处理之前，你要确认不能连接 9191 socat 服务。
+
+现在通过使用自 sidecar 注册的配置文件开始 web 代理。
+
+```shell
+consul connect proxy -sidecar-for web
+```
+
+出现一下信息即成功开启代理
+
+```shell
+==> Consul Connect proxy starting...
+    Configuration mode: Agent API
+        Sidecar for ID: web
+              Proxy ID: web-sidecar-proxy
+
+==> Log data will now stream in as it occurs:
+
+    2020-10-27T02:07:41.123Z [INFO]  proxy: Starting listener: listener=127.0.0.1:9191->service:default/socat bind_addr=127.0.0.1:9191
+    2020-10-27T02:07:41.131Z [INFO]  proxy: Proxy loaded config and ready to serve
+    2020-10-27T02:07:41.132Z [INFO]  proxy: Parsed TLS identity: uri=spiffe://f747f347-a603-96a1-6c36-cbf0d65cbe47.consul/ns/default/dc/dc1/svc/web roots=[pri-r5m71lq.consul.ca.f747f347.consul]
+    2020-10-27T02:07:41.132Z [INFO]  proxy: Starting listener: listener="public listener" bind_addr=0.0.0.0:21001
+```
+
+当输入 `request from port 9191` 时，会实时输出 `requst from port 9191`。但是您会发生，在之前监听的端口 8181，也会输出 `request from port 9191`。这是因为从 9191 的请求转发到了目标上游服务 `socat`。
+
+## Consul 数据存储
+
+Consul 有两种方式存储 Key/Value 数据：Consul CLI 以及 UI。先说 CLI
+
+### 添加数据
+
+使用命名 `consul kv put` 插入一个数据到 K/V 存储器。第一个参数就是要存储的条目键名，第二个就是键值
+
+```shell
+consul kv put redis/config/minconns 1 # key=redis/config/minconns;value=1
+```
+
+输出如下信息几位成功
+
+```
+Success! Data written to: redis/config/minconns
+```
+
+注意下面输入的 `redis/config/users/admin`，设置了一个标识 `flags` 值为 42。键支持设置 64 位的整数值，这在 Consul 内部是没有使用的。
+
+```
+consul kv put -flags=42 redis/config/users/admin abcd1234
+```
+
+### 查询数据
+
+```
+consul kv get redis/config/minconns
+# 输出
+1
+```
+
+Consul 还保留了键值对的一些元数据信息。可以使用 `-detailed` 检索元数据
+
+```shell
+consul kv get -detailed redis/config/users/admin
+# 输出
+CreateIndex      32
+Flags            42
+Key              redis/config/users/admin
+LockIndex        0
+ModifyIndex      32
+Session          -
+Value            abcd1234
+```
+
+查询所有键值信息，结果按字典顺序返回。
+
+```shell
+consul kv get -recurse
+# 输出
+redis/config/minconns:1
+redis/config/users/admin:abcd1234
+```
+
+### 删除数据
+
+使用关键字 `delete`
+
+```
+consul kv delete redis/config/minconns
+# 输出
+Success! Deleted key: redis/config/minconns
+```
+
+注意，如果删除一个键不存在的值，会默认返回成功结果。
+
+删除所有的键值对
+
+```
+consul kv delete -recurse redis # 删除所有前缀为 redis 的键值
+# 输出
+Success! Deleted keys with prefix: redis
+```
+
+### 修改数据
+
+修改以存在的值
+
+```
+consul kv put foo bar	# 存储数据
+consul kv get foo	    # 查询数据
+consul kv put foo zip	# 修改数据
+consul kv get foo	    # 查询数据
+```
+
+关于 consul 执行的更新数据存储操作是 CAS（check-and-set）是原子操作，此外还包括一些其他的相关的复杂操作。可以输入 `consul kv put -h` 获取更多。
+
+## 数据中心
+
+当 consul 开启代理时，彼此之间是不知道的。特别是只有一个成员的数据中心。代理要知道的话有两种方式。一种是在已有的数据中心添加新的代理，你要在这个数据中心提供任何其他代理的 IP 地址（无论客户端还是服务器）。它会导致新的代理加入这个数据中心。一旦这个代理成为新数据中心的成员，它就会通过管道（gossip）知道了其他代理。
+
+那么如何将两个代理互相连接起来，创建两个成员的数据中心呢？
+
+### 设置环境变量
+
+**docker 中无法实现此主题**
 
 官网：https://www.consul.io/
 
