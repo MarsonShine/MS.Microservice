@@ -35,7 +35,46 @@ public class HeartBeatScheduler implements Logging {
 }
 ```
 
+在正在发送消息的服务端，调度器执行一个方法来发送心跳检查。
 
+```java
+// class SendingServer
+private void sendHeartbeat() throws IOException {
+  	socketChannel.blockingSend(newHeartbeatRequest(serverId));
+}
+```
+
+在接收的服务端，失败探测机制启动一个类似的调度器。定期会检查这个心跳是否正常接收。
+
+```java
+class AbstractFailureDetector {
+    private HeartBeatScheduler heartbeatScheduler = new HeartBeatScheduler(heartBeatCheck, 100l);
+    abstract void heartBeatCheck();
+    abstract void heartBeatReceived(T serverId);
+}
+```
+
+失败探测器必须要有两个方法
+
+- 一个是当接收服务器接收心跳的时候调用，来告诉失败探测器心跳请求已接收。
+
+  ```java
+  // class ReceivingServer
+  private void HandleRequest(Message<RequestOrResponse> request) {
+      RequestOrResponse clientRequest = request.getRequest();
+      if (isHeartbeatRequest(clientRequest)) {
+        HeartbeatRequest heartbeatRequest = JsonSerDes.deserialize(clientRequest.getMessageBodyJson(), HeartbeatRequest.class);
+        failureDetector.heartBeatReceived(heartbeatRequest.getServerId());
+        sendResponse(request);
+      } else {
+        //processes other requests
+      }
+  }
+  ```
+
+- 一个是定期检查心跳状态和探测失败的可能。
+
+何时标记一个服务器是否失败依赖于各种标准。各有不同的，一般来说心跳间隔越小，故障检测到的速度就越快，但是却提高了失败探测的几率。因此心跳间隔和缺失心跳的解释是根据集群的要求实现的。一般是分两大类
 
 ## 小集群 - 如像 RAFT，Zookeeper 基于一致性的系统
 
