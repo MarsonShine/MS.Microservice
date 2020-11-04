@@ -279,21 +279,21 @@ RabbitMQ 服务资源仓库包含了下面配置文件的例子：
 | ssl_options                            | TLS 配置。详见 [TLS 指南](https://www.rabbitmq.com/ssl.html#enabling-ssl)<br />默认： `ssl_options = none ` |
 | ssl_handshake_timeout                  | TLS 握手超时时间，毫秒<br /> 默认：`ssl_handshake_timeout = 5000 ` |
 | vm_memory_high_watermark               | 内存控制流程触发的阈值，可是绝对或相对于 OS 的 RAM 可用量：<br />`vm_memory_high_watermark.relative = 0.6 ` <br />`vm_memory_high_watermark.absolute = 2GB ` <br />详见 [基于内存流程控制](https://www.rabbitmq.com/memory.html) 以及 [警报](https://www.rabbitmq.com/alarms.html) 文档。<br />默认：`vm_memory_high_watermark.relative = 0.4 ` |
-| vm_memory_calculation_strategy         | 内存使用报表策略。可以是下面中的一个：<br />1. `allocated`: uses Erlang memory allocator statistics rss: uses operating system RSS memory reporting. This uses OS-specific means and may start short lived child processes. legacy: uses legacy memory reporting (how much memory is considered to be used by the runtime). This strategy is fairly inaccurate. erlang: same as legacy, preserved for backwards compatibility  Default: `vm_memory_calculation_strategy = allocated ` |
-| vm_memory_high_watermark_paging_ratio  | Fraction of the high watermark limit at which queues start to page messages out to disc to free up memory. See the [memory-based flow control](https://www.rabbitmq.com/memory.html) documentation. Default: `vm_memory_high_watermark_paging_ratio = 0.5 ` |
-| total_memory_available_override_value  | Makes it possible to override the total amount of memory available, as opposed to inferring it from the environment using OS-specific means. This should only be used when actual maximum amount of RAM available to the node doesn't match the value that will be inferred by the node, e.g. due to containerization or similar constraints the node cannot be aware of. The value may be set to an integer number of bytes or, alternatively, in information units (e.g `8GB`). For example, when the value is set to 4 GB, the node will believe it is running on a machine with 4 GB of RAM. Default: undefined (not set or used). |
-| disk_free_limit                        | Disk free space limit of the partition on which RabbitMQ is storing data. When available disk space falls below this limit, flow control is triggered. The value can be set relative to the total amount of RAM or as an absolute value in bytes or, alternatively, in information units (e.g `50MB` or `5GB`): `disk_free_limit.relative = 3.0` `disk_free_limit.absolute = 2GB` By default free disk space must exceed 50MB. See the [Disk Alarms](https://www.rabbitmq.com/disk-alarms.html) documentation. Default: `disk_free_limit.absolute = 50MB ` |
-| log.file.level                         | Controls the granularity of logging. The value is a list of log event category and log level pairs. The level can be one of error (only errors are logged), warning (only errors and warning are logged), info (errors, warnings and informational messages are logged), or debug (errors, warnings, informational messages and debugging messages are logged).  Default: `log.file.level = info ` |
-| channel_max                            | Maximum permissible number of channels to negotiate with clients, not including a special channel number 0 used in the protocol. Setting to 0 means "unlimited", a dangerous value since applications sometimes have channel leaks. Using more channels increases memory footprint of the broker. Default: `channel_max = 2047 ` |
-| channel_operation_timeout              | Channel operation timeout in milliseconds (used internally, not directly exposed to clients due to messaging protocol differences and limitations). Default: `channel_operation_timeout = 15000 ` |
-| max_message_size                       | The largest allowed message payload size in bytes. Messages of larger size will be rejected with a suitable channel exception. Default: 134217728 Max value: 536870912 |
-| heartbeat                              | Value representing the heartbeat timeout suggested by the server during connection parameter negotiation. If set to 0 on both ends, heartbeats are disabled (this is not recommended). See the [Heartbeats guide](https://www.rabbitmq.com/heartbeats.html) for details. Default: `heartbeat = 60 ` |
-| default_vhost                          | Virtual host to create when RabbitMQ creates a new database from scratch. The exchange `amq.rabbitmq.log` will exist in this virtual host. Default: `default_vhost = / ` |
-| default_user                           | User name to create when RabbitMQ creates a new database from scratch. Default: `default_user = guest ` |
-| default_pass                           | Password for the default user. Default: `default_pass = guest ` |
-| default_user_tags                      | Tags for the default user. Default: `default_user_tags.administrator = true ` |
-| default_permissions                    | [Permissions](https://www.rabbitmq.com/access-control.html) to assign to the default user when creating it. Default: `default_permissions.configure = .* default_permissions.read = .* default_permissions.write = .* ` |
-| loopback_users                         | List of users which are only permitted to connect to the broker via a loopback interface (i.e. `localhost`). To allow the default `guest` user to connect remotely (a security practice [unsuitable for production use](https://www.rabbitmq.com/production-checklist.html)), set this to `none`: `# awful security practice, # consider creating a new # user with secure generated credentials! loopback_users = none `  To restrict another user to localhost-only connections, do it like so (`monitoring` is the name of the user): `loopback_users.monitoring = true `  Default: `# guest uses well known # credentials and can only # log in from localhost # by default loopback_users.guest = true ` |
+| vm_memory_calculation_strategy         | 内存使用报表策略。可以是下面中的一个：<br />1. `allocated`: 使用 Erlang 内存分配器统计信息 <br />2. `rss`: 使用操作系统 RSS 内存报报告，这使用特定于操作系统的方法，可以启动短生命周期的子进程。<br />3. `legacy`: 使用遗留内存报告 (要考虑在运行时到底使用了多少内存)。这种策略是不准确的。<br />4. `erlang`: 由于历史遗留问题，要提供一个向后兼容的能力<br />Default: `vm_memory_calculation_strategy = allocated ` |
+| vm_memory_high_watermark_paging_ratio  | 由于内存的高水位阈值的限制，队列开始将消息分页存储到磁盘来释放内存。详见[基于内存流程控制](https://www.rabbitmq.com/memory.html)文档<br />Default: `vm_memory_high_watermark_paging_ratio = 0.5 `，这个意思就是说当内存使用到服务器总内存的 50% 时，会引起服务器 GC |
+| total_memory_available_override_value  | 为了尽可能的修改可使用的总内存，而不是使用操作系统特定的方法从环境中推断。只有当节点可用的实际最大 RAM 数量与节点推断的值不匹配时，才应该使用此选项，如由于容器化或类似的约束，节点无法感知。值可以设置 byte 的整数范围，或者是设置单位信息（如 `8GB`）。例如当值设置位 4GB 时，节点就会认为这是运行在只有 4GB 内存的 RAM 的机器。<br />Default: undefined （没有使用或赋值） |
+| disk_free_limit                        | 银盘释放的 RabbitMQ 存储数据的空间。当磁盘可用空间低于这个限制值时，控制流程就会触发。值可以设置相对于 ROM 总内存的值（如 `50MB` 或 `5GB`）也可以以字节为绝对值，或者是单元信：<br />`disk_free_limit.relative = 3.0` <br />`disk_free_limit.absolute = 2GB` <br />默认空闲空间必须大于 50MB。详见 [磁盘警告](https://www.rabbitmq.com/disk-alarms.html) 文档。<br />Default: `disk_free_limit.absolute = 50MB ` |
+| log.file.level                         | 控制日志记录的粒度（granularity）。值是日志事件分类和日志级别对的集合。<br />级别可以是 `error`（只记录错误日志），`warning` (只记录警告和错误)，`info`（错误，警告，information 以及调试都会记录），或 `debug`（errors, warnings, informational 以及 debug 都会记录）<br />Default: `log.file.level = info ` |
+| channel_max                            | 允许与客户端协商的最大通道数，不包括协议中使用的特殊通道数 0。 0 代表无限制，当发生通道泄露时，设置这个值非常危险。使用更多通道会增加 broker 的内存占用。<br />Default: `channel_max = 2047 ` |
+| channel_operation_timeout              | 通道操作超时(以毫秒为单位)(内部使用，由于消息传递协议的差异和限制，没有直接暴露给客户端)。<br />Default: `channel_operation_timeout = 15000 ` |
+| max_message_size                       | 允许的最大消息负载大小(以字节为单位)。较大的消息将被拒绝，并有一个合适的通道异常。<br />Default: `134217728` <br />Max value: `536870912` |
+| heartbeat                              | 表示服务器在连接期间，建议的心跳超时的值。如果设置为 0 就代表禁用心跳检查 (不建议)。详见 [Heartbeats 指南](https://www.rabbitmq.com/heartbeats.html).。<br />Default: `heartbeat = 60 ` |
+| default_vhost                          | 当 RabbitMQ 从零开始创建一个新数据库时创建的虚拟主机。 交换机 `amq.rabbitmq.log` 在这个虚拟主机中就已经存在。<br />Default: `default_vhost = / ` |
+| default_user                           | 当 RabbitMQ 从零开始创建一个新数据库时要创建的用户名。<br />Default: `default_user = guest ` |
+| default_pass                           | `default_user` 的密码。<br />Default: `default_pass = guest ` |
+| default_user_tags                      | `default_user` 的标签<br />Default: `default_user_tags.administrator = true ` |
+| default_permissions                    | [Permissions](https://www.rabbitmq.com/access-control.html) 当创建它的时候，用户的默认许可权限集合<br />Default: <br />default_permissions.configure = .*<br />default_permissions.read = .*<br />default_permissions.write = .* （每个选项占一行） |
+| loopback_users                         | 只允许通过回路接口（[loopback](https://baike.baidu.com/item/loopback/2779210?fr=aladdin)）连接到代理的用户列表 (如 `localhost`)。允许默认的 `user` 用户远程连接 ([不适合生产使用的安全措施](https://www.rabbitmq.com/production-checklist.html))，赋值为 none: <br /># awful security practice, <br /># consider creating a new <br /># user with secure generated credentials! <br />loopback_users = none <br />要限制另一个用户只能使用 localhost-only 连接，就像下面这样做(`monitoring` 是用户的名称):<br />`loopback_users.monitoring = true `  <br />默认内容: <br /># guest uses well known <br /># credentials and can only <br /># log in from localhost <br /># by default <br />loopback_users.guest = true |
 | cluster_formation.classic_config.nodes | Classic [peer discovery](https://www.rabbitmq.com/cluster-formation.html) backend's list of nodes to contact. For example, to cluster with nodes `rabbit@hostname1` and `rabbit@hostname2` on first boot: `cluster_formation.classic_config.nodes.1 = rabbit@hostname1 cluster_formation.classic_config.nodes.2 = rabbit@hostname2 ` Default: `none` (not set) |
 | collect_statistics                     | Statistics collection mode. Primarily relevant for the management plugin. Options are: `none` (do not emit statistics events) `coarse` (emit per-queue / per-channel / per-connection statistics) `fine` (also emit per-message statistics)  Default: `collect_statistics = none ` |
 | collect_statistics_interval            | Statistics collection interval in milliseconds. Primarily relevant for the [management plugin](https://www.rabbitmq.com/management.html#statistics-interval). Default: `collect_statistics_interval = 5000 ` |
@@ -314,11 +314,109 @@ RabbitMQ 服务资源仓库包含了下面配置文件的例子：
 | proxy_protocol                         | If set to true, RabbitMQ will expect a [proxy protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) header to be sent first when an AMQP connection is opened. This implies to set up a proxy protocol-compliant reverse proxy (e.g. [HAproxy](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt) or [AWS ELB](http://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-proxy-protocol.html)) in front of RabbitMQ. Clients can't directly connect to RabbitMQ when proxy protocol is enabled, so all connections must go through the reverse proxy. See [the networking guide](https://www.rabbitmq.com/networking.html#proxy-protocol) for more information.  Default: `proxy_protocol = false ` |
 | cluster_name                           | Operator-controlled cluster name. This name is used to identify a cluster, and by the federation and Shovel plugins to record the origin or path of transferred messages. Can be set to any arbitrary string to help identify the cluster (eg. london). This name can be inspected by AMQP 0-9-1 clients in the server properties map. Default: by default the name is derived from the first (seed) node in the cluster. |
 
+### 配置值加密
+
+在 RabbitMQ 配置文件中有敏感的条目（比如密码，包含凭证的 URL）项是可以进行加密的。broker 在开始的时候可以加密解密。但并不是说在配置文件使用加密就能使系统安全，不过，它们允许 RabbitMQ 的部署遵循各国的规定，即配置文件中不应以纯文本形式显示敏感数据。
+
+要加密的值必须放在 Erlang `encrypted` 元组中：`{encrypted, ...}`。这里有在配置文件中默认是加密的例子：
+
+```erlang
+[
+  {rabbit, [
+      {default_user, <<"guest">>},
+      {default_pass,
+        {encrypted,
+         <<"cPAymwqmMnbPXXRVqVzpxJdrS8mHEKuo2V+3vt1u/fymexD9oztQ2G/oJ4PAaSb2c5N/hRJ2aqP/X0VAfx8xOQ==">>
+        }
+      },
+      {config_entry_decoder, [
+             {passphrase, <<"mypassphrase">>}
+         ]}
+    ]}
+].
+```
+
+要注意其中的 `config_entry_decoder` 的密码和密钥，RabbitMQ 将使用它解密加密的值。
+
+这个 `passphrase` 的值不应该硬编码到配置文件中，它应该在单独的文件中：
+
+```erlang
+[
+  {rabbit, [
+      %% ...
+      {config_entry_decoder, [
+             {passphrase, {file, "/path/to/passphrase/file"}}
+         ]}
+    ]}
+].
+```
+
+RabbitMQ 开始时会使用 `{passphrase, prompt}` 请求一个操作将 passphrase 输入进来。
+
+使用 [rabbitmqctl](https://www.rabbitmq.com/cli.html) 以及 `encode` 命令来加密值:
+
+```bash
+rabbitmqctl encode '<<"guest">>' mypassphrase
+{encrypted,<<"... long encrypted value...">>}
+rabbitmqctl encode '"amqp://fred:secret@host1.domain/my_vhost"' mypassphrase
+{encrypted,<<"... long encrypted value...">>}
+```
+
+在 Windows 平台中
+
+```powershell
+rabbitmqctl encode "<<""guest"">>" mypassphrase
+{encrypted,<<"... long encrypted value...">>}
+rabbitmqctl encode '"amqp://fred:secret@host1.domain/my_vhost"' mypassphrase
+{encrypted,<<"... long encrypted value...">>}
+```
+
+添加 `decode` 来解密
+
+```bash
+rabbitmqctl decode '{encrypted, <<"...">>}' mypassphrase
+<<"guest">>
+rabbitmqctl decode '{encrypted, <<"...">>}' mypassphrase
+"amqp://fred:secret@host1.domain/my_vhost"
+```
+
+WIndows:
+
+```powershell
+rabbitmqctl decode "{encrypted, <<""..."">>}" mypassphrase
+<<"guest">>
+rabbitmqctl decode "{encrypted, <<""..."">>}" mypassphrase
+"amqp://fred:secret@host1.domain/my_vhost"
+```
+
+不同类型的值都能被加密。上面的示例编码了二进制文件(`<<"guest">>`) 和字符串(`"amqp://fred:secret@host1.domain/my_vhost"`)。
+
+或者使用[命令行工具](https://www.rabbitmq.com/cli.html):
+
+```bash
+rabbitmqctl encode --cipher blowfish_cfb64 --hash sha256 --iterations 10000 \ '<<"guest">>' mypassphrase
+```
 
 
 
+windows:
 
+```powershell
+rabbitmqctl encode --cipher blowfish_cfb64 --hash sha256 --iterations 10000 \ "<<""guest"">>" mypassphrase
+```
 
+### 配置使用的环境白能量
 
+某些服务器参数可以使用环境变量进行配置：[节点名称](https://www.rabbitmq.com/cli.html#node-names)，RabbitMQ [配置文件路径](https://www.rabbitmq.com/configure.html#configuration-files)，[内部节点通信端口](https://www.rabbitmq.com/networking.html#ports)，Erlang VM 标志等
 
+### 路径于目录名称限制
+
+一些环境变量配置路径和位置(节点的基目录或数据目录、[插件源目录和扩展目录](https://www.rabbitmq.com/plugins.html)，等等)。这些路径必须排除一些字符:
+
+- `*` 和`?` (在Linux、macOS、BSD和其他类unix系统上)
+- `^` and `!` (Windows 平台)
+- `[` 和 `]`
+- `{` 和 `}`
+
+上述字符会使该节点无法按预期启动或工作（如展开插件并加载它们的元数据）
 
