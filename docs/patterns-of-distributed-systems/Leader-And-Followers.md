@@ -185,11 +185,22 @@ class ServerImpl…
 
 ## 为什么 Quorum 读/写不足以保证强一致性
 
+它可能看起来像是由 Dynamo 风格的数据库(如 Cassandra)提供的 Quorum 读/写，足以在服务器出现故障时获得强大的一致性。但其实不是这样的。思考下面例子。我们现在有一个三个服务器的集群，变量 x 存在所有的服务器上，（复制因子是 3）。启动时值从 1 开始。
 
+- 当 writer1 赋值 x = 2，复制因子是 3。这个写请求发送给所有的服务器。在 server1 写成功，但是在 server2 和 server3 失败了。（无论是在发送写请求之后的网络小故障还是只是在 writer1 写的时候发生了垃圾回收的暂停）。
+- 客户端 c1 从 server1 和 server2 读取 x，它获得了最新的值 x = 2，因为 server1 写成功了。
+- 客户端 c2 也读取了 x。但是 server1 临时宕机了，所以 c1 开始从 server2、server3 读取 x，其中的 x 都是旧值即 x = 1。所以 c2 在 c1 读取完最新的值之后读取了一个旧的值。
+
+两次连续的读取值就会显示最新的值。一旦 server1 重新恢复，随后的一次读取就会获取最新的值。假设读修复或反熵（Anti-Entropy）过程正在运行，其余的服务器也会“最终”得到最新的值。但是集群存储不提供保证会确保一次指定值就在所有客户端可见，及时服务器失败，所有后续读取都将继续获取该值。
+
+> 反熵：在一个最终一致性性的数据库中，随着时间流逝，应该被精确复制的节点都会慢慢互相偏差。这个偏差可以被认为是系统的“entropy”。反熵 就是让节点之间互相同步的过程。
 
 ## 例子
 
-
+- 为了实现系统的一致性，用一个服务器来与复制进程的活动协作是非常重要的。如 [Paxos](https://lamport.azurewebsites.net/pubs/paxos-simple.pdf) 在论文中所指出的那样，这对系统的生存力很重要。
+- 在 [Raft](https://raft.github.io/) 和 [Zab](https://zookeeper.apache.org/doc/r3.4.13/zookeeperInternals.html#sc_atomicBroadcast) 的一致性算法中，在启动或 leader 发生故障时，进行 leader 选举是明确的
+- [Viewstamp 复制](http://pmg.csail.mit.edu/papers/vr-revisited.pdf)算法有一个主要概念，类似于其它算法的里的 leader 
+- [Kafka](https://kafka.apache.org/) 有一个[控制器](https://cwiki.apache.org/confluence/display/KAFKA/Kafka+Controller+Internals)，它负责代表集群下所有行为。它对来自 Zookeeper 的事件做出反应，对于 Kafka 中的每个分区，都有一个指定的 leader broker 和follower broker。
 
 
 
