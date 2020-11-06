@@ -199,7 +199,7 @@ class ServerImpl…
 
 - 为了实现系统的一致性，用一个服务器来与复制进程的活动协作是非常重要的。如 [Paxos](https://lamport.azurewebsites.net/pubs/paxos-simple.pdf) 在论文中所指出的那样，这对系统的生存力很重要。
 - 在 [Raft](https://raft.github.io/) 和 [Zab](https://zookeeper.apache.org/doc/r3.4.13/zookeeperInternals.html#sc_atomicBroadcast) 的一致性算法中，在启动或 leader 发生故障时，进行 leader 选举是明确的
-- [Viewstamp 复制](http://pmg.csail.mit.edu/papers/vr-revisited.pdf)算法有一个主要概念，类似于其它算法的里的 leader 
+- [Viewstamp 复制](http://pmg.csail.mit.edu/papers/vr-revisited.pdf)算法有一个 Primary 概念，类似于其它算法的里的 leader 
 - [Kafka](https://kafka.apache.org/) 有一个[控制器](https://cwiki.apache.org/confluence/display/KAFKA/Kafka+Controller+Internals)，它负责代表集群下所有行为。它对来自 Zookeeper 的事件做出反应，对于 Kafka 中的每个分区，都有一个指定的 leader broker 和follower broker。
 
 
