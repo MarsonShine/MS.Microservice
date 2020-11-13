@@ -18,7 +18,7 @@ namespace MS.Microservice.MongoDb.Test
         protected virtual ILogger<MongoDbTest> Logger { get; set; }
         public MongoDbTest() : base()
         {
-            _cityRepository = RootServiceProvider.GetService<ICityRepository>();
+            _cityRepository = RootServiceProvider.GetService<ICityRepository>()!;
             Logger = NullLogger<MongoDbTest>.Instance;
         }
 

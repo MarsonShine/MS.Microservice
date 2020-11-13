@@ -74,7 +74,7 @@ namespace MS.Microservice.Domain.Enumerations
 
         private static T Parse<T, K>(K value, string name, Func<T, bool> predicate) where T : Enumeration, new()
         {
-            var matchingItem = GetAll<T>().FirstOrDefault(predicate);
+            var matchingItem = GetAll<T>().FirstOrDefault(predicate)!;
 
             if(matchingItem == null!)
             {
@@ -244,7 +244,7 @@ namespace MS.Microservice.Domain.Enumerations
 
         static bool TryParse(Func<TEnumeration, bool> predicate, out TEnumeration result)
         {
-            result = GetAll().FirstOrDefault(predicate);
+            result = GetAll().FirstOrDefault(predicate)!;
             return result != null;
         }
 
