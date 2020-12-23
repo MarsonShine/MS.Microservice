@@ -33,7 +33,8 @@ namespace MS.Microservice.Test
             AddEventBusService(services);
 
             ServiceProvider = services.BuildServiceProvider();
-            EventBus = ServiceProvider.GetService<IEventBus>();
+            EventBus = ServiceProvider.GetService<IEventBus>() ?? 
+                throw new ArgumentNullException(nameof(EventBus));
         }
 
         private void AddEventBusService(ServiceCollection services)

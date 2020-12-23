@@ -21,6 +21,17 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
 - [快照模式](docs/Snapshot.md)
 - [康威定律](docs/ConwayLaw.md)
 
+# 微服务模块组成
+
+- [消息中间件（RabbitMQ）](docs/mq)
+- [服务注册发现（Consul）](docs/consul)
+- [Grpc](docs/grpc)
+- [服务网格](docs/service-mesh)
+
+# 分布式系统模式
+
+- [分布式系统解决方案模式](docs/patterns-of-distributed-systems)
+
 # 关于 Docker 部署
 
 利用 Visual Studio 2019 工具添加 docker 支持，会根据项目结构自动添加两个文件结构
@@ -72,8 +83,3 @@ ENTRYPOINT ["dotnet", "MS.Microservice.Web.dll"]
   </packageSources>
 </configuration>
 ```
-
-# 关于微服务的架构组成知识点
-
-- [Grpc](docs/grpc/README.md)
-- [Consul](docs/consul/README.md)

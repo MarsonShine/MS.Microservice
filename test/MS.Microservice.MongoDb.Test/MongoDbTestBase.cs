@@ -7,6 +7,7 @@ using MS.MicroService.MongoDb.Log;
 using MS.MicroService.MongoDb.Repository;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace MS.Microservice.MongoDb.Test
@@ -33,9 +34,9 @@ namespace MS.Microservice.MongoDb.Test
 
             RootServiceProvider = CreateServiceProvider(services);
 
-            LoggerFactory = RootServiceProvider.GetService<ILoggerFactory>();
+            LoggerFactory = RootServiceProvider.GetService<ILoggerFactory>()!;
 
-            LoggerFactory.AddProvider(new MongoDbLoggerProvider(RootServiceProvider.GetService<IMongoDbLogRepository>()));
+            LoggerFactory.AddProvider(new MongoDbLoggerProvider(RootServiceProvider.GetService<IMongoDbLogRepository>()!));
         }
 
         private IServiceCollection CreateServiceCollection()
@@ -43,12 +44,12 @@ namespace MS.Microservice.MongoDb.Test
             return new ServiceCollection();
         }
 
-        private IServiceProvider CreateServiceProvider(IServiceCollection services)
+        private IServiceProvider CreateServiceProvider([NotNull]IServiceCollection services)
         {
             return services.BuildServiceProvider();
         }
 
-        private void RegisterRepository(IServiceCollection services)
+        private static void RegisterRepository(IServiceCollection services)
         {
             services.TryAddTransient<ICityRepository, CityRepository>();
         }

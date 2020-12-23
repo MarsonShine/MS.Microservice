@@ -4,7 +4,7 @@
   <Import Project="build\version.props" />-->
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- Don't make missing XML docs a fatal build error, but still surface so we have visibility into undocumented APIs. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591</WarningsNotAsErrors>

@@ -73,12 +73,12 @@ namespace MS.WebHttpClient
             {
                 if (null != message && message.IsSuccessStatusCode)
                 {
-                    if (message.Content is object && message.Content.Headers.ContentType.MediaType == "application/json")
+                    if (message.Content is object && message.Content.Headers.ContentType!.MediaType == "application/json")
                     {
                         var contentStream = await message.Content.ReadAsStreamAsync();
                         try
                         {
-                            return await JsonSerializer.DeserializeAsync<T>(contentStream, new JsonSerializerOptions { IgnoreNullValues = true, PropertyNameCaseInsensitive = true });
+                            return (await JsonSerializer.DeserializeAsync<T>(contentStream, new JsonSerializerOptions { IgnoreNullValues = true, PropertyNameCaseInsensitive = true }))!;
                         }
                         catch (JsonException)
                         {
@@ -86,12 +86,11 @@ namespace MS.WebHttpClient
                         }
                     }
                 }
-
                 return default!;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
 
         }

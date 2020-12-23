@@ -1,9 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <LangVersion>8.0</LangVersion>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="MailKit" Version="2.6.0" />
   </ItemGroup>
