@@ -83,3 +83,45 @@ ENTRYPOINT ["dotnet", "MS.Microservice.Web.dll"]
   </packageSources>
 </configuration>
 ```
+
+# docker 部署修改
+
+由于本项目增加了文件 `Directory.Build.props` 以及 `global.json` 文件，所以生成项目是要依赖解决方案的。在上面的的 dockerfile 内容只是复制了各项目的内容，没有 `*.sln` 做上下文环境支撑，所以无法正常运行。
+
+需要将对应的项目目录结构全部拷贝至 docker 环境中，如最新的 dockerfile 内容如下：（⚠️要放在 sln 同目录下）
+
+```dockerfile
+#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
+
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-buster-slim AS base
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
+FROM mcr.microsoft.com/dotnet/sdk:5.0-buster-slim AS build
+WORKDIR /src
+COPY ["Directory.Build.props","src/"]
+COPY ["global.json","src/"]
+COPY ["MS.Microservice.sln","src/"]
+COPY ["nuget.config","src/"]
+COPY ["src/MS.Microservice.Web/MS.Microservice.Web.csproj", "src/MS.Microservice.Web/"]
+COPY ["src/MS.Microservice.IntegrateEvent/MS.Microservice.IntegrateEvent.csproj", "src/MS.Microservice.IntegrateEvent/"]
+COPY ["src/MS.Microservice.Database/MS.Microservice.Database.csproj", "src/MS.Microservice.Database/"]
+COPY ["src/MS.Microservice.Repostitory/MS.Microservice.Repostitory.csproj", "src/MS.Microservice.Repostitory/"]
+COPY ["src/MS.Microservice.Domain/MS.Microservice.Domain.csproj", "src/MS.Microservice.Domain/"]
+COPY ["src/MS.Microservice.Core/MS.Microservice.Core.csproj", "src/MS.Microservice.Core/"]
+RUN dotnet restore "src/MS.Microservice.Web/MS.Microservice.Web.csproj"
+COPY . .
+
+WORKDIR "/src/src/MS.Microservice.Web"
+RUN dotnet build "MS.Microservice.Web.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "MS.Microservice.Web.csproj" -c Release -o /app/publish
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "MS.Microservice.Web.dll"]
+```
+
