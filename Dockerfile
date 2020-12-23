@@ -1,24 +1,26 @@
 #See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-buster-slim AS base
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-buster-slim AS base
 WORKDIR /app
-EXPOSE 5000
-# EXPOSE 443
+EXPOSE 80
+EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
-# WORKDIR /src
-COPY ["Directory.Build.props","MS.Microservice.Web/"]
-COPY ["nuget.config","MS.Microservice.Web/"]
-COPY ["/src/MS.Microservice.Web/MS.Microservice.Web.csproj", "MS.Microservice.Web/"]
-COPY ["/src/MS.Microservice.IntegrateEvent/MS.Microservice.IntegrateEvent.csproj", "MS.Microservice.IntegrateEvent/"]
-COPY ["/src/MS.Microservice.Database/MS.Microservice.Database.csproj", "MS.Microservice.Database/"]
-COPY ["/src/MS.Microservice.Repostitory/MS.Microservice.Repostitory.csproj", "MS.Microservice.Repostitory/"]
-COPY ["/src/MS.Microservice.Domain/MS.Microservice.Domain.csproj", "MS.Microservice.Domain/"]
-COPY ["/src/MS.Microservice.Core/MS.Microservice.Core.csproj", "MS.Microservice.Core/"]
-RUN dotnet restore "MS.Microservice.Web/MS.Microservice.Web.csproj"
+FROM mcr.microsoft.com/dotnet/sdk:5.0-buster-slim AS build
+WORKDIR /src
+COPY ["Directory.Build.props","src/"]
+COPY ["global.json","src/"]
+COPY ["MS.Microservice.sln","src/"]
+COPY ["nuget.config","src/"]
+COPY ["src/MS.Microservice.Web/MS.Microservice.Web.csproj", "src/MS.Microservice.Web/"]
+COPY ["src/MS.Microservice.IntegrateEvent/MS.Microservice.IntegrateEvent.csproj", "src/MS.Microservice.IntegrateEvent/"]
+COPY ["src/MS.Microservice.Database/MS.Microservice.Database.csproj", "src/MS.Microservice.Database/"]
+COPY ["src/MS.Microservice.Repostitory/MS.Microservice.Repostitory.csproj", "src/MS.Microservice.Repostitory/"]
+COPY ["src/MS.Microservice.Domain/MS.Microservice.Domain.csproj", "src/MS.Microservice.Domain/"]
+COPY ["src/MS.Microservice.Core/MS.Microservice.Core.csproj", "src/MS.Microservice.Core/"]
+RUN dotnet restore "src/MS.Microservice.Web/MS.Microservice.Web.csproj"
 COPY . .
 
-WORKDIR "/MS.Microservice.Web"
+WORKDIR "/src/src/MS.Microservice.Web"
 RUN dotnet build "MS.Microservice.Web.csproj" -c Release -o /app/build
 
 FROM build AS publish
