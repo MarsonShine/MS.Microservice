@@ -5,7 +5,7 @@
     public class OrderCreatedEvent : IOrderCreatedEvent
     {
         public OrderCreatedEvent(string orderNumber, string orderName) {
-            OrderNumber = OrderNumber;
+            OrderNumber = orderName;
             OrderName = orderName;
             CreationTime = DateTime.UtcNow;
         }
