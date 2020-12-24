@@ -84,7 +84,7 @@ ENTRYPOINT ["dotnet", "MS.Microservice.Web.dll"]
 </configuration>
 ```
 
-# docker 部署修改
+# 2020-12-24 修改
 
 由于本项目增加了文件 `Directory.Build.props` 以及 `global.json` 文件，所以生成项目是要依赖解决方案的。在上面的的 dockerfile 内容只是复制了各项目的内容，没有 `*.sln` 做上下文环境支撑，所以无法正常运行。
 
