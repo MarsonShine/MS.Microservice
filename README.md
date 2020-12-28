@@ -35,6 +35,7 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
 # 分布式锁
 
 - [Redis：Redlock](docs/distribution-lock/redis-distribution-lock.md)
+- [关于 Redis 分布式锁实现原理分析以及可能出现的问题](docs/How-To-Do-Distributed-Locking.md)
 - Zookeeper
 
 # 关于 Docker 部署
