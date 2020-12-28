@@ -32,6 +32,11 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
 
 - [分布式系统解决方案模式](docs/patterns-of-distributed-systems)
 
+# 分布式锁
+
+- [Redis：Redlock](docs/distribution-lock/redis-distribution-lock.md)
+- Zookeeper
+
 # 关于 Docker 部署
 
 利用 Visual Studio 2019 工具添加 docker 支持，会根据项目结构自动添加两个文件结构
