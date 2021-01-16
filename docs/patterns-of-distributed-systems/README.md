@@ -133,6 +133,6 @@
 
 
 
-# 参考资料
+# 原文系列
 
-- 原文：https://martinfowler.com/articles/patterns-of-distributed-systems/
+- https://martinfowler.com/articles/patterns-of-distributed-systems/
