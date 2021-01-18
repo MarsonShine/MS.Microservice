@@ -1,9 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using MS.Microservice.Core.EventEntity;
+using MS.Microservice.Domain;
 using MS.Microservice.Test.Etos;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 

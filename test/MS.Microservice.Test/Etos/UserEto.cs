@@ -1,7 +1,4 @@
-﻿using MS.Microservice.Core.EventEntity;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using MS.Microservice.Domain;
 
 namespace MS.Microservice.Test.Etos
 {

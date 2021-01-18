@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MS.Microservice.Core.EventEntity
+namespace MS.Microservice.Domain
 {
     public class EventBase
     {

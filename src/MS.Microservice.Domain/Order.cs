@@ -11,7 +11,12 @@ namespace MS.Microservice.Domain
         public string OrderName { get; protected set; } = null!;
         public decimal Price { get; set; }
         public DateTimeOffset? UpdationTime { get; set; }
-        public Order()
+        public Order() : this(0)
+        {
+           
+        }
+
+        public Order(int id) : base(id)
         {
             CreationTime = DateTimeOffset.UtcNow;
         }

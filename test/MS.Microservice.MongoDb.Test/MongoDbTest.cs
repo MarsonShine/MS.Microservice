@@ -32,7 +32,7 @@ namespace MS.Microservice.MongoDb.Test
         [Fact]
         public async Task Person_Add_Successfully()
         {
-            var city = new City
+            var city = new City(1)
             {
                 Name = "深圳市"
             };
@@ -59,7 +59,7 @@ namespace MS.Microservice.MongoDb.Test
             Assert.Equal(cityName, city.Name);
 
             // update
-            city.SetId(100000);
+            //city.SetId(100000);
             city.Name = "岳阳市";
             var cityUpdated = await _cityRepository.UpdateAsync(city);
             Assert.NotNull(cityUpdated);
@@ -104,7 +104,7 @@ namespace MS.Microservice.MongoDb.Test
         [Fact]
         public void MongoDb_Log_Init_Successfully()
         {
-            var logEntity = new MongoDbLogEntity
+            var logEntity = new MongoDbLogEntity(1)
             {
                 Content = "测试添加日志内容",
                 IP = "localhost",

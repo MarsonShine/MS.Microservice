@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace MS.Microservice.Core.EventEntity
+namespace MS.Microservice.Domain
 {
     public interface IEventHandle<in TEvent> 
         where TEvent : EventBase

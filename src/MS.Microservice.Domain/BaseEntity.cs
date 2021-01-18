@@ -1,19 +1,35 @@
 ﻿using MediatR;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
+// 与 MS.Microservice.Core 领域相关整合到 Domain 层下
 namespace MS.Microservice.Domain
 {
-    public abstract class BaseEntity : IAggregateRoot
+    public abstract class BaseEntity : BaseEntity<int>
     {
-        private int id;
-        public virtual int Id
+        protected BaseEntity(int id) : base(id)
+        {
+        }
+    }
+
+    public abstract class BaseEntity<TKey> : IEntity<TKey>, IAggregateRoot
+    {
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑声明为可以为 null。
+        private TKey id;
+#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑声明为可以为 null。
+        public virtual TKey Id
         {
             get
             {
                 return id;
             }
+        }
+
+        protected BaseEntity(TKey id)
+        {
+            this.id = id;
         }
 
         private List<INotification>? _domainEvents;
@@ -47,10 +63,6 @@ namespace MS.Microservice.Domain
             this.IsDelete = true;
         }
 
-        protected void SetID(int id)
-        {
-            this.id = id;
-        }
         private DateTimeOffset creationTime;
         public virtual DateTimeOffset CreationTime
         {

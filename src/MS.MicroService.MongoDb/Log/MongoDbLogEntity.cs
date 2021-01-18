@@ -6,6 +6,10 @@ namespace MS.MicroService.MongoDb.Log
 {
     public class MongoDbLogEntity : BaseEntity
     {
+        public MongoDbLogEntity(int id) : base(id)
+        {
+        }
+
         /// <summary>
         /// 操作人姓名
         /// </summary>

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MS.Microservice.Core.EventEntity
+namespace MS.Microservice.Domain
 {
     public class InMemoryEventBus : IEventBus
     {

@@ -1,4 +1,4 @@
-﻿namespace MS.Microservice.Core.Entity
+﻿namespace MS.Microservice.Domain
 {
     public interface ISpecification
     {

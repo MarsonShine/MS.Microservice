@@ -1,6 +1,5 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using MS.Microservice.Core.Repository;
 using MS.Microservice.Domain;
 using System;
 using System.Diagnostics.CodeAnalysis;

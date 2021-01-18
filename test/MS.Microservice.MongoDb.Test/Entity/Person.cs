@@ -7,6 +7,10 @@ namespace MS.Microservice.MongoDb.Test.Entity
 {
     public class Person : BaseEntity
     {
+        public Person(int id) : base(id)
+        {
+        }
+
         public string Name { get; set; } = null!;
     }
 }

@@ -1,11 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using MS.Microservice.Core.EventEntity;
+using MS.Microservice.Domain;
 using MS.Microservice.Test.Etos;
 using MS.Microservice.Test.Handles;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Xunit;
 
 namespace MS.Microservice.Test

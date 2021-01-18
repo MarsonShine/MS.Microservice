@@ -7,11 +7,10 @@ namespace MS.Microservice.MongoDb.Test.Entity
 {
     public class City : BaseEntity
     {
-        public string Name { get; set; } = null!;
-        
-        public void SetId(int id)
+        public City(int id) : base(id)
         {
-            SetID(id);
         }
+
+        public string Name { get; set; } = null!;
     }
 }
