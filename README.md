@@ -62,10 +62,29 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
 
 - 微服务划分，最后一个难点也是团队争议比较多的点，就是如何划分微服务。请切记尽可能让每个微服务逻辑自洽。
 
+## 微服务分层
+
 - [应用层](docs/basic-concept/Application.md)
+  - Web API（.NET,Java,Go）
+  - 网络访问（GRPC）
+  - API 接口实现
+  - 命令与命令事件（Command，Command Handler）
+  - 查询器（Query，CQRS 分离模式），如 Dapper,ADO.NET
+  - ...
 - [领域层](docs/basic-concept/Domain.md)
-- [仓储层](docs/basic-concept/Repository.md)
+  - 实体领域模型
+  - POCO 实体类
+  - 领域实体行为（方法，事件）
+  - DDD 模式
+    - 领域实体，聚合根
+    - 值对象
+    - 仓储接口
 - [基础设施层](docs/basic-concept/Infrastructure.md)
+  - 数据持久化架构
+    - 仓储接口的实现
+  - 使用 ORM，数据访问层 API（EF，ADO.NET，NOSQL）
+  - 其它公共功能基础设施，被其他层引用到的模块都可以放置此
+    - Logging，密码安全，搜索引擎等
 
 # 微服务模块组成
 
