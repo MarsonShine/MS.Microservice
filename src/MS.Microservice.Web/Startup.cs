@@ -19,6 +19,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.PlatformAbstractions;
 using MS.Microservice.Database;
+using MS.Microservice.EventBus;
+using MS.Microservice.EventBus.Abstractions;
 using MS.Microservice.Web;
 using MS.Microservice.Web.AutofacModules;
 using MS.Microservice.Web.AutoMappers.Profiles;
@@ -64,13 +66,13 @@ namespace MS.Microservice
                 //options.DescribeAllEnumsAsStrings();
                 options.DocInclusionPredicate((docName, description) => true);
             });
+            RegisterEventBus(services);
+        }
 
-            //builder.RegisterModule<ApplicationAutoModule>();  //success
-            //builder.Populate(services);
-
-            //builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
-
-            //return new AutofacServiceProvider(builder.Build());
+        private void RegisterEventBus(IServiceCollection services)
+        {
+            services.AddSingleton<IEventBusSubscriptionsManager, InMemoryEventBusSubscriptionsManager>();
+            //services.AddTransient<IEventbus>();
         }
 
         // ConfigureContainer is where you can register things directly
@@ -117,9 +119,20 @@ namespace MS.Microservice
                 cfg.MapDefaultControllerRoute();
             });
 
+            // 订阅事件
+            ConfigureEventBus(app);
+
             //var bus = app.ApplicationServices.GetService<IBusControl>();
             //var busHandle = TaskUtil.Await(() => bus.StartAsync());
             //lifetime.ApplicationStopping.Register(() => busHandle.Stop());
+        }
+
+        private void ConfigureEventBus(IApplicationBuilder app)
+        {
+            var eventBus = app.ApplicationServices.GetRequiredService<IEventbus>();
+
+            //eventBus.Subscribe<ProductPriceChangedIntegrationEvent, ProductPriceChangedIntegrationEventHandler>();
+            //eventBus.Subscribe<OrderStartedIntegrationEvent, OrderStartedIntegrationEventHandler>();
         }
     }
 }

@@ -1,6 +1,10 @@
 # MS.Microservice
 微服务架构设计
 
+[.NET 微服务 - 体系结构电子书-原文英文版](https://github.com/dotnet-architecture/eBooks/tree/master/current/microservices)
+
+[.NET 微服务 - 体系结构电子书](https://docs.microsoft.com/zh-cn/dotnet/architecture/microservices/)
+
 Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com/articles/microservices.html#SmartEndpointsAndDumbPipes)
 
 - [上下文边界](docs/Context-Bounded.md)
@@ -60,7 +64,7 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
 
   还有一个问题就是客户端与服务的网络协议不同，比如客户端与服务端采用的是浏览器友好的 HTTP 协议，而内部服务用的可能是 GRPC 或是 AMPQ 协议，这也带来了一定的复杂性。
 
-- 微服务划分，最后一个难点也是团队争议比较多的点，就是如何划分微服务。请切记尽可能让每个微服务逻辑自洽。
+- 微服务分区，最后一个难点也是团队争议比较多的点，就是如何划分微服务。请切记尽可能让每个微服务逻辑自洽。
 
 ## 微服务分层
 

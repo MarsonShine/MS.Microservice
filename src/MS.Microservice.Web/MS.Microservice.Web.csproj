@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\MS.Microservice.EventBus\MS.Microservice.EventBus.csproj" />
     <ProjectReference Include="..\MS.Microservice.Database\MS.Microservice.Database.csproj" />
     <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
     <ProjectReference Include="..\MS.Microservice.IntegrateEvent\MS.Microservice.IntegrateEvent.csproj" />
