@@ -97,6 +97,14 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
 - [Grpc](docs/grpc)
 - [服务网格](docs/service-mesh)
 
+# 分布式链路追踪
+
+分布式链路追踪要遵循 [OpenTracing API](https://github.com/apache/skywalking) 规范的。
+
+- [Jaeger](https://github.com/jaegertracing/jaeger)
+- [Zipkin](https://github.com/openzipkin/zipkin)
+- [Skyworking](https://github.com/apache/skywalking)
+
 # 分布式系统模式
 
 - [分布式系统解决方案模式](docs/patterns-of-distributed-systems)
