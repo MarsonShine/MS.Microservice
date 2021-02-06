@@ -90,6 +90,30 @@ Martin Fowler 对微服务特征的概括：[微服务](https://martinfowler.com
   - 其它公共功能基础设施，被其他层引用到的模块都可以放置此
     - Logging，密码安全，搜索引擎等
 
+## 微服务验证
+
+编码一定免不了的就是异常，以我现在的经验业务验证一般都是写在应用层。还有一些就是请求接口参数的基本验证逻辑，向这种一般都是直接从业务层返回给 UI 的。还有一种验证就是领域验证，比如聚合根添加实体的时候会对领域实体属性进行符合领域需求的验证判断。我们一般的做法是直接抛出一个属于领域层特定的错误类型如`DomainException`，然后在应用层或是全局异常处理程序中对消息展现给 UI。这样就做到了领域层与应用层的逻辑解耦。
+
+```c#
+public void check() {
+   if (date == null) throw new IllegalArgumentException("date is missing");
+   LocalDate parsedDate;
+   try {
+     parsedDate = LocalDate.parse(date);
+   }
+   catch (DateTimeParseException e) {
+     throw new IllegalArgumentException("Invalid format for date", e);
+   }
+   if (parsedDate.isBefore(LocalDate.now())) throw new IllegalArgumentException("date cannot be before today");
+   if (numberOfSeats == null) throw new IllegalArgumentException("number of seats cannot be null");
+   if (numberOfSeats < 1) throw new IllegalArgumentException("number of seats must be positive");
+ }
+```
+
+这个做法是没错的，但是我们要知道，这种做法是有代价了，尽管结构，代码都优雅了，但是请记住这是以抛出异常的方式为代价实现的。我们知道发生异常会给应用程序带来非常大的性能开销，会由用户态切换成内核态将错误信息栈拿到返回给上层应用。那么我们其实是可以**通知模式验证**代替这种跑错的方式的。
+
+具体详见用[通知代替抛出异常](docs/Replace-Throw-Exception-With-Notification.md)
+
 # 微服务模块组成
 
 - [消息中间件（RabbitMQ）](docs/mq)

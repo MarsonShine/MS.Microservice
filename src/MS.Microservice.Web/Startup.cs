@@ -26,6 +26,7 @@ using MS.Microservice.Web.AutofacModules;
 using MS.Microservice.Web.AutoMappers.Profiles;
 using MS.Microservice.Web.Swagger;
 using MySql.Data.EntityFrameworkCore.Extensions;
+using Polly;
 
 namespace MS.Microservice
 {
@@ -44,6 +45,13 @@ namespace MS.Microservice
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            // 定义伸缩性，可用性强的 httpclient
+            services.AddHttpClient("highavailable")
+                .SetHandlerLifetime(TimeSpan.FromSeconds(10)) // 设置每个请求处理的生存时间（可重用时间）为 10 秒，默认 2 分钟
+                .AddTransientHttpErrorPolicy(p => 
+                    p.WaitAndRetryAsync(3, _ => TimeSpan.FromMilliseconds(600))
+                );
+
             services.AddEntityFrameworkMySQL()
                 .AddDbContext<OrderingContext>(options =>
                 {
