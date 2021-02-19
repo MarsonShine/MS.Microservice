@@ -20,11 +20,11 @@
 
 - 第二定律
 
-  There is never enough time to do something right, but there is always enough time to do it over：时间再多，一件事也不可能做的完美，但是总有时间会做完一件事。再敏捷开发中，就是产品迭代，总会有 bug 修复，做到持续交付，获取反馈再快速相应反馈（bug）并交付。
+  There is never enough time to do something right, but there is always enough time to do it over：时间再多，一件事也不可能做的完美，但是总有时间会做完一件事。再敏捷开发中，就是产品迭代，总会有 bug 修复，做到持续交付，获取反馈再快速相应反馈（bug）并交付。所以我们要**先把能完成的先完成，不要一口气吃成一个大胖子**，特别是在微服务时代，每个微服务都要要求做到弹性设计（Resilience）、高可用，目的也就是这个。
 
 - 第三定律
 
-  There is a homomorphism from the linear graph of a system to the linear graph of its design organization：线性系统和线性组织架构间有潜在的异质同态特性；意思就是说根据架构的特定，切分成对应的团队。比如整个系统包含支付模块，订单模块，那么就可以分成支付和订单两个团队独立负责。做到系统模块，服务自洽。
+  There is a homomorphism from the linear graph of a system to the linear graph of its design organization：线性系统和线性组织架构间有潜在的异质同态特性；意思就是说根据架构的特定，切分成对应的团队。比如整个系统包含支付模块，订单模块，那么就可以分成支付和订单两个团队独立负责。做到系统模块，服务自洽。这样也减少了沟通成本，减少了一个人分担多个模块导致的思维发散等困惑。
 
 - 第四定律
 
@@ -35,4 +35,5 @@
 - 《架构整洁之道》
 - https://ardalis.com/conways-law-ddd-and-microservices/
 - https://www.jianshu.com/p/ba2d444c89d2
+- https://developer.aliyun.com/article/8611
 
