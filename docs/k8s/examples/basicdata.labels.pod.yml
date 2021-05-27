@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: basicdata-label
+  labels:
+    creation_method: manual
+    env: dev
+spec:
+  containers:
+  - image: basicdata:latest # 创建容器所用的镜像
+    imagePullPolicy: IfNotPresent # 本地拉取，如果本地没有则拉取远程镜像仓库
+    name: basicdata # 容器名称
+    ports:
+    - containerPort: 9000 # pod 开启应用监听的端口
+      protocol: TCP
