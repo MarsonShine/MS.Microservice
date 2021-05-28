@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: multi-parallelism-batch-job
+spec:
+  completions: 5  # 设置顺序运行5个作业
+  parallelism: 2  # 最多2个并发job
+  activeDeadlineSeconds: 100  # job运行的超时时间
+  backoffLimit: 5 # 失败重试的次数，默认为 6
+  template:
+    metadata:
+      labels:
+        app: multi-batch-job
+    spec:
+      restartPolicy: OnFailure  # 定义重启策略
+      containers:
+      - name: main
+        image: luksa/batch-job

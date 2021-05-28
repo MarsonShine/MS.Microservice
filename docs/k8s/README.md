@@ -9,6 +9,20 @@
 1. [Kubernetes 指南](https://kubernetes.feisky.xyz/#ben-shu-ban-ben-geng-xin-ji-lu)（次数更新涉及到的版本为 v1.11 版本，很陈旧了）
 2. 《Kubernetes in Action》
 
+# Kubernet 资源三个结构
+
+## metadata
+
+这主要包括**名称、命名空间、标签和关于该容器的其他信息**
+
+## spec
+
+主要包含 pod 的内容实际说明，例如 pod 的容器、卷以及其他数据
+
+## status
+
+包含当前运行中的 pod 的状态信息，例如 pod 所处的条件、每个容器的描述和状态，以及内部 IP 和其他基本信息
+
 # 初学遇到的问题
 
 ##  创建 pod 遇到的问题
@@ -355,3 +369,59 @@ kubectl delete rs basicdata-replicaset
 ## 关于 DaemonSet
 
 因为它的⼯作是确保**⼀个 pod 匹配它的选择器并在每个节点上运⾏。即每个节点上运行一个 pod**。其副本是在节点上随机分布的。
+
+```yaml
+apiVersion: apps/v1
+kind: DaemondSet
+metadata:
+  name: ssd-monitor
+spec:
+  selector:
+    matchLabels:
+      apps: ssd-monitor
+    template:
+      metadata:
+        labels:
+          app: ssd-monitor
+      spec:
+        nodeSelector:
+          disk: ssd # 节点选择器，选择 disk=ssd 标签的节点
+        constainers:
+        - name: main
+          image: luksa/ssd-monitor
+```
+
+这就代表了选择每个带有 disk=ssd 标签的节点上部署一个 pod。
+
+## 关于定时任务 pod（Job）
+
+像定时作业不应该像之前的 pod 一样一直保持启动状态。有些 pod 如完成特定的作业，当这个作业的 pod 完成时就关闭无需重新开启。这个时候我们就需要开启 Job 类型的 pod
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: batch-job
+spec:
+  template:
+    metadata:
+      labels:
+        app: batch-job
+    spec:
+      restartPolicy: OnFailure  # 定义重启策略
+      containers:
+      - name: main
+        image: luksa/batch-job
+```
+
+要注意的是其中的 `restartPolicy`，默认是 `Always`，但是我们不需要它无限重启，而是正常完成就可以关闭。所以我们要设置成 `Onfailure`。还有一个值是 `Never`。
+
+可以设置 `completions` 以及 `parallelism` 属性来实现串行还是并行完成作业。
+
+### 横向伸缩 Job
+
+```bash
+kubectl scale job multi-completion-batch-job --replicas 3
+```
+
+效果就是将 parallelism 变为 3，另外的 pod 就会立即启动。

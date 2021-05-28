@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: multi-batch-job
+spec:
+  completions: 5  # 设置顺序运行5个作业
+  template:
+    metadata:
+      labels:
+        app: multi-batch-job
+    spec:
+      restartPolicy: OnFailure  # 定义重启策略
+      containers:
+      - name: main
+        image: luksa/batch-job
