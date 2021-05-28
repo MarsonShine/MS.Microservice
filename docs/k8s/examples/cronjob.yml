@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: batch-job-every-fifteen-minutes
+spec:
+  schedule: "0,15,30,45 * * * *"  # 每天每小时0，15，30，45分钟运行一次
+  startingDeadlineSeconds: 15 # pod 最迟必须在预定的时间 15 秒之后开始运行
+  jobTemplate:  # job 模版
+    spec:
+      template:
+        metadata:
+          labels:
+            app: periodic-batch-job
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: main
+            image: luksa/batch-job
