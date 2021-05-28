@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  containers:
+  - image: basicdata:latest # 创建容器所用的镜像
+    imagePullPolicy: IfNotPresent # 本地拉取，如果本地没有则拉取远程镜像仓库
+    name: basicdata-unhealthy # 容器名称
+    livenessProbe: # 存活探针
+      httpGet:  # http get 类型的探针
+        path: /
+        port: 9000
+      initialDelaySeconds: 15 # 初始化等待时间即会在第一次探测前等待15秒
+
+# 存活探针默认的设置是定期调用指定路径，如果超过 5 次 http 状态码不是 20x/3xx 就会重启 pod

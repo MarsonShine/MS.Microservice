@@ -1,0 +1,21 @@
+apiVersion: apps/v1 # ReplicaSet 不是 api v1 的一部分，所以要指定正确的 api version
+kind: ReplicaSet
+metadata:
+  name: basicdata-replicaset
+spec:
+  replicas: 3
+  selector: 
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - basidata-rc
+  template:
+    metadata:
+      labels:
+        app: basicdata-rc
+    spec:
+      containers:
+      - name: basicdata
+        image: basicdata:latest
+        imagePullPolicy: IfNotPresent
