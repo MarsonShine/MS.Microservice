@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: basicdata-ingress
+spec:
+  rules: # 同一个 ingress 服务可以配置不同的服务
+  - host: basicdata.example.com
+    http:
+      paths: 
+      - path: /
+        backend:
+          serviceName: basicdata-nodeport
+          servicePort: 80
+  - host: bar.example.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: bar
+          servicePort: 80

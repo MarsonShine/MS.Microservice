@@ -425,3 +425,70 @@ kubectl scale job multi-completion-batch-job --replicas 3
 ```
 
 效果就是将 parallelism 变为 3，另外的 pod 就会立即启动。
+
+## 直连 pod 执行 cmd 命令
+
+```bash
+kubectl exec basicdata-8znt9 -- curl -s http://10.111.206.238
+```
+
+> 双横杠（--）代表着 kubectl 命令项的结束。在两个横杠之后的内容是指在 pod 内部需要执⾏的命令。
+
+## 创建对外访问的服务
+
+### NodePart
+
+通过创建 NodePort 服务，可以让 Kubernetes 在其所有节点上保留⼀个端口（所有节点上都使⽤相同的端口号），并将传⼊的连接转发给作为服务部分的 pod。
+
+即：连接集群外部的服务通讯
+
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: basicdata-nodepart
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 9000
+    nodePort: 30123 # 通过集群节点的 30123 端口可以访问该服务
+  selector:
+    app: basicdata
+```
+
+> 在通信时要注意可能会因为防火墙的原因通信失败
+
+### LoadBlancer
+
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: basicdata-loadbalancer
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9001	# 如果端口被其它程序占用则会失败
+    targetPort: 9000
+  selector:
+    app: basicdata
+```
+
+### Ingress
+
+通过创建 Ingress 服务也能对外部访问服务。
+
+⼀个重要的原因是每个LoadBalancer 服务都需要⾃⼰的负载均衡器，以及独有的公有 IP 地址，**⽽ Ingress 只需要⼀个公⽹ IP 就能为许多服务提供访问。**
+
+**只有 Ingress 控制器在集群中运⾏，Ingress 资源才能正常⼯作。**不同的 Kubernetes 环境使⽤不同的控制器实现，但有些并不提供默认控制器。
+
+Kubernet 官方提供了很多 Ingress 控制器，具体详见：https://kubernetes.io/zh/docs/concepts/services-networking/ingress/
+
+## 获取所有节点的 IP
+
+```bash
+kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}' #
+kubectl get nodes -o json # 查看所有节点的信息，json 格式
+```
+
