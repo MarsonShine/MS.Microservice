@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: basicdata-headless
+spec:
+  clusterIP: None # 设置这个将该服务称为 handless
+  publishNotReadyAddresses: true
+  ports:
+  - port: 8000
+    targetPort: 9000
+  selector:
+    app: basicdata

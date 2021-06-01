@@ -78,6 +78,12 @@ kubectl run basicdata --image=basicdata:latest --port=9000 --image-pull-policy N
 
 > 注意，上述命令只能在建立 replicationcontroller 之后才有效果。
 
+## 直接访问 pod bash
+
+```bash
+ kubectl exec -it basicdata-2fzx8 -- bash
+```
+
 ## 如何横向拓展 pod 节点
 
 我们可以通过创建一个 basicdata 的 replicationcontroller。首先我们定义一个 replicationcontroller.yml 文件
@@ -492,3 +498,100 @@ kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP
 kubectl get nodes -o json # 查看所有节点的信息，json 格式
 ```
 
+## TLS
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: basicdata-ingress-tls
+spec:
+  tls:
+  - hosts:
+    - basicdata.example.com
+    secretName: tls-secret
+  rules:
+    - host: basicdata.example.com
+      http:
+        paths:
+        - path: /
+          backend:
+            serviceName: basicdata-nodepart
+            servicePost: 8000
+```
+
+首先要创建 Secret；第一步就要创建私钥和证书：
+
+```bash
+openssl genrsa -out tls.key 2048	# 创建 tls.key 密钥
+openssl req -new -x509 -key tls.key -out tls.cert -days 360 -subj /CN=basic.example.com	# 创建 tls.cert 证书
+```
+
+创建 Secret
+
+```bash
+kubectl create secret tls tls-secret --cert=tls.cert --key=tls.key
+```
+
+然后通过 CertificateSigningRequest（CSR） 资源签署证书：
+
+```bash
+kubectl certificate approve <name of the CSR>
+```
+
+> 请注意，证书签署者组件必须在集群中运⾏，否则创建 CertificateSigningRequest 以及批准或拒绝将不起作⽤。
+
+## 探针（probe）
+
+探针之前有说到存货探针，相当于一个健康检查。除了存活探针之外还有**就绪探针（readiness probe）**，代表 pod 准备就绪了。内部是通过申明就绪探针的检验方式来实现的，在 `spec.containers` 节点下增加就绪探针申明：
+
+```yml
+readinessProbe:  # pod 的每个容器都会有一个就绪探针
+  exec:
+    command:
+    - ls
+    - /var/ready
+```
+
+工作原理就是 pod 会检测所在的服务器中是否有指定的 /var/ready 文件，如果有的话说明就准备就绪了，反之查询 pod 的状态会一直处于 `ready /0` 状态。
+
+就绪探针类型有三种：
+
+- Exec  探针，执行进程的地方。容器的状态进程的退出状态代码确定。
+- HTTP GET 探针，向容器发送 HTTP GET 请求，通过响应的 HTTP 状态代码判断容器是否准备好。
+- TCP Socket 探针，它打开⼀个TCP 连接到容器的指定端口。如果连接已建⽴，则认为容器已准备就绪。
+
+## 客户端如何连接所有的 Pod
+
+- 通过访问 Kubernetes API 获取 pod 以及它的 IP 地址列表
+- 通过解析 DNS 查找发现 pod IP，客户端可以做一个简单的 DNS A 记录查找属于该服务的所有 pod IP。客户端可以使用该信息连接到其中一个、多个或全部
+
+具体措施：这个时候我们可以开启新的 pod，利用 `tutum/dnsutils` 镜像来访问其它的 pod，这样就能进行 dns 解析获取该服务所有的 pod 的 IP 信息。
+
+```bash
+kubectl run dnsutils --image=tutum/dnsutils --command -- sleep infinity
+```
+
+然后运行 dnsutils 的命令：
+
+```bash
+kubectl exec dnsutils nslookup basicdata-headless
+```
+
+```
+Server:         10.96.0.10
+Address:        10.96.0.10#53
+
+Name:   basicdata-headless.default.svc.cluster.local
+Address: 10.1.0.178
+Name:   basicdata-headless.default.svc.cluster.local
+Address: 10.1.0.176
+Name:   basicdata-headless.default.svc.cluster.local
+Address: 10.1.0.177
+Name:   basicdata-headless.default.svc.cluster.local
+Address: 10.1.0.183
+```
+
+上述查询都是查出该服务中已经准备就绪（就绪探针）的 pod。那么如果要查所有（也包括哪些未就绪的）的 pod 呢？
+
+在服务的 `metadata.annotations` 节点下添加 `service.alpha.kubernetes.io/tolerate-unready-endpoints: true`。注意最新版这个节点已经弃用，改用 `.spec.publishNotReadyAddresses: true` 即可。

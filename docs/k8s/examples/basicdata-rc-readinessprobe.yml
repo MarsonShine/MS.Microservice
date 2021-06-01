@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ReplicationController
+metadata: 
+  name: basicdata-rc
+spec:
+  replicas: 3
+  selector: # pod 选择器，选择了 app=basicdata 的目标 pod
+    app: basicdata
+  template: # 创建新的 pod 的模板内容
+    metadata:
+      labels:
+        app: basicdata
+    spec:
+      containers:
+      - name: basicdata
+        image: basicdata:latest
+        imagePullPolicy: IfNotPresent
+        readinessProbe:  # pod 的每个容器都会有一个就绪探针
+          exec:
+            command:
+            - ls
+            - /var/ready
+        ports:
+        - containerPort: 9000
