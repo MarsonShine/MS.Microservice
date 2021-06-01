@@ -595,3 +595,34 @@ Address: 10.1.0.183
 上述查询都是查出该服务中已经准备就绪（就绪探针）的 pod。那么如果要查所有（也包括哪些未就绪的）的 pod 呢？
 
 在服务的 `metadata.annotations` 节点下添加 `service.alpha.kubernetes.io/tolerate-unready-endpoints: true`。注意最新版这个节点已经弃用，改用 `.spec.publishNotReadyAddresses: true` 即可。
+
+## 卷：容器之间共享数据
+
+在一个 pod 上创建三个容器，容器之间共享卷。先创建一个 pod：
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fortune
+spec:
+  containers:
+  - image: marsonshine/fortune
+    name: html-generator
+    volumeMounts:
+    - name: html
+      mountPath: /var/htdocs
+  - image:  nginx:alpine
+    name: web-server
+    volumeMounts:
+    - name: html
+      mountPath: /usr/share/nginx/html
+      readOnly: true	# 卷只读
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+volumes:  # 一个名为 html 的类型为 emptyDir 的卷，挂载在上面的两个容器中
+  - name: html
+    emptyDir: {}
+```
+
