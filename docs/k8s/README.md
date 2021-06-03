@@ -731,7 +731,7 @@ spec:
 
 当配置项很多的时候。如果要像上面那样一个一个的申明，那肯定是很繁琐。那么这个时候就可以通过前缀匹配多个配置
 
-```
+```yml
 spec:
   containers:
   - image: marsonshine/fortune:env
@@ -742,6 +742,12 @@ spec:
         configMapKeyRef:
           name: fortune-config
           key: sleep-interval
+```
+
+### 通过 configMap 卷将条目暴露为文件
+
+```bash
+kubectl create configmap fortune-config --from-file=configmap-files	# configmap-files 为文件夹，也可以是具体文件
 ```
 
 
