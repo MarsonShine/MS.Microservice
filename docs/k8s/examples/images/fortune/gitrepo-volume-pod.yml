@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gitrepo-volume-pod
+spec:
+  containers:
+  - image: nginx:alpine
+    name: web-server
+    volumeMounts:
+    - name: html
+      mountPath: /usr/share/nginx/html
+      readOnly: true
+    ports:
+    - containerPort: 8000
+      protocol: TCP
+  volumes:
+  - name: html
+    gitRepo:  # gitRepo 卷
+      repository: https://github.com/MS-Practice/kubia-website-example.git
+      revision: master  # 仓库主分支
+      directory: .  # 将项目克隆到根目录

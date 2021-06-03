@@ -1,0 +1,9 @@
+# 定义可用存储类型
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+provisioner: kubernetes.io/gce-pd # 用于配置持久卷的卷插件
+parameters:
+  type: pd-ssd
+  zone: europe-west1-b

@@ -626,3 +626,38 @@ volumes:  # 一个名为 html 的类型为 emptyDir 的卷，挂载在上面的�
     emptyDir: {}
 ```
 
+除了 `emptyDir` 卷之外，还有一个 `gitRepo` 卷是比较实用的。在 pod 建立时就会在对应的 git 地址克隆下来放到对应的位置。并且还能开启一个 "sidercar" 附加容器来协助这些 git 仓库的同步。
+
+注意：**`emptyDir` 和 `gitRepo` 生命周期与 pod 是一致的，也就是说 pod 被删除时，这两个卷的内容也会跟着删除**
+
+## 访问容器上具体的文件
+
+在大多数情况下，这些 pod 不应该访问文件系统上的任务文件。但是总有时候我们希望能在特殊场景下能狗访问哪些文件。我们可以通过 `hostPath` 卷来实现这个目的。
+
+hostPath：**指向节点文件系统上的特定文件或目录，在同一个节点上运行的 pod 其 hostPath 路径相同说明这些就能访问相同的文件或目录**。
+
+不同于 `emptyDir` 和 `gitRepo` 两个卷，`hostPath` 是持久化的，即同一节点内的其它 pod 删除，这个卷的内容不会删除。
+
+但请注意，**多容器共享一个卷总不是一个好选择，在请选择这个方案之前一定要再三斟酌**。
+
+## 持久化存储
+
+kubernetes 内部提供了不同卷驱动的持久化卷，如 Google Kubernetes 引擎的 GCE 持久磁盘 `gcePersistentDisk`、还有 AWS 的 `awsElasticBlockStore` 以及 NFS 卷。
+
+其创建构建 pod 流程如图：
+
+![](../asserts/pod-pvc.jpg)
+
+关于 NFS 相关的例子见：https://github.com/kubernetes/examples/tree/master/staging/volumes/nfs
+
+简而言之：1. 创建持久卷；2. 创建持久卷申明来获取持久卷；3. 创建 pod（pod 中引用了持久卷申明）
+
+### 通过 StorageClass 动态配置定义可用存储类型
+
+1. 创建 StorageClass 定义可用存储类型
+2. 这样就可以在持久卷申明中引用 1 创建的名字来定义存储类型
+
+创建 pod 的流程图：
+
+![](../asserts/storageclass-pod.jpg)
+

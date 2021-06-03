@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+spec:
+  resources:
+    requests:
+      storage: 1Gi  # 申请 1G 的存储空间
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: ""  # 关于动态配置相关的设置

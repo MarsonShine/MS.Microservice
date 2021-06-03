@@ -21,3 +21,5 @@ spec:
   volumes:  # 一个名为 html 的类型为 emptyDir 的卷，挂载在上面的两个容器中
     - name: html
       emptyDir: {}
+      # emptyDir: 
+      #   medium: Memory  # empty 的文件将会存储在内存中

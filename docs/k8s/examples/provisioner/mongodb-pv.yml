@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv
+spec:
+  capacity:
+    storage: 1Gi  # 申请 1G 的存储空间
+  accessModes:
+  - ReadWriteOnce
+  - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain # 设置当申明被释放后，PersistentVolume 将会保留不被删除和清理
+  gcePersistentDisk:
+    pdName: mongodb
+    fsType: ext4
