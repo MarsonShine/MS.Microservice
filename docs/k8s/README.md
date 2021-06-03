@@ -661,3 +661,89 @@ kubernetes 内部提供了不同卷驱动的持久化卷，如 Google Kubernetes
 
 ![](../asserts/storageclass-pod.jpg)
 
+## 传递 cmd 命令行参数
+
+在 `spec.containers.args` 添加要执行的参数：
+
+```yml
+spec:
+  containers:
+  - image: marsonshine/fortune:args
+	args: ["2"]	# 单个值
+	# args:	# 多个值
+    # - foo
+    # - bar
+    # - "2"
+    name: html-generator
+    ...
+```
+
+注意：参数位数字的时候要记得加引号，字符串反倒不需要加。
+
+## 设置环境变量给应用程序
+
+```yml
+spec:
+  containers:
+  - image: marsonshine/fortune:args
+    env:
+    - name: INTERVAL
+      value: "30"
+    - name: SECOND_VAR  # 可以在环境变量中引用另一个环境变量
+      value: "$(INTERVAL) REFFRENCE"
+    name: html-generator
+```
+
+上面配置变量的方式都是硬编码方式，为了能在多个环境下复用 pod 的定义，需要将配置从 pod 定义的描述中解耦出来。可以通过 ConfigMap 来完成这个目的。
+
+## 如何使用 ConfigMap
+
+```bash
+kubectl create configmap fortune-config --from-literal=sleep-interval=25  # --from-literal参数可创建包含多条⽬的ConfigMap
+kubectl create configmap myconfigmap --from-literal=foo=bar --from-literal=bar=baz --from-literal=one=two
+```
+
+这个时候就会生成一个 json 文件：
+
+```json
+{
+	"sleep-interval": "25"
+}
+```
+
+ConfigMap 也支持读取多个文件，并将每个文件内的 k/v 合并：
+
+![](../asserts/configmap-multi-file.jpg)
+
+定义了这些 k/v 配置信息之后该如何传递给各个 pod 呢？
+
+```yml
+spec:
+  containers:
+  - image: marsonshine/fortune:env
+    env:
+    - name: INTERVAL
+      valueFrom:
+        configMapKeyRef:
+          name: fortune-config
+          key: sleep-interval
+```
+
+当配置项很多的时候。如果要像上面那样一个一个的申明，那肯定是很繁琐。那么这个时候就可以通过前缀匹配多个配置
+
+```
+spec:
+  containers:
+  - image: marsonshine/fortune:env
+    env:
+    - name: INTERVAL
+      valueFrom:
+      - prefix: CONFIG_	# 匹配所有前缀为 CONFIG 的环境变量配置
+        configMapKeyRef:
+          name: fortune-config
+          key: sleep-interval
+```
+
+
+
+## 传递敏感资源

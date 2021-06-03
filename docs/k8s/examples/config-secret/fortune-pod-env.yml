@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fortune2s
+spec:
+  containers:
+  - image: marsonshine/fortune:args
+    env:
+    - name: INTERVAL
+      value: "30"
+    - name: SECOND_VAR  # 可以在环境变量中引用另一个环境变量
+      value: "$(INTERVAL) REFFRENCE"
+    name: html-generator
+    volumeMounts:
+    - name: html
+      mountPath: /var/htdocs
+  - image:  nginx:alpine
+    name: web-server
+    volumeMounts:
+    - name: html
+      mountPath: /usr/share/nginx/html
+      readOnly: true
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+  volumes:  # 一个名为 html 的类型为 emptyDir 的卷，挂载在上面的两个容器中
+    - name: html
+      emptyDir: {}
+      # emptyDir: 
+      #   medium: Memory  # empty 的文件将会存储在内存中
