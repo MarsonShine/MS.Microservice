@@ -750,6 +750,30 @@ spec:
 kubectl create configmap fortune-config --from-file=configmap-files	# configmap-files 为文件夹，也可以是具体文件
 ```
 
+有什么好处呢？
 
+**可以达到配置热更新的效果，无需重新创建 pod 或重启容器**。ConfigMap 被更新之后，卷中引用它的所有文件也会相应更新，进程发现文件被更改之后进行重载。Kubernetes 同样支持文件更新之后手动通知容器。
+
+```bash
+kubectl edit configmap fortune-config
+```
+
+更改之后执行
+
+```bash
+kubectl exec fortune-configmap-volume -c web-server cat /etc/nginx/conf.d/my-nginx-config.conf
+```
+
+也可以通知 Nginx 重载配置
+
+```bash
+kubectl exec fortune-configmap-volume -c web-server -- nginx -s reload
+```
+
+内部是通过**符号链接**来完成的。当修改 ConfigMap 时，Kubernetes 通过创建符号链接将所有的卷文件连接到一起，然后一次性修改所有的文件。
+
+### ConfigMap 更新的短时间内的数据配置不一致性
+
+由于configMap 卷中⽂件的更新⾏为对于所有运⾏中⽰例⽽⾔不是同步的，因此不同 pod 中的⽂件可能会在长达⼀分钟的时间内出现不⼀致的情况。
 
 ## 传递敏感资源
