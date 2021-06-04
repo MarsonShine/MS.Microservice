@@ -777,3 +777,17 @@ kubectl exec fortune-configmap-volume -c web-server -- nginx -s reload
 由于configMap 卷中⽂件的更新⾏为对于所有运⾏中⽰例⽽⾔不是同步的，因此不同 pod 中的⽂件可能会在长达⼀分钟的时间内出现不⼀致的情况。
 
 ## 传递敏感资源
+
+传递含有敏感资源时，我们需要创建 Secret 资源。首先要创建密钥和证书，然后将其存入 Secret。
+
+```bash
+openssl genrsa -out https.key 2048
+openssl req -new -x509 -key .\https.key -out https.cert -days 3650 -subj /CN=www.kubia-example.com
+```
+
+为了防止敏感信息泄露，官方建议通过 Secret 卷存储于内存中
+
+```bash
+kubectl exec fortune-https -c web-server -- mount | grep certs
+```
+
