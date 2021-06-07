@@ -791,3 +791,45 @@ openssl req -new -x509 -key .\https.key -out https.cert -days 3650 -subj /CN=www
 kubectl exec fortune-https -c web-server -- mount | grep certs
 ```
 
+## 使用私有镜像仓库
+
+```bash
+# 格式：kubectl create secret docker-register secretName --option=<>
+kubectl create secret docker-register mysecretName 
+	--docker-server=marsonshine 
+	--docker-username=marsonshine 
+	--docker-password=password 
+	--docker-email=marsonshine@163.com
+```
+
+指定私有仓库镜像 pod
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: private-pod
+spec:
+  imagePullSecrets:
+  - name: mydockerhubsecret
+  containers:
+  - image: marsonshine/basicdata:private
+    name: main
+```
+
+注意：并不需要为每个 pod 都指定私有仓库的个人敏感信息。
+
+## 通过环境变量暴露元数据
+
+通过建立一个 downward pod 节点 [downward-api-env.yml](./examples/downward-api-env.yml)，在创建 pod 之后就能通过命令查看容器中的环境变量，并且在**该容器内的所有进程都可以读取这些信息。**
+
+除了通过环境变量的方式，还可以通过 [dowanwardAPI 卷](https://kubernetes.io/zh/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/#the-downward-api)的方式挂载这些信息来实现同样的目的。
+
+其生成的过程与生成的文件如下图所示
+
+![](../asserts/downwardAPI.jpg)
+
+
+
+
+

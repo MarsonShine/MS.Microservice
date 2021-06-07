@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: downward
+  labels:           # 通过 downwardAPI 卷来暴露这些注解和标签信息
+    foo: bar
+  annotations:
+    key1: value1
+    key2: |
+      multi
+      line
+      value
+spec:
+  container:
+  - name: main
+    image: busybox
+    command: ["sleep", "999999"]
+    resources:
+      requests:
+        cpu: 15m
+        memory: 100Ki
+      limits:
+        cpu: 100m
+        memory: 4Mi
+    volumeMounts: # 讲 downward 卷挂在到 /etc/downward 下
+    - name: downward
+      mountPath:  /etc/downward
+  volumes:
+  - name: downward
+    downwardAPI:  # 申明一个 downwardAPI 卷
+      items:
+      - path: "podName"
+        fieldRef:
+          fieldPath: metadata.name
+      - path: "podNamespace"
+        fieldRef:
+          fieldPath: metadata.namespace
+      - path: "labels"
+        fieldRef:
+          fieldPath: metadata.labels
+      - path: "annotations"
+        fieldRef:
+          fieldPath: metadata.annotations
+      - path: "containerCpuRequestMillicores"
+        resourceFieldRef: # 对于容器的资源限制和请求设置必须要强制指明 containerName
+          containerName: main
+          resource: requests.cpu
+          divisor: 1m
+      - path: "containerMemoryLimitBytes"
+        resourceFieldRef:
+          containerName: main
+          resource: limits.memory
+          divisor: 1
+  
