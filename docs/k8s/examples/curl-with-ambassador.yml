@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl-with-ambassador
+spec:
+  containers:
+  - name: main
+    image: curlimages/curl
+    command: ["sleep", "999999"]
+  - name: ambassador
+    image: marsonshine/kubectl-proxy:1.10.0

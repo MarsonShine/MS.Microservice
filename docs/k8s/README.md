@@ -831,5 +831,80 @@ spec:
 
 
 
+## 应用容器访问 kubernetes API 服务器
 
+进入其中一个容器命令内部：`kubectl exec -it curl -- bash`；节点像访问 kubernetes api 服务器是要通过安全验证的。生成 pod 容器时，会自动创建 token，位于 `/var/run/secrets/kubernetes.io/serviceaccount`。
+
+如果我们直接访问会报 SSL 问题
+
+```bash
+$ curl https://kubernetes
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+```
+
+这个时候可以通过使用 CA 证书
+
+```bash
+curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt https://kubernetes
+# 上述命令可以简化成下面语句，先定义一个环境变量 CURL_CA_BUNDLE=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+# 这样就不用每次访问的时候都携带 --cacert
+$ export CURL_CA_BUNDLE=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+$ curl https://kubernetes
+```
+
+这个时候虽然通过了 API 服务器身份验证，但是还有资源的授权，这个时候可以利用 secret 生辰 token
+
+```bash
+$ TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+```
+
+然后访问的携带这个 token 即可
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" https://kubernetes
+```
+
+## 基于角色的控制访问（RBAC）
+
+允许所有用户操作任务指令：
+
+```bash
+kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --group=system.serviceaccounts
+```
+
+获取该 pod 所属的命名空间
+
+```bash
+$ NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+$ curl -H "Authorization: Bearer $TOKEN" https://kubernetes/api/v1/namespaces/$NS/pods
+```
+
+要访问这些信息就像前面所做的一样非常繁琐复杂，其实我们可以通过在同节点创建一个 ambassador 代理实现与 API 服务器交互
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl-with-ambassador
+spec:
+  containers:
+  - name: main
+    image: curlimages/curl
+    command: ["sleep", "999999"]
+  - name: ambassador
+    image: marsonshine/kubectl-proxy:1.10.0
+```
+
+启动容易并执行命令 bash 则可以直接通过 `curl localhost:8001` 获取同命名空间下的所有信息。其实这个镜像所作就是我们前面做的步步工作。镜像工作执行的脚本如下：
+
+```bash
+#!/bin/sh
+
+API_SERVER="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT"
+CA_CRT="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+
+/kubectl proxy --server="$API_SERVER" --certificate-authority="$CA_CRT" --token="$TOKEN" --accept-paths='^.*'
+```
 
