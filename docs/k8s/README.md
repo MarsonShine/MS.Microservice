@@ -908,3 +908,151 @@ TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
 /kubectl proxy --server="$API_SERVER" --certificate-authority="$CA_CRT" --token="$TOKEN" --accept-paths='^.*'
 ```
 
+## 平滑升级、发布应用
+
+### 先删除旧版本 pod，在创建新的 pod
+
+这个适合能容忍一小段时间不可用的场景
+
+### 先创建新的 pod，再删除旧版本 pod
+
+这个可以不用是应用暂停。但是这种措施会占用更多的资源，同环境下得多占用一般的硬件设备，要多一半 pod。
+
+还有一种方式是手动将 service 将流量切换到最新的 pod：修改 [service 标签选择器](https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#-em-selector-em-)：`$ kubectl set selector (-f FILENAME | TYPE NAME) EXPRESSIONS [--resource-version=version]` 
+
+```bash
+kubectl set selector --local -f - 'environment=qa' -o yaml
+```
+
+### 滚动升级
+
+创建 rc 和 svc
+
+```yml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: mynodeserver-v1
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: mynodeserver
+      labels:
+        app: nodeserver
+    spec:
+      containers:
+      - image: marsonshine/mynodeserver:v1
+        imagePullPolicy: IfNotPresent
+        name: nodejs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mynodeserver
+spec:
+  type: LoadBalancer
+  selector:
+    app: nodeserver
+  ports:
+  - port: 8080
+    targetPort: 8080
+```
+
+循环执行 curl http://localhost:8080 模拟正在运行的环境
+
+```sh
+while true;
+do curl http://localhost:8080;
+done
+```
+
+然后将 `mynodeserver` 镜像的内容改成 v2 并生成镜像 `marsonshine/mynodeserver:v2`
+
+然后执行：`kubectl rolling-update mynodeserver-v1 mynodeserver-v2 --image=marsonshine/mynodeserver:v2`
+
+> 注意，上面的命令已经过时被删掉了，最新的命令后面会提到
+
+#### 滚动升级的过程
+
+我们先来谈论 `kubectl rolling-update` 的执行过程。在执行的过程中 kubectl 会执行一下操作：
+
+1. 复制 `mynodeserver-v1` 的内容，命名为 `mynodeserver-v2`，并设置其 replicas=0
+
+   1. 复制的过程中修改了 pod 模板的镜像的版本。
+   2. 还修改了 pod 标签选择器，由原来的 `app: nodeserver` 还增加了一个 `deployment=xxxxxxx`。要注意，为了防止新的 rc 把旧版本的 rc 下的 pod 加入管理，在复制的过程中把旧版本的 rc 中的 pod 也加了 `deployment=yyyyy`，并在各自的标签选择器加上这个标签。这样就不影响。**但也正是因为直接修改了 rc pod 的内容，才会导致这种滚动升级方式取消了**。
+
+2. 执行 pod 流量切换
+
+   1. 缩小旧版本 rc-v1 的 replicas 为 2；增加新版本 rc-v2 的 replicas 为 1
+
+   2. 继续重复上面的动作，直到完全切换完毕。
+
+这种方案的问题：`kubectl rzhzhegeolling-update` 执行过程是在客户端执行的，通过调用 API 服务器来实现增加/减少副本数。那么如果当升级的过程中失去网络连接，这个时候 pod 和 rc 都处于中间状态。而 deployment 的部署方式只需要在 pod 定义中更改所期望的 tag，并让 kubernetes 用运行新镜像的 pod 替换旧的 pod。因为之前的方法在切换的时候频繁的在 v1 和 v2 之间修改 tag 和 pod 的内容，而 deployment 就是负责处理这里面的逻辑，我们在编写 deployment 的时候都不需要特定指明版本 pod，因为它可以同时管理多个版本的 pod。
+
+#### Deployment 滚动升级
+
+当创建一个 deployment 时，rc 和 rs 都会跟着创建，这些 pod 是由 deployment 创建的 rs 创建和管理的。
+
+![](../asserts/kubernetes-deployment.jpg)
+
+**Deployment 也是由标签选择器、期望副数和 pod 模板组成的**
+
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mynodeserver
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: mynodeserver
+      labels:
+        app: nodeserver
+    spec:
+      containers:
+      - image: marsonshine/mynodeserver:v1
+        imagePullPolicy: IfNotPresent
+        name: nodejs
+  selector:
+    matchLabels:
+      app: nodeserver
+```
+
+可以看到，相较于之前的文件，这里只是更改了 kind 和不带版本号的 name 以及删除了 service。更加简洁了。
+
+```bash
+kubectl create -f ..\nodeserver-deployment-v1.yml --record	# --record 开启记录历史版本号
+```
+
+查看 deployment 的部署状态：
+
+```bash
+kubectl rollout status deployment mynodeserver
+```
+
+#### 升级 Deployment
+
+当使⽤ ReplicationController 部署应⽤时，必须通过运⾏ `kubectl rolling-update` 显式地告诉 Kubernetes 来执⾏更新，甚⾄必须为新的 ReplicationController 指定名称来替换旧的资源。Kubernetes 会将所有原来的 pod 替换为新的 pod，并在结束后删除原有的 ReplicationController。在整个过程中必须保持终端处于打开状态，让 kubectl 完成滚动升级。
+
+而 Deployment 只需要修改资源中定义的 pod 模板，kubernetes 就会自动将实际的系统状态更新为资源中定义的状态。
+
+事实上执行 Deployment 升级是由升级策略 RollingUpdate 决定的。
+
+```bash
+kubectl set image deployment mynodeserver nodejs=marsonshine/mynodeserver:v2
+```
+
+这个时候你会发现正在运行状态的 `curl http://localhost:8080` 会由 `This is v1 running in pod xxxx` 陆续变为 `This is v2 running in pod yyyy`。
+
+# kubectl 修改资源对象的方式总结
+
+| 方法              |                             作用                             |
+| :---------------- | :----------------------------------------------------------: |
+| kubectl edit      | 使用默认编辑器打开配置资源。可以直接修改内容，保存并退出，资源对象则会被更新：<br />`kubectl edit deployment mynodeserver` |
+| kubectl apply     | 通过完整的 yaml 或 json 文件，应用其中新的值来修改对象。如果文件指定的对象不存在则创建。<br />`kubectl apply -f nodeserver-deployment-v2.yml` |
+| kubectl patch     | 修改单个资源属性<br />`kubectl patch deployment mynodeserver --patch "{\"spec\":{\"minReadySeconds\": 10}}"` |
+| kubectl replace   | 将指定文件替换<br />`kubectl replace -f nodeserver-deployment-v2.yml ` |
+| kubectl set image | 修改 Pod、ReplicationController、Deployment、DemonSet、Job 或 ReplicaSet 内的镜像<br />`kubectl set image deployment mynodeserver nodejs=marsonshine/mynodeserver:v2` |
+

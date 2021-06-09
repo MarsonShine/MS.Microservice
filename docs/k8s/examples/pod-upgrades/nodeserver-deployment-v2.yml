@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mynodeserver
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: mynodeserver
+      labels:
+        app: nodeserver
+    spec:
+      containers:
+      - image: marsonshine/mynodeserver:v2
+        imagePullPolicy: IfNotPresent
+        name: nodejs
+  selector:
+    matchLabels:
+      app: nodeserver

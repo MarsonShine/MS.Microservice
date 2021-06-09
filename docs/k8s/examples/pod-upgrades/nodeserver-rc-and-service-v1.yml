@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: mynodeserver-v1
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: mynodeserver
+      labels:
+        app: nodeserver
+    spec:
+      containers:
+      - image: marsonshine/mynodeserver:v1
+        imagePullPolicy: IfNotPresent
+        name: nodejs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mynodeserver
+spec:
+  type: LoadBalancer
+  selector:
+    app: nodeserver
+  ports:
+  - port: 8080
+    targetPort: 8080
