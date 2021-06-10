@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mynodeserver
+spec:
+  replicas: 3
+  minReadySeconds: 10
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      name: mynodeserver
+      labels:
+        app: nodeserver
+    spec:
+      containers:
+      - image: marsonshine/mynodeserver:v3
+        imagePullPolicy: IfNotPresent
+        name: nodejs
+        readinessProbe:
+          periodSeconds: 1  # 每隔1秒就绪探针请求一次
+          httpGet:
+            path: /
+            port: 8080
+  selector:
+    matchLabels:
+      app: nodeserver

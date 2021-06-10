@@ -1046,6 +1046,51 @@ kubectl set image deployment mynodeserver nodejs=marsonshine/mynodeserver:v2
 
 这个时候你会发现正在运行状态的 `curl http://localhost:8080` 会由 `This is v1 running in pod xxxx` 陆续变为 `This is v2 running in pod yyyy`。
 
+### 回滚升级
+
+假设我们在升级的时候发生错误了，那么我们需要回滚。这个时候我们具体要回滚到哪一个版本，我们可以先查询历史版本记录：
+
+```bash
+kubectl rollout history deployment mynodeserver deployment.apps/mynodeserver
+```
+
+#### 回滚指定版本
+
+```bash
+kubectl rollout undo deployment mynodeserver --to-revision=1
+```
+
+回滚的过程跟升级的过程一样，控制 replicas 的数量。由于发版升级次数越来越多，这个时候可以用 Deployment 属性 revisionHistoryLimit 来控制历史版本的数量限制。
+
+我们也可以设置一些参数来控制升级策略
+
+```yml
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1	# 根据设定的期望副本数，最多允许超出 pod 实例的数量。默认为25%。即假设副本数是4，那么在滚动升级中不会运行超过5个实例
+      maxUnavailable: 0	# 最多允许 pod 不可用的数量，默认值25%。所以可用 pod 实例的数量不能低于副本数的75%。如果副本数为4，那么不可用的pod最多只有一个
+    type: RollingUpdate
+```
+
+![](../asserts/rolling-update-maxsurge.jpg)
+
+### 部分升级
+
+就像之前的例子一样，如果最新的版本出现问题，一升级全部升级，这就导致了一出错全部出错。所以我们需要一种方案能够部分升级，让一部分用户先体验新版本，发现没有问题之后再把剩下的旧版本全部升级。这就是金丝雀发布。
+
+```bash
+kubectl set image deployment mynodeserver nodejs=marsonshine/mynodeserver:v4
+```
+
+再执行暂停
+
+```
+kubectl rollout pause deployment mynodeserver
+```
+
+⼀个新的 pod 会被创建，与此同时所有旧的 pod 还在运⾏。⼀旦新的 pod 成功运⾏，服务的⼀部分请求将被切换到新的 pod。
+
 # kubectl 修改资源对象的方式总结
 
 | 方法              |                             作用                             |
