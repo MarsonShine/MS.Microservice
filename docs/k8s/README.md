@@ -1091,6 +1091,44 @@ kubectl rollout pause deployment mynodeserver
 
 ⼀个新的 pod 会被创建，与此同时所有旧的 pod 还在运⾏。⼀旦新的 pod 成功运⾏，服务的⼀部分请求将被切换到新的 pod。
 
+确定没问题之后再恢复升级
+
+```
+kubectl rollout resume deployment mynodeserver
+```
+
+## StatusfulSet —— 多个 pod 示例设置独自的卷内存
+
+这个 pod 实例需要在别的节点上重建，**但是新的实例必须与被替换的实例拥有相同的名称、⽹络标识和状态**。
+
+StatusfulSet 保证了 pod 在重新调度后保留了原来的标识和状态，但 StatusfulSet 创建的副本不是完全一样的，**他可以为每个副本单独设置数据卷**。这些 pod 的名字都是固定的。这与 ReplicaSet 管理调度的 pod 不同
+
+![](../asserts/replicaset-vs-statusfulset.jpg)
+
+首先要创建持久化存储卷
+
+```
+kubectl create -f ./persistent-volumes-hostpath.yml
+```
+
+创建服务
+
+```
+kubectl create -f ./nodepet-service-headless.yml
+```
+
+定义并创建 StatusfulSet
+
+```bash
+kubectl create -f ./nodepet-statusfulset.yml
+```
+
+更新 StatusfulSet 修改所需的属性值
+
+```
+kubectl edit statusfulset nodepet
+```
+
 # kubectl 修改资源对象的方式总结
 
 | 方法              |                             作用                             |
