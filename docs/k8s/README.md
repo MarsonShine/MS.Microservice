@@ -1129,6 +1129,14 @@ kubectl create -f ./nodepet-statusfulset.yml
 kubectl edit statusfulset nodepet
 ```
 
+### 强制删除有问题的 pod
+
+```bash
+kubectl delete po nodeserver-0 --force --grace-period 0
+```
+
+
+
 # kubectl 修改资源对象的方式总结
 
 | 方法              |                             作用                             |
