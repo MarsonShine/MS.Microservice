@@ -6,7 +6,7 @@
 
 让我们从什么是无服务架构开始，并列出其中的优点和缺点。
 
-# 什么是 Serverless？
+## 什么是 Serverless？
 
 就像软件领域的许多趋势一样，没有人清楚地知道什么是无服务器。首先，它包含两个不同但重叠的领域：
 
@@ -19,9 +19,9 @@ BaaS 和 Faas 在它们的操作属性中有一些是相关的（如无资源管
 
 小公司在这两个领域也有类似的联系。[Auth0](https://auth0.com/) 从一个实现了多用户管理的 BaaS 产品开始，随后创建了配套的 FaaS 服务 [Webtask](https://webtask.io/)。该公司通过扩展将这一想法更进一步，使其他 SaaS 和 BaaS 公司能够轻松地向现有产品添加 FaaS 功能，从而创建统一的无服务器产品。
 
-## 一系列的案例
+### 一系列的案例
 
-### UI 驱动程序
+#### UI 驱动程序
 
 让我们回头看具有服务器端逻辑的传统三层面向客户端的系统。一个典型的例子就是电商 app。
 
@@ -53,7 +53,7 @@ BaaS 和 Faas 在它们的操作属性中有一些是相关的（如无资源管
 
 使用这种方式有很多好处。Sam Newman 在他的[构建微服务](https://samnewman.io/books/building_microservices/)的笔记中记载道，以这种方式构建系统会 “更加灵活，更加适应变化”，无论是作为整体还是通过组件的独立更新；有更好的明确的分工；还有一些令人着迷的成本效益，Gojko Adzic 在这次精彩的[演讲](https://gojko.net/2017/10/05/serverless-design-gotocph.html)中讨论了这一点。
 
-### 消息驱动程序、
+#### 消息驱动程序
 
 另一个例子是后端数据处理服务。
 
@@ -71,7 +71,7 @@ Severless 模式就像下面所示：
 
 FaaS 环境也能并发的处理多个消息，通过复制多个 FaaS 实例。根据我们编写原始流程的方式，这可能是我们需要考虑的新概念。
 
-## 分解 ”函数即服务（Function as a Service）“
+### 分解 ”函数即服务（Function as a Service）“
 
 之前已经提到 FaaS，现在是时候解释它真正的含义了。首先我们来看一下 Amazon FaaS 产品的[公开描述](https://aws.amazon.com/lambda/)：Lambda。我已经加了一些标记，后面我会拓展。
 
@@ -97,19 +97,19 @@ FaaS 环境也能并发的处理多个消息，通过复制多个 FaaS 实例。
 
 6. 大多数提供者还允许作为对 HTTP 请求的响应触发函数。在 AWS 中，通常通过使用 API 网关来实现这一点。在我们的 Pet Store 示例中，我们使用了一个API 网关来实现 “搜索” 和 “购买” 功能。还可以通过平台提供的 API 直接调用函数，可以从外部调用，也可以从相同的云环境中调用，但这种用法相对不常见。
 
-### 状态
+#### 状态
 
 FaaS 函数在处理本地（机器/实例绑定）状态时有很大的限制，例如存储在内存变量中的数据，或写入本地磁盘的数据。您的确有这样的存储需求，但您不能保证这种状态在多个调用之间持久化，而且更强烈地说，您不应该假设一个函数调用的状态对另一个相同的调用是可用的。因此 FaaS 函数通常被描述为**无状态**的，但是更准确地说，**需要持久的 FaaS 函数的任何状态都需要在 FaaS 函数实例之外被具体化。**
 
 对于无状态的 FaaS 函数，例如对于那些仅提供输入到输出的函数转换的应用程序，这是无关紧要的。但对于其他人来说，这可能会对应用程序架构产生很大的影响，尽管不是唯一的——"[十二因素应用程序](http://12factor.net/)"的概念有完全相同的限制。这种面向状态的函数通常会利用数据库、跨应用程序缓存（如 Redis）或网络文件/对象存储（如 S3）来跨请求存储状态，或提供处理请求所需的进一步输入。
 
-### 执行期间
+#### 执行期间
 
 FaaS 函数在它每次允许调用的时间是受限的。目前 AWS Lambda 函数响应一个事件的时间在超时时间到达终止之前最多为 5 分钟。Microsoft Azure 和 Google Cloud Functions 都有相同的限制。
 
 这意味着如果不进行重新架构，某些长期存在的这类任务就不适合 FaaS 功能 —— 您可能需要创建几个不同的协同 FaaS 功能，这在以前传统环境中你可能有一个长时间任务同时执行协作和执行。
 
-### 启动延迟和 ”冷启动“
+#### 启动延迟和 ”冷启动“
 
 FaaS 平台在每个事件之前初始化一个函数的实例需要一些时间。即使对于一个特定的函数，启动延迟也可能变化很大，这取决于许多因素，可能从几毫秒到几秒不等。这听起来很糟，但让我们更具体一点，以 AWS Lambda 为例。Lambda 函数的初始化可以是“热启动” —— 重用 Lambda 函数的一个实例以及来自前一个事件的宿主容器。或者是“冷启动” —— 创建一个新的容器实例，启动函数宿主进程，等等。
 
@@ -123,7 +123,7 @@ FaaS 平台在每个事件之前初始化一个函数的实例需要一些时间
 
 无论您是否认为您的应用程序可能存在这样的问题，您都应该使用类似于产品的负载来测试性能。如果您的用例现在不能工作，您可能想在几个月后再试一次，因为这是 FaaS 供应商持续改进的主要领域。
 
-### API 网关
+#### API 网关
 
 ![](./asserts/ag.svg)
 
@@ -139,18 +139,67 @@ Amazon Web Services 有自己的API网关(名称稍有混淆的“API 网关”)
 
 当我第一次写这篇文章时，至少 Amazon API Gateway 的工具还非常不成熟。自那以后，这些工具有了显著的改进。像 AWS API Gateway 这样的组件还不是“主流”，但希望它们不像以前那么痛苦，而且只会继续改进。
 
-### 工具
+#### 工具
 
-### 开源
+略
 
-# 什么不是 Serverless
+#### 开源
 
-## 比较 PaaS
+除了云厂商提供给的官方工具之外，在开源界也有很多相关的项目提供使用。
 
-## 比较容器
+在 Serverless 中，开源最常见的用途是用于 FaaS 工具和框架，特别是流行的 [Serverless Framework](https://github.com/serverless/serverless)，它的目的是让使用 AWS API Gateway 和 Lambda 比使用AWS 提供的工具更容易。它还提供了大量跨供应商的工具抽象，一些用户认为这很有价值。类似工具的例子包括 [Claudia](https://github.com/claudiajs/claudia) 和 [Zappa](https://github.com/Miserlou/Zappa)。另一个例子是 [Apex](https://github.com/apex/apex)，它特别有趣，因为它允许您用非亚马逊直接支持的语言开发 Lambda 函数。
 
-## NoOps
+然而，在开源工具方面，大型供应商自己并没有落后。AWS 自己的部署[无服务应用程序模型（Serverless Application Model）](https://docs.aws.amazon.com/lambda/latest/dg/serverless_app.html)工具也是[开源](https://github.com/awslabs/serverless-application-model)的。
 
-## 存储过程即服务
+专有 FaaS 的主要好处之一是不必关心底层计算基础设施（机器、vm 甚至容器）。但是如果你想要关心这些事情呢？也许您有一些安全需求云供应商无法满足，或者您已经购买了一些服务器，但不想扔掉。在这些场景中，开源是否能提供帮助，允许您运行自己的“Serverful”的 FaaS 平台？
+
+当然，这在社区是非常活跃的。开源 FaaS 的最初领导者之一是 IBM（使用 [OpenWhisk](https://openwhisk.apache.org/)，现在是 Apache 项目)，这让我很惊讶——至少对我来说！——微软，该公司开放了其 [Azure Functions](https://azure.microsoft.com/en-us/services/functions/)平台的大部分源代码。许多其他自托管 FaaS 实现都使用底层容器平台，通常是 Kubernetes，出于许多原因，这很有意义。在这个领域，像 [Galactic Fog](http://www.galacticfog.com/)、[Fission ](https://fission.io/)和 [OpenFaaS](https://github.com/openfaas/faas) 这样的项目值得探索。这是一个巨大的、快速发展的世界，我建议看看云原生计算联盟（Cloud Native Computing Federation(CNCF)）的 [Serverless Working Group](https://github.com/cncf/wg-serverless) 是如何做以及跟进的。
+
+### 什么不是 Serverless
+
+到目前为止，在本文中，我将 Serverless 描述为两种思想的结合：后端即服务（BaaS）和功能即服务（FaaS）。我还研究了后者的能力。关于我认为的Serverless 服务的关键属性（以及为什么我认为甚至像 S3 这样的老服务也是无服务器的），我请您参考我的另一篇文章：[定义无服务器](https://blog.symphonia.io/defining-serverless-part-1-704d72bc8a32)。
+
+在我们开始研究优缺点这一非常重要的领域之前，我想再花一点时间来解释一下定义。让我们来定义什么不是 Serverless。
+
+#### 比较 PaaS
+
+考虑到无服务 FaaS 功能与 [Twelve-Factor 应用程序](http://12factor.net/)非常相似，那么它们只是像 Heroku 那样的“平台即服务”（PaaS）的另一种形式吗? 我引用 Adrian Cockcroft 的话作简短回答
+
+> 如果您的 PaaS 能够在 20ms 内有效地启动实例，并且运行时间为半秒，那么就称它为 Serverless。——Adrian Cockcroft
+
+换句话说，大多数 PaaS 应用程序并不是为了使整个应用程序上下响应一个事件而设计的，而 FaaS 平台恰恰做到了这一点。
+
+如果我是一个优秀的 Twelve-Factor 应用程序开发人员，这并不一定会影响我如何编写和构建我的应用程序，但它确实会对我如何操作它们产生很大的影响。因为我们都是优秀的 DevOps-savvy 工程师，所以我们在考虑开发的同时也在考虑运作，对吧？
+
+FaaS 和 PaaS 在操作上的关键区别在于可伸缩性。一般来说，对于 PaaS，您仍然需要考虑如何伸缩——例如，使用 [Heroku](https://www.heroku.com/)，您想运行多少个 Dynos？对于FaaS 应用程序，这是完全透明的。即使您将 PaaS 应用程序设置为自动伸缩，也不会达到单个请求的级别（除非您有非常明确的流量配置文件），因此 FaaS 应用程序在成本方面要有效率得多。
+
+有了上面这些好处，为什么还要使用 PaaS？有几个原因，但工具可能是最大的原因。还有一些人使用像 [Cloud Foundry](https://en.wikipedia.org/wiki/Cloud_Foundry) 这样的 PaaS 平台来提供跨混合公共和私有云的共同开发体验；在撰写本文时，还没有一个 FaaS 比得上这一点。
+
+#### 比较容器
+
+使用 Serverless FaaS 的原因之一是为了避免在操作系统级别管理应用程序进程。虽然像 Heroku 这样的 PaaS 服务也提供这种功能，我已经在上面描述了 PaaS 与 Serverless FaaS 的不同之处。另一个流行的进程抽象是容器，[Docker](https://www.docker.com/) 是这种技术最明显的例子。容器托管系统（如 [Mesos](http://mesos.apache.org/) 和 [Kubernetes](http://kubernetes.io/)）从操作系统级部署中抽象出单独的应用程序，它们越来越受欢迎。沿着这条路前进，我们会看到像 [Amazon ECS](https://aws.amazon.com/ecs/) 和 [EKS](https://aws.amazon.com/eks/) 这样的云托管容器平台，以及[谷歌容器引擎（Google Container Engine）](https://cloud.google.com/container-engine)等就像 Serverless FaaS 一样，让团队完全不必管理自己的服务器主机。考虑到容器的发展势头，是否还值得考虑 Serverless FaaS？
+
+我对 PaaS 的主要论点原则仍然适用于容器——因为 **Serverless FaaS 的伸缩是自动管理的、透明的和细粒度的**，这与我前面提到的自动资源提供和分配是相关联的。容器平台传统上仍然需要您管理集群的大小和形状。
+
+我还认为容器技术仍然不成熟和稳定，尽管它已经越来越接近成熟和稳定了。当然，这并不是说 Serverless FaaS 已经成熟，但是选择您喜欢的未完善的边界仍然是当务之急（picking which rough edges you’d like is still the order of the day）。
+
+值得一提的是，自伸缩容器集群现在可以在容器平台中使用。Kubernetes 在“[水平节点自动伸缩（Horizontal Pod Autoscaling）](http://kubernetes.io/docs/user-guide/horizontal-pod-autoscaling/)”中内置了这一功能，[AWS Fargate](https://aws.amazon.com/fargate/) 等服务也承诺提供“无服务容器”。
+
+正如我们所看到的，Serverless FaaS 和托管容器之间的管理和伸缩性差距越来越小，它们之间的选择可能只取决于应用程序的风格和类型。例如，对于每个应用程序组件的事件类型很少的**事件驱动**风格，FaaS 可能是更好的选择，而对于具有许多入口点的**同步请求驱动**组件，容器则是更好的选择。我期望同样在相当短的时间内，许多应用程序和团队将使用这两种体系结构方法，看到这种使用模式的出现将是非常有趣的。
+
+#### NoOps
+
+Serverless 并不意味着“No Ops”——尽管它可能意味着“没有系统管理员”，这取决于你在 Serverless 的兔子洞（rabbit hole）里走了多远。
+
+“Ops”不仅仅意味着服务器管理。它还意味着—至少—监视、部署、安全、网络、支持，以及通常一定数量的生产调试和系统扩展。这些问题在 Serverless 应用程序中仍然存在，您仍然需要一个策略来处理它们。从某种程度上说，在 Serverless 世界里，Ops 变得更难了，因为很多东西都是新的。
+
+系统管理员仍然存在——您只是使用无服务器将其外包（outsourcing）。这并不一定是坏事（或好事）——我们外包了很多，它的好坏取决于你到底想要做什么。无论采用哪种方法，抽象在某些时候可能会泄漏，您需要知道某个地方的人工系统管理员正在支持您的应用程序。
+
+[Charity Majors](https://twitter.com/mipsytipsy) 在第一次 Serverlessconf 上就这个主题做了一个很好的[演讲](https://www.youtube.com/watch?v=wgT5f0eBhD8)。(你也可以阅读她的两篇评论：[WTF is operations](https://charity.wtf/2016/05/31/wtf-is-operations-serverless/)？和 [Ops 最佳实践](https://charity.wtf/2016/05/31/operational-best-practices-serverless/)。)
+
+#### 存储过程即服务
+
+// TODO
 
 原文连接：https://martinfowler.com/articles/serverless.html
+
