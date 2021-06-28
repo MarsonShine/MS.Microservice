@@ -78,7 +78,7 @@ private ScheduledThreadPoolExecutor gossipExecutor = new ScheduledThreadPoolExec
 }
 ```
 
-当调度任务被调用时，它会从元数据映射的服务器列表中随机选取一小组节点。一个小的常量定义为 gossip fanout，它决定了有多少个节点可以选定为 gossip 目标。如果什么都还不知道，它就随机选择一个种子节点，并将它的元数据映射发送到该节点。
+当调度任务被调用时，它会从元数据映射的服务器列表中随机选取一小组节点。一个小的常量定义为 gossip fanout，它决定了有多少个节点可以选定为 gossip 目标。如果什么都没有，它就随机选择一个种子节点，并将它的元数据映射发送到该节点。
 
 ```java
 class Gossip…
