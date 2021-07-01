@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="632px" preserveAspectRatio="none" style="width:675px;height:632px;" version="1.1" viewBox="0 0 675 632" width="675px" zoomAndPan="magnify"><defs/><g><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="32" x2="32" y1="36.4883" y2="625.3887"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="180" x2="180" y1="36.4883" y2="625.3887"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="345" x2="345" y1="36.4883" y2="625.3887"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="510" x2="510" y1="36.4883" y2="625.3887"/><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="54" x="5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="40" x="12" y="25.5352">Client</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="60" x="150" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="46" x="157" y="25.5352">Leader</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="82" x="304" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="68" x="311" y="25.5352">Follower1</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="82" x="469" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="68" x="476" y="25.5352">Follower2</text><polygon fill="#070D4A" points="168,63.7988,178,67.7988,168,71.7988,172,67.7988" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="174" y1="67.7988" y2="67.7988"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="124" x="39" y="63.0566">put("color", "green")</text><polygon fill="#070D4A" points="333,93.1094,343,97.1094,333,101.1094,337,97.1094" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="180" x2="339" y1="97.1094" y2="97.1094"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117" x="187" y="92.3672">replicationRequest</text><polygon fill="#070D4A" points="498,122.4199,508,126.4199,498,130.4199,502,126.4199" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="180" x2="504" y1="126.4199" y2="126.4199"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117" x="187" y="121.6777">replicationRequest</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="180" x2="222" y1="155.7305" y2="155.7305"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="222" x2="222" y1="155.7305" y2="168.7305"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="181" x2="222" y1="168.7305" y2="168.7305"/><polygon fill="#070D4A" points="191,164.7305,181,168.7305,191,172.7305,187,168.7305" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="110" x="187" y="150.9883">incrementVersion</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="180" x2="222" y1="198.041" y2="198.041"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="222" x2="222" y1="198.041" y2="211.041"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="181" x2="222" y1="211.041" y2="211.041"/><polygon fill="#070D4A" points="191,207.041,181,211.041,191,215.041,187,211.041" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="151" x="187" y="193.2988">applySetValueCommand</text><path d="M185,224.041 L185,279.041 L293,279.041 L293,234.041 L283,224.041 L185,224.041 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M283,224.041 L283,234.041 L293,234.041 L283,224.041 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="58" x="191" y="241.6094">version:1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="87" x="191" y="256.9199">key:"color@1"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82" x="191" y="272.2305">value:"green"</text><polygon fill="#070D4A" points="43,302.2832,33,306.2832,43,310.2832,39,306.2832" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="37" x2="179" y1="306.2832" y2="306.2832"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="70" x="49" y="301.541">writtenAt:1</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="345" x2="387" y1="335.5938" y2="335.5938"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="387" x2="387" y1="335.5938" y2="348.5938"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="346" x2="387" y1="348.5938" y2="348.5938"/><polygon fill="#070D4A" points="356,344.5938,346,348.5938,356,352.5938,352,348.5938" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="110" x="352" y="330.8516">incrementVersion</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="345" x2="387" y1="377.9043" y2="377.9043"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="387" x2="387" y1="377.9043" y2="390.9043"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="346" x2="387" y1="390.9043" y2="390.9043"/><polygon fill="#070D4A" points="356,386.9043,346,390.9043,356,394.9043,352,390.9043" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="151" x="352" y="373.1621">applySetValueCommand</text><path d="M350,403.9043 L350,458.9043 L458,458.9043 L458,413.9043 L448,403.9043 L350,403.9043 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M448,403.9043 L448,413.9043 L458,413.9043 L448,403.9043 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="58" x="356" y="421.4727">version:1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="87" x="356" y="436.7832">key:"color@1"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82" x="356" y="452.0938">value:"green"</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="510" x2="552" y1="486.1465" y2="486.1465"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="552" x2="552" y1="486.1465" y2="499.1465"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="511" x2="552" y1="499.1465" y2="499.1465"/><polygon fill="#070D4A" points="521,495.1465,511,499.1465,521,503.1465,517,499.1465" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="110" x="517" y="481.4043">incrementVersion</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="510" x2="552" y1="528.457" y2="528.457"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="552" x2="552" y1="528.457" y2="541.457"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="511" x2="552" y1="541.457" y2="541.457"/><polygon fill="#070D4A" points="521,537.457,511,541.457,521,545.457,517,541.457" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="151" x="517" y="523.7148">applySetValueCommand</text><path d="M515,554.457 L515,609.457 L623,609.457 L623,564.457 L613,554.457 L515,554.457 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M613,554.457 L613,564.457 L623,564.457 L613,554.457 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="58" x="521" y="572.0254">version:1</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="87" x="521" y="587.3359">key:"color@1"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="82" x="521" y="602.6465">value:"green"</text><!--MD5=[cb01bca13ab7c7012716b5169bcb1ae4]
+@startuml
+!include ../style.puml
+participant Client
+Client -> Leader: put("color", "green")
+Leader -> Follower1:replicationRequest
+Leader -> Follower2: replicationRequest
+Leader -> Leader: incrementVersion
+Leader -> Leader: applySetValueCommand
+note right Leader
+ version:1
+ key:"color@1"
+ value:"green"
+end note
+Client <- - Leader: writtenAt:1
+Follower1 -> Follower1: incrementVersion
+Follower1 -> Follower1: applySetValueCommand
+note right Follower1
+ version:1
+ key:"color@1"
+ value:"green"
+end note
+Follower2 -> Follower2: incrementVersion
+Follower2 -> Follower2: applySetValueCommand
+note right Follower2
+ version:1
+ key:"color@1"
+ value:"green"
+end note
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant{
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequenceLifeLine {
+   BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequence {
+  ArrowColor #070D4A
+}
+
+skinparam Note {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam Node {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+skinparam object {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+
+hide footbox
+participant Client
+Client -> Leader: put("color", "green")
+Leader -> Follower1:replicationRequest
+Leader -> Follower2: replicationRequest
+Leader -> Leader: incrementVersion
+Leader -> Leader: applySetValueCommand
+note right Leader
+ version:1
+ key:"color@1"
+ value:"green"
+end note
+Client <- - Leader: writtenAt:1
+Follower1 -> Follower1: incrementVersion
+Follower1 -> Follower1: applySetValueCommand
+note right Follower1
+ version:1
+ key:"color@1"
+ value:"green"
+end note
+Follower2 -> Follower2: incrementVersion
+Follower2 -> Follower2: applySetValueCommand
+note right Follower2
+ version:1
+ key:"color@1"
+ value:"green"
+end note
+@enduml
+
+PlantUML version 1.2021.5(Sun Apr 25 07:20:28 EDT 2021)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
