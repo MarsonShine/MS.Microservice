@@ -220,3 +220,46 @@ class HybridTimestamp…
   }
 ```
 
+## 分配时间戳给分布式事务
+
+像 [mongodb](https://www.mongodb.com/) 和 [cockroachdb](https://www.cockroachlabs.com/docs/stable/) 这样的数据库使用了 [Hybrid Clock](Hybrid-Clock.md) 来维护分布式所的因果关系（causality）。使用分布式锁，需要重点注意的是，在事务提交的时候作为事务的一部分所有存储的值都应在跨服务器的相同的时间戳。因此，请求服务器与所有参与服务器通信，告知事务提交时它收到的最高时间戳。这个非常适合用[两阶段](https://en.wikipedia.org/wiki/Two-phase_commit_protocol)协议实现的事务。
+
+下面例子展示了如何在事务提交时确定最高时间戳。假设这里有三台服务器。服务器 Blue 存储名称，服务器 Green 存储标题。有一个单独的服务器作为协调器。正如所见，每个服务器都有自己不同的逻辑时钟值。这可以是一个单一的整数或混合时钟。作为协调者服务器以已知的时钟值 1 开始向服务器 Blue 写入数据。但是 Blue 的时钟是 2，所以它将其自增，并在时间戳 3 处写入值。时间戳 3 以响应体形式返回给协调者。对于所有随后发送到其他服务器的请求，协调器使用时间戳 3。服务器 Green 在请求中接收到了时间戳 3，但是它的时钟是 4。所以它会选择更高的值，也就是 4。自增并在时间戳 5 写入值并返回给协调者。当事务提交时，协调者使用它收到的最高时间戳来提交事务。事务中更新的所有值都将存储在这个最高时间戳处。
+
+![](../asserts/causality-and-transactions-sequence.svg)
+
+​																					（跨服务传播提交时间戳）
+
+关于时间戳处理程序使用事务一个非常简单的代码如下所示：
+
+```java
+class TransactionCoordinator…
+	public Transaction beginTransaction() {
+			return new Transaction(UUID.randomUUID().toString());
+	}
+	
+	public void putTransactionally() {
+			Transaction txn = beginTransaction();
+			HybridTimestamp coordinatorTime = new HybridTimestamp(1);
+			HybridTimestamp server1WriteTime
+              = server1.write("name", "Alice", coordinatorTime, txn);
+
+      HybridTimestamp server2WriteTime = server2.write("title", "Microservices", server1WriteTime, txn);
+
+      HybridTimestamp commitTimestamp = server1WriteTime.max(server2WriteTime);
+      commit(txn, commitTimestamp);
+	}
+	
+	private void commit(Transaction txn, HybridTimestamp commitTimestamp) {
+			server1.commitTxn("name", commitTimestamp, txn);
+			server2.commitTxn("title", commitTimestamp, txn);
+	}
+```
+
+事务实现还可以使用两阶段提交协议的准备阶段来了解每个参与服务器使用的最高时间戳。
+
+## 例子
+
+[mongodb](https://www.mongodb.com/) 在它的 MVCC 存储中使用混合时间戳来维护版本。
+
+[cockrachdb](https://www.cockroachlabs.com/docs/stable/) 使用分布式事务用了混合时间戳来维护因果关系（causality）

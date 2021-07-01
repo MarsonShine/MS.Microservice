@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="895px" preserveAspectRatio="none" style="width:741px;height:895px;" version="1.1" viewBox="0 0 741 895" width="741px" zoomAndPan="magnify"><defs/><g><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="32" x2="32" y1="36.4883" y2="888.4941"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="224" x2="224" y1="36.4883" y2="888.4941"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="466.5" x2="466.5" y1="36.4883" y2="888.4941"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="603.5" x2="603.5" y1="36.4883" y2="888.4941"/><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="54" x="5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="40" x="12" y="25.5352">Client</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="98" x="175" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="84" x="182" y="25.5352">Coordinator</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="43" x="445.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="29" x="452.5" y="25.5352">Blue</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="55" x="576.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="41" x="583.5" y="25.5352">Green</text><path d="M187,51.4883 L187,76.4883 L260,76.4883 L260,61.4883 L250,51.4883 L187,51.4883 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M250,51.4883 L250,61.4883 L260,61.4883 L250,51.4883 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="193" y="69.0566">Clock: 1</text><polygon fill="#070D4A" points="212,99.1094,222,103.1094,212,107.1094,216,103.1094" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="218" y1="103.1094" y2="103.1094"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="108" x="39" y="98.3672">BeginTransaction</text><polygon fill="#070D4A" points="212,128.4199,222,132.4199,212,136.4199,216,132.4199" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="218" y1="132.4199" y2="132.4199"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122" x="39" y="127.6777">put("name", "Alice")</text><path d="M430,145.4199 L430,170.4199 L503,170.4199 L503,155.4199 L493,145.4199 L430,145.4199 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M493,145.4199 L493,155.4199 L503,155.4199 L493,145.4199 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="436" y="162.9883">Clock: 2</text><path d="M567,180.7305 L567,205.7305 L640,205.7305 L640,190.7305 L630,180.7305 L567,180.7305 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M630,180.7305 L630,190.7305 L640,190.7305 L630,180.7305 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="573" y="198.2988">Clock: 4</text><polygon fill="#070D4A" points="455,228.3516,465,232.3516,455,236.3516,459,232.3516" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="224" x2="461" y1="232.3516" y2="232.3516"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="219" x="231" y="227.6094">put("name", "Alice", "timestamp:1")</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="467" x2="509" y1="261.6621" y2="261.6621"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="509" x2="509" y1="261.6621" y2="274.6621"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="468" x2="509" y1="274.6621" y2="274.6621"/><polygon fill="#070D4A" points="478,270.6621,468,274.6621,478,278.6621,474,274.6621" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="123" x="474" y="256.9199">chooseMax("1", "2")</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="467" x2="509" y1="303.9727" y2="303.9727"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="509" x2="509" y1="303.9727" y2="316.9727"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="468" x2="509" y1="316.9727" y2="316.9727"/><polygon fill="#070D4A" points="478,312.9727,468,316.9727,478,320.9727,474,316.9727" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="99" x="474" y="299.2305">incrementClock</text><path d="M412,329.9727 L412,384.9727 L522,384.9727 L522,339.9727 L512,329.9727 L412,329.9727 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M512,329.9727 L512,339.9727 L522,339.9727 L512,329.9727 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="418" y="347.541">Clock:3</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="89" x="418" y="362.8516">key:"name@3"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="78" x="418" y="378.1621">value:"Alice"</text><polygon fill="#070D4A" points="235,408.2148,225,412.2148,235,416.2148,231,412.2148" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="229" x2="466" y1="412.2148" y2="412.2148"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="70" x="241" y="407.4727">writtenAt:3</text><polygon fill="#070D4A" points="212,437.5254,222,441.5254,212,445.5254,216,441.5254" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="218" y1="441.5254" y2="441.5254"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="168" x="39" y="436.7832">put("title", "Microservices")</text><polygon fill="#070D4A" points="592,466.8359,602,470.8359,592,474.8359,596,470.8359" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="224" x2="598" y1="470.8359" y2="470.8359"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="219" x="231" y="466.0938">put("name", "Alice", "timestamp:3")</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="604" x2="646" y1="500.1465" y2="500.1465"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="646" x2="646" y1="500.1465" y2="513.1465"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="605" x2="646" y1="513.1465" y2="513.1465"/><polygon fill="#070D4A" points="615,509.1465,605,513.1465,615,517.1465,611,513.1465" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="123" x="611" y="495.4043">chooseMax("3", "4")</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="604" x2="646" y1="542.457" y2="542.457"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="646" x2="646" y1="542.457" y2="555.457"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="605" x2="646" y1="555.457" y2="555.457"/><polygon fill="#070D4A" points="615,551.457,605,555.457,615,559.457,611,555.457" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="99" x="611" y="537.7148">incrementClock</text><path d="M527,568.457 L527,623.457 L681,623.457 L681,578.457 L671,568.457 L527,568.457 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M671,568.457 L671,578.457 L681,578.457 L671,568.457 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="533" y="586.0254">Clock:5</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80" x="533" y="601.3359">key:"title@5"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="133" x="533" y="616.6465">value:"Microservices"</text><polygon fill="#070D4A" points="235,646.6992,225,650.6992,235,654.6992,231,650.6992" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="229" x2="603" y1="650.6992" y2="650.6992"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="70" x="241" y="645.957">writtenAt:5</text><polygon fill="#070D4A" points="212,676.0098,222,680.0098,212,684.0098,216,680.0098" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="218" y1="680.0098" y2="680.0098"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="39" y="675.2676">commit</text><polygon fill="#070D4A" points="455,705.3203,465,709.3203,455,713.3203,459,709.3203" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="224" x2="461" y1="709.3203" y2="709.3203"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="197" x="231" y="704.5781">commit("name", "timestamp:5")</text><path d="M412,722.3203 L412,777.3203 L522,777.3203 L522,732.3203 L512,722.3203 L412,722.3203 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M512,722.3203 L512,732.3203 L522,732.3203 L512,722.3203 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="418" y="739.8887">Clock:5</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="89" x="418" y="755.1992">key:"name@5"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="78" x="418" y="770.5098">value:"Alice"</text><polygon fill="#070D4A" points="592,800.5625,602,804.5625,592,808.5625,596,804.5625" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="224" x2="598" y1="804.5625" y2="804.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="188" x="231" y="799.8203">commit("title", "timestamp:5")</text><path d="M527,817.5625 L527,872.5625 L681,872.5625 L681,827.5625 L671,817.5625 L527,817.5625 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M671,817.5625 L671,827.5625 L681,827.5625 L671,817.5625 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="533" y="835.1309">Clock:5</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80" x="533" y="850.4414">key:"title@5"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="133" x="533" y="865.752">value:"Microservices"</text><!--MD5=[fcec6207149e731c17708f0458b4834f]
+@startuml
+!include ../style.puml
+participant Client
+note over Coordinator: Clock: 1
+Client -> Coordinator:BeginTransaction
+Client -> Coordinator:put("name", "Alice")
+note over  Blue: Clock: 2
+note over  Green: Clock: 4
+
+Coordinator ->  Blue:put("name", "Alice", "timestamp:1")
+ Blue ->  Blue:chooseMax("1", "2")
+ Blue ->  Blue:incrementClock
+note over  Blue 
+Clock:3
+key:"name@3"
+value:"Alice"
+end note
+Coordinator <- -  Blue:writtenAt:3
+
+Client -> Coordinator:put("title", "Microservices")
+Coordinator ->  Green:put("name", "Alice", "timestamp:3")
+ Green ->  Green:chooseMax("3", "4")
+ Green ->  Green:incrementClock
+note over  Green 
+Clock:5
+key:"title@5"
+value:"Microservices"
+end note
+Coordinator <- -  Green:writtenAt:5
+
+Client -> Coordinator:commit
+Coordinator-> Blue: commit("name", "timestamp:5")
+note over  Blue 
+Clock:5
+key:"name@5"
+value:"Alice"
+end note
+
+Coordinator-> Green: commit("title", "timestamp:5")
+note over  Green 
+Clock:5
+key:"title@5"
+value:"Microservices"
+end note
+
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant{
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequenceLifeLine {
+   BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequence {
+  ArrowColor #070D4A
+}
+
+skinparam Note {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam Node {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+skinparam object {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+
+hide footbox
+participant Client
+note over Coordinator: Clock: 1
+Client -> Coordinator:BeginTransaction
+Client -> Coordinator:put("name", "Alice")
+note over  Blue: Clock: 2
+note over  Green: Clock: 4
+
+Coordinator ->  Blue:put("name", "Alice", "timestamp:1")
+ Blue ->  Blue:chooseMax("1", "2")
+ Blue ->  Blue:incrementClock
+note over  Blue 
+Clock:3
+key:"name@3"
+value:"Alice"
+end note
+Coordinator <- -  Blue:writtenAt:3
+
+Client -> Coordinator:put("title", "Microservices")
+Coordinator ->  Green:put("name", "Alice", "timestamp:3")
+ Green ->  Green:chooseMax("3", "4")
+ Green ->  Green:incrementClock
+note over  Green 
+Clock:5
+key:"title@5"
+value:"Microservices"
+end note
+Coordinator <- -  Green:writtenAt:5
+
+Client -> Coordinator:commit
+Coordinator-> Blue: commit("name", "timestamp:5")
+note over  Blue 
+Clock:5
+key:"name@5"
+value:"Alice"
+end note
+
+Coordinator-> Green: commit("title", "timestamp:5")
+note over  Green 
+Clock:5
+key:"title@5"
+value:"Microservices"
+end note
+
+@enduml
+
+PlantUML version 1.2021.5(Sun Apr 25 07:20:28 EDT 2021)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
