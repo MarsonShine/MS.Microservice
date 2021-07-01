@@ -7,7 +7,7 @@
 - [Gossip 传播(Gossip Dissemination)](Gossip-Dissemination.md)
 - [心跳检查(HeartBeat)](HeartBeat.md)
 - [高水位标记(High-Water Mask)](High-Water-Mark.md))
-- [混合时钟(Hybrid Clock)](Hybrid-Clock.md) //TODO
+- [混合时钟(Hybrid Clock)](Hybrid-Clock.md)
 - [幂等接收者(Idempotent Receiver)](Idempotent-Receiver.md)
 - [键和值(Key And Value)](Key-Value.md) //TODO
 - [Lamport 时钟](lamport-clock.md) //TODO
