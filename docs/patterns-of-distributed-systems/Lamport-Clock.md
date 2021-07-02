@@ -60,13 +60,89 @@ class LamportClock...
 
 ## 一个键值存储例子
 
+思考多服务节点键值存储的简单例子。有两个服务器，Blue 和 Green。每个服务器负责存储键集合。这是跨一组服务器集合对数据进行分区的典型场景。值以 [Versioned Value](Versioned-Value.md) 的形式存储，Lamport 时间戳存储为版本号。
 
+![](../asserts/two-servers-each-with-specific-key-range.svg)
 
-## 分区排序
+接收服务器比较并更新它自己的时间戳，并使用它写入一个版本化的键值。
+
+```java
+class Server… 
+  public int write(String key, String value, int requestTimestamp) {
+      //update own clock to reflect causality
+      int writeAtTimestamp = clock.tick(requestTimestamp);
+      mvccStore.put(new VersionedKey(key, writeAtTimestamp), value);
+      return writeAtTimestamp;
+  }
+```
+
+将用于写入值的时间戳返回给客户端。客户端通过更新自己的时间戳来跟踪最大时间戳。它会使用这个时间戳发出进一步的写入操作。
+
+```java
+class Client… 
+  LamportClock clock = new LamportClock(1);
+  public void write() {
+      int server1WrittenAt = server1.write("name", "Alice", clock.getLatestTime());
+      clock.updateTo(server1WrittenAt);
+
+      int server2WrittenAt = server2.write("title", "Microservices", clock.getLatestTime());
+      clock.updateTo(server2WrittenAt);
+
+      assertTrue(server2WrittenAt > server1WrittenAt);
+  }
+```
+
+请求序列如下图所示：
+
+![](../asserts/lamport-clock-request-sequence.svg)
+
+同样的技术也适用于客户端与 [Leader 和 Follower](Leader-And-Followers.md) 组的 Leader 通信，每个组负责特定的键。客户端将请求发送给组的 Leader，如上所述。Lamport Clock 实例由组的 Leader 维护，并以与前一节中讨论的完全相同的方式进行更新。
+
+![](../asserts/different-keys-different-servers.svg)
+
+​																				不同的 leader follower 组存储不同的键值
+
+## 局部排序
+
+Lamport Clock 存储的值只有局部顺序。如果两个客户端将值存储在两个独立的服务器中，则不能使用时间戳对跨服务器的值进行排序。在下例中，Bob 在服务器Green 上于时间戳 2 处存储标题。但是不能确定 Bob 是在 Alice 在服务器 Blue 上存储名称之前还是之后存储了标题。
+
+![](../asserts/two-clients-two-separate-servers.svg)
+
+​																						局部排序
 
 ## 单服务器/领导者更新值
 
+对于单服务器 leader-follower 服务器组，其中 leader 是负责存储值，其基本实现方式就是在 [Versioned Value](Versioned-Value.md) 中提到的一样来维护因果关系。
+
+![](../asserts/single-servergroup-kvstore.svg)
+
+​																					单 leader-follower 组保存键值
+
+在这个案例中，键值存储保存的是一个整数版本计数器（version counter）。每次从预写日志（WAL）应用键值写命令时，它都会增加这个版本计数器。然后用自增版本计数器构造新 key。只有 leader 负责递增版本计数器，并且 follower 使用相同的版本号。
+
+```java
+class ReplicatedKVStore… 
+  int version = 0;
+  MVCCStore mvccStore = new MVCCStore();
+
+  @Override
+  public CompletableFuture<Response> put(String key, String value) {
+      return server.propose(new SetValueCommand(key, value));
+  }
+
+  private Response applySetValueCommand(SetValueCommand setValueCommand) {
+      getLogger().info("Setting key value " + setValueCommand);
+      version = version + 1;
+      mvccStore.put(new VersionedKey(setValueCommand.getKey(), version), setValueCommand.getValue());
+      Response response = Response.success(version);
+      return response;
+  }
+```
+
 ## 例子
+
+- 像 [mongodb](https://www.mongodb.com/) 和 [cockroachdb](https://www.cockroachlabs.com/docs/stable/) 这样的数据库使用 Lamport Clock 的变体来实现 [mvcc](https://en.wikipedia.org/wiki/Multiversion_concurrency_control) 存储。
+- [生成时钟](Generation-Clock.md)就是 Lamport Clock 的一个例子
 
 ## 原文
 

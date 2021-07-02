@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="570px" preserveAspectRatio="none" style="width:514px;height:570px;" version="1.1" viewBox="0 0 514 570" width="514px" zoomAndPan="magnify"><defs/><g><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="41" x2="41" y1="36.2969" y2="563.5547"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="282.5" x2="282.5" y1="36.2969" y2="563.5547"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="398.5" x2="398.5" y1="36.2969" y2="563.5547"/><rect fill="#F7F8FE" height="30.2969" style="stroke:#070D4A;stroke-width:1.5;" width="55" x="14" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="41" x="21" y="24.9951">Client</text><rect fill="#F7F8FE" height="30.2969" style="stroke:#070D4A;stroke-width:1.5;" width="46" x="259.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="32" x="266.5" y="24.9951">Blue</text><rect fill="#F7F8FE" height="30.2969" style="stroke:#070D4A;stroke-width:1.5;" width="58" x="369.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="44" x="376.5" y="24.9951">Green</text><path d="M5,51.2969 L5,76.2969 L78,76.2969 L78,61.2969 L68,51.2969 L5,51.2969 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M68,51.2969 L68,61.2969 L78,61.2969 L68,51.2969 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="11" y="68.3638">Clock: 1</text><path d="M246,86.4297 L246,111.4297 L319,111.4297 L319,96.4297 L309,86.4297 L246,86.4297 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M309,86.4297 L309,96.4297 L319,96.4297 L309,86.4297 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="252" y="103.4966">Clock: 1</text><polygon fill="#070D4A" points="270.5,133.6953,280.5,137.6953,270.5,141.6953,274.5,137.6953" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="41.5" x2="276.5" y1="137.6953" y2="137.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="217" x="48.5" y="132.6294">write("name", "Alice", "clock=1")</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="282.5" x2="324.5" y1="166.8281" y2="166.8281"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="324.5" x2="324.5" y1="166.8281" y2="179.8281"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="283.5" x2="324.5" y1="179.8281" y2="179.8281"/><polygon fill="#070D4A" points="293.5,175.8281,283.5,179.8281,293.5,183.8281,289.5,179.8281" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="102" x="289.5" y="161.7622">incrementClock</text><path d="M221,192.8281 L221,247.8281 L344,247.8281 L344,202.8281 L334,192.8281 L221,192.8281 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M334,192.8281 L334,202.8281 L344,202.8281 L334,192.8281 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="227" y="209.895">Clock:2</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="102" x="227" y="225.0278">key: "name@2"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="88" x="227" y="240.1606">value: "Alice"</text><polygon fill="#070D4A" points="52.5,270.3594,42.5,274.3594,52.5,278.3594,48.5,274.3594" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="46.5" x2="281.5" y1="274.3594" y2="274.3594"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="72" x="58.5" y="269.2935">writtenAt 2</text><path d="M5,287.3594 L5,312.3594 L78,312.3594 L78,297.3594 L68,287.3594 L5,287.3594 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M68,287.3594 L68,297.3594 L78,297.3594 L68,287.3594 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="11" y="304.4263">Clock: 2</text><path d="M362,322.4922 L362,347.4922 L435,347.4922 L435,332.4922 L425,322.4922 L362,322.4922 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M425,322.4922 L425,332.4922 L435,332.4922 L425,322.4922 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="368" y="339.5591">Clock: 1</text><polygon fill="#070D4A" points="386.5,369.7578,396.5,373.7578,386.5,377.7578,390.5,373.7578" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="41.5" x2="392.5" y1="373.7578" y2="373.7578"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="263" x="48.5" y="368.6919">write("title", "Microservices", "clock=2")</text><line style="stroke:#070D4A;stroke-width:1.0;" x1="398.5" x2="440.5" y1="402.8906" y2="402.8906"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="440.5" x2="440.5" y1="402.8906" y2="415.8906"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="399.5" x2="440.5" y1="415.8906" y2="415.8906"/><polygon fill="#070D4A" points="409.5,411.8906,399.5,415.8906,409.5,419.8906,405.5,415.8906" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="102" x="405.5" y="397.8247">incrementClock</text><path d="M315,428.8906 L315,483.8906 L481,483.8906 L481,438.8906 L471,428.8906 L315,428.8906 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M471,428.8906 L471,438.8906 L481,438.8906 L471,428.8906 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="48" x="321" y="445.9575">Clock:3</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="91" x="321" y="461.0903">key: "title@3"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="145" x="321" y="476.2231">value: "Microservices"</text><polygon fill="#070D4A" points="52.5,506.4219,42.5,510.4219,52.5,514.4219,48.5,510.4219" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="46.5" x2="397.5" y1="510.4219" y2="510.4219"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="72" x="58.5" y="505.356">writtenAt 3</text><path d="M5,523.4219 L5,548.4219 L78,548.4219 L78,533.4219 L68,523.4219 L5,523.4219 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M68,523.4219 L68,533.4219 L78,533.4219 L68,523.4219 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="52" x="11" y="540.4888">Clock: 3</text><!--MD5=[3c7f9cdc28a02f15c6f1bba576deea6a]
+@startuml
+!include ../style.puml
+participant Client
+note over Client: Clock: 1
+note over Blue: Clock: 1
+Client -> Blue: write("name", "Alice", "clock=1")
+Blue -> Blue: incrementClock
+note over Blue 
+Clock:2
+key: "name@2"
+value: "Alice"
+end note
+Client <- - Blue: writtenAt 2
+note over Client: Clock: 2
+note over Green: Clock: 1
+Client -> Green: write("title", "Microservices", "clock=2")
+Green -> Green: incrementClock
+note over Green 
+Clock:3
+key: "title@3"
+value: "Microservices"
+end note
+Client <- - Green: writtenAt 3
+note over Client: Clock: 3
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant{
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequenceLifeLine {
+   BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequence {
+  ArrowColor #070D4A
+}
+
+skinparam Note {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam Node {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+skinparam object {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+
+hide footbox
+participant Client
+note over Client: Clock: 1
+note over Blue: Clock: 1
+Client -> Blue: write("name", "Alice", "clock=1")
+Blue -> Blue: incrementClock
+note over Blue 
+Clock:2
+key: "name@2"
+value: "Alice"
+end note
+Client <- - Blue: writtenAt 2
+note over Client: Clock: 2
+note over Green: Clock: 1
+Client -> Green: write("title", "Microservices", "clock=2")
+Green -> Green: incrementClock
+note over Green 
+Clock:3
+key: "title@3"
+value: "Microservices"
+end note
+Client <- - Green: writtenAt 3
+note over Client: Clock: 3
+@enduml
+
+PlantUML version 1.2021.5(Sun Apr 25 16:50:28 IST 2021)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: IN
+--></g></svg>
