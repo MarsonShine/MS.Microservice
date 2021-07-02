@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="286px" preserveAspectRatio="none" style="width:498px;height:286px;" version="1.1" viewBox="0 0 498 286" width="498px" zoomAndPan="magnify"><defs/><g><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="32" x2="32" y1="36.4883" y2="279.6621"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="224" x2="224" y1="36.4883" y2="279.6621"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:5.0,5.0;" x1="415.5" x2="415.5" y1="36.4883" y2="279.6621"/><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="54" x="5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="40" x="12" y="25.5352">Client</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="60" x="194" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="46" x="201" y="25.5352">Leader</text><rect fill="#F7F8FE" height="30.4883" style="stroke:#070D4A;stroke-width:1.5;" width="73" x="379.5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="59" x="386.5" y="25.5352">Follower</text><path d="M150,51.4883 L150,76.4883 L297,76.4883 L297,61.4883 L287,51.4883 L150,51.4883 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M287,51.4883 L287,61.4883 L297,61.4883 L287,51.4883 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="126" x="156" y="69.0566">title: "Nitroservices"</text><path d="M342,51.4883 L342,76.4883 L489,76.4883 L489,61.4883 L479,51.4883 L342,51.4883 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M479,51.4883 L479,61.4883 L489,61.4883 L479,51.4883 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="126" x="348" y="69.0566">title: "Nitroservices"</text><polygon fill="#070D4A" points="212,99.1094,222,103.1094,212,107.1094,216,103.1094" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="218" y1="103.1094" y2="103.1094"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="168" x="39" y="98.3672">put("title", "Microservices")</text><path d="M149,116.1094 L149,141.1094 L299,141.1094 L299,126.1094 L289,116.1094 L149,116.1094 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M289,116.1094 L289,126.1094 L299,126.1094 L289,116.1094 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="129" x="155" y="133.6777">title: "Microservices"</text><path d="M342,116.1094 L342,141.1094 L489,141.1094 L489,126.1094 L479,116.1094 L342,116.1094 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M479,116.1094 L479,126.1094 L489,126.1094 L479,116.1094 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="126" x="348" y="133.6777">title: "Nitroservices"</text><polygon fill="#070D4A" points="404,163.7305,414,167.7305,404,171.7305,408,167.7305" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="32" x2="410" y1="167.7305" y2="167.7305"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="63" x="39" y="162.9883">get("title")</text><polygon fill="#070D4A" points="43,193.041,33,197.041,43,201.041,39,197.041" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;stroke-dasharray:2.0,2.0;" x1="37" x2="415" y1="197.041" y2="197.041"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="93" x="49" y="192.2988">"Nitroservices"</text><polygon fill="#070D4A" points="404,222.3516,414,226.3516,404,230.3516,408,226.3516" style="stroke:#070D4A;stroke-width:1.0;"/><line style="stroke:#070D4A;stroke-width:1.0;" x1="224" x2="410" y1="226.3516" y2="226.3516"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="168" x="231" y="221.6094">put("title", "Microservices")</text><path d="M341,239.3516 L341,264.3516 L491,264.3516 L491,249.3516 L481,239.3516 L341,239.3516 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M481,239.3516 L481,249.3516 L491,249.3516 L481,239.3516 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="129" x="347" y="256.9199">title: "Microservices"</text><!--MD5=[64af59eabb6588ebcfcaa33c3658cce9]
+@startuml
+!include ../style.puml
+participant Client
+note over Leader: title: "Nitroservices"
+/ note over Follower: title: "Nitroservices"
+Client -> Leader: put("title", "Microservices")
+note over Leader: title: "Microservices"
+/ note over Follower: title: "Nitroservices"
+Client -> Follower: get("title")
+Client <- - Follower: "Nitroservices"
+Leader -> Follower: put("title", "Microservices")
+note over Follower: title: "Microservices"
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant{
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequenceLifeLine {
+   BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequence {
+  ArrowColor #070D4A
+}
+
+skinparam Note {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam Node {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+skinparam object {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+
+hide footbox
+participant Client
+note over Leader: title: "Nitroservices"
+/ note over Follower: title: "Nitroservices"
+Client -> Leader: put("title", "Microservices")
+note over Leader: title: "Microservices"
+/ note over Follower: title: "Nitroservices"
+Client -> Follower: get("title")
+Client <- - Follower: "Nitroservices"
+Leader -> Follower: put("title", "Microservices")
+note over Follower: title: "Microservices"
+@enduml
+
+PlantUML version 1.2021.5(Sun Apr 25 07:20:28 EDT 2021)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

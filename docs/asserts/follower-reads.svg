@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="377px" preserveAspectRatio="none" style="width:387px;height:377px;" version="1.1" viewBox="0 0 387 377" width="387px" zoomAndPan="magnify"><defs/><g><!--MD5=[d56c532315820982898244c3b14aaf96]
+cluster us-west1--><rect fill="#FFFFFF" height="364" style="stroke:#000000;stroke-width:1.5;" width="210" x="7" y="7"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="69" x="77.5" y="22.5352">us-west1</text><!--MD5=[7023c76b342cc1e0ba01d6f7765cb04f]
+cluster us-east--><rect fill="#FFFFFF" height="220" style="stroke:#000000;stroke-width:1.5;" width="140" x="241" y="151"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="56" x="283" y="166.5352">us-east</text><!--MD5=[261b70d766cf3b488716fdc7774eedb5]
+entity Client1--><polygon fill="#F7F8FE" points="53.5,52,63.5,42,142.5,42,142.5,78.4883,132.5,88.4883,53.5,88.4883,53.5,52" style="stroke:#070D4A;stroke-width:1.5;"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="132.5" x2="142.5" y1="52" y2="42"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="53.5" x2="132.5" y1="52" y2="52"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="132.5" x2="132.5" y1="52" y2="88.4883"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="49" x="68.5" y="75.5352">Client1</text><!--MD5=[f2b9f41118a9b61d4dd838078395d163]
+entity Leader--><polygon fill="#F7F8FE" points="115,196,125,186,201,186,201,222.4883,191,232.4883,115,232.4883,115,196" style="stroke:#070D4A;stroke-width:1.5;"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="191" x2="201" y1="196" y2="186"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="115" x2="191" y1="196" y2="196"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="191" x2="191" y1="196" y2="232.4883"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="46" x="130" y="219.5352">Leader</text><!--MD5=[576008b671310936a912986e55eea508]
+entity Follower1--><polygon fill="#F7F8FE" points="39,319,49,309,147,309,147,345.4883,137,355.4883,39,355.4883,39,319" style="stroke:#070D4A;stroke-width:1.5;"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="137" x2="147" y1="319" y2="309"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="39" x2="137" y1="319" y2="319"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="137" x2="137" y1="319" y2="355.4883"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="68" x="54" y="342.5352">Follower1</text><!--MD5=[87b5331bd98359a6a5d777d873059d3a]
+entity Client2--><polygon fill="#F7F8FE" points="266.5,196,276.5,186,355.5,186,355.5,222.4883,345.5,232.4883,266.5,232.4883,266.5,196" style="stroke:#070D4A;stroke-width:1.5;"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="345.5" x2="355.5" y1="196" y2="186"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="266.5" x2="345.5" y1="196" y2="196"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="345.5" x2="345.5" y1="196" y2="232.4883"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="49" x="281.5" y="219.5352">Client2</text><!--MD5=[5769ee1fb28520fd95651b8963178008]
+entity Follower2--><polygon fill="#F7F8FE" points="257,319,267,309,365,309,365,345.4883,355,355.4883,257,355.4883,257,319" style="stroke:#070D4A;stroke-width:1.5;"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="355" x2="365" y1="319" y2="309"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="257" x2="355" y1="319" y2="319"/><line style="stroke:#070D4A;stroke-width:1.5;" x1="355" x2="355" y1="319" y2="355.4883"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="68" x="272" y="342.5352">Follower2</text><!--MD5=[85a4735c59618561b6641024a17a52e1]
+link Client1 to Leader--><path d="M107.38,88.19 C117.99,113.3 135.27,154.21 146.64,181.11 " fill="none" id="Client1-to-Leader" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="148.69,185.97,148.884,176.1231,146.7497,181.3618,141.5109,179.2275,148.69,185.97" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="128" y="131.5684">write</text><!--MD5=[6d18536989c2d7e38585cec8e66fae44]
+link Client1 to Follower1--><path d="M89.5,88.19 C84.16,103.36 77.76,124.09 75,143 C66.68,199.9 78.21,267.07 86.29,303.73 " fill="none" id="Client1-to-Follower1" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="87.46,308.92,89.4124,299.2666,86.3753,304.0391,81.6029,301.002,87.46,308.92" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="20" x="76" y="214.0684">get</text><!--MD5=[1b6cedec9a47754958593f43964fecc5]
+link Leader to Follower1--><path d="M133.6,232.21 C125.39,240.81 116.84,251.19 111,262 C104.04,274.89 99.67,290.6 96.98,303.77 " fill="none" id="Leader-to-Follower1" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="96,308.87,101.6285,300.7879,96.9448,303.9601,93.7726,299.2763,96,308.87" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="54" x="112" y="275.5684">replicate</text><!--MD5=[e6487ff1a877901f98bce8995ed96d34]
+link Leader to Follower2--><path d="M186.06,232.19 C212.37,253 251.67,284.08 279.15,305.81 " fill="none" id="Leader-to-Follower2" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="283.12,308.95,278.5326,300.2348,279.1949,305.8527,273.5769,306.515,283.12,308.95" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="54" x="244" y="275.5684">replicate</text><!--MD5=[8aa1ee0c8ba2d8f2cc298a769c5b6cd0]
+link Client2 to Follower2--><path d="M311,232.19 C311,252.41 311,282.31 311,303.92 " fill="none" id="Client2-to-Follower2" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="311,308.95,315,299.95,311,303.95,307,299.95,311,308.95" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="20" x="312" y="275.5684">get</text><!--MD5=[4d277b8fd5ddf05b6c833df645aafff9]
+@startuml
+!include ../style.puml
+skinparam packageStyle rectangle
+package us-west1 {
+  node Client1
+  node Leader
+  node Follower1
+}
+package us-east {
+  node Client2
+  node Follower2
+}
+Client1 - -> Leader : write
+Client1 - -> Follower1 : get
+Leader - -> Follower1 : replicate
+Leader - -> Follower2 : replicate
+Client2 - -> Follower2 : get
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant{
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequenceLifeLine {
+   BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequence {
+  ArrowColor #070D4A
+}
+
+skinparam Note {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam Node {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+skinparam object {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+
+hide footbox
+skinparam packageStyle rectangle
+package us-west1 {
+  node Client1
+  node Leader
+  node Follower1
+}
+package us-east {
+  node Client2
+  node Follower2
+}
+Client1 - -> Leader : write
+Client1 - -> Follower1 : get
+Leader - -> Follower1 : replicate
+Leader - -> Follower2 : replicate
+Client2 - -> Follower2 : get
+@enduml
+
+PlantUML version 1.2021.5(Sun Apr 25 07:20:28 EDT 2021)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

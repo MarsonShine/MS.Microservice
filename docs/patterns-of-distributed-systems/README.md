@@ -2,7 +2,7 @@
 
 - [一致性核心](Consisten-Core.md)
 - [固定分区](Fixed-Partitions.md) //TODO
-- [从读(Follower Reads)](Follower-Reads.md) //TODO
+- [从读(Follower Reads)](Follower-Reads.md)
 - [时钟生成器(Generation Clock)](Generation-Clock.md)
 - [Gossip 传播(Gossip Dissemination)](Gossip-Dissemination.md)
 - [心跳检查(HeartBeat)](HeartBeat.md)
@@ -10,7 +10,7 @@
 - [混合时钟(Hybrid Clock)](Hybrid-Clock.md)
 - [幂等接收者(Idempotent Receiver)](Idempotent-Receiver.md)
 - [键和值(Key And Value)](Key-Value.md) //TODO
-- [Lamport 时钟](lamport-clock.md) //TODO
+- [Lamport 时钟](lamport-clock.md)
 - [低水位标记(Low-Water Mark)](Low-Water-Mark.md)
 - [领导者与追随者(Leader And Followers)](Leader-And-Followers.md)
 - [租赁(Lease)](Lease.md)
