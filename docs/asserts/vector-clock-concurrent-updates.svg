@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="250px" preserveAspectRatio="none" style="width:686px;height:250px;" version="1.1" viewBox="0 0 686 250" width="686px" zoomAndPan="magnify"><defs/><g><rect fill="#F7F8FE" height="33.9688" style="stroke:#070D4A;stroke-width:1.5;" width="56" x="211.9" y="7"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="42" x="218.9" y="20.1387">Client1</text><line style="stroke:#070D4A;stroke-width:1.5;" x1="212.9" x2="266.9" y1="24.9688" y2="24.9688"/><rect fill="#F7F8FE" height="33.9688" style="stroke:#070D4A;stroke-width:1.5;" width="56" x="428.9" y="7"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="42" x="435.9" y="20.1387">Client2</text><line style="stroke:#070D4A;stroke-width:1.5;" x1="429.9" x2="483.9" y1="24.9688" y2="24.9688"/><rect fill="#F7F8FE" height="37.6094" style="stroke:#070D4A;stroke-width:1.5;" width="59" x="41.4" y="196.5"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="26" x="57.9" y="209.6387">Blue</text><line style="stroke:#070D4A;stroke-width:1.5;" x1="42.4" x2="99.4" y1="214.4688" y2="214.4688"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacing" textLength="47" x="47.4" y="227.751">clock = 2</text><rect fill="#F7F8FE" height="37.6094" style="stroke:#070D4A;stroke-width:1.5;" width="59" x="412.4" y="196.5"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="36" x="423.9" y="209.6387">Green</text><line style="stroke:#070D4A;stroke-width:1.5;" x1="413.4" x2="470.4" y1="214.4688" y2="214.4688"/><text fill="#000000" font-family="sans-serif" font-size="10" lengthAdjust="spacing" textLength="47" x="418.4" y="227.751">clock = 4</text><path d="M280.9,102 L280.9,127.1328 L422.9,127.1328 L422.9,112 L412.9,102 L280.9,102 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M412.9,102 L412.9,112 L422.9,112 L412.9,102 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="121" x="286.9" y="119.0669">Connection Failure</text><path d="M135.4,188 L135.4,211.5 L100.63,215.5 L135.4,219.5 L135.4,243.3984 A0,0 0 0 0 135.4,243.3984 L264.4,243.3984 A0,0 0 0 0 264.4,243.3984 L264.4,198 L254.4,188 L135.4,188 A0,0 0 0 0 135.4,188 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M254.4,188 L254.4,198 L264.4,198 L254.4,188 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="102" x="141.4" y="205.0669">key: "name@2"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="88" x="141.4" y="220.1997">value: "Alice"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="108" x="141.4" y="235.3325">version:{blue:1}</text><path d="M506.9,188 L506.9,211.5 L471.47,215.5 L506.9,219.5 L506.9,243.3984 A0,0 0 0 0 506.9,243.3984 L644.9,243.3984 A0,0 0 0 0 644.9,243.3984 L644.9,198 L634.9,188 L506.9,188 A0,0 0 0 0 506.9,188 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><path d="M634.9,188 L634.9,198 L644.9,198 L634.9,188 " fill="#F7F8FE" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="102" x="512.9" y="205.0669">key: "name@4"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="81" x="512.9" y="220.1997">value: "Bob"</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="117" x="512.9" y="235.3325">version:{green:1}</text><!--MD5=[be28875575a609d324a56f32b84b1f13]
+link Client1 to N1--><path codeLine="12" d="M260.18,41.03 C282.37,58.56 317.4,86.24 337.13,101.83 " fill="none" id="Client1-N1" style="stroke:#FF0000;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><!--MD5=[8e97a0c2885aa53b27a3c9e1427a72b7]
+link N1 to Green--><path codeLine="13" d="M362.58,127.25 C378.13,144.35 407.15,176.27 425.44,196.4 " fill="none" id="N1-Green" style="stroke:#FF0000;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><!--MD5=[b4b26b1262c195b0357648dd9f33d19f]
+link Client2 to N1--><path codeLine="15" d="M437.64,41.23 C416.8,58.8 384.09,86.37 365.68,101.88 " fill="none" id="Client2-N1" style="stroke:#FF0000;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><!--MD5=[30a87e9c8d036f304a034d57c48b9d03]
+link N1 to Blue--><path codeLine="16" d="M304.22,127.08 C256.17,139.48 180.39,161.07 117.9,188 C112.13,190.48 106.17,193.48 100.5,196.56 " fill="none" id="N1-Blue" style="stroke:#FF0000;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><!--MD5=[ce9c6b45d0d6556c16df556e09cc6b1a]
+link Client1 to Blue--><path codeLine="18" d="M211.66,25.56 C163.99,28.21 68.59,41.27 25.9,102 C6,130.31 30.25,168.68 50.13,192.5 " fill="none" id="Client1-to-Blue" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="53.53,196.48,50.7099,187.0435,50.276,192.6837,44.6359,192.2499,53.53,196.48" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="235" x="26.9" y="119.0669">putAsPrimary("name", "Alice", "{}")</text><!--MD5=[eee5e1796898fe7518725618743b7294]
+link Client2 to Green--><path codeLine="19" d="M455.62,41.16 C452.95,74.82 446.8,152.57 443.72,191.46 " fill="none" id="Client2-to-Green" style="stroke:#070D4A;stroke-width:1.0;"/><polygon fill="#070D4A" points="443.33,196.46,448.0369,187.8087,443.7299,191.476,440.0626,187.1689,443.33,196.46" style="stroke:#070D4A;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="228" x="450.9" y="119.0669">putAsPrimary("name", "Bob", "{}")</text><!--MD5=[1ae9c1a217d76022bf3ccedab62693c6]
+@startuml
+!include ../style.puml
+object Client1
+object Client2
+object Blue {
+    clock = 2
+}
+object Green {
+    clock = 4
+}
+
+note "Connection Failure" as N1
+Client1 .[#red,thickness=1]. N1
+N1 .[#red,thickness=1]. Green
+
+Client2 .[#red,thickness=1]. N1
+N1 .[#red,thickness=1]. Blue
+
+Client1 - -> Blue: putAsPrimary("name", "Alice", "{}")
+Client2 - -> Green: putAsPrimary("name", "Bob", "{}")
+
+
+note right of Blue: key: "name@2"\nvalue: "Alice"\nversion:{blue:1}
+note right of Green: key: "name@4"\nvalue: "Bob"\nversion:{green:1}
+
+@enduml
+
+@startuml
+skinparam shadowing false
+skinparam sequenceParticipant{
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequenceLifeLine {
+   BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam sequence {
+  ArrowColor #070D4A
+}
+
+skinparam Note {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+skinparam Node {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+skinparam object {
+    BackgroundColor #F7F8FE
+  BorderColor #070D4A
+}
+
+
+hide footbox
+object Client1
+object Client2
+object Blue {
+    clock = 2
+}
+object Green {
+    clock = 4
+}
+
+note "Connection Failure" as N1
+Client1 .[#red,thickness=1]. N1
+N1 .[#red,thickness=1]. Green
+
+Client2 .[#red,thickness=1]. N1
+N1 .[#red,thickness=1]. Blue
+
+Client1 - -> Blue: putAsPrimary("name", "Alice", "{}")
+Client2 - -> Green: putAsPrimary("name", "Bob", "{}")
+
+
+note right of Blue: key: "name@2"\nvalue: "Alice"\nversion:{blue:1}
+note right of Green: key: "name@4"\nvalue: "Bob"\nversion:{green:1}
+
+@enduml
+
+PlantUML version 1.2021.5(Sun Apr 25 16:50:28 IST 2021)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: IN
+--></g></svg>
