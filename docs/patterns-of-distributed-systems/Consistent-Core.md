@@ -26,6 +26,10 @@ public interface ConsistentCore {
 
 至少，一致性核心提供了一个简单得 k/v 存储机制。它可以用来存储元数据。
 
+> [线性化(Linearizability)](https://jepsen.io/consistency/models/linearizable)是最强的一致性保证，保证所有客户端都能看到最新提交的数据更新。提供线性化和容错需要在服务器上实现[共识](https://en.wikipedia.org/wiki/Consensus_(computer_science))算法，如 [Raft](https://raft.github.io/)、[Zab](https://zookeeper.apache.org/doc/r3.4.13/zookeeperInternals.html#sc_atomicBroadcast) 或 [Paxos](https://en.wikipedia.org/wiki/Paxos_(computer_science))。
+>
+> 虽然共识算法是实现一致性核心的基本要求，在客户端交互方面是多个方面的——比如客户如何找到 leader，如何处理重复请求，等等——这些都是重要的实现决策。还有一些关于安全性和活跃性的重要实现考虑。Paxos 只定义了共识算法，但是 Paxos 的文献中并没有很好地记录这些实现方面。Raft 非常清晰地记录了各个实现方面，以及一个参考实现，因此是目前使用最广泛的算法。
+
 ## 元数据存储
 
 这个存储是利用一致性算法实现的，如 Raft。它的一个例子就是复制预写日志（Replicated Write Ahead Log）的实现，这里面复制的部分就是靠 [Leader Followers]() 处理的，高水位标记是用仲裁（Quorum）来追踪成功复制。
