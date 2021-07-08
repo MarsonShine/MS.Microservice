@@ -115,9 +115,9 @@ CRUD 方法有一些限制：
 
 只要为灵活性提供更多的空间，使用事件存储区也能为关于会议的预定和取消提供完成历史记录，或审计追踪。在事件存储区中的事件记录了源的真相。这里不需要以其他方式持久化聚合，因为系统能很容易的从重播事件以及在那个时间点还原状态。
 
+## 原文
 
-
-[Event Sourcing Pattern]: https://docs.microsoft.com/en-us/previous-versions/msp-n-p/dn589792(v=pandp.10)?redirectedfrom=MSDN	"事件溯源模式"
+https://docs.microsoft.com/en-us/previous-versions/msp-n-p/dn589792(v=pandp.10)?redirectedfrom=MSDN
 
 
 
