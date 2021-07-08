@@ -10,7 +10,7 @@
 - [混合时钟(Hybrid Clock)](Hybrid-Clock.md)
 - [幂等接收者(Idempotent Receiver)](Idempotent-Receiver.md)
 - [键和值(Key And Value)](Key-Value.md) //TODO
-- [Lamport 时钟](lamport-clock.md)
+- [Lamport 时钟](Lamport-Clock.md)
 - [低水位标记(Low-Water Mark)](Low-Water-Mark.md)
 - [领导者与追随者(Leader And Followers)](Leader-And-Followers.md)
 - [租赁(Lease)](Lease.md)
