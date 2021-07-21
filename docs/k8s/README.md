@@ -1147,3 +1147,80 @@ kubectl delete po nodeserver-0 --force --grace-period 0
 | kubectl replace   | 将指定文件替换<br />`kubectl replace -f nodeserver-deployment-v2.yml ` |
 | kubectl set image | 修改 Pod、ReplicationController、Deployment、DemonSet、Job 或 ReplicaSet 内的镜像<br />`kubectl set image deployment mynodeserver nodejs=marsonshine/mynodeserver:v2` |
 
+# 权限相关 RoleBinding
+
+## Role
+
+创建用户角色权限：
+
+```bash
+kubectl create role service-reader --verb=get --verb=list --resource=services -n bar
+```
+
+上述命令就是创建了一个名为 service-reader 的角色，设置了各种能获取的资源与权限。与下面的 yaml 申明是等价的
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: foo
+  name: service-reader
+rules:
+- apiGroups: [""]
+  verbs: ["get", "list"]
+  resources: ["services"]
+```
+
+## RoleBinding
+
+创建了角色就得把角色绑定到一个主体上；必须将⾓⾊绑定⼀个到主体，它可以是⼀个 user（⽤户）、⼀个 ServiceAccount 或⼀个组（⽤户或 ServiceAccount 的组）。
+
+```bash
+kubectl create rolebinding test --role=service-reader --serviceaccount=foo:default -n foo
+```
+
+如果要绑定用户或组的话，可以使用可选参数 --user 或 --group。
+
+## ClusterRole
+
+ClusterRole 是⼀种集群级资源，它允许访问没有命名空间的资源和⾮资源（括Node、PersistentVolume、Namespace，等等）型的 URL，或者作为单个命名空间内部绑定的公共⾓⾊，从⽽避免必须在每个命名空间中重新定义相同的⾓⾊。
+
+### 创建 ClusterRole
+
+```bash
+kubectl create clusterrole pv-reader --verb=get,list --resouce=persistentvolumes
+```
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pv-reader
+rules:
+- apiGroups: [""]
+  verbs: ["get", "list"]
+  resources: ["persistentvolumes"]
+```
+
+### ClusterRoleBinding
+
+创建 ClusterRole 之后就需要绑定，如果还是向之前的通过 RoleBinding 绑定主体是行不通的。得通过 ClusterRoleBinding 绑定主体
+
+```bash
+kubectl create clusterrolebinding pv-test --clusterrole=pv-reader --serviceaccount=foo:default
+```
+
+访问非自愿性 URL：
+
+```bash
+kubectl get clusterrole system:discovery -o yaml
+
+kubectl get clusterrolebinding system:discovery -o yaml
+```
+
+**如果你创建了⼀个 ClusterRoleBinding 并在它⾥⾯引⽤了 ClusterRole，在绑定中列出的主体可以在所有命名空间中查看指定的资源。相反，如果你创建的是⼀个 RoleBinding，那么在绑定中列出的主体只能查看在 RoleBinding 命名空间中的资源。**
+
+```bash
+kubectl create clusterrolebinding view-test --clusterrole=view --serviceaccount=foo:default
+```
+
