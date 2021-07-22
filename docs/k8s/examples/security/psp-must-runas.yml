@@ -1,0 +1,45 @@
+# 安全策略验证
+# 阻⽌了pod 使⽤宿主节点的 PID、IPC、⽹络命名空间，运⾏特权模式的容器，
+# 以及绑定⼤多数宿主节点的端⼜（除11 000～11 000和13 000～14 000范围内的端⼜）。
+# 
+apiVersion: extensions/vibeta1
+kind: PodSecurityPolicy
+metadata:
+  name: default
+spec:
+  hostIPC: false
+  hostPID: false
+  hostNetwork: false
+  hostPorts:
+  - min: 10000
+    max: 11000
+  - min: 13000
+    max: 14000
+  privileged: false
+  readOnlyRootFilesystem: true
+  # 指定容器运⾏时必须使⽤的⽤户和⽤户组ID
+  # 使用 MustRunAs
+  # 注意：PodSecurityPolicy 这里设置的 runAsUser 可以覆盖 dockerfile 文件中设置的运行用户
+  runAsUser:
+    rule: MustRunAs
+    ranges:
+    - min: 2
+      max: 2
+  fsGroup:
+    rule: MustRunAs
+    ranges:
+    - min: 2
+      max: 10
+    - min: 20
+      max: 30
+  supplementalGroups:
+    rule: MustRunAs
+    ranges:
+    - min: 2
+      max: 10
+    - min: 20
+      max: 30
+  setLinux:
+    rule: MustRunAs
+  volumes:
+  - '*'

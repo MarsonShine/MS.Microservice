@@ -1,0 +1,17 @@
+# 安全策略
+# 在 PodSecurityPolicy 资源中指定内核功能
+# allowedCapabilities: 允许内核功能
+# defaultAddCapabilities：默认添加的内核功能
+# requiredDropCapabilities：禁止使用的内核功能
+apiVersion: extensions/vibeta1
+kind: PodSecurityPolicy
+metadata:
+  name: default
+spec:
+  allowedCapabilities:
+  - SYS_TIME
+  defaultAddCapabilities:
+  - CHOWN
+  requiredDropCapabilities:
+  - SYS_ADMIN
+  - SYS_MODULE
