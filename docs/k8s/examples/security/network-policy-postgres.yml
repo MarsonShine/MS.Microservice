@@ -1,0 +1,19 @@
+# 在同一命名空间下
+# 指定符合条件的pod允许访问
+# 集群中的CNI插件或其他⽹络⽅案需要⽀持NetworkPolicy
+# 否则NetworkPolicy将不会影响pod之间的可达性。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-netpolicy
+spec:
+  podSelector:
+    matchLabels:  # 设置指定 tag 的 pod 的访问安全性
+      app: database
+    ingress:
+    - from: # 只允许来自具有 label=webserver 标签的 pod 的访问
+      - podSelector:
+          matchLabels:
+            app: webserver
+      ports:
+      - port: 5432

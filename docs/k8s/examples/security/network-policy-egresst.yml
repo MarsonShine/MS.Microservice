@@ -1,0 +1,16 @@
+# 允许具有标签app=webserver的pod访问具有
+# 标签app=database的pod，除此之外不能访问任何地址（不论是其他
+# pod，还是任何其他的IP，⽆论在集群内部还是外部）。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-netpolicy
+spec:
+  podSelector:
+    matchLabels:  # 该策略应用于标签 app=webserver 的 pod
+      app: webserver
+  egress:  # 限制 pod 的出网流量
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database

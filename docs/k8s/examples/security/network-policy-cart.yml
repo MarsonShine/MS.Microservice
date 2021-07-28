@@ -1,0 +1,21 @@
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shoppingcart-netpolicy
+spec:
+  podSelector:
+    matchLabels:  # 设置指定 tag 的 pod 的访问安全性
+      app: shopping-cart
+  ingress:  # 对内控制
+  - from: # 只允许来自具有 tenant=manning 标签的命名空间中运行的 pod 能访问
+    - ipBlock:  # 允许IP在192.168.1.0到192.168.1.24范围内的客户端访问之前提到的shoppingcart的pod
+      cidr: 192.168.1.0/24  
+    - namespaceSelector:
+        matchLabels:
+          tenant: manning
+    # - podSelector:
+    #     matchLabels:
+    #       app: webserver
+    ports:
+    - port: 5432

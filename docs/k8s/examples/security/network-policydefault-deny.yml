@@ -1,0 +1,10 @@
+# 应用这个配置就代表
+# 任何命名空间下的pod都不能访问
+# 集群中的CNI插件或其他⽹络⽅案需要⽀持NetworkPolicy
+# 否则NetworkPolicy将不会影响pod之间的可达性。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector:  # 空标签代表所有的pod
