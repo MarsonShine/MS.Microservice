@@ -1,0 +1,20 @@
+# CPU和内存硬限制
+# 注意：所有limits的总和允许超过节点资源总量的 100%
+# 换句话说，资源limits可以超卖。
+# 如果节点资源使⽤量超过 100%，⼀些容器将被杀掉。
+apiVersion: v1
+kind: Pod
+metadata:
+  name: limited-pod
+spec:
+  containers:
+  - image: busybox
+    command: ["dd", "if=/dev/zero", "of=/dev/null"]
+    name: main
+    resources:
+      limits: # 如果没有设置 requests，则请求资源与 limits 一致
+        cpu: 1
+        memory: 20Mi
+      # requests:
+      #   cpu: 800m
+      #   memory: 20Mi

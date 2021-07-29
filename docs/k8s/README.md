@@ -1224,3 +1224,14 @@ kubectl get clusterrolebinding system:discovery -o yaml
 kubectl create clusterrolebinding view-test --clusterrole=view --serviceaccount=foo:default
 ```
 
+# QOS- 服务质量
+
+qos 有三个等级，优先级从低到高分别为：
+
+1. BestEffort
+2. Burstable
+3. Guaranteed
+
+QoS 等级决定着哪个容器第⼀个被杀掉，这样释放出的资源可以提供给⾼优先级的 pod 使⽤。BestEffort 等级的pod⾸先被杀掉，其次是 Burstable pod，最后是 Guaranteed pod。Guaranteed pod 只有在系统进程需要内存时才会被杀掉。
+
+如果 pod 的 Qos 等级都是一致的，那么就会根据 OOM 的分数值来决定哪个 pod 进程先被杀掉（值高的被优先杀掉进程）。

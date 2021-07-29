@@ -1,0 +1,17 @@
+# https://kubernetes.io/zh/docs/concepts/configuration/manage-resources-containers/
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: reuqests-pod
+spec:
+  container:
+  - image: busybox
+    command: ["dd", "if=/dev/zero", "of=/dev/null"]
+    name: main
+    # 指定容器的资源情况
+    # cpu 200耗核，即一个cpu核芯时间的1/5
+    # 内存 10M
+    resources:
+      requests:
+        cpu: 200m
+        memory: 10Mi
