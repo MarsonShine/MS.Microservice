@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: besteffort-notterminating-pods
+spec:
+  # 总共有4个scope： BestEffort 、 NotBestEffort 、 Termination、NotTerminating。
+  # BestEffort范围只允许限制pod个数，⽽其他 3 种范围除了
+  # pod个数，还可以限制CPU/内存的requests和limits
+  scopes:
+  - BestEffort
+  - NotTerminating
+  hard:
+    pods: 4
