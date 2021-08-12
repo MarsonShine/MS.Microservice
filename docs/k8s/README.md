@@ -1235,3 +1235,41 @@ qos 有三个等级，优先级从低到高分别为：
 QoS 等级决定着哪个容器第⼀个被杀掉，这样释放出的资源可以提供给⾼优先级的 pod 使⽤。BestEffort 等级的pod⾸先被杀掉，其次是 Burstable pod，最后是 Guaranteed pod。Guaranteed pod 只有在系统进程需要内存时才会被杀掉。
 
 如果 pod 的 Qos 等级都是一致的，那么就会根据 OOM 的分数值来决定哪个 pod 进程先被杀掉（值高的被优先杀掉进程）。
+
+# AutoScaler  自动横向伸缩
+
+## 基于 CPU
+
+给 pod 启用自动横向伸缩：
+
+```
+kubectl autoscale deployment kubia --cpu-percent=30 --min=1 --max=5
+```
+
+上面命令将 Deployment 设置为伸缩目标。还设置了 cpu 使用率为 30%，指定了副本最小和最大数量。
+
+*⼀定要确保⾃动伸缩的⽬标是 Deployment ⽽不是底层 ReplicaSet。*
+
+删除 HPA 资源时，AutoScaler 控制器会检测到这一变更，就会执行相应的动作。需要注意的是，**删除 HPA 资源只会禁⽤⽬标资源的⾃动伸缩**（本例中的 Deployment），而它的伸缩规模会保持在删除资源的时刻。**在你为 Deployment 创建⼀个新的 HPA 资源之后，⾃动伸缩过程就会继续进⾏**。
+
+上面提到的都是i基于 CPU 度量标准来自动伸缩，还有根据内存度量以及其它自定义度量标准来自动伸缩。
+
+# 限制集群缩容时的服务干扰
+
+通过创建 PDB（PodDisruptionBudget） 来做到这一点：
+
+```
+kubectl create pdb kubia-pdb --selector=app=kubia --min-avaiable=3
+```
+
+上述命令确保了 kubia pod 有三个示例在运行。其中的 min-avaiable 数值也可以用百分比表示。
+
+配置 pod 的⾃动横向伸缩很简单，**只要创建⼀个**
+**HorizontalpodAutoscaler 对象，将它指向⼀个Deployment、ReplicaSet、ReplicationController，并设置 pod 的⽬标CPU使⽤率即可。**
+
+带有 -it 和 --rm 选项的 kubectl run 命令在 pod 中运⾏⼀次性的进程，并在按下 CTRL+C 组合键时⾃动停⽌并删除该临时 pod。
+
+``` 
+kubectl run --it --rm --restart=Never loadgenerator --image=busybox -- sh -c "while true; do wget -O - -q http://kubia.default; done"
+```
+
