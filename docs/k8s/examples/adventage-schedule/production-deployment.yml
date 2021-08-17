@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: prod
+spec:
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: prod
+    spec:
+      containers:
+      - args:
+        - sleep
+        - "99999"
+        image: busybox
+        name: main
+      tolerations:
+      - key: node-type  # 此处的污点容忍度允许 pod 被调度到生产环境节点上
+        operator: Equal
+        value: production
+        effect: NoSchedule

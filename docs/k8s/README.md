@@ -1273,3 +1273,16 @@ kubectl create pdb kubia-pdb --selector=app=kubia --min-avaiable=3
 kubectl run --it --rm --restart=Never loadgenerator --image=busybox -- sh -c "while true; do wget -O - -q http://kubia.default; done"
 ```
 
+# 高级调度
+
+## 污点和容忍节点
+
+实现目的：通过污点和容忍节点对应，能控制 pod 能调度到具体哪个节点。**⼀个 pod 只有容忍了节点的污点，才能被调度到该节点上⾯。**
+
+给节点添加污点：
+
+```
+kubectl taint node node1.k8s node-type=production:NoSchedule
+```
+
+添加一个污点，key = node-type，value = production，效果为 NoSchedule。这就表明要想将 pod 调度到这个节点，就必须要为 pod 设置对应的容忍度。
