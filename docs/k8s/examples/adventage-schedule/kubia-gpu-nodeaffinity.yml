@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kubia-gpu
+spec:
+  # 使用节点亲缘性调度pod
+  nodeAffinity:
+    # requiredDuringScheduling 表明字段定义的规则：为了让pod能调度到该节点上，明确指出了该节点必须包含的标签。
+    # IgnoredDuringExecution 表明不会影响已经在节点上运⾏着的pod
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      # pod必须满足下面的表达式规则才能调度
+      # 标签为gpu，值为true的pod 
+      - matchExpressions:
+        - key: gpu
+          operator: In
+          values:
+          - "true"
+  containers:
+  - image: lukasa/kubia
+    name: kubia

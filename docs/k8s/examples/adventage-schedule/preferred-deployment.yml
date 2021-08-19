@@ -1,0 +1,34 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: pref
+spec:
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: perf
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoreDuringExecution:
+          - weight: 80  # 优先级权重，优先调度到 zone1
+            preference:
+              matchExpressions:
+              - key: availability-zone
+                operator: In
+                values:
+                - zone1
+          - weight: 20  # 同时优先调度 pod 到独占节点，但是该优先级为 zone1 优先级的 1/4
+            preference:
+              matchExpressions:
+              - key: share-type
+                operator: In
+                values:
+                - dedicated
+      containers:
+      - args:
+        - sleep
+        - "99999"
+        image: busybox
+        name: main

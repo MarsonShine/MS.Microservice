@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kubia-gpu
+spec:
+  nodeSelector: # 用节点选择器来调度 pod
+    gpu: "true"
+  containers:
+  - image: lukasa/kubia
+    name: kubia
