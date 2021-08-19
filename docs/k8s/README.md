@@ -1286,3 +1286,41 @@ kubectl taint node node1.k8s node-type=production:NoSchedule
 ```
 
 添加一个污点，key = node-type，value = production，效果为 NoSchedule。这就表明要想将 pod 调度到这个节点，就必须要为 pod 设置对应的容忍度。
+
+## 节点亲缘性
+
+设置节点亲缘性可以允许通知 Kubernetes 将 pod 只调度到某些节点集上面。功能上很像 nodeSelector，但远比 nodeSelector 强大。强大到有了节点亲缘性就不需要设置 nodeSelector。
+
+节点亲缘性是根据**节点设置的标签**来进行选择的。
+
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kubia-gpu
+spec:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: gpu
+          operator: In
+          values:
+          - "true"
+  containers:
+  - image: lukasa/kubia
+    name: kubia
+```
+
+requiredDuringScheduling 表明字段定义的规则：为了让pod能调度到该节点上，明确指出了该节点必须包含的标签。
+
+IgnoredDuringExecution 表明不会影响已经在节点上运⾏着的pod
+
+所以上面的意思就是 pod 必须满足下面的表达式规则（标签为gpu，值为 true 的 pod ）才能调度。
+
+节点亲缘性还支持通过 `preferredDuringSchedulingIgnoredDuringExecution` **优先调度节点**的功能。
+
+### 通过节点间亲缘性将多个pod部署到同一个节点上
+
+这样可以降低节点间交互的延时，提供应用的性能。
+
