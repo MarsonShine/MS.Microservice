@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-poststart-hook
+spec:
+  containers:
+  - image: luksa/kubia
+    name: kubia
+    lifecycle:
+      preStop:
+        httpGet:
+          port: 8080
+          path: shutdown
