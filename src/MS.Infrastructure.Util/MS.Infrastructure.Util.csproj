@@ -1,6 +1,0 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <PackageReference Include="MailKit" Version="2.6.0" />
-  </ItemGroup>
-
-</Project>
