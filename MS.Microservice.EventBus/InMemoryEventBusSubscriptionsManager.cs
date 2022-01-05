@@ -66,7 +66,7 @@ namespace MS.Microservice.EventBus
             RemoveHandler<T>(eventName, eventHandlerToRemove);
         }
 
-        private void RemoveHandler<T>(string eventName, SubscriptionDescriptionInfo? eventHandlerToRemove)
+        private void RemoveHandler<T>(string eventName, SubscriptionDescriptionInfo eventHandlerToRemove)
         {
             if (eventHandlerToRemove != null)
             {
@@ -84,7 +84,7 @@ namespace MS.Microservice.EventBus
             }
         }
 
-        private SubscriptionDescriptionInfo? FindSubscriptionToRemove(string eventName, Type handlerType)
+        private SubscriptionDescriptionInfo FindSubscriptionToRemove(string eventName, Type handlerType)
         {
             if (!HasSubscriptionsForEvent(eventName))
             {
