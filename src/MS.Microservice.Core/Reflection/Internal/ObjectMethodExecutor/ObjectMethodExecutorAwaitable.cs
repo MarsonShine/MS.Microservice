@@ -11,7 +11,7 @@ namespace MS.Microservice.Core.Reflection.Internal
     /// 提供一个通用的可等待的结构体<see cref="ObjectMethodExecutor.MethodExecutorAsync"/>，
     /// 无论这个底层的值是否是 System.Task 还是 FSharpAsync 或是应用程序定义的自定义可等待对象
     /// </summary>
-    internal readonly struct ObjectMethodExecutorAwaitable
+    public readonly struct ObjectMethodExecutorAwaitable
     {
         private readonly object _customAwaitable;
         private readonly Func<object, object> _getAwaiterMethod;

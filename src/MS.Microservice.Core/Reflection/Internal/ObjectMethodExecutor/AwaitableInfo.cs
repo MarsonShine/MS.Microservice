@@ -1,12 +1,11 @@
 #nullable disable
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
-namespace MS.Microservice.Core.Reflection.Internal {
+namespace MS.Microservice.Core.Reflection.Internal
+{
     internal readonly struct AwaitableInfo {
         public Type AwaiterType { get; }
         public PropertyInfo AwaiterIsCompletedProperty { get; }
