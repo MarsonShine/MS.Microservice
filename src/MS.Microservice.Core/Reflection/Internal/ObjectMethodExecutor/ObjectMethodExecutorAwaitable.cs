@@ -55,7 +55,7 @@ namespace MS.Microservice.Core.Reflection.Internal
         public Awaiter GetAwaiter()
         {
             var customAwaiter = _getAwaiterMethod(_customAwaitable);
-            return new Awaiter(_customAwaitable, _isCompletedMethod, _getResultMethod, _onCompletedMethod, _unsafeOnCompletedMethod);
+            return new Awaiter(customAwaiter, _isCompletedMethod, _getResultMethod, _onCompletedMethod, _unsafeOnCompletedMethod);
         }
 
         public readonly struct Awaiter : ICriticalNotifyCompletion

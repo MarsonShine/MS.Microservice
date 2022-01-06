@@ -9,11 +9,15 @@ using System.Threading.Tasks;
 using Xunit;
 using MS.Microservice.Core.Reflection.Internal;
 using Microsoft.AspNetCore.Mvc.Internal;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace MS.Microservice.Core.Test
 {
     public class ObjectMethodExecutorTest
     {
+        private TestObject _targetObject = new TestObject();
+        private TypeInfo targetTypeInfo = typeof(TestObject).GetTypeInfo();
         [Fact]
         public void ObjectMethodExecutor_ExecutesVoidActions()
         {
@@ -38,6 +42,16 @@ namespace MS.Microservice.Core.Test
             Assert.IsType<ActionResult<TestModel>>(result);
         }
 
+        [Fact]
+        public async Task ExecuteValueMethodAsync()
+        {
+            var executor = GetExecutorForMethod("ValueMethodAsync");
+            var result = await executor.ExecuteAsync(
+                _targetObject,
+                new object[] { 10, 20 });
+            Assert.True(executor.IsMethodAsync);
+            Assert.Equal(30, (int)result);
+        }
         private static ObjectMethodExecutor GetExecutor(string methodName)
         {
             var type = typeof(TestController);
@@ -45,6 +59,19 @@ namespace MS.Microservice.Core.Test
             Assert.NotNull(methodInfo);
             return ObjectMethodExecutor.Create(methodInfo, type.GetTypeInfo());
         }
+
+        private ObjectMethodExecutor GetExecutorForMethod(string methodName)
+        {
+            var method = typeof(TestObject).GetMethod(methodName);
+            return ObjectMethodExecutor.Create(method, targetTypeInfo);
+        }
+
+        private ObjectMethodExecutor GetExecutorForMethod(string methodName, object[] parameterDefaultValues)
+        {
+            var method = typeof(TestObject).GetMethod(methodName);
+            return ObjectMethodExecutor.Create(method, targetTypeInfo, parameterDefaultValues);
+        }
+
 
         private class TestController
         {
@@ -92,6 +119,217 @@ namespace MS.Microservice.Core.Test
         private class CustomConvertibleFromAction : IConvertToActionResult
         {
             public IActionResult Convert() => null;
+        }
+
+        public class TestObject
+        {
+            public string value;
+            public int ValueMethod(int i, int j)
+            {
+                return i + j;
+            }
+
+            public void VoidValueMethod(int i)
+            {
+
+            }
+
+            public TestObject ValueMethodWithReturnType(int i)
+            {
+                return new TestObject() { value = "Hello" }; ;
+            }
+
+            public TestObject ValueMethodWithReturnTypeThrowsException(TestObject i)
+            {
+                throw new NotImplementedException("Not Implemented Exception");
+            }
+
+            public TestObject ValueMethodUpdateValue(TestObject parameter)
+            {
+                parameter.value = "HelloWorld";
+                return parameter;
+            }
+
+            public Task<int> ValueMethodAsync(int i, int j)
+            {
+                return Task.FromResult<int>(i + j);
+            }
+
+            public async Task VoidValueMethodAsync(int i)
+            {
+                await ValueMethodAsync(3, 4);
+            }
+            public Task<TestObject> ValueMethodWithReturnTypeAsync(int i)
+            {
+                return Task.FromResult<TestObject>(new TestObject() { value = "Hello" });
+            }
+
+            public async Task ValueMethodWithReturnVoidThrowsExceptionAsync(TestObject i)
+            {
+                await Task.CompletedTask;
+                throw new NotImplementedException("Not Implemented Exception");
+            }
+
+            public async Task<TestObject> ValueMethodWithReturnTypeThrowsExceptionAsync(TestObject i)
+            {
+                await Task.CompletedTask;
+                throw new NotImplementedException("Not Implemented Exception");
+            }
+
+            public Task<TestObject> ValueMethodUpdateValueAsync(TestObject parameter)
+            {
+                parameter.value = "HelloWorld";
+                return Task.FromResult<TestObject>(parameter);
+            }
+
+            public TestAwaitable<TestObject> CustomAwaitableOfReferenceTypeAsync(
+                string input1,
+                int input2)
+            {
+                return new TestAwaitable<TestObject>(new TestObject
+                {
+                    value = $"{input1} {input2}"
+                });
+            }
+
+            public TestAwaitable<int> CustomAwaitableOfValueTypeAsync(
+                int input1,
+                int input2)
+            {
+                return new TestAwaitable<int>(input1 + input2);
+            }
+
+            public TestAwaitableWithICriticalNotifyCompletion CustomAwaitableWithICriticalNotifyCompletion()
+            {
+                return new TestAwaitableWithICriticalNotifyCompletion();
+            }
+
+            public TestAwaitableWithoutICriticalNotifyCompletion CustomAwaitableWithoutICriticalNotifyCompletion()
+            {
+                return new TestAwaitableWithoutICriticalNotifyCompletion();
+            }
+
+            public ValueTask<int> ValueTaskOfValueType(int result)
+            {
+                return new ValueTask<int>(result);
+            }
+
+            public ValueTask<string> ValueTaskOfReferenceType(string result)
+            {
+                return new ValueTask<string>(result);
+            }
+
+            public void MethodWithMultipleParameters(int valueTypeParam, string referenceTypeParam)
+            {
+            }
+        }
+
+        public class TestAwaitable<T>
+        {
+            private T _result;
+            private bool _isCompleted;
+            private List<Action> _onCompletedCallbacks = new List<Action>();
+
+            public TestAwaitable(T result)
+            {
+                _result = result;
+
+                // Simulate a brief delay before completion
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    Thread.Sleep(100);
+                    SetCompleted();
+                });
+            }
+
+            private void SetCompleted()
+            {
+                _isCompleted = true;
+
+                foreach (var callback in _onCompletedCallbacks)
+                {
+                    callback();
+                }
+            }
+
+            public TestAwaiter GetAwaiter()
+            {
+                return new TestAwaiter(this);
+            }
+
+            public struct TestAwaiter : INotifyCompletion
+            {
+                private TestAwaitable<T> _owner;
+
+                public TestAwaiter(TestAwaitable<T> owner) : this()
+                {
+                    _owner = owner;
+                }
+
+                public bool IsCompleted => _owner._isCompleted;
+
+                public void OnCompleted(Action continuation)
+                {
+                    if (_owner._isCompleted)
+                    {
+                        continuation();
+                    }
+                    else
+                    {
+                        _owner._onCompletedCallbacks.Add(continuation);
+                    }
+                }
+
+                public T GetResult()
+                {
+                    return _owner._result;
+                }
+            }
+        }
+
+        public class TestAwaitableWithICriticalNotifyCompletion
+        {
+            public TestAwaiterWithICriticalNotifyCompletion GetAwaiter()
+                => new TestAwaiterWithICriticalNotifyCompletion();
+        }
+
+        public class TestAwaitableWithoutICriticalNotifyCompletion
+        {
+            public TestAwaiterWithoutICriticalNotifyCompletion GetAwaiter()
+                => new TestAwaiterWithoutICriticalNotifyCompletion();
+        }
+
+        public class TestAwaiterWithICriticalNotifyCompletion
+            : CompletionTrackingAwaiterBase, ICriticalNotifyCompletion
+        {
+        }
+
+        public class TestAwaiterWithoutICriticalNotifyCompletion
+            : CompletionTrackingAwaiterBase, INotifyCompletion
+        {
+        }
+
+        public class CompletionTrackingAwaiterBase
+        {
+            private string _result;
+
+            public bool IsCompleted { get; private set; }
+
+            public string GetResult() => _result;
+
+            public void OnCompleted(Action continuation)
+            {
+                _result = "Used OnCompleted";
+                IsCompleted = true;
+                continuation();
+            }
+
+            public void UnsafeOnCompleted(Action continuation)
+            {
+                _result = "Used UnsafeOnCompleted";
+                IsCompleted = true;
+                continuation();
+            }
         }
     }
 }
