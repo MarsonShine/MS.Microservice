@@ -153,7 +153,200 @@ Cyrene 向集群中剩余的节点发送准备消息。与 Athens 的早期准�
 
 [FLP 不可能性结果显示](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)，即使是单个故障节点也可以阻止集群选择一个值。
 
-我们可以通过确保无论何时申请人需要选择新一代来减少这个活锁发生的机会
+我们可以通过确保无论何时申请人需要选择新一代来减少这个活锁发生的机会，这个过程必须等待一段随机的时间。**这种随机性使得一个提议者很可能能够在另一个提议者向完整法定人数发送准备请求之前获得法定人数**。
+
+但是我们并不能百分百确保不会发生活锁。这是最基本的权衡：我们想要百分百的安全和活性？鱼与熊掌不可兼得。Paxos 首先确保的是安全。
+
+## key-value 存储的例子
+
+此处解释的 Paxos 协议在单个值上建立共识（通常称为单一法令 Paxos[single-decree Paxos]）。在 [Cosmos DB](https://docs.microsoft.com/en-us/azure/cosmos-db/introduction) 和 [Spanner](https://cloud.google.com/spanner) 等主流产品中使用的大多数实际实现都是使用一种称为 multi-paxos 的 paxos 拓展版，它被实现为 [Replicated Log](Replicated-Log.md)。
+
+但是一个简单的 k-v 存储就能用基本的 paxos 构建。[cassandra](http://cassandra.apache.org/) 用类似的方式使用基本的 Paxos 来实现它的轻量级事物。
+
+k-v 存储为每个 key 维护一个 Paxos 实例。
+
+```java
+class PaxosPerKeyStore...
+	int serverId;
+	public PaxosPerKeyStore(int serverId) {
+			this.serverId = serverId;
+	}
+	
+	Map<String, Acceptor> key2Acceptors = new HashMap<String, Acceptor>();
+	List<PaxosPerKeyStore> peers;
+```
+
+Acceptor 存储 promisedGeneration, acceptedGeneration 以及 acceptedValue。
+
+```java
+class Acceptor...
+	public class Acceptor {
+			MonotonicId promisedGeneration = MonotonicId.empty();
+			Optional<MonotonicId> acceptedGeneration = Optional.empty();
+			Optional<Command> acceptedValue = Optional.empty();
+			Optional<Command> committedValue = Optional.empty();
+			Optional<MonotonicId> committedGeneration = Optional.empty();
+			
+			public AcceptorState state = AcceptorState.NEW;
+			private BiConsumer<Acceptor, Command> kvStore;
+	}
+```
+
+当 key 和 value 被 push 进来存储在 k-v store 时，它就运用了 Paxos 协议。
+
+```java
+class PaxosPerKeyStore...
+	int maxKnownPaxosRoundId = 1;
+  int maxAttempts = 4;
+  public void push(String key, String defaultProposal) {
+  		int attempts = 0;
+  		while(attempts <= maxAttempts) {
+  				attempts++;
+  				MonotonicId requestId = new MonotonicId(maxKnownPaxosRoundId++, serverId);
+  				SetValueCommand setValueCommand = new SetValueCommand(key, defaultProposal);
+  				
+  				if(runPaxos(key, requestId, setValueCommand)) {
+  						return;
+  				}
+  				
+  				Uninterruptibles.sleepUninterruptibly(ThreadLocalRandom.current().nextInt(100), MILLISECONDS);
+  				logger.warn("Experienced Paxos contention. Attempting with higher generation");
+  		}
+  		throw new WriteTimeoutException(attempts);
+  }
+  
+  private boolean runPaxos(String key, MonotonicId generation, Command initialValue) {
+  		List<Acceptor> allAcceptors = getAcceptorInstancesFor(key);
+      List<PrepareResponse> prepareResponses = sendPrepare(generation, allAcceptors);
+      if (isQuorumPrepared(prepareResponses)) {
+          Command proposedValue = getValue(prepareResponses, initialValue);
+          if (sendAccept(generation, proposedValue, allAcceptors)) {
+              sendCommit(generation, proposedValue, allAcceptors);
+          }
+          if (proposedValue == initialValue) {
+              return true;
+          }
+      }
+      return false;
+  }
+  
+  public Command getValue(List<PrepareResponse> prepareResponses, Command initialValue) {
+  		PrepareResponse mostRecentAcceptedValue = getMostRecentAcceptedValue(prepareResponses);
+      Command proposedValue
+              = mostRecentAcceptedValue.acceptedValue.isEmpty() ?
+              initialValue : mostRecentAcceptedValue.acceptedValue.get();
+      return proposedValue;
+  }
+  
+  private PrepareResponse getMostRecentAcceptedValue(List<PrepareResponse> prepareResponses) {
+  		return prepareResponses.stream().max(Comparator.comparing(r -> r.acceptedGeneration.orElse(MonotonicId.empty()))).get();
+  }
+```
+
+```java
+class Acceptor...
+	public PrepareResponse prepare(MonotonicId generation) {
+			if(promisedGeneration.isAfter(generation)) {
+				return new PrepareReponse(false, acceptedValue, acceptedGeneration, commitedGeneration, committedValue);
+			}
+			promisediGeneration = generation;
+			state = AcceptorState.PROMISED;
+			return new PrepareResponse(true, acceptedValue, acceptedGeneration, committedGeneration, commitedValue);
+	}
+```
+
+```java
+class Acceptor...
+	public boolean accept(MonotonicId generation, Command value) {
+			if(generation.equals(promisedGeneration) || generation.isAfter(promisedGeneration)) {
+					this.promisedGeneration = generation;
+					this.acceptedGeneration = Optional.of(generation);
+					this.acceptedValue = Optional.of(value);
+					return true;
+			}
+			state = AcceptorState.ACCEPTED;
+			return false;
+	}
+```
+
+只有在成功提交之后，值就会存储在 kvstore 中。
+
+```java
+class Acceptor...
+	public void commit(MonotonicId generation, Command value) {
+			committedGeneration = Optional.of(generation);
+			committedValue = Optional.of(value);
+			state = AcceptorState.COMMITED;
+			kvStore.accept(this, value);
+	}
+```
+
+```java
+class PaxosPerKeyStore...
+	private void accept(Acceptor acceptor, Command command) {
+			if(command instanceof SetValueCommand) {
+					SetValueCommand setValueCommand = (SetValueCommand) command;
+					kv.put(setValueCommand.getKey(), setValueCommand.getValue());
+			}
+			acceptor.resetPaxosState();
+	}
+```
+
+paxos 的状态必须持久化。这样才易通过 [WAL](Write-Ahead-Log.md) 做到。
+
+## 多值处理
+
+值得注意的是 Paxos 被指定并被证明可以处理单个值。因此，使用 Paxos 协议的单值处理多个值需要在协议规范之外完成。一种替代方法是重置状态，并分别存储已提交的值，以确保它们不会丢失。
+
+```java
+class Acceptor...
+	public void resetPaxosState() {
+			// 如果未存储已提交的值，则此实现存在问题
+			// 在准备阶段分别处理
+			// 具体查看 Cassandra 的详细实现
+			// https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/db/SystemKeyspace.java#L1232
+			promisedGeneration = MonotonicId.empty();
+      acceptedGeneration = Optional.empty();
+      acceptedValue = Optional.empty();
+	}
+```
+
+还有像 [gryadka](https://github.com/gryadka/js) 建议的另一种方式，它稍微修改了 Paxos 的基本协议，允许设置多个值。执行基本算法之外的步骤的需要是在实践中首选 [Replicated Log](https://martinfowler.com/articles/patterns-of-distributed-systems/replicated-log.html) 的原因。
+
+## 读值
+
+Paxos 依赖于准备阶段来检测任何未提交的值。所以如果使用基本的 Paxos 来实现如上所示的 key-value 存储，那么读操作也需要运行完整的 Paxos 算法。
+
+```java
+class PaxosPerKeyStore...
+	public String get(String key) {
+			int attempts = 0;
+			while(attempts <= maxAttempts) {
+				attempts++;
+				MonotonicId requestId = new MonotonicId(maxKnownPaxosRoundId++, serverId);
+				Command getValueCommand = new NoOpCommand(key);
+				if(runPaxos(key, requestId, getValueCommand)) {
+						return kv.get(key);
+				}
+				
+				Uninterruptibles.sleepUninterruptibly(ThreadLocalRandom.current().nextInt(100), MILLISECONDS);
+				logger.warn("Experienced Paxos contention. Attempting with higher generation");
+			}
+			throw new WriteTimeoutException(attempts);
+	}
+```
+
+## 例子
+
+[cassandra](http://cassandra.apache.org/) 使用了 Paxos 来实现轻量级事物。
+
+所有的共识算法像 [Raft](https://raft.github.io/)，就使用了与 Paxos 类似的基本概念。[二阶段提交](Two-Phase-Commit.md)，[仲裁](Quorum.md)以及[生成时钟](Generation-Clock.md)都使用类似的概念。
+
+## 注意
+
+1: Paxos 弹性的
+
+*Paxos 的原始描述在准备和接受阶段都需要多数仲裁(Quorum)。Heidi Howard 和其他人最近的一些工作表明，Paxos 的主要要求是在准备阶段和接受阶段的法定人数中有重叠。 只要满足此要求，就不需要两个阶段的多数仲裁(Quorum)。* 
 
 ## 原文链接
 
