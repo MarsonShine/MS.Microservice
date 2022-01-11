@@ -4,6 +4,12 @@
 
 ## 问题
 
+当多个节点共享状态时，它们之间通常需要就某个特定值达成一致。通过 [Leader 和 Followers](Leader-And-Followers.md) 机制，leader 决定并传递这个值给其它 followers。但是如果没有 leader，那么节点就需要自己明确一个值。（即使有一个 leader 存在，它们也可能需要这样做来选择一个 leader）。
+
+一个 leader 获得这个更新的值并通过[2PC](Two-Phase-Commit.md)能确保安全的复制，但是没有了 leader，我们就会让竞争节点尝试仲裁 [Quorum](Quorum.md)。这个过程更加复杂，因为任何节点都可能失败或断开连接。节点可以对某个值进行决策，但在它能够将该值传递给整个集群之前断开连接。
+
+## 解决方案
+
 Paxos 算法是由[莱斯利·兰波特(Leslie Lamport)](http://lamport.org/)开发的，发表在他 1998 年的论文 [The Part-Time 议会(Parliament)](http://lamport.azurewebsites.net/pubs/pubs.html#lamport-paxos) 中。Paxos 工作在三个阶段，以确保多个节点在部分网络或节点故障的情况下还能达成一致性。**前两个阶段的作用是围绕一个值建立共识，然后最后一个阶段将该共识传递给其余的副本**。
 
 - 准备阶段(Prepare)：建立最新的[生成时钟](Generation-Clock.md)，并收集已经接受的值。
@@ -12,9 +18,11 @@ Paxos 算法是由[莱斯利·兰波特(Leslie Lamport)](http://lamport.org/)开
 
 在第一个阶段里（称为准备阶段），节点会提出一个值（称为提议者[proposer]）联系在集群中其它节点（称为决策者[acceptors]），并询问它们是否选择这个值（即投票）。**一旦这些决策者已经准备就绪，并达到预定的法定人数（一般是奇数），提议者就进入第二阶段**。在第二个阶段(称为接受阶段)，提议者发送这个建议的值，**如果节点的仲裁[1]接受该值，就会选择该值**。在最后一个阶段(称为提交阶段)，提议者可以将选择的值提交给集群中的所有节点。
 
+在第一个阶段里（称为准备阶段），节点会提出一个值（称为提议者[proposer]）再连接集群中其它节点（称为接受者[acceptors]），并询问它们是否选择这个值（即投票）。**一旦这些接受者已经准备就绪，并达到预定的 Quorum（一般是奇数），提议者就进入第二阶段**。在第二个阶段(称为接受阶段)，提议者发送这个建议的值，**如果节点的仲裁[1]接受该值，就会选择该值**。在最后一个阶段(称为提交阶段)，提议者可以将选择的值提交给集群中的所有节点。
+
 ## 协议流程
 
-Paxos 是个复杂难以理解的协议。我们将先从例子出发来展示这个协议的流程，然后深入研究它如何工作的一些细节。我们希望通过这个解释能直观地了解协议是如何工作的，而不是作为一个基于实现的全面描述。
+Paxos 是个复杂且难以理解的协议。我们将先从例子出发来展示这个协议的流程，然后深入研究它如何工作的一些细节。我们希望通过这个解释能直观地了解协议是如何工作的，而不是作为一个基于实现的全面描述。
 
 > Paxos 整个过程分为三个角色
 >
@@ -44,20 +52,20 @@ Paxos 是个复杂难以理解的协议。我们将先从例子出发来展示�
 
 ![](../asserts/mfpaxos-initial-prepare.png)
 
-在准备阶段，提议者首先发送一些预备请求，这些请求都包含一个生成编号。由于 Paxos 的目的是避免单点故障，所以我们不会从单个时钟编号中得出这个结论。相反，每个节点维护它自己的生成时钟编号，它将生成编号与节点 ID 结合在一起。节点 ID 用来打破这些关系(ties)，所以 [2,a] > [1,e] > [1,a]。每个决策者记录了到目前为止看到的最新承诺
+在准备阶段，提议者首先发送一些预备请求，这些请求都包含一个生成编号（即生成时钟，以下统称编号）。由于 Paxos 的目的是避免单点故障，所以我们不会从单代时钟中得出这个结论。相反，每个节点维护它自己的编号，它将生成的编号与节点 ID 结合在一起。节点 ID 用来打破这些关系(ties)，所以 [2,a] > [1,e] > [1,a]。每个决策者记录了到目前为止看到的最新承诺
 
 | Node     | Athens | Byzantium | Cyrene | Delphi | Ephesus |
 | -------- | ------ | --------- | ------ | ------ | ------- |
 | 承诺代   | 1,a    | 1,a       | 0      | 1,e    | 1,e     |
 | 接受的值 | none   | none      | none   | none   | none    |
 
-因为在此之前它们没有看到任何请求，所以它们都返回一个承诺给调用者。我们称返回值为 "promise"，因为它表示接受方承诺不考虑任何比所承诺的更早一代时钟的消息。
+因为在此之前它们没有看到任何请求，所以它们都返回一个承诺给调用者。我们称返回值为 "promise"，因为它表示接受方承诺不考虑任何比所承诺的更早一代时钟的消息（只考了当前携带最新的编号的请求消息）。
 
 ![](../asserts/mfpaxos-a-prepare-c.png)
 
 Athens 发送一个预备消息给 Cryene。当它收到一个返回的 promise 时，这就意味着它此时此刻收到了集群5个节点中的3个节点的 promise，这体现为仲裁的大多数([Quorum](Quorum.md))。Athens 现在从发送准备消息到发送接受消息。
 
-Athens 可能无法从集群的大多数节点那里得到承诺。在这种情况下 Athens 通过增加生成时钟来重试准备请求。
+Athens 可能无法从集群的大多数节点那里得到承诺。在这种情况下 Athens 通过增加编号来重试准备请求。
 
 | Node                | Athens | Byzantium | Cyrene | Delphi | Ephesus |
 | ------------------- | ------ | --------- | ------ | ------ | ------- |
@@ -75,7 +83,7 @@ Athens 现在会开始发送消息，其中包含了生成和提议的值。Athe
 
 ![](../asserts/mfpaxos-e-prepare-c.png)
 
-Ephesus 现在发送一个预备消息给 Cyrene。Cyrene 已经发送一个 promise 响应给 Athens，但是 Ephesus 的请求中时钟数更大（代数更高），所以它会优先 Ephesus。即 Cyrene 发送 promise 给 Ephesus。
+Ephesus 现在发送一个预备消息给 Cyrene。Cyrene 已经发送一个 promise 响应给 Athens，但是 Ephesus 的请求中编号更大，所以它会优先 Ephesus。即 Cyrene 发送 promise 给 Ephesus。
 
 ![](../asserts/mfpaxos-c-refuses-a.png)
 
@@ -88,14 +96,14 @@ Cyrene 现在会得到来自 Athens 一个接受请求，但是由于该请求�
 
 ![](../asserts/mfpaxos-e-send-accepts.png)
 
-Ephesus 现在已经获得了法定数量(quorum)的预备信息，所以能进一步发送接受(accept)请求了。它向自己和 Delphi 发送 accept，但在它要更多 accept 之前崩溃了。
+Ephesus 现在已经获得了法定数量(quorum)的预备信息，所以能进一步发送接受(accept)请求了。它向自己和 Delphi 发送 accept，但在它接受 accept 之前崩溃了。
 
 | Node                | Athens | Byzantium | Cyrene | Delphi | Ephesus |
 | ------------------- | ------ | --------- | ------ | ------ | ------- |
 | promised generation | 1,a    | 1,a       | 1,e    | 1,e    | 1,e     |
 | accepted value      | alice  | alice     | none   | elanor | elanor  |
 
-与此同时，Athens 必须要去处理，拒绝（因为超时、心跳机制等）来自 Cyrene 的 accept 请求。这就表明了它没到法定人数而不会将 promise 给它，因此它的提议将失败(This indicates that its quorum is no longer promised to it and thus its proposal will fail. )。这种情况总是会发生在一个提议者失去了，导致无法称为大多数投票像上面说的那样。另一个提议者要达到了大多数投票，第一个提议者的 Quorum 数中至少有一个成员会叛变（for another proposer to achieve quorum at least one member of the first proposer's quorum will defect.）。
+与此同时，Athens 必须要去处理，拒绝（因为超时、心跳机制等）来自 Cyrene 的 accept 请求。这就表明了它没到法定人数而不会将 promise 给它，因此它的提议将失败(This indicates that its quorum is no longer promised to it and thus its proposal will fail. )。这种情况总是会发生在一个提议者失联了，导致无法称为大多数投票像上面说的那样。另一个提议者要达到了大多数投票，第一个提议者的 Quorum 数中至少有一个成员会叛变（for another proposer to achieve quorum at least one member of the first proposer's quorum will defect.）。
 
 在这个简单的两阶段提交情况下，我们希望 Ephesus 继续并选择它的值，但是由于 Ephesus 崩溃了，导致这样的方案会遇到麻烦。如果在法定人数（quorum）上锁，它的崩溃又将导致整个提案过程僵住。Paxos 就意料到了这种情况发生，所以 Athens 将会进行其它尝试，这次会生成一个更高的时钟值（代数更高）。
 
