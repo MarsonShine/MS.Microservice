@@ -623,11 +623,55 @@ class TransactionalKVStore…
 
 #### 幂等操作
 
+在网络故障的情况下，协调器可以重试调用来「准备」、「提交」或「中止」。所以这些运算必须是幂等的。
+
 ### 场景举例
 
 #### 原子写操作
 
+有以下场景，Paula Blue 有一个卡车，Steven Green 有一个挖掘机。卡车和挖掘机的可用性和预订状态存储在分布式键-值存储器中。根据 key 映射到服务器的方式，Blue 的卡车和 Green 的挖掘机订单存储在单独的集群节点上。Alice 正试图预订一辆卡车和挖掘机来完成她计划在周一开始的施工工作。卡车和挖掘机都要是可用的。
+
+下单场景过程如下流程所示。
+
+Alice 检查 Blue 的卡车和 Green 的挖掘机是否可用。通过读取键'truck_booking_monday'以及'backhoe_booking_monday'
+
+![](../asserts/blue_get_truck_availability.png)
+
+![](../asserts/blue_get_backhoe_availability.png)
+
+如果读取的值是空的，则预订是免费的。她保留了卡车和挖掘机。这两个值都是通过原子操作设置的，这一点很重要。如果有任何失败，则没有设置任何值。
+
+提交发生在两个阶段。Alice 联系的第一个服务器充当协调器并执行这两个阶段。
+
+![](../asserts/blue_commit_success.png)
+
+> 协调器在协议中是一个独立的参与者，并以序列图中这种方式显示。然而，通常其中一个服务器(Blue或Green)充当协调器，因此在交互中扮演两个角色。
+
 #### 事物冲突
+
+现在考虑另一个场景，有另一个人 Bob，他也在尝试在相同的时间点周一预定卡车和挖掘机。
+
+预定场景如下所示：
+
+- Alice 和 Bob 同时读取相同的 key —— 'truck_booking_monday' 和 'backhoe_booking_monday'
+- 两人都看到值为空，这意味着预订是免费的。
+- 两人都尝试预定卡车和挖掘机。
+
+我们的期望是，只有 Alice 或 Bob 能够预订，因为事务是冲突的。在出现错误的情况下，需要重新尝试整个流程，希望能够继续进行预订。但在任何情况下，预订都不能只完成一部分。要么两个预订都应该完成，要么两个预订都不完成。
+
+为了检查可用性，Alice 和 Bob 都启动一个事务，并分别联系 Blue 和 Green 服务器来检查可用性。Blue 持有 key 'truck_booking_on_monday' 的读锁，Green 持有 key 'backhoe_booking_on_monday' 的读锁。因为读锁是共享的，所以 Alice 和 Bob 都可以读取这些值。
+
+![](../asserts/get_truck_availability.png)
+
+![](../asserts/get_backhoe_availability.png)
+
+Alice 和 Bob 都看到了在周一卡车和挖掘机是可用的。所以它们通过向服务器发送 put 请求来保留卡车和挖掘机。两个服务器都将 put 请求保存在临时存储中。
+
+![](../asserts/reserve_truck.png)
+
+![](../asserts/reserve_backhoe.png)
+
+当 Alice 和 Bob 决定提交事务时 —— 假设 Blue 充当协调器 —— 它触发两阶段提交协议，并将准备请求发送给自己和 Green。
 
 ### 使用版本化的值（Versioned Value）
 
