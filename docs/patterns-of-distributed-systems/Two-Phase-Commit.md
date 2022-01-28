@@ -313,11 +313,313 @@ class TransactionRef…
   }
 ```
 
-##### 等待（wound-wait）
+##### 有害等待（wound-wait）
+
+在[有害等待(wound-wait)](http://www.mathcs.emory.edu/~cheung/Courses/554/Syllabus/8-recv+serial/deadlock-woundwait.html)方法中，如果存在冲突，则将请求锁的事务引用与当前拥有锁的所有事务进行比较。如果当前锁的所有者都要比请求锁的事务更年轻，那么这些事务都要被中止。但是，如果请求该锁的事务比拥有该锁的事务年轻，那么它将等待该锁。
+
+```java
+class Lock...
+	public CompletableFuture<TransactionRef> woundwait(TransactionRef txnRef,
+																										 String key,
+																										 LockMode askedLockMode,
+																										 CompletableFuture<TransactionRef> lockFuture,
+																										 LockManager lockManager) {
+			if (allOwningTransactionsStartedAfter(txnRef) && !anyOwnerIsPrepared(lockManager)) {	//注意，如果已经处于准备阶段，则不会终止
+					abortAllOwners(lockManager, key, txnRef);
+					return lockManager.acquire(txnRef, key, askedLockMode, lockFuture);
+			}
+			
+			LockRequest lockRequest = new LockRequest(txnRef, key, askedLockMode, lockFuture);
+			lockManager.logger.debug("Adding to wait queue = " + lockRequest);
+			addToWaitQueue(lockRequest);
+			return lockFuture;
+	}
+	
+class Lock...
+	private boolean allOwningTransactionsStartedAfter(TransactionRef txn) {
+			return owners.stream().filter(o -> !o.equals(txn)).allMatch(owner -> owner.after(txn));
+	}
+```
+
+其中一个关键需要注意，如果这个锁拥有者的事务已经处于两阶段提交的准备阶段，那么它就不会被中止。
 
 ##### 等待死亡（wait-die）
 
+[wait-die方法](http://www.mathcs.emory.edu/~cheung/Courses/554/Syllabus/8-recv+serial/deadlock-waitdie.html)的工作原理与[wound-wait](http://www.mathcs.emory.edu/~cheung/Courses/554/Syllabus/8-recv+serial/deadlock-woundwait.html)相反。如果锁所有者都比请求锁的事务年轻，那么事务就会等待锁。如果请求锁的事务小于拥有该事务的事务，则该事务将被中止。
+
+```java
+class Lock...
+	public CompletableFuture<TransactionRef> waitDie(TransactionRef txnRef,
+																									 String key,
+																									 LockMode askedLockMode,
+																									 CompletableFuture<TransactionRef> lockFuture,
+																									 LockManager lockManager) {
+			if (allOwningTransactionsStartedAfter(txnRef)) {
+					addToWaitQueue(new LockRequest(txnRef, key, askedLockMode, lockFuture));
+					return lockFuture;
+			}
+      
+      lockManager.abort(txnRef, key);
+      lockFuture.completeExceptionally(new WriteConflictException(txnRef, key, owners));
+      return lockFuture;
+	}
+```
+
+与 wait-die 相比 Wound-wait 机制通常很少会重新启动。所以像[Spanner](https://cloud.google.com/spanner)这样的数据存储器就会使用[wound-wait](http://www.mathcs.emory.edu/~cheung/Courses/554/Syllabus/8-recv+serial/deadlock-woundwait.html)的方法。
+
+当持有锁的事务释放锁时，正处于等待的事务就会被授予锁。
+
+```java
+class LockManager...
+	private void release(TransactionRef txn, String key) {
+			Optional<Lock> lock = getLock(key);
+			lock.isPresent(l -> {
+					l.release(txn, this);
+			});
+	}
+	
+class Lock...
+	public void release(TransactionRef txn, LockManager lockManager) {
+			removeOwner(txn);
+			if (hasWaiters()) {
+					LockRequest lockRequest = getFirst(lockManager.waitPolicy);
+					lockManager.acquire(lockRequest.txn, lockRequest.key, lockRequest.lockMode, lockRequest.future);
+			}
+	}
+```
+
 ### 提交以及回退
+
+如果客户端非常顺利没有经过任何冲突成功读写所有键值，它就会通过向协调者发送一个提交请求来启动请求提交。
+
+```java
+class TransactionClient...
+	public CompletableFuture<Boolean> commit() {
+			return coordinator.commit(transactionRef);
+	}
+```
+
+事务协调者记录了准备提交的事务状态。协调者在第二阶段实现了提交处理程序。
+
+- 它首先向每个参与者发送准备请求。
+- 一旦得到所有参与者的响应信息，协调者就会将事务从准备标记为完成。然后发送提交请求给所有的参与者。
+
+```java
+class TransactionCoordinator...
+	public CompletableFuture<Boolean> commit(TransactionRef transactionRef) {
+			TransactionMetadata metadata = transactions.get(transactionRef);
+			metadata.markPreparingToCommit(transactionLog);
+			List<CompletableFuture<Boolean>> allPrepared = sendPrepareRequestToParticipants(transactionRef);
+			CompletableFutrue<List<Boolean>> futureList = sequence(allPrepared);
+			return futureList.thenApply(result -> {
+					if (!result.stream().allMatch(r -> r)) {
+							logger.info("Rolling back = " + transactionRef);
+							rollback(transactionRef);
+							return false;
+					}
+					metadata.markPrepared(transactionLog);
+					sendCommitMessageToParticipants(transactionRef);
+					metadata.markCommitComplete(transactionLog);
+					return true;
+			});
+	}
+	
+	public List<CompletableFuture<Boolean>> sendPrepareRequestToParticipants(TransactionRef transactionRef) {
+			TransactionMetadata transactionMetadata = transactions.get(transactionRef);
+			var transactionParticipants = getParticipants(transactionMetadata.getParticipatingKeys());
+			return transactionParticipants.keySet()
+							.stream()
+							.map(server -> server.handlePrepare(transactionRef))
+							.collect(Collectors.toList());
+	}
+	
+	private void sendCommitMessageToParticipants(TransactionRef transactionRef) {
+			TransactionMetadata transactionMetadata = transactions.get(transactionRef);
+			var participantsForKeys = getParticipants(transactionMetadata.getParticipatingKeys());
+			return transactionParticipants.keySet()
+							.stream()
+							.forEach(kvStore -> {
+									List<String> keys = participantsForKeys.get(kvStore);
+									kvStore.handleCommit(transactionRef, keys);
+							});
+	}
+	
+	private Map<TransactionalKVStore, List<String>> getParticipants(List<String> participatingKeys) {
+			return participatingKeys.stream()
+							.map(k -> Pair.of(serverFor(k), k))
+							.collect(Collectors.groupingBy(Pair::getKey, Collectors.mapping(Pair::getValue, Collectors.toList())));
+	}
+```
+
+集群接收准备请求会做两件事：
+
+- 尝试获取所有键的写锁。
+- 一旦成功获取，它将会把所有的变更写到[预写日志](WAL.md)中。
+
+如果成功做完上面两件事，就能保证事务不会冲突，甚至是当集群节点崩溃的情况下也能恢复所有必要的状态最终完成事务。
+
+```java
+class TransactionalKVStore… 
+	public synchronized CompletableFuture<Boolean> handlePrepare(TransactionRef txn) {
+			try {
+					TransactionState state = getTransactionState(txn);
+					if (state.isPrepared()) {
+              return CompletableFuture.completedFuture(true); //already prepared.
+          }
+          if (state.isAborted()) {
+              return CompletableFuture.completedFuture(false); //aborted by another transaction.
+          }
+          
+          Optional<Map<String, String>> pendingUpdates = state.getPendingUpdates();
+          CompletableFuture<Boolean> prepareFuture = prepareUpdates(txn, pendingUpdates);
+          return prepareFuture.thenApply(ignored -> {
+              Map<String, Lock> locksHeldByTxn = lockManager.getAllLocksFor(txn);
+              state.markPrepared();
+              writeToWAL(new TransactionMarker(txn, locksHeldByTxn, TransactionStatus.PREPARED));
+              return true;
+          });
+			} catch (TransactionException| WriteConflictException e) {
+					logger.error(e);
+			}
+			return CompletableFuture.completedFuture(false);
+	}
+	
+	private CompletableFuture<Boolean> prepareUpdates(TransactionRef txn, Optional<Map<String, String>> pendingUpdates) {
+			if (pendingUpdates.isPresent()) {
+					Map<String, String> pendingKVs = pendingUpdates.get();
+					CompletableFuture<List<TransactionRef>> lockFuture = acquireLocks(txn, pendingKVs.keySet());
+          return lockFuture.thenApply(ignored -> {
+              writeToWAL(txn, pendingKVs);
+              return true;
+          });
+			}
+			return CompletableFuture.completedFuture(true);
+	}
+	
+	TransactionState getTransactionState(TransactionRef txnRef) {
+      return ongoingTransactions.get(txnRef);
+  }
+  
+  private void writeToWAL(TransactionRef txn, Map<String, String> pendingUpdates) {
+     for (String key : pendingUpdates.keySet()) {
+          String value = pendingUpdates.get(key);
+          wal.writeEntry(new SetValueCommand(txn, key, value).serialize());
+      }
+  }
+  
+  private CompletableFuture<List<TransactionRef>> acquireLocks(TransactionRef txn, Set<String> keys) {
+      List<CompletableFuture<TransactionRef>> lockFutures = new ArrayList<>();
+      for (String key : keys) {
+          CompletableFuture<TransactionRef> lockFuture = lockManager.acquire(txn, key, LockMode.READWRITE);
+          lockFutures.add(lockFuture);
+      }
+      return sequence(lockFutures);
+  }
+```
+
+当集群节点从协调者接收到提交请求时，可以安全的让 key-value 变更可见。当提交变更时集群节点会做一下三件事：
+
+- 标记事务为已提交。如果集群节点此时发生故障，它知道事务的结果，可以重复以下步骤。
+- 将所有的更改保存到 k-v 存储器中
+- 释放全部持有的锁。
+
+```java
+class TransactionalKVStore… 
+	public synchronized void handleCommit(TransactionRef transactionRef, List<String> keys) {
+			if (!ongoingTransactions.containsKey(transactionRef)) {
+          return; //this is a no-op. Already committed.
+      }
+      if (!lockManager.hasLocksFor(transactionRef, keys)) {
+          throw new IllegalStateException("Transaction " + transactionRef + " should hold all the required locks for keys " + keys);
+      }
+      writeToWAL(new TransactionMarker(transactionRef, TransactionStatus.COMMITTED, keys));
+      
+      applyPendingUpdates(transactionRef);
+      
+      releaseLocks(transactionRef, keys);
+	}
+	
+	private void removeTransactionState(TransactionRef txnRef) {
+			ongoingTransactions.remove(txnRef);
+	}
+	
+	private void applyPendingUpdates(TransactionRef txnRef) {
+			TransactionState state = getTransactionState(txnRef);
+			Optional<Map<String, String>> pendingUpdates = state.getPendingUpdates();
+			apply(txnRef, pendingUpdates);
+	}
+	
+	private void apply(TransactionRef txnRef, Optional<Map<String, String>> pendingUpdates) {
+			if (pendingUpdates.isPresent()) {
+          Map<String, String> pendingKv = pendingUpdates.get();
+          apply(pendingKv);
+      }
+      removeTransactionState(txnRef);
+	}
+	
+	private void apply(Map<String, String> pendingKv) {
+      for (String key : pendingKv.keySet()) {
+          String value = pendingKv.get(key);
+          kv.put(key, value);
+      }
+  }
+  private void releaseLocks(TransactionRef txn, List<String> keys) {
+          lockManager.release(txn, keys);
+  }
+  
+  private Long writeToWAL(TransactionMarker transactionMarker) {
+     return wal.writeEntry(transactionMarker.serialize());
+  }
+```
+
+回滚操作是用类似的操作实现的。如果存在任何的失败，客户端就会通知协调器回滚事务。
+
+```java
+class TransactionClient…
+  public void rollback() {
+      coordinator.rollback(transactionRef);
+  }
+```
+
+事务协调器将事务的状态记录为准备回滚。然后，它将回滚请求转发到所有存储给定事务值的服务器。一旦所有请求都成功，协调器将「事务回滚」标记为「完成」。如果协调器在事务被标记为“准备回滚”后崩溃，它可以继续向所有参与的集群节点发送回滚消息。
+
+```java
+class TransactionCoordinator… 
+	public void rollback(TransactionRef transactionRef) {
+      transactions.get(transactionRef).markPrepareToRollback(this.transactionLog);
+
+      sendRollbackMessageToParticipants(transactionRef);
+
+      transactions.get(transactionRef).markRollbackComplete(this.transactionLog);
+  }
+  
+  private void sendRollbackMessageToParticipants(TransactionRef transactionRef) {
+      TransactionMetadata transactionMetadata = transactions.get(transactionRef);
+      var participants = getParticipants(transactionMetadata.getParticipatingKeys());
+      for (TransactionalKVStore kvStore : participants.keySet()) {
+          List<String> keys = participants.get(kvStore);
+          kvStore.handleRollback(transactionMetadata.getTxn(), keys);
+      }
+  }
+```
+
+集群节点接收到会滚请求会做两件事：
+
+- 记录回滚事务状态到预写日志中。
+- 丢弃事务状态。
+- 释放所有锁。
+
+```java
+class TransactionalKVStore… 
+	public synchronized void handleRollback(TransactionRef transactionRef, List<String> keys) {
+      if (!ongoingTransactions.containsKey(transactionRef)) {
+          return; //no-op. Already rolled back.
+      }
+      writeToWAL(new TransactionMarker(transactionRef, TransactionStatus.ROLLED_BACK, keys));
+      this.ongoingTransactions.remove(transactionRef);
+      this.lockManager.release(transactionRef, keys);
+  }
+```
 
 #### 幂等操作
 
