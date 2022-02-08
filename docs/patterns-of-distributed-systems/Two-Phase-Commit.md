@@ -673,17 +673,284 @@ Alice 和 Bob 都看到了在周一卡车和挖掘机是可用的。所以它们
 
 当 Alice 和 Bob 决定提交事务时 —— 假设 Blue 充当协调器 —— 它触发两阶段提交协议，并将准备请求发送给自己和 Green。
 
-### 使用版本化的值（Versioned Value）
+Alice 的请求它尝试为 key'truck_booking_on_monday' 获取写锁，但是它无法获取，因为此时还存在其他事务获取了读锁，这里存在冲突了。所以 Alice 事务在准备阶段失败了。相同的事情也同样发生在 Bob 的请求中。
+
+![](../asserts/commit_failure_retry.png)
+
+事务可以循环重试：
+
+```java
+class TransactionExecutor...
+	public boolean executeWithRetry(Function<TransactionClient, Boolean> txnMethod, ReplicaMapper replicaMapper, SystemClock systemClock) {
+			for (int attempt = 1; attempt <= maxRetries; attempt++) {
+					TransactionClient client = new TransactionClient(replicaMapper, systemClock);
+					try {
+							boolean checkPassed = txnMethod.apply(client);
+							Boolean successfullyCommitted = client.commit().get();
+							return checkPassed && successfullyCommitted;
+					} catch (Exception e) {
+							logger.error("Write conflict detected while executing." + client.transactionRef + " Retrying attempt " + attempt);
+							client.rollback();
+							randomWait();	// 随机等待
+					}
+			}
+			
+			return false;
+	}
+```
+
+Alice 和 Bob 的预定逻辑如下：
+
+```java
+class TransactionalKVStoreTest… 
+	@Test
+	public void retryWhenConflict() {
+			List<TransactionalKVStore> allServers = createTestServers(WaitPolicy.WoundWait);
+			TransactionExecutor aliceTxn = bookTransactionally(allServers, "Alice", new TestClock(1));
+			TransactionExecutor bobTxn = bookTransactionally(allServers, "Bob", new TestClock(2));
+			
+			TestUtils.waitUntilTrue(() -> (aliceTxn.isSuccess() && !bobTxn.isSuccess()) || (!aliceTxn.isSuccess() && bobTxn.isSuccess()), "waiting for one txn to complete", Duration.ofSeconds(50));
+	}
+	
+	private TransactionExecutor bookTransactionally(List<TransactionalKVStore> allServers, String user, SystemClock systemClock) {
+			List<String> bookingKeys = Arrays.asList("truck_booking_on_monday", "backhoe_booking_on_monday");
+      TransactionExecutor t1 = new TransactionExecutor(allServers);
+      t1.executeAsyncWithRetry(txnClient -> {
+          if (txnClient.isAvailable(bookingKeys)) {
+              txnClient.reserve(bookingKeys, user);
+              return true;
+          }
+          return false;
+      }, systemClock);
+      return t1;
+	}
+```
+
+在这种情况下，其中一个事务将最终成功，而另一个将退出。
+
+虽然它很容易实现，但使用 WaitPolicy.Error 时，会有多个事务重启，从而降低了总吞吐量。如上一节所述，如果使用了 Wound-Wait 策略，将会有更少的事务重启。在上面的例子中，在发生冲突的情况下，只有一个事务可能会重新启动，而不是两个事务都重新启动。
+
+### 使用[版本化的值（Versioned Value）](Versioned-Value.md)
+
+所有读和写操作都有冲突是非常有约束的，特别是当事务可以是只读的时候。如果只读事务可以在不持有任何锁的情况下工作，并且仍然保证事务中读到的值不会随着并发读写事务而改变，那么这是最理想的。
+
+数据存储器（Data-stores）通常存储值的多个版本，如[版本值](Versioned-Value.md)中所述。版本使用的是是通过参照[Lamport 时钟](Lamport-Clock.md)的时间戳。大多数数据库如[MongoDb](https://www.mongodb.com/)或[CockroachDB](https://www.cockroachlabs.com/docs/stable/)使用的是[混合时钟](Hybrid-Clock.md)。要将它与两阶段提交协议一起使用，诀窍在于，参与事务的每个服务器都发送可以写入值的时间戳，作为对 prepare 请求的响应。协调器选择这些时间戳中的最大值作为提交的时间戳，并将其与值一起发送。然后，参与的服务器将该值保存在提交时间戳。这允许在不持有锁的情况下执行只读请求，因为它保证了在特定时间戳写入的值永远不会改变。
+
+思考下面的例子。Philip 正在运行一份在阅读时间戳2之前的所有预订的报告。如果它是一个持有锁的长时间运行的操作，那么正在尝试预订卡车的 Alice 将被阻塞，直到 Philip 的工作完成。使用[版本值](Versioned-Value.md), Philip 的 get 请求(它是只读操作的一部分)可以在时间戳2上继续，而 Alice 的预定请求在时间戳4上继续。
+
+![](../asserts/mvcc-read.png)
+
+注意，读请求是读写事务的一部分，仍然需要持有锁。
+
+Lamport 时钟代码示例如下：
+
+```java
+class MvccTransactionalKVStore… 
+	public String readOnlyGet(String key, long readTimestamp) {
+      adjustServerTimestamp(readTimestamp);
+      return kv.get(new VersionedKey(key, readTimestamp));
+  }
+  
+  public CompletableFuture<String> get(TransactionRef txn, String key, long readTimestamp) {
+  		adjustServerTimestamp(readTimestamp);
+      CompletableFuture<TransactionRef> lockFuture = lockManager.acquire(txn, key, LockMode.READ);
+      return lockFuture.thenApply(transactionRef -> {
+          getOrCreateTransactionState(transactionRef);
+          return kv.get(key);
+      });
+  }
+  
+  private void adjustServerTimestamp(long readTimestamp) {
+      this.timestamp = readTimestamp > this.timestamp ? readTimestamp : timestamp;
+  }
+  
+  public void put(TransactionRef txnId, String key, String value) {
+      timestamp = timestamp + 1;
+      TransactionState transactionState = getOrCreateTransactionState(txnId);
+      transactionState.addPendingUpdates(key, value);
+  }
+  
+class MvccTransactionalKVStore… 
+	private long prepare(TransactionRef txn, Optional<Map<String, String>> pendingUpdates) throws WriteConflictException, IOException {
+      if (pendingUpdates.isPresent()) {
+          Map<String, String> pendingKVs = pendingUpdates.get();
+
+          acquireLocks(txn, pendingKVs);
+
+          timestamp = timestamp + 1; //increment the timestamp for write operation.
+
+          writeToWAL(txn, pendingKVs, timestamp);
+       }
+      return timestamp;
+  }
+  
+ class MvccTransactionCoordinator… 
+ 	public long commit(TransactionRef txn) {
+          long commitTimestamp = prepare(txn);
+
+          TransactionMetadata transactionMetadata = transactions.get(txn);
+          transactionMetadata.markPreparedToCommit(commitTimestamp, this.transactionLog);
+
+          sendCommitMessageToAllTheServers(txn, commitTimestamp, transactionMetadata.getParticipatingKeys());
+
+          transactionMetadata.markCommitComplete(transactionLog);
+
+          return commitTimestamp;
+  }
+  
+  public long prepare(TransactionRef txn) throws WriteConflictException {
+      TransactionMetadata transactionMetadata = transactions.get(txn);
+      Map<MvccTransactionalKVStore, List<String>> keysToServers = getParticipants(transactionMetadata.getParticipatingKeys());
+      List<Long> prepareTimestamps = new ArrayList<>();
+      for (MvccTransactionalKVStore store : keysToServers.keySet()) {
+          List<String> keys = keysToServers.get(store);
+          long prepareTimestamp = store.prepare(txn, keys);
+          prepareTimestamps.add(prepareTimestamp);
+      }
+      return prepareTimestamps.stream().max(Long::compare).orElse(txn.getStartTimestamp());
+  }
+```
+
+然后所有参与的集群节点将在提交时间戳存储键值。
+
+```java
+class MvccTransactionalKVStore… 
+	public void commit(TransactionRef txn, List<String> keys, long commitTimestamp) {
+      if (!lockManager.hasLocksFor(txn, keys)) {
+          throw new IllegalStateException("Transaction should hold all the required locks");
+      }
+
+      adjustServerTimestamp(commitTimestamp);
+
+      applyPendingOperations(txn, commitTimestamp);
+
+      lockManager.release(txn, keys);
+
+      logTransactionMarker(new TransactionMarker(txn, TransactionStatus.COMMITTED, commitTimestamp, keys, Collections.EMPTY_MAP));
+  }
+  
+  private void applyPendingOperations(TransactionRef txnId, long commitTimestamp) {
+      Optional<TransactionState> transactionState = getTransactionState(txnId);
+      if (transactionState.isPresent()) {
+          TransactionState t = transactionState.get();
+          Optional<Map<String, String>> pendingUpdates = t.getPendingUpdates();
+          apply(txnId, pendingUpdates, commitTimestamp);
+      }
+  }
+  
+  private void apply(TransactionRef txnId, Optional<Map<String, String>> pendingUpdates, long commitTimestamp) {
+      if (pendingUpdates.isPresent()) {
+          Map<String, String> pendingKv = pendingUpdates.get();
+          apply(pendingKv, commitTimestamp);
+      }
+      ongoingTransactions.remove(txnId);
+  }
+  
+  private void apply(Map<String, String> pendingKv, long commitTimestamp) {
+      for (String key : pendingKv.keySet()) {
+          String value = pendingKv.get(key);
+          kv.put(new VersionedKey(key, commitTimestamp), value);
+      }
+  }
+```
 
 #### 技术讨论
 
-### 使用复制日志
+这里还有一个小问题需要解决。**一旦一个特定的响应在一个给定的时间戳被返回，任何写操作都不应该发生在比读请求中接收到的时间戳更低的时间戳上**。这是通过不同的技术实现的。[Google Percolator](https://research.google/pubs/pub36726/)和受 Percolator 启发的[TiKV](https://tikv.org/)等数据存储使用了一个名为 Timestamp oracle 的独立服务器，该服务器保证提供单调的时间戳。[MongoDB](https://www.mongodb.com/)或[CockroachDB](https://www.cockroachlabs.com/docs/stable/)等数据库使用[混合时钟](Hybrid-Clock.md)来保证这一点，因为每个请求都会调整每个服务器上的混合时钟，使其成为最新的。时间戳也会随着每次写请求而单调地增加。最后，在提交阶段，所有参与的服务器中选取最大的时间戳，确保写操作始终遵循上一个读请求。
+
+需要注意的是，如果客户端读取的时间戳低于服务器正在写入的时间戳，这种场景不是问题。但是，如果服务器正要按指定的时间戳写入数据时，客户端正在按时间戳读取数据，那么就有问题了。如果服务器检测到客户端正在一个时间戳读取操作，而这个时间戳（仅指准备好的时间戳），服务器正在进行写入操作，则服务器就会拒绝写入。如果在一个正在进行中的事务时间戳进行读取操作，[CockroachDB](https://www.cockroachlabs.com/docs/stable/)会抛出异常。[Spanner](https://cloud.google.com/spanner)有一个读取阶段，即客户端获取特定分区上最后一次成功写入的时间。如果客户端在一个更高时间戳上读取，那么这个读请求就会一直等到这个时间戳发生写入操作。
+
+### 使用[复制日志](Replicated-Log.md)
+
+为了提高容错性，集群节点使用了[复制日志](Replicated-Log.md)。协作者使用复制日志来存储事务日志条目。
+
+还是考虑上面 Alice 和 Bob 的例子，Blue 服务器将有一组服务器，Green 服务器也是。所有的预定数据将会横跨复制到这些服务器集合。作为两阶段提交的一部分，每个请求都会发送给服务器组的 leader。复制是使用[复制日志](Replicated-Log.md)实现的。
+
+客户端与每组的 leader 交互。只有在当客户端决定提交事务的时候才需要复制，所以它是作为准备阶段的一部分发生的。
+
+协作者（coodinator）也将每个状态变更复制到复制日志中。
+
+在分布式数据存储中，每个集群节点处理多个分区。每个分区维护一个[复制日志](Replicated-Log.md)。当 [Raft](https://raft.github.io/) 被用做复制的一部分时，它有时也会被称为 [multi-raft](https://www.cockroachlabs.com/blog/scaling-raft/)。
+
+客户端与参与事务中的每个分区的 leader 通信。
+
+> Multi-Raft 与 [Multi-Paxos](https://www.youtube.com/watch?v=JEpsBg0AO6o&t=1920s) 是两个非常不同的东西。Multi-Paxos 指的是单个[复制日志](Replicated-Log.md)。多个 Paxos 实例，每个日志条目都有一个 Paxos 实例。Multi-Raft 指的是多个[复制日志](Replicated-Log.md)。
 
 ### 失败处理
 
+两阶段提交协议严重依赖协调节点（coordinator node）来传达事务的结果。在知道事务结果之前，各个集群节点不能允许任何其他事务写入那些参与挂起事务的 keys。在知道事务结果之前，集群节点会一直阻塞。这就会协调节点提出了一些关键的要求。
+
+即即使在进程发生崩溃，协调者需要记住事务的状态。
+
+协调者使用[预写日志](Write-Ahead-Log.md)来记录事务中状态的每个更新。通过这种方式，当协调器崩溃并恢复时，它可以继续处理未完成的事务。
+
+```java
+class TransactionCoordinator...
+	public void loadTransactionsFromWAL() throws IOException {
+			List<WALEntry> walEntries = this.transactionLog.readAll();
+			for (WALEntry walEntry : walEntries) {
+					TransactionMetadata txnMetadata = (TransactionMetadata) Command.deserialize(new ByteArrayInputStream(walEntry.getData()));
+					transactions.put(txnMetadata.getTxn(), txnMetadata);
+			}
+			startTransactionTimeoutScheduler();
+			completePreparedTransactions();
+	}
+	private void completePreparedTransactions() throws IOException {
+			List<Map.Entry<TransactionRef, TransactionMetadata>> preparedTransactions 
+							= transactions.entrySet().stream().filter(entry -> entry.getValue().isPrepared()).collect(Collectors.toList());
+      for (Map.Entry<TransactionRef, TransactionMetadata> preparedTransaction : preparedTransactions) {
+      		TransactionMetadata txnMetadata = preparedTransaction.getValue();
+          sendCommitMessageToParticipants(txnMetadata.getTxn());
+      }
+	}
+```
+
+客户端可能在向协调者发送提交消息之前失败。
+
+**事务协调器跟踪每个事务状态的更新。如果在配置的超时时间内没有接收到状态更新，则会触发事务回滚。**
+
+```java
+class TransactionCoordinator… 
+	private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1);
+  private ScheduledFuture<?> taskFuture;
+  private long transactionTimeoutMs = Long.MAX_VALUE; //for now.
+  
+  public void startTransactionTimeoutScheduler() {
+      taskFuture = scheduler.scheduleAtFixedRate(() -> timeoutTransactions(),
+              transactionTimeoutMs,
+              transactionTimeoutMs,
+              TimeUnit.MILLISECONDS);
+  }
+  
+  private void timeoutTransactions() {
+      for (TransactionRef txnRef : transactions.keySet()) {
+          TransactionMetadata transactionMetadata = transactions.get(txnRef);
+          long now = systemClock.nanoTime();
+          if (transactionMetadata.hasTimedOut(now)) {
+              sendRollbackMessageToParticipants(transactionMetadata.getTxn());
+              transactionMetadata.markRollbackComplete(transactionLog);
+          }
+      }
+  }
+```
+
 ### 跨异构系统的事务
 
+这里概述的解决方案演示了同构系统中的两阶段提交实现。同构(Homogenous)意味着所有集群节点都是同一系统的一部分，并且存储相同类型的数据。例如像 MongoDb 这样的分布式数据存储，或者像 Kafka 这样的分布式消息代理。
+
+在过去，两阶段提交主要是在异构系统(heterogeneous systems)的上下文中讨论的。两阶段提交最常见的用法是使用[[XA]](https://pubs.opengroup.org/onlinepubs/009680699/toc.pdf)事务。在 J2EE 服务器中，跨消息代理和数据库使用两阶段提交是非常常见的。最常见的使用模式是需要在如 ActiveMQ 或 JMS 等消息代理上生成消息，并且需要在数据库中插入/更新记录。
+
+如上所述，协调器的容错在两阶段提交实现中起着关键作用。**在 XA 事务的情况下，协调器主要是进行数据库和消息代理调用的应用程序进程。**在大多数现代场景中，应用程序都是运行在容器化环境中的无状态微服务。它并不是一个真正合适的地方来放置协调者的责任。协调器需要维护状态，并从失败中快速恢复，以提交或回滚，这在这种情况下很难实现（译者注：因为要记录每个状态的变更记录，并且还要读取预写日志来恢复记录，这不是一个无状态服务该干的事）。
+
+这就是 XA 事务看起来如此吸引人的原因，但它们在[实践中经常会遇到问题]()并被避免。在微服务世界中，像[[事务发件箱]](https://microservices.io/patterns/data/transactional-outbox.html)这样的模式比 XA 事务更受欢迎。
+
+另一方面，大多数分布式存储系统实现了跨组分区的两阶段提交，并且在实践中工作得很好。
+
 ## 例子
+
+像[CockroachDB](https://www.cockroachlabs.com/docs/stable/)、[MongoDB](https://www.mongodb.com/)等分布式数据库实现了两阶段提交，以原子方式跨分区存储值。
+
+[Kafka](https://kafka.apache.org/)允许通过类似于两阶段提交的实现，在多个分区之间自动生成消息。
 
 ## 原文链接
 
