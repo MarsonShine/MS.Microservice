@@ -159,3 +159,6 @@ Google 著名的 [chubby](https://research.google/pubs/pub27897/) 锁服务就�
 [kubernetes](https://kubernetes.io/) 使用 [ectd](https://etcd.io/) 协调，管理集群元数据以及成员信息组的信息
 
 所有的大数据存储和像 [hdfs](https://hadoop.apache.org/docs/r3.0.0/hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html)，[spark](http://spark.apache.org/docs/latest/spark-standalone.html#standby-masters-with-zookeeper)，[flink](https://ci.apache.org/projects/flink/flink-docs-release-1.11/ops/jobmanager_high_availability.html) 这样的处理系统都使用 zookeeper 这种来实现高可用以及集群协作。
+
+## 原文地址
+
