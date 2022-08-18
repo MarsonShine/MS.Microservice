@@ -102,9 +102,9 @@ class Client…
 
 ​																				不同的 leader follower 组存储不同的键值
 
-## 局部排序
+## 部分排序（Partially Order）
 
-Lamport Clock 存储的值只有局部顺序。如果两个客户端将值存储在两个独立的服务器中，则不能使用时间戳对跨服务器的值进行排序。在下例中，Bob 在服务器Green 上于时间戳 2 处存储标题。但是不能确定 Bob 是在 Alice 在服务器 Blue 上存储名称之前还是之后存储了标题。
+Lamport Clock 存储的值只有[部分顺序](https://en.wikipedia.org/wiki/Partially_ordered_set)（非完全排序）。如果两个客户端将值存储在两个独立的服务器中，则不能使用时间戳对跨服务器的值进行排序。在下例中，Bob 在服务器Green 上于时间戳 2 处存储标题。但是不能确定 Bob 是在 Alice 在服务器 Blue 上存储名称之前还是之后存储了标题。
 
 ![](../asserts/two-clients-two-separate-servers.svg)
 

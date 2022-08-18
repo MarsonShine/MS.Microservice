@@ -1,5 +1,6 @@
 # 目录
 
+- [时钟约束等待(Clock-Bound Wait)](Clock-Bound.md)
 - [一致性核心](Consisten-Core.md)
 - [固定分区(Fixed Partitions)](Fixed-Partitions.md) //TODO
 - [从读(Follower Reads)](Follower-Reads.md)
@@ -17,14 +18,14 @@
 - [租赁(Lease)](Lease.md)
 - [Paxos](Paxos.md)
 - [选举(Quorum)](Quorum.md)
-- [复制日志(Replicated Log)](Replicated-Log.md) //TODO
+- [复制日志(Replicated Log)](Replicated-Log.md)
 - [批处理请求(Request-Batch)](Request-Batch.md) //TODO
 - [分段日志(Segmented Log)](Segmented-Log.md)
 - [请求管道(Request Pipeline)](Request-Pipeline.md)
 - [Single Socket Channel](Single-Socket-Channel.md)
 - [Single Update Queue](Single-Update-Queue.md)
 - [状态监控(State Watch)](State-Watch.md)
-- [两阶段提交(Two Phase Commit)](Two-Phase-Commit.md) //TODO
+- [两阶段提交(Two Phase Commit)](Two-Phase-Commit.md)
 - [版本向量(Version Vector)](Version-Vector.md)
 - [版本值(Versioned Values)](Versioned-Value.md)
 - [WAL(Write-Ahead Log)](Write-Ahead-Log.md)
