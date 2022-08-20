@@ -2,6 +2,7 @@
 
 - [时钟约束等待(Clock-Bound Wait)](Clock-Bound.md)
 - [一致性核心](Consisten-Core.md)
+- [应急Leader(Emergent Leader)](Emergent-Leader.md)
 - [固定分区(Fixed Partitions)](Fixed-Partitions.md) //TODO
 - [从读(Follower Reads)](Follower-Reads.md)
 - [时钟生成器(Generation Clock)](Generation-Clock.md)

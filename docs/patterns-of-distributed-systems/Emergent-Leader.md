@@ -79,6 +79,8 @@ class MembershipService {
 
 可以有多个种子节点。但是只有在种子节点加入集群后才开始接受请求。此外，如果种子节点关闭，集群仍将正常工作，但不能向集群中添加新节点。
 
+> 通常会提供不同的发现机制来查找要加入集群的节点。如[JGroups](http://www.jgroups.org/)提供不同的[发现协议](https://docs.jboss.org/jbossas/docs/Clustering_Guide/beta422/html/jbosscache-jgroups-discovery.html)。[Akka](https://akka.io/)提供了几种[发现机制](https://docs.jboss.org/jbossas/docs/Clustering_Guide/beta422/html/jbosscache-jgroups-discovery.html)。
+
 然后非种子节点向种子节点发送加入请求。种子节点通过创建新成员记录并分配其“年龄”来处理该加入请求。然后，它会更新自己的成员列表，并使用这个新成员列表向所有现有成员发送消息。然后它等到确保响应从每个节点返回，但即使响应延迟，最终也会返回加入响应。
 
 ```java
