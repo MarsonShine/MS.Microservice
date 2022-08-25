@@ -402,3 +402,202 @@ class ClusterCoordinator {
 
 ##### 客户端接口
 
+如果我们重新考虑一个简单的键值存储的例子，如果一个客户端需要查询/存储指定键的值，它要通过下面几步：
+
+- 客户端对键应用哈希函数，并基于分区的总数找到相关的分区。
+- 客户端从协调者中获取分区表并找到了该分区的集群节点。客户端还会定期刷新分区表。
+
+从协调器获取分区表的客户端可能很快就会导致瓶颈，尤其是当所有请求都由单个协调器处理时。这就是为什么通常的做法是在所有集群节点上只保持元数据可用。协调器可以将元数据推送到集群节点，或者集群节点可以从协调器提取元数据。然后，客户端可以连接到任何集群节点来刷新元数据。
+
+这通常在键值存储提供的客户端库中实现，或者通过客户端请求处理(在集群节点上发生)实现。
+
+```java
+class Client {
+  ...
+    public void put(String key, String value) throws IOException {
+      Integer partitionId = findPartition(key, noOfPartitions);
+      InetAddressAndPort nodeAddress = getNodeAddressFor(partitionId);
+      sendPutMessage(partitionId, nodeAddress, key, value);
+  }
+
+  private InetAddressAndPort getNodeAddressFor(Integer partitionId) {
+      PartitionInfo partitionInfo = partitionTable.getPartition(partitionId);
+      InetAddressAndPort nodeAddress = partitionInfo.getAddress();
+      return nodeAddress;
+  }
+
+  private void sendPutMessage(Integer partitionId, InetAddressAndPort address, String key, String value) throws IOException {
+      PartitionPutMessage partitionPutMessage = new PartitionPutMessage(partitionId, key, value);
+      SocketClient socketClient = new SocketClient(address);
+      socketClient.blockingSend(new RequestOrResponse(RequestId.PartitionPutKV.getId(),
+                                                JsonSerDes.serialize(partitionPutMessage)));
+  }
+
+  public String get(String key) throws IOException {
+      Integer partitionId = findPartition(key, noOfPartitions);
+      InetAddressAndPort nodeAddress = getNodeAddressFor(partitionId);
+      return sendGetMessage(partitionId, key, nodeAddress);
+  }
+
+  private String sendGetMessage(Integer partitionId, String key, InetAddressAndPort address) throws IOException {
+      PartitionGetMessage partitionGetMessage = new PartitionGetMessage(partitionId, key);
+      SocketClient socketClient = new SocketClient(address);
+      RequestOrResponse response = socketClient.blockingSend(new RequestOrResponse(RequestId.PartitionGetKV.getId(), JsonSerDes.serialize(partitionGetMessage)));
+      PartitionGetResponseMessage partitionGetResponseMessage = JsonSerDes.deserialize(response.getMessageBodyJson(), PartitionGetResponseMessage.class);
+      return partitionGetResponseMessage.getValue();
+  }
+}
+```
+
+##### 移动分区至新添加的成员
+
+当新节点加入到集群时，一些分区会移动至其它的节点。节点一旦增加，这个过程是自动发生的。但是它可能涉及到在集群节点之间移动的大量数据，这就是为什么管理员通常会触发重新分区。一种简单的方法是计算每个节点应该托管的分区的平均数量，然后将额外的分区移动到新节点。例如，如果分区数是30，以及在集群中有三个节点，则每个节点应该托管10个分区。如果新添加一个节点，那么每个节点就是7。因此协调器会尝试从集群节点中移动三个分区到新的节点。
+
+```java
+class ClusterCoordinator {
+  ...
+  List<Migration> pendingMigrations = new ArrayList<>();
+
+  boolean reassignPartitions() {
+      if (partitionAssignmentInProgress()) {
+          logger.info("Partition assignment in progress");
+          return false;
+      }
+      List<Migration> migrations = repartition(this.partitionTable);
+      CompletableFuture proposalFuture = replicatedLog.propose(new MigratePartitionsCommand(migrations));
+      proposalFuture.join();
+      return true;
+  }
+
+  public List<Migration> repartition(PartitionTable partitionTable) {
+    int averagePartitionsPerNode = getAveragePartitionsPerNode();
+    List<Member> liveMembers = membership.getLiveMembers();
+    var overloadedNodes = partitionTable.getOverloadedNodes(averagePartitionsPerNode, liveMembers);
+    var underloadedNodes = partitionTable.getUnderloadedNodes(averagePartitionsPerNode, liveMembers);
+    // 将分区移动至未过载的节点
+    var migrations = tryMovingPartitionsToUnderLoadedMembers(averagePartitionsPerNode, overloadedNodes, underloadedNodes);
+    return migrations;
+}
+
+  private List<Migration> tryMovingPartitionsToUnderLoadedMembers(int averagePartitionsPerNode,
+                                                                Map<InetAddressAndPort, PartitionList> overloadedNodes,
+                                                                Map<InetAddressAndPort, PartitionList> underloadedNodes) {
+      List<Migration> migrations = new ArrayList<>();
+      for (InetAddressAndPort member : overloadedNodes.keySet()) {
+          var partitions = overloadedNodes.get(member);
+          var toMove = partitions.subList(averagePartitionsPerNode, partitions.getSize());
+          overloadedNodes.put(member, partitions.subList(0, averagePartitionsPerNode));
+          ArrayDeque<Integer> moveQ = new ArrayDeque<Integer>(toMove.partitionList());
+          while (!moveQ.isEmpty() && nodeWithLeastPartitions(underloadedNodes, averagePartitionsPerNode).isPresent()) {
+              assignToNodesWithLeastPartitions(migrations, member, moveQ, underloadedNodes, averagePartitionsPerNode);
+          }
+          if (!moveQ.isEmpty()) {
+              overloadedNodes.get(member).addAll(moveQ);
+          }
+      }
+    return migrations;
+  }
+
+  int getAveragePartitionsPerNode() {
+      return noOfPartitions / membership.getLiveMembers().size();
+  }
+}
+```
+
+协调器将把计算得到的迁移持久化到复制日志中，然后发送跨集群节点移动分区的请求。
+
+```java
+private void applyMigratePartitionCommand(MigratePartitionsCommand command) {
+    logger.info("Handling partition migrations " + command.migrations);
+    for (Migration migration : command.migrations) {
+        RequestPartitionMigrationMessage message = new RequestPartitionMigrationMessage(requestNumber++, this.listenAddress, migration);
+        pendingMigrations.add(migration);
+        if (isLeader()) {
+            scheduler.execute(new RetryableTask(migration.fromMember, network, this, migration.getPartitionId(), message));
+        }
+    }
+}
+```
+
+当集群节点接收到迁移的请求时，它会将分区标记为迁移。这将停止对分区的任何进一步的修改。然后它将整个分区数据发送到目标节点。
+
+```java
+class KVStore {
+  ...
+  private void handleRequestPartitionMigrationMessage(RequestPartitionMigrationMessage message) {
+      Migration migration = message.getMigration();
+      Integer partitionId = migration.getPartitionId();
+      InetAddressAndPort toServer = migration.getToMember();
+      if (!allPartitions.containsKey(partitionId)) {
+          return;// The partition is not available with this node.
+      }
+      Partition partition = allPartitions.get(partitionId);
+      partition.setMigrating();
+      network.send(toServer, new MovePartitionMessage(requestNumber++, this.listenAddress, toServer, partition));
+  }
+}
+```
+
+集群节点收到请求之后，就会将自己添加到新的分区并返回确认ack
+
+```java
+class KVStore {
+  ...
+  private void handleMovePartition(Message message) {
+      MovePartitionMessage movePartitionMessage = (MovePartitionMessage) message;
+      Partition partition = movePartitionMessage.getPartition();
+      allPartitions.put(partition.getId(), partition);
+      network.send(message.from, new PartitionMovementComplete(message.messageId, listenAddress,
+              new Migration(movePartitionMessage.getMigrateFrom(), movePartitionMessage.getMigrateTo(),  partition.getId())));
+  }
+}
+```
+
+以前拥有该分区的集群节点将发送迁移完成消息给集群协调器
+
+```java
+class KVStore {
+  ...
+  private void handlePartitionMovementCompleteMessage(PartitionMovementComplete message) {
+      allPartitions.remove(message.getMigration().getPartitionId());
+      network.send(coordLeader, new MigrationCompleteMessage(requestNumber++, listenAddress,
+              message.getMigration()));
+  }
+}
+```
+
+集群协调器然后会标记迁移为完成。这个变化过程会持久化到复制日志中。
+
+```java
+class ClusterCoordinator {
+  ...
+  private void handleMigrationCompleteMessage(MigrationCompleteMessage message) {
+      MigrationCompleteMessage migrationCompleteMessage = message;
+      CompletableFuture propose = replicatedLog.propose(new MigrationCompletedCommand(message.getMigration()));
+      propose.join();
+  }
+  
+  private void applyMigrationCompleted(MigrationCompletedCommand command) {
+      pendingMigrations.remove(command.getMigration());
+      logger.info("Completed migration " + command.getMigration());
+      logger.info("pendingMigrations = " + pendingMigrations);
+      partitionTable.migrationCompleted(command.getMigration());
+  }
+}
+
+class PartitionTable {
+  ...
+  public void migrationCompleted(Migration migration) {
+      this.addPartition(migration.partitionId, new PartitionInfo(migration.partitionId, migration.toMember, ClusterCoordinator.PartitionStatus.ONLINE));
+  }
+}
+```
+
+## 案例
+
+在[Kafka](https://kafka.apache.org/)中，每个topic都有固定数量的分区
+
+[Akka中的分片分配](https://doc.akka.io/docs/akka/current/typed/cluster-sharding.html#shard-allocation)配置了固定数量的分片。原则是让分片的数量是集群大小的10倍
+
+内存中的数据网格产品(如[Apache Ignite 中的分区](https://ignite.apache.org/docs/latest/data-modeling/data-partitioning/)和[Hazelcast中的分区](https://docs.hazelcast.com/imdg/4.2/overview/data-partitioning))有固定数量的分区，这些分区是为它们的缓存配置的。
+
