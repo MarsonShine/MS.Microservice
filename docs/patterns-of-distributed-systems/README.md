@@ -3,7 +3,7 @@
 - [时钟约束等待(Clock-Bound Wait)](Clock-Bound.md)
 - [一致性核心](Consisten-Core.md)
 - [应急Leader(Emergent Leader)](Emergent-Leader.md)
-- [固定分区(Fixed Partitions)](Fixed-Partitions.md) //TODO
+- [固定分区(Fixed Partitions)](Fixed-Partitions.md)
 - [从读(Follower Reads)](Follower-Reads.md)
 - [时钟生成器(Generation Clock)](Generation-Clock.md)
 - [Gossip 传播(Gossip Dissemination)](Gossip-Dissemination.md)
@@ -12,7 +12,7 @@
 - [混合时钟(Hybrid Clock)](Hybrid-Clock.md)
 - [幂等接收者(Idempotent Receiver)](Idempotent-Receiver.md)
 - [键和值(Key And Value)](Key-Value.md) //TODO
-- [键-范围分区(Key-Range Partitions)](Key-Range-Partitions.md) //TODO
+- [键-范围分区(Key-Range Partitions)](Key-Range-Partitions.md)
 - [Lamport 时钟](Lamport-Clock.md)
 - [低水位标记(Low-Water Mark)](Low-Water-Mark.md)
 - [领导者与追随者(Leader And Followers)](Leader-And-Followers.md)
@@ -20,7 +20,7 @@
 - [Paxos](Paxos.md)
 - [选举(Quorum)](Quorum.md)
 - [复制日志(Replicated Log)](Replicated-Log.md)
-- [批处理请求(Request-Batch)](Request-Batch.md) //TODO
+- [批处理请求(Request-Batch)](Request-Batch.md)
 - [分段日志(Segmented Log)](Segmented-Log.md)
 - [请求管道(Request Pipeline)](Request-Pipeline.md)
 - [Single Socket Channel](Single-Socket-Channel.md)
