@@ -23,6 +23,7 @@
 - [批处理请求(Request-Batch)](Request-Batch.md)
 - [分段日志(Segmented Log)](Segmented-Log.md)
 - [请求管道(Request Pipeline)](Request-Pipeline.md)
+- [请求等待列表(Request Waiting List)](Request-Wating-List.md)
 - [Single Socket Channel](Single-Socket-Channel.md)
 - [Single Update Queue](Single-Update-Queue.md)
 - [状态监控(State Watch)](State-Watch.md)
