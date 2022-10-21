@@ -9,6 +9,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MS.Microservice.Web.Infrastructure.Filters;
+using MS.Microservice.Web.Infrastructure.Mvc.ModelBinder.Extension;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 
 namespace MS.Microservice.Web
 {
@@ -23,6 +28,19 @@ namespace MS.Microservice.Web
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddControllers().AddMvcOptions(options =>
+            {
+                options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+                options.UseApiDecryptModelBinding(Configuration);
+            }).AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                // 这里添加自定义json转换器
+                // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
+            });
+
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;

@@ -6,6 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="BackgroundWork\**" />
+    <Content Remove="BackgroundWork\**" />
+    <EmbeddedResource Remove="BackgroundWork\**" />
+    <None Remove="BackgroundWork\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
     <PackageReference Include="Dapper" Version="2.0.90" />
     <PackageReference Include="Dapper.SqlBuilder" Version="2.0.78" />
@@ -22,7 +29,6 @@
   <ItemGroup>
     <Folder Include="Application\DomainEventHandlers\" />
     <Folder Include="Application\Enums\" />
-    <Folder Include="BackgroundWork\" />
   </ItemGroup>
 
 </Project>
