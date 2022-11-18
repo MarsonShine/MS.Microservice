@@ -306,7 +306,7 @@ athens 追加一个空的条目（no-op entry）到本地日志。之后它成�
 
 复制的日志机制用于各种各样的应用程序，从键值存储到[区块链](https://en.wikipedia.org/wiki/Blockchain)。
 
-对于 KV 存储，日志记录的内容是设置 key-value。对于[租赁](Lease.md)，条目是关于建立命名的租赁。对于区块链，这些日志条目是区块链中需要以相同顺序提供给所有对等体的块。对于 [MongoDB](https://www.mongodb.com/) 这样的数据库，条目是需要一致复制的数据。
+对于 KV 存储，日志记录的内容是设置 key-value。对于[租约](Lease.md)，条目是关于建立命名的租约。对于区块链，这些日志条目是区块链中需要以相同顺序提供给所有对等体的块。对于 [MongoDB](https://www.mongodb.com/) 这样的数据库，条目是需要一致复制的数据。
 
 ## 例子
 

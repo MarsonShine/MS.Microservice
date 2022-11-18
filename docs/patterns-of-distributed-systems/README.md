@@ -16,7 +16,7 @@
 - [Lamport 时钟](Lamport-Clock.md)
 - [低水位标记(Low-Water Mark)](Low-Water-Mark.md)
 - [领导者与追随者(Leader And Followers)](Leader-And-Followers.md)
-- [租赁(Lease)](Lease.md)
+- [租约(Lease)](Lease.md)
 - [Paxos](Paxos.md)
 - [选举(Quorum)](Quorum.md)
 - [复制日志(Replicated Log)](Replicated-Log.md)

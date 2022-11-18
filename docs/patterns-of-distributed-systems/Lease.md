@@ -1,6 +1,6 @@
-# 租赁（Lease）
+# 租约（Lease）
 
-给集群节点使用时间边界租赁来实现相互协作。
+给集群节点使用时间边界租约来实现相互协作。
 
 ## 问题
 
@@ -8,7 +8,7 @@
 
 ## 解决方案
 
-一个集群节点可以在一个有效的时间能请求租赁，超过这个时间就失效。如果它想要继续访问的话，那就得在它有效期过期之前再次租赁。使用一致性核心来实现租赁机制来提供容错性和一致性。存在一个与租赁相关的 "生存期" 的值。集群节点能在一致性核心中创建一个 key 来实现它。这个租赁能通过 [Leader 和 Followers](Leader-And-Followers.md) 来实现备份来提供容错性。**拥有租期的节点负责定期刷新租期**。客户端会使用[心跳检查](HeartBeat.md)去刷新在一致性核心中的生存时间。在[一致性核心](Consisten-Core.md)中能给所有的集群节点创建租赁，但是只有主节点能追踪租约的超期时间（timeout）。在一致性核心中的 follower 节点是无法追踪 timeout 的。这样做是因为我们需要 leader 使用它自己的单调时钟（monotonic clock）来决定租约何时到期，并且在之后要让 followers 了解到租约合适过期。这要确保在一致性核心的其它决定，这些节点也要对租约到期保持一致。
+一个集群节点可以在一个有效的时间能请求租约，超过这个时间就失效。如果它想要继续访问的话，那就得在它有效期过期之前再次租约。使用一致性核心来实现租约机制来提供容错性和一致性。存在一个与租约相关的 "生存期" 的值。集群节点能在一致性核心中创建一个 key 来实现它。这个租约能通过 [Leader 和 Followers](Leader-And-Followers.md) 来实现备份来提供容错性。**拥有租期的节点负责定期刷新租期**。客户端会使用[心跳检查](HeartBeat.md)去刷新在一致性核心中的生存时间。在[一致性核心](Consisten-Core.md)中能给所有的集群节点创建租约，但是只有主节点能追踪租约的超期时间（timeout）。在一致性核心中的 follower 节点是无法追踪 timeout 的。这样做是因为我们需要 leader 使用它自己的单调时钟（monotonic clock）来决定租约何时到期，并且在之后要让 followers 了解到租约合适过期。这要确保在一致性核心的其它决定，这些节点也要对租约到期保持一致。
 
 当一个一致性核心中的节点变成 leader 时，它就要开始跟踪租约了：
 
@@ -122,7 +122,7 @@ class ReplicatedKVStore {
 }
 ```
 
-当一个节点想要创建一个租赁，它要连接一致性核心的 leader 并发送一个创建租赁的请求。租赁注册请求会备份并且在[一致性核心](Consistent-Core.md)中会像其它请求一样处理。只有当高水位标记达到备份日志里请求条目的日志索引时才会完成。
+当一个节点想要创建一个租约，它要连接一致性核心的 leader 并发送一个创建租约的请求。租约注册请求会备份并且在[一致性核心](Consistent-Core.md)中会像其它请求一样处理。只有当高水位标记达到备份日志里请求条目的日志索引时才会完成。
 
 ```java
 class ReplicatedKVStore {
@@ -145,7 +145,7 @@ class ReplicatedKVStore {
 }
 ```
 
-一个重要的事情就是要注意验证重复租赁注册的那个地方。在提出请求之前检查它是不够的，因为可能有多个正在运行的请求。因此，在成功复制后，当注册了租期时，服务器还会检查是否有重复。
+一个重要的事情就是要注意验证重复租约注册的那个地方。在提出请求之前检查它是不够的，因为可能有多个正在运行的请求。因此，在成功复制后，当注册了租期时，服务器还会检查是否有重复。
 
 ```java
 class LeaderLeaseTracker {
@@ -176,11 +176,11 @@ class LeaderLeaseTracker {
 }
 ```
 
-刷新请求只发送给一致性核心的 leader，因为只有 leader 负责决定租赁合适到期。
+刷新请求只发送给一致性核心的 leader，因为只有 leader 负责决定租约合适到期。
 
 ![](../asserts/refresh-lease.png)
 
-当租赁到期，它会从 leader 中移除。这个信息非常关键，会提交到一致性核心中。所以 leader 会发送一个请求来过期租赁，这就像一致性核心中其它请求处理一样。一旦高水位线到达租赁到期请求，它就会从所有的 followers 中移除。
+当租约到期，它会从 leader 中移除。这个信息非常关键，会提交到一致性核心中。所以 leader 会发送一个请求来过期租约，这就像一致性核心中其它请求处理一样。一旦高水位线到达租约到期请求，它就会从所有的 followers 中移除。
 
 ```java
 class LeaderLeaseTracker {
@@ -201,17 +201,17 @@ class LeaderLeaseTracker {
 >
 > 计算机还有一种不同的时钟机制，称为“单调时钟”，它表示经过的时间（elapsed time）。**单调时钟的值不受 NTP 等服务的影响。保证连续两次调用单调时钟可以得到经过的时间。**因此，为了测量超时值，总是使用单调时钟。这在单个服务器上运行良好。 但是无法比较两个不同服务器上的单调时钟。所有编程语言都有一个 api 来读取挂钟和单调时钟。例如在 Java 中`System.currentMillis` 给出挂钟时间，而`System.nanoTime`给出单调时钟时间。
 
-## 附加租赁到 key 存储至 key/value 存储器
+## 附加租约到 key 存储至 key/value 存储器
 
-集群需要知道它们中间时哪个几点失败了。它可以通过让节点从一致的核心中获得一个租约来实现这一点，然后附加到自标识 key 存储至一致性核心中的存储器。如果这个节点正在运行，那么它应该定期更新创建租赁。租约到期，相关的 key 就会被移除。当这个 key 被移除时，一个标识节点失败的事件就会发送到感兴趣的集群节点，如[状态监视](State-Watch.md)模式中所讨论的那样。
+集群需要知道它们中间时哪个几点失败了。它可以通过让节点从一致的核心中获得一个租约来实现这一点，然后附加到自标识 key 存储至一致性核心中的存储器。如果这个节点正在运行，那么它应该定期更新创建租约。租约到期，相关的 key 就会被移除。当这个 key 被移除时，一个标识节点失败的事件就会发送到感兴趣的集群节点，如[状态监视](State-Watch.md)模式中所讨论的那样。
 
-集群节点使用一致性核心，通过网络调用创建租赁，如下所示：
+集群节点使用一致性核心，通过网络调用创建租约，如下所示：
 
 ```java
 consistentCoreClient.registerLease("server1Lease", TimeUnit.SECONDS.toNanos(5));	
 ```
 
-然后它会将这个租赁附加到自标识键存储到一致性核心
+然后它会将这个租约附加到自标识键存储到一致性核心
 
 ```java
 consistentCoreClient.setValue("/servers/1", "{address:192.168.199.10, port:8000}", "server1Lease");
@@ -240,7 +240,7 @@ class ReplicatedKVStore {
 }
 ```
 
-一旦租赁过期，一致性核心就会从 k/v 存储器中移除该键。
+一旦租约过期，一致性核心就会从 k/v 存储器中移除该键。
 
 ```java
 class LeaderLeaseTracker {
@@ -265,9 +265,9 @@ class LeaderLeaseTracker {
 
 ## 处理 Leader 失败
 
-当已有的 leader 失败时，新的一致性核心的 leader 就会被选举。一旦成功选举，就要追踪租赁的状态。
+当已有的 leader 失败时，新的一致性核心的 leader 就会被选举。一旦成功选举，就要追踪租约的状态。
 
-新的 leader 会刷新所有已知的租赁。要注意，在原来的 leader 获取的即将过期的 “生存期” 会被延长。这个是没问题的，并且它给了客户端重新连接新 leader 和继续租赁的机会。
+新的 leader 会刷新所有已知的租约。要注意，在原来的 leader 获取的即将过期的 “生存期” 会被延长。这个是没问题的，并且它给了客户端重新连接新 leader 和继续租约的机会。
 
 ```java
 private void refreshLeases() {
@@ -284,15 +284,15 @@ private void refreshLeases() {
 
 ## 示例
 
-Google 的 [chubby](https://research.google/pubs/pub27897/) 服务就是基于时间边界租赁的机制相同的方法实现的
+Google 的 [chubby](https://research.google/pubs/pub27897/) 服务就是基于时间边界租约的机制相同的方法实现的
 
-[zookeeper](https://zookeeper.apache.org/) 会话管理就是通过租赁复制类似的机制实现的
+[zookeeper](https://zookeeper.apache.org/) 会话管理就是通过租约复制类似的机制实现的
 
-Kafka 的 [Kip-631 ](https://cwiki.apache.org/confluence/display/KAFKA/KIP-631%3A+The+Quorum-based+Kafka+Controller)提议使用时间边界的租赁来管理成员信息组以及 kafka 的 brokers 故障检查
+Kafka 的 [Kip-631 ](https://cwiki.apache.org/confluence/display/KAFKA/KIP-631%3A+The+Quorum-based+Kafka+Controller)提议使用时间边界的租约来管理成员信息组以及 kafka 的 brokers 故障检查
 
-[etcd](https://etcd.io/) 提供了一个时间边界租赁工厂，用它来让客户端之间的协作以及组成员关系和故障检测
+[etcd](https://etcd.io/) 提供了一个时间边界租约工厂，用它来让客户端之间的协作以及组成员关系和故障检测
 
-[dhcp](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol) 协议允许连接设备去租赁 IP 地址。具有多个 DHCP 服务器的[故障转移协议（failover protocol）](https://tools.ietf.org/html/draft-ietf-dhc-failover-12)的工作原理与这里介绍的实现类似
+[dhcp](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol) 协议允许连接设备去租约 IP 地址。具有多个 DHCP 服务器的[故障转移协议（failover protocol）](https://tools.ietf.org/html/draft-ietf-dhc-failover-12)的工作原理与这里介绍的实现类似
 
 ## 原文地址
 
