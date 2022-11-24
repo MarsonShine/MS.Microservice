@@ -28,7 +28,7 @@
 
 ​											leader 心跳检查
 
-对于 3-5 个节点的小集群，像在系统中实现一致性，在数据集群内不依赖于任何外部系统，能够实现 leader 选举 。Leader 选举时发生在服务器启动阶段。每个服务器在启动时开始一个 leader 选举并尝试选举一个 leader。这个时候系统时不会接收任何客户端请求直到选出了 leader。在[生成时钟](https://martinfowler.com/articles/patterns-of-distributed-systems/generation.html)模式中解释过，每个 leader 选举都需要更新生成的数值。这些总是处于在 Leader，Follower 或是 Looking For Leader（或是 Candidate）这三个状态的一个。
+对于 3-5 个节点的小集群，像在系统中实现一致性，在数据集群内不依赖于任何外部系统，能够实现 leader 选举 。Leader 选举时发生在服务器启动阶段。每个服务器在启动时开始一个 leader 选举并尝试选举一个 leader。这个时候系统时不会接收任何客户端请求直到选出了 leader。在[生成时钟](Generation-Clock.md)模式中解释过，每个 leader 选举都需要更新生成的数值。这些总是处于在 Leader，Follower 或是 Looking For Leader（或是 Candidate）这三个状态的一个。
 
 ```java
 public enum ServerRole {
@@ -38,7 +38,7 @@ public enum ServerRole {
 }
 ```
 
-[心跳检查](https://martinfowler.com/articles/patterns-of-distributed-systems/heartbeat.html)机制是用在探测已经存在的 leader 是否发生故障，以至可以选举新的 leader。
+[心跳检查](HeartBeat.md)机制是用在探测已经存在的 leader 是否发生故障，以至可以选举新的 leader。
 
 新的 leader 选举开始于发送给每个服务器一个投票的请求消息。
 
@@ -58,15 +58,15 @@ class ReplicationModule…
 
 - 由于这些系统大多数都用来做数据备份，它那些能赢得选举的服务器加了一些额外的限制。只有在 'most up to date' 的服务器才会称为一个合法的 leader。举个例子，在典型的基于一致性系统中，'most up to date' 定义了两个东西：
 
-  - 最新的[生成时钟](https://martinfowler.com/articles/patterns-of-distributed-systems/generation.html)
-  - 最新的 [WAL](https://martinfowler.com/articles/patterns-of-distributed-systems/wal.html) 里的日志索引
+  - 最新的[生成时钟](Generation-Clock.md)
+  - 最新的 [WAL](Write-Ahead-Log.md) 里的日志索引
 
 - 如果所有的服务都是相同最新的，那么 leader 就会基于下面条件选举出来：
 
   - 一些指定条件的实现，像哪个服务器排名更好或者有更高的 id（如 [Zab](https://zookeeper.apache.org/doc/r3.4.13/zookeeperInternals.html#sc_atomicBroadcast)）
   - 要确保一次只有一个服务器请求一次投票，无论其它服务器是否开始选举。（如 [Raft](https://raft.github.io/)）
 
-  一旦在给定的[生成时钟](https://martinfowler.com/articles/patterns-of-distributed-systems/generation.html)内的服务器被投票，那么将总是为该生成返回相同的投票。当一个成功的选举已经发生的时候，这确保了为同一代投票的请求的其他服务器不会被选上。就像下面处理请求投票：
+  一旦在给定的[生成时钟](Generation-Clock.md)内的服务器被投票，那么将总是为该生成返回相同的投票。当一个成功的选举已经发生的时候，这确保了为同一代投票的请求的其他服务器不会被选上。就像下面处理请求投票：
 
   class ReplicationModule…
 
@@ -123,7 +123,7 @@ class ReplicationModule…
     }
   ```
 
-从大多数服务器中接受到投票的服务器会转换为 Leader 状态。这大多数是在 [Quorum](https://martinfowler.com/articles/patterns-of-distributed-systems/quorum.html) 中讨论决定的。一旦选举，这个 leader 会继续发送[心跳检查](https://martinfowler.com/articles/patterns-of-distributed-systems/heartbeat.html)给所有追随者。如果追随者在指定的时间间隔内没有收到心跳检查，那么就会触发新的 leader 选举。
+从大多数服务器中接受到投票的服务器会转换为 Leader 状态。这大多数是在 [Quorum](Quorum.md) 中讨论决定的。一旦选举，这个 leader 会继续发送[心跳检查](HeartBeat.md)给所有追随者。如果追随者在指定的时间间隔内没有收到心跳检查，那么就会触发新的 leader 选举。
 
 ## 使用外部[[可线性化]](https://jepsen.io/consistency/models/linearizable)的存储来 Leader 选举
 
@@ -191,7 +191,7 @@ class ServerImpl…
 - 客户端 c1 从 server1 和 server2 读取 x，它获得了最新的值 x = 2，因为 server1 写成功了。
 - 客户端 c2 也读取了 x。但是 server1 临时宕机了，所以 c1 开始从 server2、server3 读取 x，其中的 x 都是旧值即 x = 1。所以 c2 在 c1 读取完最新的值之后读取了一个旧的值。
 
-两次连续的读取值就会显示最新的值。一旦 server1 重新恢复，随后的一次读取就会获取最新的值。假设读修复或反熵（Anti-Entropy）过程正在运行，其余的服务器也会“最终”得到最新的值。但是集群存储不提供保证会确保一次指定值就在所有客户端可见，及时服务器失败，所有后续读取都将继续获取该值。
+两次连续的读取值就会显示最新的值。一旦 server1 重新恢复，随后的一次读取就会获取最新的值。假设读修复或反熵（Anti-Entropy）过程正在运行，其余的服务器也会“最终”得到最新的值。但是集群存储不提供保证会确保一次指定值就在所有客户端可见，即使服务器失败，所有后续读取都将继续获取该值。
 
 > 反熵：在一个最终一致性性的数据库中，随着时间流逝，应该被精确复制的节点都会慢慢互相偏差。这个偏差可以被认为是系统的“entropy”。反熵 就是让节点之间互相同步的过程。
 
@@ -202,6 +202,6 @@ class ServerImpl…
 - [Viewstamp 复制](http://pmg.csail.mit.edu/papers/vr-revisited.pdf)算法有一个 Primary 概念，类似于其它算法的里的 leader 
 - [Kafka](https://kafka.apache.org/) 有一个[控制器](https://cwiki.apache.org/confluence/display/KAFKA/Kafka+Controller+Internals)，它负责代表集群下所有行为。它对来自 Zookeeper 的事件做出反应，对于 Kafka 中的每个分区，都有一个指定的 leader broker 和follower broker。
 
+## 原文链接
 
-
-原文链接：https://martinfowler.com/articles/patterns-of-distributed-systems/leader-follower.html
+https://martinfowler.com/articles/patterns-of-distributed-systems/leader-follower.html

@@ -14,8 +14,8 @@ quorum 也表明了有多少失败可以容忍 —— 它是集群大小减去 q
 
 思考下面给出的例子需要的 quorum：
 
-- **集群中服务器更新数据**。[高水位标记](https://martinfowler.com/articles/patterns-of-distributed-systems/high-watermark.html)是用来确保只有这个数据能保证在大多数服务器对于客户端是可用的。
-- **Leader 选举**。在 [Leader 和 Follower](https://martinfowler.com/articles/patterns-of-distributed-systems/leader-follower.html) 中，只有获得了大多数服务器的投票才能被选择成为一个 leader。
+- **集群中服务器更新数据**。[高水位标记](High-Water-Mark.md)是用来确保只有这个数据能保证在大多数服务器对于客户端是可用的。
+- **Leader 选举**。在 [Leader 和 Follower](Leader-And-Followers.md) 中，只有获得了大多数服务器的投票才能被选择成为一个 leader。
 
 ## 决定在集群中的服务器的数量
 
@@ -47,3 +47,7 @@ quorum 也表明了有多少失败可以容忍 —— 它是集群大小减去 q
 
 - 所有的一致性算法如 [Zab](https://zookeeper.apache.org/doc/r3.4.13/zookeeperInternals.html#sc_atomicBroadcast)、[Raft](https://raft.github.io/)、[Paxos](https://en.wikipedia.org/wiki/Paxos_(computer_science)) 都是基于 Quorum 的
 - 甚至是没有一致性的系统中，在最近的服务器故障或网络分区的时候，quorum 也可以用来保证至少有一个服务器有最新的更新值。例如。在数据中如 Cassandra，它被配置只有在大多数服务器成功更新记录之后才会返回成功。
+
+## 原文链接
+
+https://martinfowler.com/articles/patterns-of-distributed-systems/quorum.html
