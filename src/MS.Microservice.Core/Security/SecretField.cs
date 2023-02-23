@@ -57,11 +57,11 @@ namespace MS.Microservice.Core.Security
             int hiddenCharCount = info.Length - left - right;
             if (hiddenCharCount > 0)
             {
-                string prefix = info.Substring(0, left), suffix = info.Substring(info.Length - right);
+                string prefix = info[..left], suffix = info[^right..];
                 sbText.Append(prefix);
                 for (int i = 0; i < hiddenCharCount; i++)
                 {
-                    sbText.Append("*");
+                    sbText.Append('*');
                 }
                 sbText.Append(suffix);
             }
@@ -71,22 +71,22 @@ namespace MS.Microservice.Core.Security
                 {
                     if (info.Length > left && left > 0)
                     {
-                        sbText.Append(info.Substring(0, left) + "****");
+                        sbText.Append(info[..left] + "****");
                     }
                     else
                     {
-                        sbText.Append(info.Substring(0, 1) + "****");
+                        sbText.Append(info[..1] + "****");
                     }
                 }
                 else
                 {
                     if (info.Length > right && right > 0)
                     {
-                        sbText.Append("****" + info.Substring(info.Length - right));
+                        sbText.Append("****" + info[^right..]);
                     }
                     else
                     {
-                        sbText.Append("****" + info.Substring(info.Length - 1));
+                        sbText.Append("****" + info[^1..]);
                     }
                 }
             }
@@ -114,19 +114,19 @@ namespace MS.Microservice.Core.Security
             int subLength = info.Length / sublen;
             if (subLength > 0 && info.Length > (subLength * 2))
             {
-                string prefix = info.Substring(0, subLength), suffix = info.Substring(info.Length - subLength);
+                string prefix = info[..subLength], suffix = info[^subLength..];
                 return prefix + "****" + suffix;
             }
             else
             {
                 if (basedOnLeft)
                 {
-                    string prefix = subLength > 0 ? info.Substring(0, subLength) : info.Substring(0, 1);
+                    string prefix = subLength > 0 ? info[..subLength] : info[..1];
                     return prefix + "****";
                 }
                 else
                 {
-                    string suffix = subLength > 0 ? info.Substring(info.Length - subLength) : info.Substring(info.Length - 1);
+                    string suffix = subLength > 0 ? info[^subLength..] : info[^1..];
                     return "****" + suffix;
                 }
             }

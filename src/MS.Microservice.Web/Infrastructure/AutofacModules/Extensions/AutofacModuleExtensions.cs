@@ -4,6 +4,7 @@ using MediatR;
 using MediatR.Pipeline;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using System;
 
 namespace MS.Microservice.Web.AutofacModules.Extensions
 {
@@ -46,7 +47,7 @@ namespace MS.Microservice.Web.AutofacModules.Extensions
             //        .As(typeof(IPipelineBehavior<,>));
             //}
 
-            builder.Register<ServiceFactory>(outerContext =>
+            builder.Register<Func<Type, object>>(outerContext =>
             {
                 var innerContext = outerContext.Resolve<IComponentContext>();
 
@@ -55,7 +56,7 @@ namespace MS.Microservice.Web.AutofacModules.Extensions
         }
 
 
-        public static void RegisterPlatformAutofacModule(this ContainerBuilder builder,IConfiguration configuration)
+        public static void RegisterPlatformAutofacModule(this ContainerBuilder builder, IConfiguration configuration)
         {
             builder
                 .RegisterModule<CommonInfrastructureModule>()

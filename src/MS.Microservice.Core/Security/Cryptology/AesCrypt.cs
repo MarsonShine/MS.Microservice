@@ -7,129 +7,75 @@ namespace MS.Microservice.Core.Security.Cryptology
     public partial class CryptologyHelper
     {
         public static class AesCrypt
-        {  
-            /// <summary>
-            /// 128 位零向量
-            /// </summary>
-            private static byte[] _iv;
-            public static byte[] IV
+        {
+            private static byte[] GetAesKey(byte[] keyArray)
             {
-                get
+                byte[] newArray = new byte[16];
+                if (keyArray.Length < 16)
                 {
-                    if (_iv == null)
+                    for (int i = 0; i < newArray.Length; i++)
                     {
-                        var size = 16;
-                        _iv = new byte[size];
-                        for (int i = 0; i < size; i++)
-                            _iv[i] = 0;
+                        if (i >= keyArray.Length)
+                        {
+                            newArray[i] = 0;
+                        }
+                        else
+                        {
+                            newArray[i] = keyArray[i];
+                        }
                     }
-                    return _iv;
                 }
-            }
-
-            #region AES加密
-            public static string Encrypt(string value)
-            {
-                return AesEnCrypt(value, key);
-            }
-
-            public static string AesEnCrypt(string value, string key)
-            {
-                return AesEnCrypt(value, key, Encoding.UTF8);
-            }
-
-            public static string AesEnCrypt(string value, string key, Encoding encoding, CipherMode cipherMode = CipherMode.CBC)
-            {
-                if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(key))
-                    return string.Empty;
-                var rijndaelManaged = CreateRijndaelManaged(key, encoding, cipherMode);
-                using (var transform = rijndaelManaged.CreateEncryptor(rijndaelManaged.Key, rijndaelManaged.IV))
-                {
-                    return GetEncryptResult(value, encoding, transform);
-                }
-            }
-
-            private static string GetEncryptResult(string value, Encoding encoding, ICryptoTransform transform)
-            {
-                var bytes = encoding.GetBytes(value);
-                var result = transform.TransformFinalBlock(bytes, 0, bytes.Length);
-
-                return Convert.ToBase64String(result);
-            }
-
-            public static string AesEnCrypt(string value, string key, string iv, Encoding encoding, CipherMode cipherMode = CipherMode.CBC)
-            {
-                if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(key))
-                    return string.Empty;
-                var rijndaelManaged = CreateRijndaelManaged(key, iv, encoding, cipherMode);
-                using (var transform = rijndaelManaged.CreateDecryptor(rijndaelManaged.Key, rijndaelManaged.IV))
-                {
-                    return GetEncryptResult(value, encoding, transform);
-                }
-            }
-            #endregion
-
-            #region AES解密
-            public static string Decrypt(string value)
-            {
-                return AesDecrypt(value, key);
-            }
-
-            public static string AesDecrypt(string value, string key)
-            {
-                return AesDecrypt(value, key, Encoding.UTF8);
-            }
-
-            public static string AesDecrypt(string value, string key, Encoding encoding, CipherMode cipherMode = CipherMode.CBC)
-            {
-                if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(key))
-                    return string.Empty;
-                var rijndaelManaged = CreateRijndaelManaged(key, encoding, cipherMode);
-                using (var transform = rijndaelManaged.CreateDecryptor(rijndaelManaged.Key, rijndaelManaged.IV))
-                {
-                    return GetDecryptResult(value, encoding, transform);
-                }
-            }
-            #endregion
-
-            /// <summary>
-            /// 创建Des加密服务提供程序
-            /// </summary>
-            private static TripleDESCryptoServiceProvider CreateDesProvider(string key)
-            {
-                return new TripleDESCryptoServiceProvider { Key = Encoding.ASCII.GetBytes(key), Mode = CipherMode.ECB, Padding = PaddingMode.PKCS7 };
-            }
-
-            private static string GetDecryptResult(string value, Encoding encoding, ICryptoTransform transform)
-            {
-                var bytes = Convert.FromBase64String(value);
-                var result = transform.TransformFinalBlock(bytes, 0, bytes.Length);
-                return encoding.GetString(result);
+                return newArray;
             }
 
             /// <summary>
-            /// 创建RijndaelManaged
+            /// 使用AES加密字符串,按128位处理key
             /// </summary>
-            private static RijndaelManaged CreateRijndaelManaged(string key, Encoding encoding, CipherMode cipherMode = CipherMode.CBC)
+            /// <param name="content">加密内容</param>
+            /// <param name="key">秘钥，需要128位、256位.....</param>
+            /// <returns>Base64字符串结果</returns>
+            public static string Encrypt(string key, string content, bool autoHandle = true)
             {
-                return CreateRijndaelManaged(key, null, encoding, cipherMode);
+                byte[] keyArray = Encoding.UTF8.GetBytes(key);
+                if (autoHandle)
+                {
+                    keyArray = GetAesKey(keyArray);
+                }
+                byte[] toEncryptArray = Encoding.UTF8.GetBytes(content);
+
+                SymmetricAlgorithm des = Aes.Create();
+                des.Key = keyArray;
+                des.Mode = CipherMode.ECB;
+                des.Padding = PaddingMode.PKCS7;
+                ICryptoTransform cTransform = des.CreateEncryptor();
+                byte[] resultArray = cTransform.TransformFinalBlock(toEncryptArray, 0, toEncryptArray.Length);
+                return Convert.ToBase64String(resultArray);
             }
 
             /// <summary>
-            /// 创建RijndaelManaged
+            /// 使用AES解密字符串,按128位处理key
             /// </summary>
-            private static RijndaelManaged CreateRijndaelManaged(string key, string iv, Encoding encoding, CipherMode cipherMode = CipherMode.CBC)
+            /// <param name="content">内容</param>
+            /// <param name="key">秘钥，需要128位、256位.....</param>
+            /// <returns>UTF8解密结果</returns>
+            public static string Decrypt(string key, string content, bool autoHandle = true)
             {
-                if (!string.IsNullOrWhiteSpace(iv))
-                    _iv = encoding.GetBytes(iv.Substring(0, 16));
-
-                return new RijndaelManaged
+                byte[] keyArray = Encoding.UTF8.GetBytes(key);
+                if (autoHandle)
                 {
-                    Key = encoding.GetBytes(key),
-                    Mode = cipherMode,
-                    Padding = PaddingMode.PKCS7,
-                    IV = IV
-                };
+                    keyArray = GetAesKey(keyArray);
+                }
+                byte[] toEncryptArray = Convert.FromBase64String(content);
+
+                SymmetricAlgorithm des = Aes.Create();
+                des.Key = keyArray;
+                des.Mode = CipherMode.ECB;
+                des.Padding = PaddingMode.PKCS7;
+
+                ICryptoTransform cTransform = des.CreateDecryptor();
+                byte[] resultArray = cTransform.TransformFinalBlock(toEncryptArray, 0, toEncryptArray.Length);
+
+                return Encoding.UTF8.GetString(resultArray);
             }
         }
     }

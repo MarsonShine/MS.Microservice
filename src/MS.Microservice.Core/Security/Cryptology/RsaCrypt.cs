@@ -44,7 +44,6 @@ namespace MS.Microservice.Core.Security.Cryptology
             {
                 // encoded OID sequence for  PKCS #1 rsaEncryption szOID_RSA_RSA = "1.2.840.113549.1.1.1"  
                 byte[] SeqOID = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
-                var seq = new byte[15];
                 // ---------  Set up stream to read the asn.1 encoded SubjectPublicKeyInfo blob  ------  
                 using var mem = new MemoryStream(publickey);
                 using var binr = new BinaryReader(mem);
@@ -59,7 +58,7 @@ namespace MS.Microservice.Core.Security.Cryptology
                 else
                     return null;
 
-                seq = binr.ReadBytes(15);       //read the Sequence OID  
+                byte[] seq = binr.ReadBytes(15);
                 if (!CompareBytearrays(seq, SeqOID))    //make sure Sequence for OID is correct  
                     return null;
 
@@ -163,7 +162,7 @@ namespace MS.Microservice.Core.Security.Cryptology
                 byte[] source = rsa.Decrypt(data, false);
                 char[] asciiChars = new char[encoding.GetCharCount(source, 0, source.Length)];
                 encoding.GetChars(source, 0, source.Length, asciiChars, 0);
-                string result = new string(asciiChars);
+                string result = new(asciiChars);
                 return result;
             }
             private static RSACryptoServiceProvider DecodePemPrivateKey(string pemstr)
@@ -277,8 +276,8 @@ namespace MS.Microservice.Core.Security.Cryptology
                 IQ = binr.ReadBytes(elems);
 
                 // ------- create RSACryptoServiceProvider instance and initialize with public key -----  
-                RSACryptoServiceProvider RSA = new RSACryptoServiceProvider();
-                RSAParameters RSAparams = new RSAParameters();
+                RSACryptoServiceProvider RSA = new();
+                RSAParameters RSAparams = new();
                 RSAparams.Modulus = MODULUS;
                 RSAparams.Exponent = E;
                 RSAparams.D = D;

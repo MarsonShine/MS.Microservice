@@ -38,15 +38,16 @@ namespace MS.Microservice.Web.Infrastructure.Extensions {
         public static IServiceCollection AddCustomMvc(this IServiceCollection services, IConfiguration configuration) {
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-            services.AddControllers(options => {
-                    options.Filters.Add(typeof(HttpGlobalExceptionFilter));
-                    options.Filters.Add(typeof(ApiEncryptActionExecutingFilter));
-                }).AddJsonOptions(options => {
-                    options.JsonSerializerOptions.WriteIndented = true;
-                    // 这里添加自定义json转换器
-                    // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
-                })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
+            services.AddControllers(options =>
+            {
+                options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+                options.Filters.Add(typeof(ApiEncryptActionExecutingFilter));
+            }).AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.WriteIndented = true;
+                // 这里添加自定义json转换器
+                // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
+            });
 
             services.AddCorsService(option => {
                 var cors = configuration.GetSection("CorsOptions").Get<CorsOptions>();

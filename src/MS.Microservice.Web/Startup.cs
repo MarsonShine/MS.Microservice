@@ -14,6 +14,7 @@ using MS.Microservice.Web.Infrastructure.Mvc.ModelBinder.Extension;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
+using MS.Microservice.Web.Application.BackgroundServices;
 
 namespace MS.Microservice.Web
 {
@@ -47,11 +48,11 @@ namespace MS.Microservice.Web
             });
             // .. 这里可以添加想要的 service
             // 设置全局 fluentvalidation 的校验模式
-            FluentValidation.ValidatorOptions.Global.CascadeMode = FluentValidation.CascadeMode.Stop;
+            FluentValidation.ValidatorOptions.Global.DefaultRuleLevelCascadeMode = FluentValidation.CascadeMode.Stop;
             services.AddFzPlatformServices(Configuration)
             ;
             // 注册后台作业
-            //services.AddHostedService<ActivateCodeGenerateBackgroundService>();
+            services.AddHostedService<HighPerformanceBackgroundService>();
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
