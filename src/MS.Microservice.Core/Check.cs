@@ -1,9 +1,9 @@
-﻿using MS.Microservice.Extensions;
+﻿using MS.Microservice.Core.Extension;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace MS.Microservice
+namespace MS.Microservice.Core
 {
     public static class Check
     {

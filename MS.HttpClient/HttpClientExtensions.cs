@@ -1,11 +1,13 @@
-﻿using MS.Microservice.Extensions;
+﻿using MS.Microservice.Core.Extension;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using System.Threading.Tasks;
 
 namespace MS.WebHttpClient
@@ -73,12 +75,12 @@ namespace MS.WebHttpClient
             {
                 if (null != message && message.IsSuccessStatusCode)
                 {
-                    if (message.Content is object && message.Content.Headers.ContentType!.MediaType == "application/json")
+                    if (message.Content is not null && message.Content.Headers.ContentType!.MediaType == "application/json")
                     {
                         var contentStream = await message.Content.ReadAsStreamAsync();
                         try
                         {
-                            return (await JsonSerializer.DeserializeAsync<T>(contentStream, new JsonSerializerOptions { IgnoreNullValues = true, PropertyNameCaseInsensitive = true }))!;
+                            return (await JsonSerializer.DeserializeAsync<T>(contentStream, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNameCaseInsensitive = true, Encoder = JavaScriptEncoder.Create(UnicodeRanges.All) }))!;
                         }
                         catch (JsonException)
                         {

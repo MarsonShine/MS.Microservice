@@ -1,146 +1,114 @@
-ï»¿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using AutoMapper;
-using Google.Protobuf.WellKnownTypes;
-using MassTransit;
-using MassTransit.Util;
+using MS.Microservice.Infrastructure.Common.Extensions;
+using MS.Microservice.Web.AutofacModules.Extensions;
+using MS.Microservice.Web.Infrastructure.Cors;
+using MS.Microservice.Web.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.PlatformAbstractions;
-using MS.Microservice.Database;
-using MS.Microservice.EventBus;
-using MS.Microservice.EventBus.Abstractions;
-using MS.Microservice.Web;
-using MS.Microservice.Web.AutofacModules;
-using MS.Microservice.Web.AutoMappers.Profiles;
-using MS.Microservice.Web.Swagger;
-using MySql.Data.EntityFrameworkCore.Extensions;
-using Polly;
+using MS.Microservice.Web.Infrastructure.Filters;
+using MS.Microservice.Web.Infrastructure.Mvc.ModelBinder.Extension;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
+using MS.Microservice.Web.Application.BackgroundServices;
 
-namespace MS.Microservice
+namespace MS.Microservice.Web
 {
     public class Startup
     {
-        [MaybeNull]
-        public ILifetimeScope AutofacContainer { get; private set; }
-        public IConfiguration Configuration { get; }
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
+        public IConfiguration Configuration { get; }
+
         public void ConfigureServices(IServiceCollection services)
         {
-            // å®šä¹‰ä¼¸ç¼©æ€§ï¼Œå¯ç”¨æ€§å¼ºçš„ httpclient
-            services.AddHttpClient("highavailable")
-                .SetHandlerLifetime(TimeSpan.FromSeconds(10)) // è®¾ç½®æ¯ä¸ªè¯·æ±‚å¤„ç†çš„ç”Ÿå­˜æ—¶é—´ï¼ˆå¯é‡ç”¨æ—¶é—´ï¼‰ä¸º 10 ç§’ï¼Œé»˜è®¤ 2 åˆ†é’Ÿ
-                .AddTransientHttpErrorPolicy(p => 
-                    p.WaitAndRetryAsync(3, _ => TimeSpan.FromMilliseconds(600))
-                );
-
-            services.AddEntityFrameworkMySQL()
-                .AddDbContext<OrderingContext>(options =>
-                {
-                    options.UseMySQL(Configuration.GetConnectionString("DefaultConnection"));
-                });
-            services.AddMvc().SetCompatibilityVersion(Microsoft.AspNetCore.Mvc.CompatibilityVersion.Latest);
-
-            //integrate automapper
-            services.AddAutoMapper(new System.Reflection.Assembly[] { typeof(OrderAutoMapperProfiles).Assembly });
-
-            //integrate swagger
-            services.AddSwaggerGen(options =>
+            services.AddControllers().AddMvcOptions(options =>
             {
-                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-                {
-                    Title = SwaggerConsts.DOC_TITLE,
-                    Version = SwaggerConsts.DOC_VERSION
-                });
-                options.ApplyBearerAuthorication();
-                //options.DescribeAllEnumsAsStrings();
-                options.DocInclusionPredicate((docName, description) => true);
+                options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+                options.UseApiDecryptModelBinding(Configuration);
+            }).AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                // ÕâÀïÌí¼Ó×Ô¶¨Òåjson×ª»»Æ÷
+                // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
             });
-            RegisterEventBus(services);
+
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            });
+            // .. ÕâÀï¿ÉÒÔÌí¼ÓÏëÒªµÄ service
+            // ÉèÖÃÈ«¾Ö fluentvalidation µÄÐ£ÑéÄ£Ê½
+            FluentValidation.ValidatorOptions.Global.DefaultRuleLevelCascadeMode = FluentValidation.CascadeMode.Stop;
+            services.AddFzPlatformServices(Configuration)
+            ;
+            // ×¢²áºóÌ¨×÷Òµ
+            services.AddHostedService<HighPerformanceBackgroundService>();
         }
 
-        private void RegisterEventBus(IServiceCollection services)
-        {
-            services.AddSingleton<IEventBusSubscriptionsManager, InMemoryEventBusSubscriptionsManager>();
-            //services.AddTransient<IEventbus>();
-        }
-
-        // ConfigureContainer is where you can register things directly
-        // with Autofac. This runs after ConfigureServices so the things
-        // here will override registrations made in ConfigureServices.
-        // Don't build the container; that gets done for you by the factory.
         public void ConfigureContainer(ContainerBuilder builder)
         {
             // Register your own things directly with Autofac here. Don't
             // call builder.Populate(), that happens in AutofacServiceProviderFactory
             // for you.
-            builder.RegisterModule<ApplicationAutoModule>();  //success
-            builder.RegisterAssemblyModules(typeof(MediatorModule).Assembly);
+            builder.RegisterPlatformAutofacModule(Configuration);
         }
 
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHostApplicationLifetime lifetime)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseForwardedHeaders();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-            this.AutofacContainer = app.ApplicationServices.GetAutofacRoot();
-
-            app.Use(async (context, next) =>
+            else
             {
-                context.Request.Headers.Remove("Connection");
-                await next();
-            });
+                app.UseExceptionHandler("/Error");
+            }
+            app.UseCors(Configuration.GetSection("CorsOptions").Get<CorsOptions>().PolicyName);
+
+            // https://docs.microsoft.com/en-us/aspnet/core/fundamentals/static-files?view=aspnetcore-6.0#serve-default-documents
+            // Ë³Ðò²»ÄÜ´í
+            app.UseDefaultFiles();
             app.UseStaticFiles();
+            //app.UsePathBase(new Microsoft.AspNetCore.Http.PathString());
+
             app.UseRouting();
 
-            app.UseCors();
-
-            app.UseSwagger()
-                .UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", SwaggerConsts.API_NAME);
-                });
-
-            app.UseEndpoints(cfg =>
+            ConfigureAuth(app);
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
             {
-                cfg.MapDefaultControllerRoute();
+                c.OAuthClientId("activationswaggerui");
+                c.OAuthAppName("ActivationSystem Swagger UI");
             });
 
-            // è®¢é˜…äº‹ä»¶
-            ConfigureEventBus(app);
+            app.UseEnableBuffering();
 
-            //var bus = app.ApplicationServices.GetService<IBusControl>();
-            //var busHandle = TaskUtil.Await(() => bus.StartAsync());
-            //lifetime.ApplicationStopping.Register(() => busHandle.Stop());
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapDefaultControllerRoute();
+                endpoints.MapControllers();
+
+                endpoints.MapHealthChecks("/hc");
+            });
         }
 
-        private void ConfigureEventBus(IApplicationBuilder app)
+        private static void ConfigureAuth(IApplicationBuilder app)
         {
-            var eventBus = app.ApplicationServices.GetRequiredService<IEventbus>();
-
-            //eventBus.Subscribe<ProductPriceChangedIntegrationEvent, ProductPriceChangedIntegrationEventHandler>();
-            //eventBus.Subscribe<OrderStartedIntegrationEvent, OrderStartedIntegrationEventHandler>();
+            app.UseAuthentication();
+            //app.UseMiddleware<ValidateTokenMiddleware>();
+            app.UseAuthorization();
         }
     }
 }
