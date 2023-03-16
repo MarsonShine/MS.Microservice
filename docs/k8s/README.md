@@ -1324,3 +1324,57 @@ IgnoredDuringExecution 表明不会影响已经在节点上运⾏着的pod
 
 这样可以降低节点间交互的延时，提供应用的性能。
 
+#  最佳实践
+
+## 固定pod启动顺序
+
+有时候多个 pod 之间是有依赖性的，所以对 pod 启动的顺序有严格要求。这时就可以通过 **init 容器**就能固定想要的顺序启动。
+
+## pod 钩子函数
+
+### Post-start 启动后钩子
+
+Post-start 是在容器的主进程启动之后⽴即执⾏的。可以通过它在容器启动的时候额外的发送一些命令或通知等操作。
+
+定义方式
+
+```yaml
+...
+spec:
+  containers:
+  - image: luksa/kubia
+    name: kubia
+    # 生命周期
+    lifecycle:
+      postStart:
+        exec:
+          command: 
+          - sh
+          - -c
+          - "echo 'hook will fail with exit code 15'; sleep 5 ; exit 15"
+...
+```
+
+
+
+### Pre-stop 停止前钩子
+
+pre-stop 是在容器被终止之前立即执行的。当一个容器需要终止运行的时候，Kubelet 在配置了停止前钩子的时候就会执行这个停止前钩子，并且仅在执行完钩子程序后才会向容器进程发送 SIGTERM 信号。
+
+```yaml
+...
+    lifecycle:
+      preStop:
+        httpGet:
+          port: 8080
+          path: shutdown
+...
+```
+
+*与 post-start 不同，pre-stop 无论钩子执行是否成功，容器都会被终止。*
+
+>  ENTRYPOINT [ʺ/mybinaryʺ] 与 ENTRYPOINT /mybinary 的区别：
+>
+> 前者是通过运行二进制文件 mybinary 的容器中，这个进程就是容器的主进程。
+>
+> 后者是先运行一个 shell 作为主进程，然后 mybinary 进程作为 shell 的子进程运行。

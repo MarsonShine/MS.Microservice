@@ -1,42 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Compile Remove="AutoMappers\Dtos\**" />
-    <Content Remove="AutoMappers\Dtos\**" />
-    <EmbeddedResource Remove="AutoMappers\Dtos\**" />
-    <None Remove="AutoMappers\Dtos\**" />
+    <Compile Remove="BackgroundWork\**" />
+    <Content Remove="BackgroundWork\**" />
+    <EmbeddedResource Remove="BackgroundWork\**" />
+    <None Remove="BackgroundWork\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Apps\Queries\" />
-    <Folder Include="Apps\Validations\" />
-    <Folder Include="wwwroot\" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Dapper" Version="2.0.123" />
+    <PackageReference Include="Dapper.SqlBuilder" Version="2.0.78" />
+    <PackageReference Include="FluentValidation" Version="11.5.1" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.21.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MassTransit.Autofac" Version="6.2.4" />
-    <PackageReference Include="MediatR" Version="8.0.1" />
-    <PackageReference Include="AutoMapper" Version="9.0.0" />
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="MassTransit.RabbitMQ" Version="6.2.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="5.0.1" />
-    <!--<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.3" />-->
-    <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.3.1" />
-
+    <ProjectReference Include="..\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Swagger\MS.Microservice.Swagger.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MS.Microservice.EventBus\MS.Microservice.EventBus.csproj" />
-    <ProjectReference Include="..\MS.Microservice.Database\MS.Microservice.Database.csproj" />
-    <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
-    <ProjectReference Include="..\MS.Microservice.IntegrateEvent\MS.Microservice.IntegrateEvent.csproj" />
+    <Folder Include="Application\DomainEventHandlers\" />
+    <Folder Include="Application\Enums\" />
   </ItemGroup>
 
 </Project>
