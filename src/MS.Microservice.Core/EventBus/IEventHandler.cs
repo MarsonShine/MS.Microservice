@@ -1,6 +1,9 @@
 using System.Threading.Tasks;
 
-public interface IEventHandler<TEvent> where TEvent : IEvent
+namespace MS.Microservice.Core.EventBus
 {
-    Task Handle(TEvent evt);
+    public interface IEventHandler<TEvent> where TEvent : IEvent
+    {
+        Task Handle(TEvent evt);
+    }
 }
