@@ -21,26 +21,25 @@ namespace MS.Microservice.Core.Security.Cryptology
 
             private static string Encrypt(byte[] data, string publicKey)
             {
-                RSACryptoServiceProvider rsa = DecodePemPublicKey(publicKey);
+                RSACryptoServiceProvider? rsa = DecodePemPublicKey(publicKey) ?? throw new ArgumentNullException(nameof(publicKey));
                 byte[] result = rsa.Encrypt(data, false);
 
                 return Convert.ToBase64String(result);
             }
 
-            private static RSACryptoServiceProvider DecodePemPublicKey(string pemstr)
+            private static RSACryptoServiceProvider? DecodePemPublicKey(string pemstr)
             {
                 byte[] pkcs8publickkey;
                 pkcs8publickkey = Convert.FromBase64String(pemstr);
                 if (pkcs8publickkey != null)
                 {
-                    RSACryptoServiceProvider rsa = DecodeRSAPublicKey(pkcs8publickkey);
+                    RSACryptoServiceProvider? rsa = DecodeRSAPublicKey(pkcs8publickkey);
                     return rsa;
                 }
-                else
-                    return null;
+                throw new ArgumentException("public key is not valid");
             }
 
-            private static RSACryptoServiceProvider DecodeRSAPublicKey(byte[] publickey)
+            private static RSACryptoServiceProvider? DecodeRSAPublicKey(byte[] publickey)
             {
                 // encoded OID sequence for  PKCS #1 rsaEncryption szOID_RSA_RSA = "1.2.840.113549.1.1.1"  
                 byte[] SeqOID = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
@@ -158,26 +157,26 @@ namespace MS.Microservice.Core.Security.Cryptology
 
             private static string Decrypt(byte[] data, string privateKey, Encoding encoding)
             {
-                RSACryptoServiceProvider rsa = DecodePemPrivateKey(privateKey);
+                RSACryptoServiceProvider rsa = DecodePemPrivateKey(privateKey) ?? throw new ArgumentNullException(nameof(privateKey));
                 byte[] source = rsa.Decrypt(data, false);
                 char[] asciiChars = new char[encoding.GetCharCount(source, 0, source.Length)];
                 encoding.GetChars(source, 0, source.Length, asciiChars, 0);
                 string result = new(asciiChars);
                 return result;
             }
-            private static RSACryptoServiceProvider DecodePemPrivateKey(string pemstr)
+            private static RSACryptoServiceProvider? DecodePemPrivateKey(string pemstr)
             {
                 byte[] pkcs8privatekey;
                 pkcs8privatekey = Convert.FromBase64String(pemstr);
                 if (pkcs8privatekey != null)
                 {
-                    RSACryptoServiceProvider rsa = DecodePrivateKeyInfo(pkcs8privatekey);
+                    RSACryptoServiceProvider? rsa = DecodePrivateKeyInfo(pkcs8privatekey);
                     return rsa;
                 }
                 else
                     return null;
             }
-            private static RSACryptoServiceProvider DecodePrivateKeyInfo(byte[] pkcs8)
+            private static RSACryptoServiceProvider? DecodePrivateKeyInfo(byte[] pkcs8)
             {
                 byte[] SeqOID = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
                 byte[] seq = new byte[15];
@@ -221,10 +220,10 @@ namespace MS.Microservice.Core.Security.Cryptology
                 //------ at this stage, the remaining sequence should be the RSA private key  
 
                 byte[] rsaprivkey = binr.ReadBytes((int)(lenstream - mem.Position));
-                RSACryptoServiceProvider rsacsp = DecodeRSAPrivateKey(rsaprivkey);
+                RSACryptoServiceProvider? rsacsp = DecodeRSAPrivateKey(rsaprivkey);
                 return rsacsp;
             }
-            private static RSACryptoServiceProvider DecodeRSAPrivateKey(byte[] privkey)
+            private static RSACryptoServiceProvider? DecodeRSAPrivateKey(byte[] privkey)
             {
                 byte[] MODULUS, E, D, P, Q, DP, DQ, IQ;
 

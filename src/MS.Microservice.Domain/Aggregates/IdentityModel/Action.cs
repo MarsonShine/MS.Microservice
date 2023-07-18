@@ -1,5 +1,4 @@
-﻿using MS.Microservice.Core;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace MS.Microservice.Domain.Aggregates.IdentityModel
@@ -13,9 +12,9 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
             Path = path;
         }
 
-        public string Name { get; set; }
-        public string Path { get; set; }
+        public string? Name { get; set; }
+        public string? Path { get; set; }
         [JsonIgnore]
-        public ICollection<Role> Roles { get; private set; }
+        public ICollection<Role>? Roles { get; private set; }
     }
 }

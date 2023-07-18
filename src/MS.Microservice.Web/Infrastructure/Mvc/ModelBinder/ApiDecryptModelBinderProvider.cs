@@ -8,7 +8,7 @@ namespace MS.Microservice.Web.Infrastructure.Mvc.ModelBinder
 {
     public class ApiDecryptModelBinderProvider: IModelBinderProvider
     {
-        public IModelBinder GetBinder(ModelBinderProviderContext context)
+        public IModelBinder? GetBinder(ModelBinderProviderContext context)
         {
             if (context == null)
             {

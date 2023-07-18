@@ -61,7 +61,7 @@ namespace MS.Microservice.Web.AutofacModules.Extensions
             builder
                 .RegisterModule<CommonInfrastructureModule>()
                 .RegisterModule<DomainServiceModule>()
-                .RegisterModule(new AppServiceModule(configuration.GetConnectionString("ActivationReaderConnection")))
+                .RegisterModule(new AppServiceModule(configuration.GetConnectionString("ActivationReaderConnection")!))
                 ;
         }
     }

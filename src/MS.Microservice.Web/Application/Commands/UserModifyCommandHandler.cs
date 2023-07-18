@@ -14,11 +14,10 @@ using MS.Microservice.Infrastructure.Caching.Consts;
 
 namespace MS.Microservice.Web.Application.Commands
 {
-    public class UserModifyCommandHandler : IRequestHandler<UserModifyCommand, (bool, string)>
+    public class UserModifyCommandHandler : IRequestHandler<UserModifyCommand, (bool, string?)>
     {
         private readonly IUserDomainService _userDomainService;
         private readonly CurrentUser _currentUser;
-        private readonly CurrentUserResolver _currentUserResolver;
         private readonly IDistributedCache _cache;
         public UserModifyCommandHandler(
             IUserDomainService userDomainService,
@@ -26,11 +25,10 @@ namespace MS.Microservice.Web.Application.Commands
             CurrentUserResolver currentUserResolver)
         {
             _userDomainService = userDomainService;
-            _currentUser = currentUserResolver.CurrentUser();
-            _currentUserResolver = currentUserResolver;
+            _currentUser = currentUserResolver.CurrentUser() ?? throw new ArgumentException(nameof(CurrentUserResolver));
             _cache = cache;
         }
-        public async Task<(bool, string)> Handle(UserModifyCommand request, CancellationToken cancellationToken)
+        public async Task<(bool, string?)> Handle(UserModifyCommand request, CancellationToken cancellationToken)
         {
             var validator = new UserModifyCommandValidator();
             var result = await validator.ValidateAsync(request, cancellationToken);
@@ -41,7 +39,7 @@ namespace MS.Microservice.Web.Application.Commands
 
             if (request.Roles.Count > 0)
             {
-                var roles = await _userDomainService.GetAllRolesAsync();
+                var roles = await _userDomainService.GetAllRolesAsync(cancellationToken);
                 var roleIds = roles.Select(r => r.Id).ToArray();
                 foreach (var r in request.Roles)
                 {
@@ -51,7 +49,7 @@ namespace MS.Microservice.Web.Application.Commands
                     }
                 }
             }
-            var exitUser = await _userDomainService.FindAsync(request.Account);
+            var exitUser = await _userDomainService.FindAsync(request.Account, cancellationToken);
             if (exitUser == null)
             {
                 //考虑自动创建账号
@@ -60,17 +58,16 @@ namespace MS.Microservice.Web.Application.Commands
             }
 
             // 这里调用领域服务
-            string salt = exitUser.Salt;
+            string salt = exitUser.Salt!;
             var pwd = "";
             if (request.Passowrd.IsNotNullOrEmpty())
                 pwd = CryptologyHelper.HmacSha256(request.Passowrd + salt);
 
-            var tmpCurrentUser = await _currentUserResolver.CurrentUserAsync();
-            var user = new Domain.Aggregates.IdentityModel.User(request.Account, pwd, salt, false, request.Telephone, tmpCurrentUser.Id, tmpCurrentUser.Id, request.Email, request.UserName, "", "");
+            var user = new Domain.Aggregates.IdentityModel.User(request.Account, pwd, salt, false, request.Telephone, _currentUser.Id, _currentUser.Id, request.Email, request.UserName, "", "");
             if (request.Roles?.Count > 0)
             {
                 user.Roles.AddIfNotContains(
-                   request.Roles?.Select(r => new Domain.Aggregates.IdentityModel.Role(r.Id, r.Name, ""))
+                   request.Roles.Select(r => new Domain.Aggregates.IdentityModel.Role(r.Id, r.Name!, ""))
                );
             }
 
@@ -78,11 +75,11 @@ namespace MS.Microservice.Web.Application.Commands
             await _userDomainService.UpdateUserAsync(user, cancellationToken);
 
             //清理缓存
-            await _cache.RemoveAsync(CacheConsts.UserAccountKey + request.Account);
+            await _cache.RemoveAsync(CacheConsts.UserAccountKey + request.Account, cancellationToken);
 
             if (exitUser.FzAccount.IsNotNullOrEmpty())
-                await _cache.RemoveAsync(CacheConsts.UserFzAccountKey + exitUser.FzAccount);
-            await _cache.RemoveAsync(CacheConsts.UserIdKey + exitUser.Id);
+                await _cache.RemoveAsync(CacheConsts.UserFzAccountKey + exitUser.FzAccount, cancellationToken);
+            await _cache.RemoveAsync(CacheConsts.UserIdKey + exitUser.Id, cancellationToken);
 
             return (true, null);
         }

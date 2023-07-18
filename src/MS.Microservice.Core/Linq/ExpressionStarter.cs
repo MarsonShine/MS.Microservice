@@ -144,7 +144,7 @@ namespace System.Linq
 
 #if !(NET35)
         /// <summary></summary>
-        public string Name => Predicate.Name;
+        public string Name => Predicate.Name!;
 
         /// <summary></summary>
         public Type ReturnType => Predicate.ReturnType;

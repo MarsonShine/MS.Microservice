@@ -32,7 +32,7 @@ namespace MS.Microservice.Infrastructure.Repository
             throw new NotImplementedException();
         }
 
-        public override async Task<User> FindAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
+        public override async Task<User?> FindAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
         {
             return await _dbContext.Users
                 .Include(u => u.Roles)
@@ -46,7 +46,7 @@ namespace MS.Microservice.Infrastructure.Repository
             return await _dbContext.Roles.AsNoTracking().ToListAsync(cancellationToken);
         }
 
-        public async Task<User> GetAsync(int userId, CancellationToken cancellationToken = default)
+        public async Task<User?> GetAsync(int userId, CancellationToken cancellationToken = default)
         {
             return await FindAsync(p => p.Id == userId, cancellationToken);
         }

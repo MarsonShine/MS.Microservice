@@ -33,11 +33,11 @@ namespace MS.Microservice.Web.Infrastructure.Filters
             if (checkSwitch == "Enabled")
             {
 
-                string content = null;
+                string? content = null;
                 if (request.Method.ToLower() == "post" && request.ContentType == "application/json")
                 {
                     request.EnableBufferingAndSeekBegin();
-                    using StreamReader reader = new StreamReader(request.Body);
+                    using StreamReader reader = new(request.Body);
                     content = await reader.ReadToEndAsync();
 
                 }

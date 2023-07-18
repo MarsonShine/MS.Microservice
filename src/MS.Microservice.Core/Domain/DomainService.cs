@@ -8,6 +8,6 @@ namespace MS.Microservice.Core.Domain
         {
 
         }
-        IUnitOfWork UnitOfWork { get; }
+        IUnitOfWork? UnitOfWork { get; }
     }
 }

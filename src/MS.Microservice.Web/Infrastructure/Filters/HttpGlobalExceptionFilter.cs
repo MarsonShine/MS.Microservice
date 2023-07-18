@@ -28,7 +28,7 @@ namespace MS.Microservice.Web.Infrastructure.Filters
             if (typeof(ActivationDomainException).IsAssignableFrom(context.Exception.GetType()))
             {
                 var exception = context.Exception as ActivationDomainException;
-                var result = new ResultDto(false, context.Exception.Message, exception.Code);
+                var result = new ResultDto(false, context.Exception.Message, exception!.Code);
                 context.Result = new JsonResult(result);
             }
             else

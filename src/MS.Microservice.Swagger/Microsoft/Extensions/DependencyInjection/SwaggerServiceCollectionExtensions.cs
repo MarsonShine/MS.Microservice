@@ -10,7 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static void AddPlatformSwagger(this IServiceCollection service, [AllowNull] Action<SwaggerOptions> setupAction = null)
         {
-            var option = new SwaggerOptions();
+            SwaggerOptions option = new SwaggerOptions();
             setupAction?.Invoke(option);
 
             if (option.IsEnabled)
@@ -28,7 +28,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
 
                     // comments
-                    var xmlPath = Path.Combine(AppContext.BaseDirectory, option.SwaggerXmlFile);
+                    var xmlPath = Path.Combine(AppContext.BaseDirectory, option.SwaggerXmlFile!);
                     if (File.Exists(xmlPath))
                     {
                         options.IncludeXmlComments(xmlPath);

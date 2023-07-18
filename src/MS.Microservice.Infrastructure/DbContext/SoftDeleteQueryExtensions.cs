@@ -20,7 +20,7 @@ namespace MS.Microservice.Infrastructure.DbContext
 
             entityData.SetQueryFilter((LambdaExpression)filter!);
             entityData.AddIndex(entityData.
-                 FindProperty(nameof(ISoftDeleted.DeletedAt)));
+                 FindProperty(nameof(ISoftDeleted.DeletedAt))!);
         }
 
         private static LambdaExpression GetSoftDeleteFilter<TEntity>()

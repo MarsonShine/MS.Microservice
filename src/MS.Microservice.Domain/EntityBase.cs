@@ -15,7 +15,7 @@ namespace MS.Microservice.Domain
 
         public override bool Equals([AllowNull] object obj)
         {
-            if (obj == null || !(obj is Entity))
+            if (obj == null || obj is not Entity)
                 return false;
 
             if (Object.ReferenceEquals(this, obj))
@@ -46,15 +46,15 @@ namespace MS.Microservice.Domain
 
         }
 
-        public static bool operator ==(EntityBase<TId> left, EntityBase<TId> right)
+        public static bool operator ==(EntityBase<TId>? left, EntityBase<TId>? right)
         {
-            if (Object.Equals(left, null))
-                return Object.Equals(right, null);
+            if (Equals(left, null))
+                return Equals(right, null);
             else
                 return left.Equals(right);
         }
 
-        public static bool operator !=(EntityBase<TId> left, EntityBase<TId> right)
+        public static bool operator !=(EntityBase<TId>? left, EntityBase<TId>? right)
         {
             return !(left == right);
         }

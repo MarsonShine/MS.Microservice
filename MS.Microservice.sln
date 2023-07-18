@@ -9,8 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CE0B6A3E-64D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{6377AFC6-2423-45BB-B243-1E639519D56A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.WebHttpClient", "MS.HttpClient\MS.WebHttpClient.csproj", "{A07E143B-55A1-4118-B869-449318DFD733}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D5505EA7-2FB3-4124-8AAA-BAB3F87ADF9C}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
@@ -34,10 +32,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A07E143B-55A1-4118-B869-449318DFD733}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A07E143B-55A1-4118-B869-449318DFD733}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A07E143B-55A1-4118-B869-449318DFD733}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A07E143B-55A1-4118-B869-449318DFD733}.Release|Any CPU.Build.0 = Release|Any CPU
 		{53EB3E52-EFF8-49EB-ADA1-1DC5A19892DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{53EB3E52-EFF8-49EB-ADA1-1DC5A19892DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{53EB3E52-EFF8-49EB-ADA1-1DC5A19892DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -67,7 +61,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{A07E143B-55A1-4118-B869-449318DFD733} = {CE0B6A3E-64D2-4151-A28E-A146CB0F29CB}
 		{53EB3E52-EFF8-49EB-ADA1-1DC5A19892DC} = {CE0B6A3E-64D2-4151-A28E-A146CB0F29CB}
 		{D8E83364-0ED7-4115-965C-CE82215F6269} = {CE0B6A3E-64D2-4151-A28E-A146CB0F29CB}
 		{EA1E7EF2-DD30-4FE6-99E4-DCE90CBAA449} = {CE0B6A3E-64D2-4151-A28E-A146CB0F29CB}

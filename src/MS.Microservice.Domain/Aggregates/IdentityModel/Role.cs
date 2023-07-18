@@ -13,7 +13,7 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
         }
         public Role(string name, string description) : this(0, name, description) { }
         [JsonConstructor]
-        public Role(int id, string name, string description, List<Action> actions = null) : this()
+        public Role(int id, string name, string description, List<Action>? actions = null) : this()
         {
             Id = id;
             Name = name;
@@ -24,8 +24,8 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
             }
         }
 
-        public string Name { get; private set; }
-        public string Description { get; }
+        public string? Name { get; private set; }
+        public string? Description { get; }
         public List<Action> Actions { get; private set; }
         [JsonIgnore]
         public List<User> Users { get; private set; }
@@ -39,14 +39,16 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
 
     public class RoleComparer : IEqualityComparer<Role>
     {
-        public bool Equals(Role x, Role y)
+        public bool Equals(Role? x, Role? y)
         {
-            return x.Id == y.Id;
+            if (x is null || y is null)
+                return false;
+            return x!.Id == y!.Id;
         }
 
         public int GetHashCode([DisallowNull] Role obj)
         {
-            return obj.Name.GetHashCode();
+            return obj.Name!.GetHashCode();
         }
     }
 
@@ -63,9 +65,9 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
         }
 
         public int UserId { get; private set; }
-        public User User { get; private set; }
+        public User? User { get; private set; }
         public int RoleId { get; private set; }
-        public Role Role { get; private set; }
+        public Role? Role { get; private set; }
     }
 
     public class RoleAction
@@ -78,8 +80,8 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
         }
 
         public int RoleId { get; private set; }
-        public Role Role { get; private set; }
+        public Role? Role { get; private set; }
         public int ActionId { get; private set; }
-        public Action Action { get; private set; }
+        public Action? Action { get; private set; }
     }
 }

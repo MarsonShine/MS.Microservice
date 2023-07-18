@@ -9,8 +9,8 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel.Repository
 {
     public interface IUserRepository : IRepository<User>
     {
-        Task<User> GetAsync(int userId, CancellationToken cancellationToken = default);
-        Task<User> FindAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default);
+        Task<User?> GetAsync(int userId, CancellationToken cancellationToken = default);
+        Task<User?> FindAsync(Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default);
         Task<User> InsertAsync(User user, CancellationToken cancellationToken = default);
         Task<User> UpdateAsync(User user, CancellationToken cancellationToken = default);
 

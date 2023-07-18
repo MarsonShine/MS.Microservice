@@ -13,7 +13,7 @@ namespace MS.Microservice.Web.Infrastructure
 {
     public class ActivationDbContextSeed
     {
-        public async Task SeedAsync(ActivationDbContext context, [AllowNull] IWebHostEnvironment env, [AllowNull] ILogger<ActivationDbContext> logger)
+        public async Task SeedAsync(ActivationDbContext context, [NotNull] IWebHostEnvironment env, [AllowNull] ILogger<ActivationDbContext> logger)
         {
             if (env.IsDevelopment())
             {

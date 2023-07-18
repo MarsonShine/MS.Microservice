@@ -28,7 +28,7 @@ namespace MS.Microservice.Infrastructure.Repository
             throw new NotImplementedException();
         }
 
-        public override Task<LogAggregateRoot> FindAsync([NotNull] Expression<Func<LogAggregateRoot, bool>> predicate, CancellationToken cancellationToken = default)
+        public override Task<LogAggregateRoot?> FindAsync([NotNull] Expression<Func<LogAggregateRoot, bool>> predicate, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

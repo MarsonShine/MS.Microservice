@@ -18,7 +18,7 @@ namespace MS.Microservice.Domain.Identity
             List<string> acts = new List<string>();
             foreach(var r in user.Roles)
             {
-                acts.AddRange(r.Actions.Select(a => a.Path));
+                acts.AddRange(r.Actions.Select(a => a.Path!));
             }
             Actions = acts.Distinct().ToArray();
         }

@@ -21,9 +21,12 @@ using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Web.Infrastructure.Filters;
 
-namespace MS.Microservice.Web.Infrastructure.Extensions {
-    public static class IServiceCollectionExtensions {
-        public static IServiceCollection AddFzPlatformServices(this IServiceCollection services, [NotNull] IConfiguration configuration) {
+namespace MS.Microservice.Web.Infrastructure.Extensions
+{
+    public static class IServiceCollectionExtensions
+    {
+        public static IServiceCollection AddFzPlatformServices(this IServiceCollection services, [NotNull] IConfiguration configuration)
+        {
             services
                 .AddCustomMvc(configuration)
                 .AddHealthChecks(configuration)
@@ -35,7 +38,8 @@ namespace MS.Microservice.Web.Infrastructure.Extensions {
             return services;
         }
 
-        public static IServiceCollection AddCustomMvc(this IServiceCollection services, IConfiguration configuration) {
+        public static IServiceCollection AddCustomMvc(this IServiceCollection services, IConfiguration configuration)
+        {
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             services.AddControllers(options =>
@@ -49,36 +53,42 @@ namespace MS.Microservice.Web.Infrastructure.Extensions {
                 // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
             });
 
-            services.AddCorsService(option => {
-                var cors = configuration.GetSection("CorsOptions").Get<CorsOptions>();
+            services.AddCorsService(option =>
+            {
+                var cors = configuration.GetSection("CorsOptions").Get<CorsOptions>() ?? throw new ArgumentException(nameof(CorsOptions));
                 option.IsEnabled = cors.IsEnabled;
                 option.PolicyName = cors.PolicyName;
                 option.Origins = cors.Origins;
                 option.IsAllCors = cors.IsAllCors;
             });
 
-            services.AddMemoryCache(options => {
-                    var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>();
-                    options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
-                })
-                .AddDistributedMemoryCache(options => {
-                    var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>();
+            services.AddMemoryCache(options =>
+            {
+                var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>() ?? throw new ArgumentException(nameof(ActivationCacheOptions));
+                options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
+            }).AddDistributedMemoryCache(options =>
+                {
+                    var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>() ?? throw new ArgumentException(nameof(ActivationCacheOptions));
                     options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
                 });
 
             return services;
         }
 
-        public static void AddCorsService(this IServiceCollection services, Action<CorsOptions> config) {
+        public static void AddCorsService(this IServiceCollection services, Action<CorsOptions> config)
+        {
             if (config == null) throw new ArgumentNullException(nameof(config));
             services.Configure(config);
 
             var option = new CorsOptions();
             config.Invoke(option);
-            if (option.IsEnabled) {
+            if (option.IsEnabled)
+            {
                 string policyName = option.PolicyName;
-                services.AddCors(options => {
-                    options.AddPolicy(policyName, builder => {
+                services.AddCors(options =>
+                {
+                    options.AddPolicy(policyName, builder =>
+                    {
                         builder.AllowAnyOrigin()
                             .WithOrigins(option.Origins)
                             .AllowAnyMethod()
@@ -92,23 +102,27 @@ namespace MS.Microservice.Web.Infrastructure.Extensions {
             }
         }
 
-        public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration) {
+        public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
+        {
             var hcBuilder = services.AddHealthChecks();
             hcBuilder.AddCheck("self", () => HealthCheckResult.Healthy());
 
             return services;
         }
 
-        public static IServiceCollection AddMySql(this IServiceCollection services, IConfiguration configuration) {
-            services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection"));
+        public static IServiceCollection AddMySql(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
             return services;
         }
 
-        public static IServiceCollection AddCustomConfiguration(this IServiceCollection services, IConfiguration configuration) {
+        public static IServiceCollection AddCustomConfiguration(this IServiceCollection services, IConfiguration configuration)
+        {
             services.AddOptions();
 
-            services.Configure<MsPlatformDbContextSettings>(option => {
-                var setting = configuration.Get<MsPlatformDbContextSettings>();
+            services.Configure<MsPlatformDbContextSettings>(option =>
+            {
+                var setting = configuration.Get<MsPlatformDbContextSettings>() ?? throw new ArgumentException(nameof(MsPlatformDbContextSettings));
                 option.AutoTimeTracker = setting.AutoTimeTracker;
                 option.EnabledSoftDeleted = setting.EnabledSoftDeleted;
             });
@@ -117,25 +131,31 @@ namespace MS.Microservice.Web.Infrastructure.Extensions {
             return services;
         }
 
-        public static IServiceCollection AddCustomSwagger(this IServiceCollection services, IConfiguration configuration) {
+        public static IServiceCollection AddCustomSwagger(this IServiceCollection services, IConfiguration configuration)
+        {
             var swaggerOption = configuration.GetSection("SwaggerOptions").Get<SwaggerOptions>();
-            services.AddPlatformSwagger(option => {
-                option.EnabledSecurity = swaggerOption.EnabledSecurity;
-                option.IsEnabled = swaggerOption.IsEnabled;
-                option.SwaggerXmlFile = swaggerOption.SwaggerXmlFile;
-            });
+            if (swaggerOption != null)
+                services.AddPlatformSwagger(option =>
+                {
+                    option.EnabledSecurity = swaggerOption.EnabledSecurity;
+                    option.IsEnabled = swaggerOption.IsEnabled;
+                    option.SwaggerXmlFile = swaggerOption.SwaggerXmlFile;
+                });
             return services;
         }
 
-        public static IServiceCollection AddCustomAuthentication(this IServiceCollection services, IConfiguration configuration) {
+        public static IServiceCollection AddCustomAuthentication(this IServiceCollection services, IConfiguration configuration)
+        {
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options => {
-                    var jwtBearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>();
+                .AddJwtBearer(options =>
+                {
+                    var jwtBearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
                     options.SaveToken = true;
                     options.RequireHttpsMetadata = false;
 
                     // 设置token属性
-                    options.TokenValidationParameters = new TokenValidationParameters() {
+                    options.TokenValidationParameters = new TokenValidationParameters()
+                    {
                         ValidateIssuerSigningKey = true,
                         ValidateAudience = true,
                         ValidAudiences = jwtBearerOption.Audiences,
@@ -147,16 +167,18 @@ namespace MS.Microservice.Web.Infrastructure.Extensions {
                         NameClaimType = JwtClaimTypes.NickName,
                         RoleClaimType = JwtClaimTypes.Role,
                     };
-                    if (jwtBearerOption.SecurityKeys.Length > 0) {
+                    if (jwtBearerOption.SecurityKeys?.Length > 0)
+                    {
                         var securityKeys = jwtBearerOption.SecurityKeys
                             .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
                         options.TokenValidationParameters.IssuerSigningKeys = securityKeys;
                     }
                 });
-            services.AddAuthorization(option => {
-                var bearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>();
+            services.AddAuthorization(option =>
+            {
+                var bearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
                 // TODO
-                option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(bearerOption.Issuers, ClaimTypes.Role, "")));
+                option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(bearerOption.Issuers!, ClaimTypes.Role, "")));
             });
 
             services.AddSingleton<IAuthorizationHandler, RbacAuthorizationHandler>();

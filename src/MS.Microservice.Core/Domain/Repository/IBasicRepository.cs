@@ -16,7 +16,7 @@ namespace MS.Microservice.Core.Domain.Repository
         /// <param name="predicate"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<TEntity> FindAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+        Task<TEntity?> FindAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
         /// <summary>
         /// 根据查询表达式删除实体
         /// </summary>
@@ -35,7 +35,7 @@ namespace MS.Microservice.Core.Domain.Repository
         /// <param name="id"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<TEntity> GetAsync([NotNull] TKey id, CancellationToken cancellationToken = default);
+        Task<TEntity?> GetAsync([NotNull] TKey id, CancellationToken cancellationToken = default);
         /// <summary>
         /// 根据主键删除实体
         /// </summary>

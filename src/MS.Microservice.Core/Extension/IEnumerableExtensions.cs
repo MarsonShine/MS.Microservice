@@ -67,7 +67,7 @@ namespace MS.Microservice.Core.Extension
             return results;
         }
 
-        public static string JoinAsString<TSource>(this IEnumerable<TSource> source, string separator)
+        public static string JoinAsString<TSource>(this IEnumerable<TSource>? source, string separator)
         {
             if (source == null)
             {

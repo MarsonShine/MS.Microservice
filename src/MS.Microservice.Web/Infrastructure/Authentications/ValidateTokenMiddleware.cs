@@ -53,7 +53,7 @@ namespace MS.Microservice.Web.Infrastructure.Authentications
         {
             try
             {
-                var securityKeys = _identityOptions.JwtBearerOption.SecurityKeys
+                var securityKeys = _identityOptions.JwtBearerOption!.SecurityKeys!
                         .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
 
                 var tokenHandler = new JwtSecurityTokenHandler();

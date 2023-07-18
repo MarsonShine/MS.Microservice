@@ -10,8 +10,8 @@ namespace MS.Microservice.Web.Application.BackgroundServices
 {
     public class BadPracticeBackgroundService : BackgroundService
     {
-        private Timer _timer;
-        private Queue<Func<CancellationToken, ValueTask>> _queue;
+        private Timer? _timer;
+        private Queue<Func<CancellationToken, ValueTask>>? _queue;
         private volatile int running = 0;
         private const int size = 5000;
         private const int queueSize = 100;
@@ -26,12 +26,11 @@ namespace MS.Microservice.Web.Application.BackgroundServices
         }
 
         public IServiceProvider Services { get; }
-        public Queue<Func<CancellationToken, ValueTask>> Queue => _queue;
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // TODO：后台作业待配置化
-            _timer = new Timer(DoWork, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+            _timer = new Timer(DoWork!, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
             _queue = new Queue<Func<CancellationToken, ValueTask>>(queueSize);
 
             return base.StartAsync(cancellationToken);
@@ -62,9 +61,9 @@ namespace MS.Microservice.Web.Application.BackgroundServices
         {
             if (TryAccquired())
             {
-                if (Queue.Count > 0)
+                if (_queue?.Count > 0)
                 {
-                    var worker = Queue.Dequeue();
+                    var worker = _queue.Dequeue();
                     await worker(cancellationToken);
                 }
                 else
@@ -83,12 +82,12 @@ namespace MS.Microservice.Web.Application.BackgroundServices
                 Release();
                 return;
             }
-            if (_queue.Count == queueSize)
+            if (_queue?.Count == queueSize)
             {
                 // 拒绝
                 return;
             }
-            _queue.Enqueue(cancel => DoWorkFromQueueAsync(cancel));
+            _queue!.Enqueue(cancel => DoWorkFromQueueAsync(cancel));
         }
 
         private async ValueTask DoWorkFromQueueAsync(CancellationToken cancellationToken = default)

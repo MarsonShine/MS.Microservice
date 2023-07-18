@@ -23,7 +23,7 @@ namespace MS.Microservice.Web.Infrastructure.Mvc.ModelBinder
             if (loggerFactory == null) throw new ArgumentNullException(nameof(loggerFactory));
             _logger = loggerFactory.CreateLogger<ApiDecryptModelBinder>();
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            _rsaPrivateKey = configuration["ApiEncryptOptions:PrivateKey"];
+            _rsaPrivateKey = configuration["ApiEncryptOptions:PrivateKey"]!;
         }
 
         public async Task BindModelAsync(ModelBindingContext bindingContext)
@@ -81,10 +81,10 @@ namespace MS.Microservice.Web.Infrastructure.Mvc.ModelBinder
 
     public class SafeDataWrapper
     {
-        public string Key { get; set; }
+        public string? Key { get; set; }
         /// <summary>
         /// 加密字符串
         /// </summary>
-        public string Info { get; set; }
+        public string? Info { get; set; }
     }
 }

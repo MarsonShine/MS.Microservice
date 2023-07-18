@@ -15,7 +15,7 @@ namespace MS.Microservice.Domain.Identity
 {
     public class SignInManager
     {
-        private HttpContext _context;
+        private HttpContext? _context;
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly ILogger<SignInManager> _logger;
         private readonly IdentityOptions _identityOptions;
@@ -38,11 +38,8 @@ namespace MS.Microservice.Domain.Identity
         {
             get
             {
-                var context = _context ?? _contextAccessor?.HttpContext;
-                if (context == null)
-                {
-                    throw new InvalidOperationException("HttpContext must not be null.");
-                }
+                var context = (_context ?? _contextAccessor?.HttpContext) 
+                    ?? throw new InvalidOperationException("HttpContext must not be null.");
                 return context;
             }
             set
@@ -53,10 +50,10 @@ namespace MS.Microservice.Domain.Identity
 
         public IdentityOptions IdentityOptions => _identityOptions;
 
-        public virtual Task SignInAsync(User user, bool isPersistent, string authenticationMethod = null)
+        public virtual Task SignInAsync(User user, bool isPersistent, string? authenticationMethod = null)
             => SignInAsync(user, new AuthenticationProperties { IsPersistent = isPersistent }, authenticationMethod);
 
-        public virtual Task SignInAsync(User user, AuthenticationProperties authenticationProperties, string authenticationMethod = null)
+        public virtual Task SignInAsync(User user, AuthenticationProperties authenticationProperties, string? authenticationMethod = null)
         {
             IList<Claim> additionalClaims = Array.Empty<Claim>();
             if (authenticationMethod != null)
@@ -79,7 +76,7 @@ namespace MS.Microservice.Domain.Identity
                 authenticationProperties ?? new AuthenticationProperties());
         }
 
-        public virtual async Task<ClaimsPrincipal> CreateUserPrincipalAsync(User user)
+        public virtual async Task<ClaimsPrincipal> CreateUserPrincipalAsync(User? user)
         {
             if (user == null)
             {
@@ -92,17 +89,17 @@ namespace MS.Microservice.Domain.Identity
         protected virtual async Task<ClaimsIdentity> GenerateClaimsAsync(User user)
         {
             var userId = user.Id.ToString();
-            var userName = user.Name;
+            var userName = user.Name!;
             var id = new ClaimsIdentity(IdentityConstants.ApplicationScheme, JwtClaimTypes.NickName, JwtClaimTypes.Role);
             id.AddClaim(new Claim(JwtClaimTypes.Id, userId));
             id.AddClaim(new Claim(JwtClaimTypes.NickName, userName));
-            id.AddClaim(new Claim(JwtClaimTypes.PhoneNumber, user.Telephone));
+            id.AddClaim(new Claim(JwtClaimTypes.PhoneNumber, user.Telephone!));
 
             var roles = user.Roles
                 .Select(p => p.Id + "_" + p.Name)
                 .ToArray();
             id.AddClaim(new Claim(JwtClaimTypes.Role, roles.JoinAsString(";")));
-            id.AddClaim(new Claim(JwtClaimTypes.Audience, IdentityOptions.AuthenticationOption.Audiences.JoinAsString(",")));
+            id.AddClaim(new Claim(JwtClaimTypes.Audience, IdentityOptions.AuthenticationOption!.Audiences.JoinAsString(",")));
             id.AddClaim(new Claim(JwtClaimTypes.Issuer, IdentityOptions.AuthenticationOption.Issuers.JoinAsString(",")));
 
             return await Task.FromResult(id);

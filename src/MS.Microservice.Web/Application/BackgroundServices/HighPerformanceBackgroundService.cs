@@ -36,7 +36,7 @@ namespace MS.Microservice.Web.Application.BackgroundServices
             };
             _queue = Channel.CreateBounded<Func<CancellationToken, ValueTask>>(options);
 #if DEBUG
-            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(60 * 5));
+            _timer = new Timer(DoWork!, null, TimeSpan.Zero, TimeSpan.FromSeconds(60 * 5));
 #else
 _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 #endif

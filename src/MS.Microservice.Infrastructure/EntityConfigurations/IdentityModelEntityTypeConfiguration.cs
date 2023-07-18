@@ -69,7 +69,7 @@ namespace MS.Microservice.Infrastructure.EntityConfigurations
                     joinTable => {
                         joinTable.ToTable("UserRoles");    
                         joinTable.HasKey(j => new { j.UserId, j.RoleId });
-                        joinTable.HasQueryFilter(p => p.User.DeletedAt == null);
+                        joinTable.HasQueryFilter(p => p.User!.DeletedAt == null);
                     }
                 );
             #endregion

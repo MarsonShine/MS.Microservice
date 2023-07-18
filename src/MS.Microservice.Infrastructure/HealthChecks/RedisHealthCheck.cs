@@ -11,7 +11,7 @@ namespace MS.Microservice.Infrastructure.HealthChecks
 
         public RedisHealthCheck(IConfiguration configuration)
         {
-            _redisConnection = configuration.GetSection("Redis:ConnectionString").Get<string>();
+            _redisConnection = configuration.GetSection("Redis:ConnectionString").Get<string>()!;
         }
 
         public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)

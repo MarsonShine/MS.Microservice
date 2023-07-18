@@ -2,7 +2,7 @@
 {
     public static class SqlBuilderExtensions
     {
-        public static SqlBuilder WhereIf(this SqlBuilder builder, bool condition, string sql, object parameters = null)
+        public static SqlBuilder WhereIf(this SqlBuilder builder, bool condition, string sql, object? parameters = null)
         {
             if (condition)
             {

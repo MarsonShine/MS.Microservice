@@ -8,12 +8,12 @@ namespace MS.Microservice.Web.Application.Models.AccountRequests
         /// 账号
         /// </summary>
         [Required]
-        public string Account { get; set; }
+        public string? Account { get; set; }
         /// <summary>
         /// 密码
         /// </summary>
         [Required]
         [DataType(DataType.Password)]
-        public string Password { get; set; }
+        public string? Password { get; set; }
     }
 }

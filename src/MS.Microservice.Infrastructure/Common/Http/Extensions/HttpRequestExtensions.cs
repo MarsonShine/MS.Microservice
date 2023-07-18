@@ -6,7 +6,7 @@ namespace MS.Microservice.Infrastructure.Common.Http.Extensions
 {
     public static class HttpRequestExtensions
     {
-        public static string BearerAuthorization(this HttpRequest request)
+        public static string? BearerAuthorization(this HttpRequest request)
         {
             return request.Headers[HeaderNames.Authorization].FirstOrDefault()?.Split(" ").Last();
         }
@@ -19,7 +19,7 @@ namespace MS.Microservice.Infrastructure.Common.Http.Extensions
 
         public static string GetIP(this HttpContext context)
         {
-            return context.Request.HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString() + ":" + context.Request.HttpContext.Connection.RemotePort;
+            return context.Request.HttpContext.Connection.RemoteIpAddress!.MapToIPv4().ToString() + ":" + context.Request.HttpContext.Connection.RemotePort;
         }
     }
 }

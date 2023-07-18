@@ -16,7 +16,7 @@ namespace MS.Microservice.Web
             var host = CreateHostBuilder(args).Build();
             host.MigrateDbContext<ActivationDbContext>((context, services) =>
             {
-                var env = services.GetService<IWebHostEnvironment>();
+                IWebHostEnvironment env = services.GetRequiredService<IWebHostEnvironment>();
                 var logger = services.GetService<ILogger<ActivationDbContext>>();
 
                 new ActivationDbContextSeed().SeedAsync(context, env, logger)

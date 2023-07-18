@@ -7,7 +7,7 @@ namespace MS.Microservice.Core.Reflection
 {
     public class TypeHelper
     {
-        public static object GetDefaultValue(Type type)
+        public static object? GetDefaultValue(Type type)
         {
             if (type.IsValueType)
             {
@@ -49,7 +49,7 @@ namespace MS.Microservice.Core.Reflection
         public static string GetFullMethodName(object obj, string methodName)
         {
             var typeInfo = obj.GetType().GetTypeInfo();
-            return typeInfo.FullName + "." + typeInfo.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Name;
+            return typeInfo.FullName + "." + typeInfo.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)!.Name;
         }
     }
 }

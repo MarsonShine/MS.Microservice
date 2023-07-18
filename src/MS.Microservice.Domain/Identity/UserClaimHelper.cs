@@ -12,13 +12,13 @@ namespace MS.Microservice.Domain.Identity
     {
         public static async Task<ClaimsIdentity> GenerateClaimsAsync(User user, string audience, string issuer)
         {
-            var userId = user.Id.ToString();
-            var userName = user.Name;
+            string userId = user.Id.ToString();
+            string userName = user.Name!;
             var id = new ClaimsIdentity(IdentityConstants.ApplicationScheme, JwtClaimTypes.NickName, JwtClaimTypes.Role);
             id.AddClaim(new Claim(JwtClaimTypes.Id, userId));
             id.AddClaim(new Claim(JwtClaimTypes.NickName, userName));
-            id.AddClaim(new Claim(JwtClaimTypes.PhoneNumber, user.Telephone));
-            id.AddClaim(new Claim(JwtClaimTypes.Email, user.Email));
+            id.AddClaim(new Claim(JwtClaimTypes.PhoneNumber, user.Telephone!));
+            id.AddClaim(new Claim(JwtClaimTypes.Email, user.Email!));
 
             var roles = user.Roles
                 .Select(p => p.Id)
@@ -30,15 +30,15 @@ namespace MS.Microservice.Domain.Identity
             return await Task.FromResult(id);
         }
 
-        public static User JWT2User(ClaimsIdentity id)
+        public static User JWT2User(ClaimsIdentity identity)
         {
-            var Name = id.FindFirst(c => c.Type == JwtClaimTypes.NickName);
-            var PhoneNumber = id.FindFirst(c => c.Type == JwtClaimTypes.PhoneNumber);
-            var Id = id.FindFirst(c => c.Type == JwtClaimTypes.Id);
+            var name = identity.FindFirst(c => c.Type == JwtClaimTypes.NickName);
+            var phoneNumber = identity.FindFirst(c => c.Type == JwtClaimTypes.PhoneNumber);
+            var id = identity.FindFirst(c => c.Type == JwtClaimTypes.Id);
             var mail = "mail@kingsunsoft.com";
             var salt = PasswordSaltHelper.Generate();
             var pwd = CryptologyHelper.HmacSha256("Fz123456" + salt);
-            var u = new User(PhoneNumber.Value, pwd, salt, false, PhoneNumber.Value, 0, 0, mail, Name.Value, PhoneNumber.Value, Id.Value);
+            var u = new User(account: phoneNumber!.Value, pwd, salt, false, phoneNumber.Value, 0, 0, mail, name!.Value, phoneNumber!.Value, id!.Value);
 
             return u;
         }

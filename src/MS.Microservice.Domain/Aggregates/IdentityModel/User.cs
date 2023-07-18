@@ -13,17 +13,17 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
     public class User : EntityBase<int>, IFullAuditTracker<int>, IAggregateRoot
     {
         private bool _isDisabled;
-        private string _telephone;
+        private string? _telephone;
         private DateTime? _deletedAt;
         private int _creatorId;
         private int _updatorId;
-        private string _email;
-        private string _name;
-        private string _password;
-        private string _account;
-        private string _salt;
-        private string _fzAccount;
-        private string _fzId;
+        private string? _email;
+        private string? _name;
+        private string? _password;
+        private string? _account;
+        private string? _salt;
+        private string? _fzAccount;
+        private string? _fzId;
 
         private User() { 
             Roles = new List<Role>();
@@ -49,12 +49,12 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
             Password = CryptologyHelper.HmacSha256(_password + _salt);
         }
 
-        public string Account { get => _account; private set => _account = value; }
-        public string Name { get => _name; private set => _name = value; }
-        public string Password { get => _password; private set => _password = value; }
-        public string Salt { get => _salt; private set => _salt = value; }
-        public string Telephone { get => _telephone; private set => _telephone = value; }
-        public string Email { get => _email; private set => _email = value; }
+        public string? Account { get => _account; private set => _account = value; }
+        public string? Name { get => _name; private set => _name = value; }
+        public string? Password { get => _password; private set => _password = value; }
+        public string? Salt { get => _salt; private set => _salt = value; }
+        public string? Telephone { get => _telephone; private set => _telephone = value; }
+        public string? Email { get => _email; private set => _email = value; }
         public bool IsDisabled { get => _isDisabled; private set => _isDisabled = value; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
@@ -65,8 +65,8 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
         public int UpdatorId { get => _updatorId; private set => _updatorId = value; }
 
         public ICollection<Role> Roles { get; private set; }
-        public string FzAccount { get => _fzAccount; private set => _fzAccount = value; }
-        public string FzId { get => _fzId; private set => _fzId = value; }
+        public string? FzAccount { get => _fzAccount; private set => _fzAccount = value; }
+        public string? FzId { get => _fzId; private set => _fzId = value; }
 
         public override bool IsTransient()
         {
@@ -100,7 +100,7 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
         /// <param name="email">邮箱 空 不更新</param>
         /// <param name="password">密码 空 不更新</param>
         /// <param name="salt">密码盐 空 不更新</param>
-        internal void Update(string name, string telephone, string email,string password,string salt)
+        internal void Update(string? name, string? telephone, string? email,string? password,string? salt)
         {
             if (name.IsNullOrEmpty() == false)
                 _name = name;

@@ -4,6 +4,6 @@
     {
         public bool IsEnabled { get; set; }
         public bool EnabledSecurity { get; set; }
-        public string SwaggerXmlFile { get; set; }
+        public string? SwaggerXmlFile { get; set; }
     }
 }

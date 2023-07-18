@@ -21,14 +21,14 @@ namespace MS.Microservice.Domain.Aggregates.LogAggregate
             Telephone = telephone;
         }
 
-        public string EventName { get; private set; }
+        public string? EventName { get; private set; }
         public LogEventTypeEnum Type { get; private set; }
-        public string MethodName { get; set; }
-        public string Description { get; private set; }
-        public string Content { get; set; }
+        public string? MethodName { get; set; }
+        public string? Description { get; private set; }
+        public string? Content { get; set; }
         public DateTime CreatedAt { get; set; }
         public int CreatorId { get; private set; }
-        public string IP { get; private set; }
-        public string Telephone { get; private set; }
+        public string? IP { get; private set; }
+        public string? Telephone { get; private set; }
     }
 }

@@ -10,7 +10,7 @@ namespace Microsoft.Extensions.Caching.Distributed
 {
     public static class IDestributedCacheExtensions
     {
-        public static async Task<TCache> GetAsync<TCache>(this IDistributedCache cache, string key, CancellationToken cancellationToken = default)
+        public static async Task<TCache?> GetAsync<TCache>(this IDistributedCache cache, string key, CancellationToken cancellationToken = default)
         {
             var bytes = await cache.GetAsync(key, cancellationToken);
             if (bytes == null) return default;

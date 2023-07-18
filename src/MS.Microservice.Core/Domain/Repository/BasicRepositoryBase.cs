@@ -45,7 +45,7 @@ namespace MS.Microservice.Core.Domain.Repository
         /// <param name="predicate"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public abstract Task<TEntity> FindAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+        public abstract Task<TEntity?> FindAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
         /// <summary>
         /// 插入实体
         /// </summary>
@@ -78,9 +78,9 @@ namespace MS.Microservice.Core.Domain.Repository
 
         public abstract Task<bool> DeleteAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
-        public abstract Task<TEntity> FindAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+        public abstract Task<TEntity?> FindAsync([NotNull] Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
 
-        public abstract Task<TEntity> GetAsync([NotNull] TKey id, CancellationToken cancellationToken = default);
+        public abstract Task<TEntity?> GetAsync([NotNull] TKey id, CancellationToken cancellationToken = default);
 
         public abstract Task<TEntity> InsertAsync([NotNull] TEntity entity, CancellationToken cancellationToken = default);
 

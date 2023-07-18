@@ -10,7 +10,7 @@ namespace MS.Microservice.Web.Application.Models
         /// 手机
         /// </summary>
         [JsonConverter(typeof(PhoneDesensitizationConverter))]
-        public string Telephone { get; set; }
+        public string? Telephone { get; set; }
         /// <summary>
         /// 操作人
         /// </summary>
@@ -22,25 +22,25 @@ namespace MS.Microservice.Web.Application.Models
         /// <summary>
         /// Email
         /// </summary>
-        public string Email { get; set; }
+        public string? Email { get; set; }
         /// <summary>
         /// 用户姓名
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
         /// <summary>
         /// 用户账号
         /// </summary>
-        public string Account { get; set; }
+        public string? Account { get; set; }
         /// <summary>
         /// 方直账号
         /// </summary>
-        public string FzAccount { get; set; }
+        public string? FzAccount { get; set; }
         /// <summary>
         /// 方直id
         /// </summary>
-        public string FzId { get; set; }
+        public string? FzId { get; set; }
         
-        public string[] Role { get; set; }
+        public string[]? Role { get; set; }
 
     }
 }

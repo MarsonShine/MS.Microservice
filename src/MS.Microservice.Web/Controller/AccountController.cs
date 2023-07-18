@@ -52,7 +52,7 @@ namespace MS.Microservice.Web.Controller
                 return BadRequest();
             }
 
-            byte[] base64Buffer = null;
+            byte[]? base64Buffer = null;
             try
             {
                 base64Buffer = Convert.FromBase64String(request.Password);
@@ -97,8 +97,8 @@ namespace MS.Microservice.Web.Controller
             identity.AddClaims(User.Claims);
 
             var ju = UserClaimHelper.JWT2User(identity);
-            var user = await _userDomainService.FindAsync(ju.Account);
-            return Ok(new Domain.Identity.ActionResult(user));
+            var user = await _userDomainService.FindAsync(ju.Account!);
+            return Ok(new Domain.Identity.ActionResult(user!));
         }
     }
 }

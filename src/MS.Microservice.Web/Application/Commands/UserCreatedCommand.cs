@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace MS.Microservice.Web.Application.Commands
 {
-    public class UserCreatedCommand : IRequest<(bool, string)>
+    public class UserCreatedCommand : IRequest<(bool, string?)>
     {
         private string _password;
 
@@ -18,11 +18,7 @@ namespace MS.Microservice.Web.Application.Commands
             _password = passowrd;
             Telephone = telephone;
             Email = email;
-            if (roles != null)
-            {
-                Roles = roles;
-            }
-
+            Roles = roles ?? new List<RoleDto>();
         }
 
         /// <summary>
@@ -71,6 +67,6 @@ namespace MS.Microservice.Web.Application.Commands
     public class RoleDto
     {
         public int Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 }

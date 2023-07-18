@@ -34,7 +34,7 @@ namespace Microsoft.AspNetCore.Hosting.Extension
         private static void InvokeSeeder<TContext>(Action<TContext, IServiceProvider> seeder, TContext context, IServiceProvider services)
             where TContext : EntityFrameworkCore.DbContext
         {
-            var env = services.GetService<IHostEnvironment>();
+            var env = services.GetRequiredService<IHostEnvironment>();
             if (env.IsDevelopment())
             {
                 //context.Database.EnsureDeleted();

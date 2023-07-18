@@ -23,11 +23,16 @@ namespace MS.Microservice.Infrastructure.DbContext
     public class ActivationDbContext : EfCoreDbContext, IUnitOfWork
     {
         public const string DEFAULT_SCHEMA = "fz_platform_activation";
-        public DbSet<User> Users { get; set; }
-        public DbSet<Role> Roles { get; set; }
-        public DbSet<Action> Actions { get; set; }
-        public DbSet<RoleAction> RoleActions { get; set; }
-        public DbSet<LogAggregateRoot> Logs { get; set; }
+        [NotNull]
+        public DbSet<User>? Users { get; set; }
+        [NotNull]
+        public DbSet<Role>? Roles { get; set; }
+        [NotNull]
+        public DbSet<Action>? Actions { get; set; }
+        [NotNull]
+        public DbSet<RoleAction>? RoleActions { get; set; }
+        [NotNull]
+        public DbSet<LogAggregateRoot>? Logs { get; set; }
         //public DbSet<MerchandiseSubject> MerchandiseSubjects { get; set; }
         private readonly IMediator _mediator;
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
@@ -38,7 +43,7 @@ namespace MS.Microservice.Infrastructure.DbContext
             IMediator mediator) : base(options)
         {
             _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
-            _platformDbContextOption = configuration.GetSection("FzPlatformDbContextSettings").Get<MsPlatformDbContextSettings>();
+            _platformDbContextOption = configuration.GetSection("FzPlatformDbContextSettings").Get<MsPlatformDbContextSettings>()!;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -119,8 +124,8 @@ namespace MS.Microservice.Infrastructure.DbContext
         }
 
         #region 事务
-        private IDbContextTransaction _currentTransaction;
-        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        private IDbContextTransaction? _currentTransaction;
+        public async Task<IDbContextTransaction?> BeginTransactionAsync(CancellationToken cancellationToken = default)
         {
             if (_currentTransaction != null)
             {
@@ -182,12 +187,12 @@ namespace MS.Microservice.Infrastructure.DbContext
         {
             public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
             {
-                return default;
+                return default!;
             }
 
             public IAsyncEnumerable<object> CreateStream(object request, CancellationToken cancellationToken = default)
             {
-                return default;
+                return default!;
             }
 
             public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default) where TNotification : INotification
@@ -205,7 +210,7 @@ namespace MS.Microservice.Infrastructure.DbContext
                 return Task.FromResult<TResponse>(default!);
             }
 
-            public Task<object> Send(object request, CancellationToken cancellationToken = default)
+            public Task<object?> Send(object request, CancellationToken cancellationToken = default)
             {
                 return Task.FromResult(default(object));
             }

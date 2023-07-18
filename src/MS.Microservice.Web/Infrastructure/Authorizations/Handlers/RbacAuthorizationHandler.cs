@@ -37,23 +37,23 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
         {
             if (identityOptionsAccessor == null || identityOptionsAccessor.Value == null)
             {
-                throw new ArgumentNullException(nameof(IdentityOptions));
+                throw new ArgumentNullException(nameof(identityOptionsAccessor));
             }
             _identityOptions = identityOptionsAccessor.Value;
             _logger = logger;
             _userDomainService = userDomainService;
             _cache = cache;
         }
-        public override Task HandleAsync(AuthorizationHandlerContext context)
+        public override async Task HandleAsync(AuthorizationHandlerContext context)
         {
-            if (!context.User.Identity.IsAuthenticated)
+            if (!context.User.Identity!.IsAuthenticated)
             {
                 if (context.Resource is HttpContext httpContext)
                 {
-                    if (!httpContext.User.Identity.IsAuthenticated)
+                    if (!httpContext.User.Identity!.IsAuthenticated)
                     {
                         //var endpoint = httpContext.GetEndpoint();
-                        string token = httpContext.Request.BearerAuthorization();
+                        string? token = httpContext.Request.BearerAuthorization();
                         if (token.IsNotNullOrEmpty())
                         {
                             if (!ValidateToken(httpContext, token))
@@ -68,8 +68,8 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
                                 identity.AddClaims(httpContext.User.Claims);
 
                                 var ju = UserClaimHelper.JWT2User(identity);
-                                var user = _userDomainService.FindFzAccountAsync(ju.Account);
-                                if (user == null || user.Result.IsTransient())
+                                User? user = await _userDomainService.FindFzAccountAsync(ju.Account!);
+                                if (user == null || user.IsTransient())
                                 {
                                     var b = _userDomainService.CreateUserAsync(ju);
                                     if (!b.Result)
@@ -84,14 +84,14 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
                     }
                 }
             }
-            return base.HandleAsync(context);
+            await base.HandleAsync(context);
         }
 
         private bool ValidateToken(HttpContext context, string token)
         {
             try
             {
-                var securityKeys = _identityOptions.JwtBearerOption.SecurityKeys
+                var securityKeys = _identityOptions.JwtBearerOption!.SecurityKeys!
                         .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
 
                 var tokenHandler = new JsonWebTokenHandler();
@@ -192,22 +192,22 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
             return false;
         }
 
-        private async Task<UserCacheItem> FindUserAsync(User ju)
+        private async Task<UserCacheItem?> FindUserAsync(User ju)
         {
             var user = await _cache.GetAsync(CacheConsts.UserAccountKey + ju.Account, async () =>
             {
-                var user = await _userDomainService.FindAsync(ju.Account);
+                var user = await _userDomainService.FindAsync(ju.Account!);
                 if (user == null) return default;
                 return ToUserCache(user);
             });
             return user;
         }
 
-        private async Task<UserCacheItem> FindFzAccountUserAsync(User ju)
+        private async Task<UserCacheItem?> FindFzAccountUserAsync(User ju)
         {
-            var user = await _cache.GetAsync(CacheConsts.UserFzAccountKey + ju.FzAccount, async () =>
+            UserCacheItem? user = await _cache.GetAsync(CacheConsts.UserFzAccountKey + ju.FzAccount, async () =>
             {
-                var user = await _userDomainService.FindFzAccountAsync(ju.FzAccount);
+                var user = await _userDomainService.FindFzAccountAsync(ju.FzAccount!);
                 if (user == null) return default;
                 return ToUserCache(user);
             });

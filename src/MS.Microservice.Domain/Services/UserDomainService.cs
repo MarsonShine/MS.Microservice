@@ -37,15 +37,10 @@ namespace MS.Microservice.Domain.Services
         public async Task<bool> DeleteUserAsync(int userId, CancellationToken cancellationToken = default)
         {
             var userInfo = await _userRepository.GetAsync(userId, cancellationToken);
-            if (userInfo.IsTransient())
+            if (userInfo == null || userInfo.IsTransient())
             {
                 return true;
             }
-
-            //string cacheKey1 = CacheConsts.UserIdKey + userInfo.Id;
-            //string cacheKey2 = CacheConsts.UserAccountKey + userInfo.Account;
-            //_cache.Remove(cacheKey1);
-            //_cache.Remove(cacheKey2);
 
             userInfo.Delete();
             await _userRepository.UpdateAsync(userInfo, cancellationToken);
@@ -58,7 +53,7 @@ namespace MS.Microservice.Domain.Services
             return roles;
         }
 
-        public async Task<User> GetUserAsync(int userId, CancellationToken cancellationToken = default)
+        public async Task<User?> GetUserAsync(int userId, CancellationToken cancellationToken = default)
         {
 
             ////string cacheKey = CacheConsts.UserIdKey + userId;
@@ -70,7 +65,7 @@ namespace MS.Microservice.Domain.Services
             return existUser;
         }
 
-        public async Task<User> FindAsync(string account, CancellationToken cancellationToken = default)
+        public async Task<User?> FindAsync(string account, CancellationToken cancellationToken = default)
         {
             return await _userRepository.FindAsync(u => u.Account == account, cancellationToken);
             //string cacheKey = CacheConsts.UserAccountKey + account;
@@ -83,7 +78,7 @@ namespace MS.Microservice.Domain.Services
             //return existUser.ToEntity();
         }
 
-        public async Task<User> FindFzAccountAsync(string fzAccount, CancellationToken cancellationToken = default)
+        public async Task<User?> FindFzAccountAsync(string fzAccount, CancellationToken cancellationToken = default)
         {
             return await _userRepository.FindAsync(u => u.FzAccount == fzAccount, cancellationToken);
 
@@ -95,9 +90,9 @@ namespace MS.Microservice.Domain.Services
         public async Task<bool> UpdateUserAsync(User user, CancellationToken cancellationToken = default)
         {
             var existUser = await _userRepository.FindAsync(p => p.Account == user.Account, cancellationToken);
-            if (existUser.IsTransient())
+            if (existUser == null || existUser.IsTransient())
             {
-                ExceptionHelper.ThrowDomainException(ExceptionConsts.UserNotExisted);
+                throw new ActivationDomainException(ExceptionConsts.UserNotExisted);
             }
 
             if (existUser.Telephone != user.Telephone)
@@ -105,7 +100,7 @@ namespace MS.Microservice.Domain.Services
                 var existPhoneUser = await _userRepository.FindAsync(p => p.Telephone == user.Telephone && p.Id != user.Id, cancellationToken);
                 if (existPhoneUser != null && !existPhoneUser.IsTransient())
                 {
-                    ExceptionHelper.ThrowDomainException(ExceptionConsts.UserExisted);
+                    throw new ActivationDomainException(ExceptionConsts.UserExisted);
                 }
             }
 

@@ -75,7 +75,7 @@ namespace MS.Microservice.Web
             {
                 app.UseExceptionHandler("/Error");
             }
-            app.UseCors(Configuration.GetSection("CorsOptions").Get<CorsOptions>().PolicyName);
+            app.UseCors(Configuration.GetSection("CorsOptions").Get<CorsOptions>()!.PolicyName);
 
             // https://docs.microsoft.com/en-us/aspnet/core/fundamentals/static-files?view=aspnetcore-6.0#serve-default-documents
             // Ë³Ðò²»ÄÜ´í
