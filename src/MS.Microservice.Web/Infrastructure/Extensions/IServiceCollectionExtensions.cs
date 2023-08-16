@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.Core.Ceching;
 using MS.Microservice.Domain.Identity;
 using MS.Microservice.Infrastructure.DbContext;
+using MS.Microservice.Infrastructure.HealthChecks;
 using MS.Microservice.Swagger.Swagger;
 using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
@@ -106,7 +107,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
         {
             var hcBuilder = services.AddHealthChecks();
             hcBuilder.AddCheck("self", () => HealthCheckResult.Healthy());
-
+            hcBuilder.AddCheck<SqlHealthCheck>(SqlHealthCheck.Name);
             return services;
         }
 

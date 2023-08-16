@@ -53,6 +53,10 @@ namespace MS.Microservice.Web
             ;
             // 注册后台作业
             services.AddHostedService<HighPerformanceBackgroundService>();
+            // 健康检查
+#if RELEASE
+
+#endif
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
