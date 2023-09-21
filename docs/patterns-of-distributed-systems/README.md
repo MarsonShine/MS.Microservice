@@ -11,7 +11,6 @@
 - [高水位标记(High-Water Mask)](High-Water-Mark.md))
 - [混合时钟(Hybrid Clock)](Hybrid-Clock.md)
 - [幂等接收者(Idempotent Receiver)](Idempotent-Receiver.md)
-- [键和值(Key And Value)](Key-Value.md) //TODO
 - [键-范围分区(Key-Range Partitions)](Key-Range-Partitions.md)
 - [Lamport 时钟](Lamport-Clock.md)
 - [低水位标记(Low-Water Mark)](Low-Water-Mark.md)
