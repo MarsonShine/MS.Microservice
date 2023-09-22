@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.Core.Ceching;
+using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
 using MS.Microservice.Infrastructure.DbContext;
 using MS.Microservice.Infrastructure.HealthChecks;
@@ -72,6 +73,8 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>() ?? throw new ArgumentException(nameof(ActivationCacheOptions));
                     options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
                 });
+
+            services.AddHttpClient<LogHttpClient>();
 
             return services;
         }
