@@ -1,5 +1,6 @@
 ﻿using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
+using NPOI.XSSF.Streaming;
 using NPOI.XSSF.UserModel;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace MS.Microservice.Infrastructure.Utils
         public IWorkbook? Workbook => workbook;
         public byte[] Export<T>(List<T> source, string sheetName)
         {
-            var myWorkBook = new XSSFWorkbook();
+            var myWorkBook = new SXSSFWorkbook();
             var mySheet = myWorkBook.CreateSheet(sheetName);
             var properties = typeof(T).GetProperties()
                     .Where(p => p.CustomAttributes.Any())
@@ -179,7 +180,7 @@ namespace MS.Microservice.Infrastructure.Utils
                 if (stream == null)
                     throw new ArgumentNullException(nameof(stream));
                 stream.Seek(0, SeekOrigin.Begin);
-                workbook = fileName.EndsWith(".xls") ? new HSSFWorkbook(stream) : new XSSFWorkbook(stream);
+                workbook = fileName.EndsWith(".xls") ? new HSSFWorkbook(stream) : new SXSSFWorkbook(new XSSFWorkbook(stream));
                 if (sheetIndex == -1)
                 {
                     AutoAnalyzeSheetIndex();
