@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extension.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -32,7 +33,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             services
                 .AddCustomMvc(configuration)
                 .AddHealthChecks(configuration)
-                // .AddMySql(configuration)
+                .AddMySql(configuration)
                 .AddCustomSwagger(configuration)
                 .AddCustomConfiguration(configuration)
                 .AddCustomAuthentication(configuration);
@@ -47,7 +48,6 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             services.AddControllers(options =>
             {
                 options.Filters.Add(typeof(HttpGlobalExceptionFilter));
-                options.Filters.Add(typeof(ApiEncryptActionExecutingFilter));
             }).AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.WriteIndented = true;
@@ -116,7 +116,8 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
         public static IServiceCollection AddMySql(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
+            //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
+            //services.AddSqlSugarService(configuration);
             return services;
         }
 

@@ -14,14 +14,14 @@ namespace MS.Microservice.Web
         public static void Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();
-            host.MigrateDbContext<ActivationDbContext>((context, services) =>
-            {
-                IWebHostEnvironment env = services.GetRequiredService<IWebHostEnvironment>();
-                var logger = services.GetService<ILogger<ActivationDbContext>>();
+            //host.MigrateDbContext<ActivationDbContext>((context, services) =>
+            //{
+            //    IWebHostEnvironment env = services.GetRequiredService<IWebHostEnvironment>();
+            //    var logger = services.GetService<ILogger<ActivationDbContext>>();
 
-                new ActivationDbContextSeed().SeedAsync(context, env, logger)
-                .Wait();
-            });
+            //    new ActivationDbContextSeed().SeedAsync(context, env, logger)
+            //    .Wait();
+            //});
 
             host.Run();
         }

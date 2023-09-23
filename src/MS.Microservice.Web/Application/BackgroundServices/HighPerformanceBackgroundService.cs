@@ -65,7 +65,7 @@ _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
             }
             catch (Exception ex)
             {
-                _logger.LogError("激活码系统调用失败：{Message}", ex.Message + Environment.NewLine + ex.StackTrace);
+                _logger.LogError("作业系统调用失败：{Message}", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
         // 为何要用Task.Run，是为了防止再程序启动一个长时间阻塞的作业，导致整个应用程序启动阻塞。

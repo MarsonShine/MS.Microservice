@@ -52,7 +52,7 @@ namespace MS.Microservice.Web
             services.AddFzPlatformServices(Configuration)
             ;
             // 注册后台作业
-            services.AddHostedService<HighPerformanceBackgroundService>();
+            //services.AddHostedService<HighPerformanceBackgroundService>();
             // 健康检查
 #if RELEASE
 
