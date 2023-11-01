@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.DirectoryServices.Protocols;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Autofac.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MS.Microservice.Core.Dto;
+using MS.Microservice.Infrastructure.Utils;
+using MS.Microservice.Web.Application.Models;
 
 namespace MS.Microservice.Web.Controller {
     [Route("api/[controller]")]
@@ -38,6 +43,22 @@ namespace MS.Microservice.Web.Controller {
                     status = 200,
                     url = "http://tmp/" + file.FileName
             });
+        }
+
+        /// <summary>
+        /// 上传书籍分类列表
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        [HttpPost("excel")]
+        public async Task<IActionResult> ExcelReader([FromForm] IFormFile file)
+        {
+            var list = new ExcelHelper()
+                .InitSheetIndex(0)
+                .InitStartReadRowIndex(0, 1)
+                .Import<ExcelDemoRequest>(file.FileName, file.OpenReadStream());
+            await Task.CompletedTask;
+            return Ok();
         }
     }
 }

@@ -5,9 +5,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Application\DomainEventHandlers\**" />
+    <Compile Remove="Application\Enums\**" />
     <Compile Remove="BackgroundWork\**" />
+    <Content Remove="Application\DomainEventHandlers\**" />
+    <Content Remove="Application\Enums\**" />
     <Content Remove="BackgroundWork\**" />
+    <EmbeddedResource Remove="Application\DomainEventHandlers\**" />
+    <EmbeddedResource Remove="Application\Enums\**" />
     <EmbeddedResource Remove="BackgroundWork\**" />
+    <None Remove="Application\DomainEventHandlers\**" />
+    <None Remove="Application\Enums\**" />
     <None Remove="BackgroundWork\**" />
   </ItemGroup>
 
@@ -24,11 +32,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />
     <ProjectReference Include="..\MS.Microservice.Swagger\MS.Microservice.Swagger.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Application\DomainEventHandlers\" />
-    <Folder Include="Application\Enums\" />
   </ItemGroup>
 
 </Project>
