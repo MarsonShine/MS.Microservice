@@ -5,6 +5,7 @@ using System.DirectoryServices.Protocols;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Autofac.Core;
 using Microsoft.AspNetCore.Http;
@@ -57,8 +58,18 @@ namespace MS.Microservice.Web.Controller {
                 .InitSheetIndex(0)
                 .InitStartReadRowIndex(0, 1)
                 .Import<ExcelDemoRequest>(file.FileName, file.OpenReadStream());
+            StringBuilder stringBuilder = new StringBuilder();
+            foreach (var item in list)
+            {
+                int bookId = item.BookId;
+                for (int i = 0; i < item.BookClassify.Length; i++)
+                {
+                    int classifyId = (int)item.BookClassify[i];
+                    stringBuilder.AppendLine($"INSERT INTO [dbo].[book_type]([BookId], [ClassifyId]) VALUES ({bookId}, {classifyId});");
+                }
+            }
             await Task.CompletedTask;
-            return Ok();
+            return Ok(stringBuilder.ToString());
         }
     }
 }

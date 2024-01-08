@@ -1,4 +1,5 @@
-﻿using NPOI.HSSF.UserModel;
+﻿using MS.Microservice.Infrastructure.Utils.Excel;
+using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.Streaming;
 using NPOI.XSSF.UserModel;
@@ -36,7 +37,7 @@ namespace MS.Microservice.Infrastructure.Utils
         private static void SetExcelTitle(ISheet sheet, List<PropertyInfo> props)
         {
             IRow title = sheet!.CreateRow(0);
-            var attrs = props.Select(p => p.GetCustomAttribute<ExcelColumnAttribute>(false)).ToArray();
+            var attrs = props.Select(p => p.GetCustomAttribute<ExcelColumnAttribute>()).ToArray();
             for (int i = 0; i < attrs.Length; i++)
             {
                 title.CreateCell(i).SetCellValue(attrs[i]!.Name!.Trim());
@@ -180,7 +181,7 @@ namespace MS.Microservice.Infrastructure.Utils
                 if (stream == null)
                     throw new ArgumentNullException(nameof(stream));
                 stream.Seek(0, SeekOrigin.Begin);
-                workbook = fileName.EndsWith(".xls") ? new HSSFWorkbook(stream) : new SXSSFWorkbook(new XSSFWorkbook(stream));
+                workbook = fileName.EndsWith(".xls") ? new HSSFWorkbook(stream) : new XSSFWorkbook(stream);
                 if (sheetIndex == -1)
                 {
                     AutoAnalyzeSheetIndex();
@@ -226,5 +227,19 @@ namespace MS.Microservice.Infrastructure.Utils
         }
 
         private static bool IsNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
+
+        public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, List<T> source)
+        {
+            using Stream stream = fileStream;
+            IWorkbook workbook = WorkbookFactory.Create(stream);
+            ISheet sheetAt = workbook.GetSheetAt(sheetIndex);
+            return new DynamicExcelBuilder<T>(workbook, sheetAt, source);
+        }
+
+        public DynamicExcelBuilder<T> OpenExcel<T>(string filePath, List<T> source)
+        {
+            using Stream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            return OpenExcel(fileStream, source);
+        }
     }
 }

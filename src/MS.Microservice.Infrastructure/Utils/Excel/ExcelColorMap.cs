@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MS.Microservice.Infrastructure.Utils
+namespace MS.Microservice.Infrastructure.Utils.Excel
 {
     public class ExcelColorMap
     {

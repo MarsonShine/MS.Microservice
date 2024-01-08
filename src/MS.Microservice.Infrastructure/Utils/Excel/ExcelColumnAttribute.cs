@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MS.Microservice.Infrastructure.Utils
+namespace MS.Microservice.Infrastructure.Utils.Excel
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
     public class ExcelColumnAttribute : Attribute

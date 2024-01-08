@@ -12,7 +12,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D5505EA7-2FB3-4124-8AAA-BAB3F87ADF9C}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
-		global.json = global.json
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MS.Microservice.EventBus", "MS.Microservice.EventBus\MS.Microservice.EventBus.csproj", "{53EB3E52-EFF8-49EB-ADA1-1DC5A19892DC}"
