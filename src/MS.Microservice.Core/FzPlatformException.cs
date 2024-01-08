@@ -20,10 +20,6 @@ namespace MS.Microservice.Core
         {
         }
 
-        protected MsPlatformException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-
         public int Code { get; set; }
 
     }

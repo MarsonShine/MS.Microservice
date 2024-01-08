@@ -21,8 +21,7 @@ namespace MS.Microservice.Web.Infrastructure.Authentications
         public ActivationAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
             IOptions<IdentityOptions> identityOptionsAccessor,
             ILoggerFactory logger,
-            UrlEncoder encoder,
-            ISystemClock clock) : base(options, logger, encoder, clock)
+            UrlEncoder encoder) : base(options, logger, encoder)
         {
             Check.NotNull(identityOptionsAccessor, nameof(IdentityOptions));
             Check.NotNull(identityOptionsAccessor.Value, nameof(IdentityOptions));
