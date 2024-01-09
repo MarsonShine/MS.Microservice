@@ -1,9 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Remove="Entity\**" />
     <Compile Remove="EventEntity\**" />
@@ -15,9 +13,7 @@
     <None Remove="EventEntity\**" />
     <None Remove="Repository\**" />
   </ItemGroup>
-
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-
 </Project>

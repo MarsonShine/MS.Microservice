@@ -56,7 +56,7 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
                         string? token = httpContext.Request.BearerAuthorization();
                         if (token.IsNotNullOrEmpty())
                         {
-                            if (!ValidateToken(httpContext, token))
+                            if (!await ValidateTokenAsync(httpContext, token))
                             {
                                 _logger.LogInformation("token unthorization");
                                 context.Fail();
@@ -87,7 +87,7 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
             await base.HandleAsync(context);
         }
 
-        private bool ValidateToken(HttpContext context, string token)
+        private async ValueTask<bool> ValidateTokenAsync(HttpContext context, string token)
         {
             try
             {
@@ -95,7 +95,7 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
                         .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
 
                 var tokenHandler = new JsonWebTokenHandler();
-                var result = tokenHandler.ValidateToken(token, new TokenValidationParameters
+                var result = await tokenHandler.ValidateTokenAsync(token, new TokenValidationParameters
                 {
                     ValidIssuers = _identityOptions.JwtBearerOption.Issuers,
                     ValidAudiences = _identityOptions.JwtBearerOption.Audiences,
