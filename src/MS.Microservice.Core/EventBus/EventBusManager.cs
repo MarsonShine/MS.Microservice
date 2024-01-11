@@ -20,11 +20,7 @@ namespace MS.Microservice.Core.EventBus
             {
                 foreach (var handler in handlers)
                 {
-                    var eventHandler = handler as IEventHandler<TEvent>;
-                    if (eventHandler == null)
-                    {
-                        throw new ArgumentException($"Handler {handler.GetType().Name} is not a valid event handler");
-                    }
+                    var eventHandler = handler as IEventHandler<TEvent> ?? throw new ArgumentException($"Handler {handler.GetType().Name} is not a valid event handler");
                     await eventHandler.Handle(evt);
                 }
             }

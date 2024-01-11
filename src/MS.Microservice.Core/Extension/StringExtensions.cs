@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace MS.Microservice.Core.Extension
@@ -29,5 +30,6 @@ namespace MS.Microservice.Core.Extension
         {
             return encoding.GetBytes(str);
         }
+
     }
 }

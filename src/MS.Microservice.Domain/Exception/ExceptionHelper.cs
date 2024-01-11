@@ -4,7 +4,7 @@
     {
         public static void ThrowDomainException(string message)
         {
-            throw new ActivationDomainException(message);
+            throw new DomainException(message);
         }
     }
 }

@@ -37,7 +37,7 @@ namespace MS.Microservice.Web.Infrastructure.Mediator.Behaviors
             {
                 _logger.LogWarning("Validation errors - {CommandType} - Command: {@Command} - Errors: {@ValidationErrors}", typeName, request, failures);
 
-                throw new ActivationDomainException(
+                throw new DomainException(
                     $"Command Validation Errors for type {typeof(TRequest).Name}", new ValidationException("Validation exception", failures));
             }
 

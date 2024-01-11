@@ -66,11 +66,11 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
             services.AddMemoryCache(options =>
             {
-                var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>() ?? throw new ArgumentException(nameof(ActivationCacheOptions));
+                var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
                 options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
             }).AddDistributedMemoryCache(options =>
                 {
-                    var cacheOptions = configuration.GetSection("CacheOptions").Get<ActivationCacheOptions>() ?? throw new ArgumentException(nameof(ActivationCacheOptions));
+                    var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
                     options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
                 });
 

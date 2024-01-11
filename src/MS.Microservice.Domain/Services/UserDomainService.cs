@@ -24,7 +24,7 @@ namespace MS.Microservice.Domain.Services
             var existUser = await _userRepository.FindAsync(p => p.Account == user.Account, cancellationToken);
             if (existUser != null && !existUser.IsTransient())
             {
-                throw new ActivationDomainException(ExceptionConsts.UserExisted);
+                throw new DomainException(ExceptionConsts.UserExisted);
             }
             user.ChangePassword();
             var userInfo = await _userRepository.InsertAsync(user, cancellationToken);
@@ -92,7 +92,7 @@ namespace MS.Microservice.Domain.Services
             var existUser = await _userRepository.FindAsync(p => p.Account == user.Account, cancellationToken);
             if (existUser == null || existUser.IsTransient())
             {
-                throw new ActivationDomainException(ExceptionConsts.UserNotExisted);
+                throw new DomainException(ExceptionConsts.UserNotExisted);
             }
 
             if (existUser.Telephone != user.Telephone)
@@ -100,7 +100,7 @@ namespace MS.Microservice.Domain.Services
                 var existPhoneUser = await _userRepository.FindAsync(p => p.Telephone == user.Telephone && p.Id != user.Id, cancellationToken);
                 if (existPhoneUser != null && !existPhoneUser.IsTransient())
                 {
-                    throw new ActivationDomainException(ExceptionConsts.UserExisted);
+                    throw new DomainException(ExceptionConsts.UserExisted);
                 }
             }
 

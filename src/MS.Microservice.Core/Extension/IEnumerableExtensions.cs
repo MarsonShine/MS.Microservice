@@ -69,12 +69,7 @@ namespace MS.Microservice.Core.Extension
 
         public static string JoinAsString<TSource>(this IEnumerable<TSource>? source, string separator)
         {
-            if (source == null)
-            {
-                throw new ArgumentNullException(nameof(source));
-            }
-
-            return string.Join(separator, source);
+            return source == null ? throw new ArgumentNullException(nameof(source)) : string.Join(separator, source);
         }
     }
 }
