@@ -1,4 +1,5 @@
 ﻿using NPOI.SS.UserModel;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -32,18 +33,34 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
                     contentCell.CellStyle = titleCellStyle;
                 }
             }
+            ReadTitle(titleRowIndex);
+            return this;
+        }
 
+        private void ReadTitle(int titleRowIndex)
+        {
+            var titles = _sheet.GetRow(titleRowIndex).Cells;
             // 建立属性名与列索引的映射关系
             PropertyInfo[] properties = typeof(T).GetTypeInfo().GetProperties();
-            for (int columnIndex = 0; columnIndex < properties.Length; columnIndex++)
+            if (titles.Count == 0)
             {
-                ExcelColumnAttribute? attribute = properties[columnIndex].GetCustomAttribute<ExcelColumnAttribute>();
-                if (attribute != null)
+                for (int columnIndex = 0; columnIndex < properties.Length; columnIndex++)
                 {
-                    _columnMapping[properties[columnIndex].Name] = columnIndex;
+                    ExcelColumnAttribute? attribute = properties[columnIndex].GetCustomAttribute<ExcelColumnAttribute>();
+                    if (attribute != null)
+                    {
+                        _columnMapping[properties[columnIndex].Name] = columnIndex;
+                    }
                 }
             }
-            return this;
+            else
+            {
+                for (int i = 0; i < titles.Count; i++)
+                {
+                    string title = titles[i].StringCellValue;
+                    _columnMapping[title] = i;
+                }
+            }
         }
 
         public DynamicExcelBuilder<T> InsertCellValue(int contentRowIndex)
@@ -55,7 +72,7 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
                 T obj = Items[i];
                 foreach (PropertyInfo prop in properties)
                 {
-                    string propertyName = prop.Name;
+                    string propertyName = prop.GetCustomAttribute<ExcelColumnAttribute>()?.Name ?? "";
 
                     if (_columnMapping.TryGetValue(propertyName, out int columnIndex))
                     {
