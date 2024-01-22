@@ -5,6 +5,7 @@ using NPOI.XSSF.Streaming;
 using NPOI.XSSF.UserModel;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -42,6 +43,31 @@ namespace MS.Microservice.Infrastructure.Utils
             {
                 title.CreateCell(i).SetCellValue(attrs[i]!.Name!.Trim());
             }
+        }
+
+        public byte[] Export(DataTable dt, string sheetName)
+        {
+            using var myWorkBook = new XSSFWorkbook();
+            var mySheet = myWorkBook.CreateSheet(sheetName);
+            IRow title = mySheet!.CreateRow(0);
+            for (int i = 0; i < dt.Columns.Count; i++)
+            {
+                title.CreateCell(i).SetCellValue(dt.Columns[i].ColumnName.Trim());
+            }
+
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                var r = dt.Rows[i];
+                IRow row = mySheet.CreateRow(i + 1);
+                foreach (DataColumn column in dt.Columns)
+                {
+                    row.CreateCell(column.Ordinal).SetCellValue(r[column].ToString());
+                }
+            }
+            using var ms = new MemoryStream();
+            myWorkBook.Write(ms);
+            ms.Flush();
+            return ms.ToArray();
         }
 
         private static void SetExcelBody<T>(ISheet sheet, List<T> source, List<PropertyInfo> props)
