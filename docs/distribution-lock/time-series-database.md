@@ -22,6 +22,17 @@
 
 ## 日志结构的合并树（LSM-Tree）
 
+LSM Tree（Log-Structured Merge-Tree）是一种专门针对写操作优化的数据存储结构，被广泛用于 [BigTable](https://cloud.google.com/bigtable)、[LevelDB](https://github.com/google/leveldb) 和 [RocksDB](https://github.com/facebook/rocksdb) 等场景。
+
+它的存储结构分为两个部分：内存存储结构（MemTable）和磁盘文件（SSTable）。
+它的基本原理与过程如下：
+
+1. 数据分为多层，通常包括一个内存存储结构(MemTable)和多个磁盘文件(SSTable)。写入操作先写入 MemTable。
+2. 当 MemTable 占用内存超过一定阈值后，其中的数据将持久化存储到磁盘上的 SSTable 文件中，并在内存重建一个新的空 MemTable 接收新的写入。
+3. 由于写入操作只是简单的追加到 MemTable，因此写入很快,这是 LSM Tree 的主要优化点。
+4. 为了查询效率，LSM Tree会在固定时间间隔对磁盘上生成的多个 SSTable 文件进行合并，生成一个新的大的 SSTable 文件,同时删除老的 SSTable 文件。每层文件合并时基于文件内数据有序这一特点。
+5. 查询时,需要先在 MemTable 查找,如果没找到,再依次在各层 SSTable 文件中由小到大查找。
+
 在讲 LSM-Tree 之前，我们得先提到哈希索引。key-value 类型并不是唯一可以索引的数据， 但它随处可见， 而且是其他更复杂索引的基础构造模块。
 
 以此为基础，我们假设数据存储全部采用追加形式的文件组成，那么根据哈希索引策略：保存内存中的 key-value 的 hash map，把每个键一一映射到数据文件中特定字节偏移量，这样就能找到对应数据的位置了。如下图所示：
