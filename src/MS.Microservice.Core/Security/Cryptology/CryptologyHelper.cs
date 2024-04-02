@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using Microsoft.AspNetCore.Components.Forms;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -42,6 +43,22 @@ namespace MS.Microservice.Core.Security.Cryptology
             var hash = sha256.ComputeHash(bytes);
             return string.Join("", hash.ToList().Select(t => t.ToString("x2")).ToArray());
         }
+
+        public static string SHA256(string value)
+        {
+			// 使用 SHA1 创建哈希值
+			using SHA256 sha256 = System.Security.Cryptography.SHA256.Create();
+			byte[] inputBytes = Encoding.UTF8.GetBytes(value);
+			byte[] hashBytes = sha256.ComputeHash(inputBytes);
+
+			// 将字节数组转换成十六进制字符串
+			StringBuilder sb = new();
+			foreach (byte b in hashBytes)
+			{
+				sb.Append(b.ToString("x2"));
+			}
+			return sb.ToString();
+		}
 
         #endregion
     }
