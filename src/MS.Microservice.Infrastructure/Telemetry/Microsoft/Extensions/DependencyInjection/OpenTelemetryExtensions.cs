@@ -19,8 +19,9 @@ namespace MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.Dependen
                     // TODO: 配置化
                     cfg.AddSource("Fz.OrderPlatform.Admin in OTel Source")
                     .AddConsoleExporter()
-                    .AddJaegerExporter()
-                    .AddAspNetCoreInstrumentation();
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter();
                 });
             return services;
         }
