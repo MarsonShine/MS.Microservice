@@ -70,6 +70,12 @@ namespace MS.Microservice.Core.Extension
 			return true;
 		}
 
+		public static IList<T> Shuffle<T>([NotNull] this IList<T> source)
+		{
+			Check.NotNull(source, nameof(source));
+			return ListHelper.Shuffle(source);
+		}
+
 		public static IEnumerable<TSource1> IntersectBy<TSource1, TSource2, TKey>(
 			this IEnumerable<TSource1> first,
 			IEnumerable<TSource2> second,
@@ -131,6 +137,24 @@ namespace MS.Microservice.Core.Extension
 			return target.Where(item => indexMap.ContainsKey(targetSelector(item)))
 						 .OrderBy(item => indexMap[targetSelector(item)])
 						 .Concat(target.Where(item => !indexMap.ContainsKey(targetSelector(item))));
+		}
+	}
+
+	public static class ListHelper
+	{
+		public static List<T> Shuffle<T>(IList<T> source)
+		{
+			var random = Random.Shared;
+			var result = new List<T>(source);
+			for (int i = 0; i < result.Count; i++)
+			{
+				int j = random.Next(i, result.Count);
+				if (j != i)
+				{
+					(result[j], result[i]) = (result[i], result[j]);
+				}
+			}
+			return result;
 		}
 	}
 }
