@@ -1,5 +1,6 @@
 ﻿using MS.Microservice.Core.Domain.Entity.Enums;
 using MS.Microservice.Core.Domain.Repository;
+using MS.Microservice.Core.Domain.Repository.SqlSugar;
 using MS.Microservice.Core.Dto;
 using SqlSugar;
 using System;

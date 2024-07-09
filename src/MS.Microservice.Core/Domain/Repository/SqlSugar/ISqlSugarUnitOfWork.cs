@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace MS.Microservice.Core.Domain.Repository
+namespace MS.Microservice.Core.Domain.Repository.SqlSugar
 {
     public interface ISqlSugarUnitOfWork
     {

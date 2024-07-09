@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MS.Microservice.Core.Domain.Repository.SqlSugar;
 
 namespace MS.Microservice.Core.Domain.Repository.Extensions
 {

@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace MS.Microservice.Infrastructure.SqlSugar
 {
-    public static class SqlSugarExtensions
+    public static class SqlSugarQueryableExtensions
     {
         public static ISugarQueryable<T> Includes<T, TReturn>(this ISugarQueryable<T> queryable, Expression<Func<T, List<TReturn>?>> include, bool isInclude = true)
         {
