@@ -21,45 +21,49 @@ namespace MS.Microservice.Infrastructure.SqlSugar.Advance.Sharding
 			{
 				for (int i = 0; i < connectionStrings.Length; i++)
 				{
-					var connectionConfig = new ConnectionConfig
-					{
-						ConnectionString = connectionStrings[i],
-						IsAutoCloseConnection = sqlSugarOptions.IsAutoCloseConnection,
-						DbType = sqlSugarOptions.DbType,
-						ConfigureExternalServices = new ConfigureExternalServices()
+					// 防止闭包变量
+					var dbIndex = i;
+					services.AddKeyedScoped<UserSharingDemoDbContext>($"UserRecord{dbIndex}", (sp, obj) => {
+						var connectionConfig = new ConnectionConfig
 						{
-							EntityNameService = (type, entity) =>
+							ConnectionString = connectionStrings[dbIndex],
+							IsAutoCloseConnection = sqlSugarOptions.IsAutoCloseConnection,
+							DbType = sqlSugarOptions.DbType,
+							ConfigureExternalServices = new ConfigureExternalServices()
 							{
-								var tableAttribute = type.GetCustomAttributes(false)
-									.Where(p => p.GetType() == typeof(TableAttribute))
-									.Cast<TableAttribute>()
-									.FirstOrDefault();
-								if (tableAttribute != null)
-									entity.DbTableName = tableAttribute.Name;
-							},
-							EntityService = (type, entity) =>
-							{
-								if (entity.PropertyName == "Id")
+								EntityNameService = (type, entity) =>
 								{
-									entity.IsPrimarykey = true;
-									entity.IsIdentity = true;
-								}
-								// 这里配置实体
+									var tableAttribute = type.GetCustomAttributes(false)
+										.Where(p => p.GetType() == typeof(TableAttribute))
+										.Cast<TableAttribute>()
+										.FirstOrDefault();
+									if (tableAttribute != null)
+										entity.DbTableName = tableAttribute.Name;
+								},
+								EntityService = (type, entity) =>
+								{
+									if (entity.PropertyName == "Id")
+									{
+										entity.IsPrimarykey = true;
+										entity.IsIdentity = true;
+									}
+									// 这里配置实体
+								},
+								SerializeService = new SqlSugarSerializeService(DefaultSerializeSetting.Default),
 							},
-							SerializeService = new SqlSugarSerializeService(DefaultSerializeSetting.Default),
-						},
-					};
-					UserSharingDemoDbContext client = new(connectionConfig);
-					// 全局过滤器
-					//client.QueryFilter.AddTableFilter<Word>(d => d.DeletedAt == null);
-					if (sqlSugarOptions.PrintLog)
-						client.Aop.OnLogExecuting = (sql, pars) =>
-						{
-							Console.WriteLine(sql + "\r\n" + client.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
 						};
-					client.DbMaintenance.CreateDatabase();
-					client.CodeFirst.InitTables(new[] { typeof(UserDemo) });
-					services.AddKeyedScoped<UserSharingDemoDbContext>($"UserRecord{i}", (sp, obj) => client);
+						UserSharingDemoDbContext client = new(connectionConfig);
+						// 全局过滤器
+						//client.QueryFilter.AddTableFilter<Word>(d => d.DeletedAt == null);
+						if (sqlSugarOptions.PrintLog)
+							client.Aop.OnLogExecuting = (sql, pars) =>
+							{
+								Console.WriteLine(sql + "\r\n" + client.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
+							};
+						client.DbMaintenance.CreateDatabase();
+						client.CodeFirst.InitTables(new[] { typeof(UserDemo) });
+						return client;
+					});
 				}
 			}
 			return services;

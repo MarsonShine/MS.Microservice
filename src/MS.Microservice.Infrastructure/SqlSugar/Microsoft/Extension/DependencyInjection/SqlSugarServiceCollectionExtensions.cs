@@ -4,6 +4,7 @@ using MS.Microservice.Core.Serialization;
 using MS.Microservice.Infrastructure.DbContext.SqlSugar;
 using MS.Microservice.Infrastructure.SqlSugar;
 using MS.Microservice.Infrastructure.SqlSugar.Advance.Sharding;
+using MS.Microservice.Infrastructure.SqlSugar.Converters;
 using SqlSugar;
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -55,7 +56,10 @@ namespace Microsoft.Extension.DependencyInjection
 							entity.IsIdentity = true;
 
 						}
-						// 这里添加实体配置
+						//// 这里添加实体配置
+						//// Json 实体配置，自定义转换
+						//entity.IsJson = true;
+						//entity.SqlParameterDbType = typeof(ObjectJsonConverter);
 					},
 					SerializeService = new SqlSugarSerializeService(DefaultSerializeSetting.Default),
 				},
@@ -67,6 +71,8 @@ namespace Microsoft.Extension.DependencyInjection
 			{
 				opt.ConnectionStrings = shardingOptions.ConnectionStrings;
 				opt.DbType = shardingOptions.DbType;
+				opt.IsAutoCloseConnection = shardingOptions.IsAutoCloseConnection;
+				opt.PrintLog = shardingOptions.PrintLog;
 			});
 		}
 
