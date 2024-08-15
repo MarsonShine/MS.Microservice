@@ -123,7 +123,7 @@ public void check() {
 
 # 分布式链路追踪
 
-分布式链路追踪要遵循 [OpenTracing API](https://github.com/apache/skywalking) 规范的。
+分布式链路追踪要遵循 [OpenTelemetry API](https://opentelemetry.io/docs/specs/) 规范。
 
 - [Jaeger](https://github.com/jaegertracing/jaeger)
 - [Zipkin](https://github.com/openzipkin/zipkin)
