@@ -31,7 +31,7 @@ namespace MS.Microservice.Web
         {
             services.AddControllers().AddMvcOptions(options =>
             {
-                options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+                //options.Filters.Add(typeof(HttpGlobalExceptionFilter));
                 options.UseApiDecryptModelBinding(Configuration);
             }).AddJsonOptions(options =>
             {

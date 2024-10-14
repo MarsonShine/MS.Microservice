@@ -48,7 +48,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
             services.AddControllers(options =>
             {
-                options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+                //options.Filters.Add(typeof(HttpGlobalExceptionFilter));
             }).AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.WriteIndented = true;
@@ -77,7 +77,13 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
             services.AddHttpClient<LogHttpClient>();
 
-            return services;
+            // 异常处理，可以管道化
+            services.AddExceptionHandler<GlobalExceptionHandler>();  // 处理第一个异常
+			//// 管道化
+			//services.AddExceptionHandler<GlobalExceptionHandler2>(); // 紧接着处理第二个异常
+			//services.AddExceptionHandler<GlobalExceptionHandler3>(); // 最后处理第三个异常
+
+			return services;
         }
 
         public static void AddCorsService(this IServiceCollection services, Action<CorsOptions> config)
