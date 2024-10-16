@@ -19,9 +19,9 @@ namespace MS.Microservice.Web.Infrastructure.Filters
 		private readonly ILogger<GlobalExceptionHandler> _logger = logger;
 		public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
 		{
-			_logger.LogError(exception, exception.Message);
 			if (exception is DomainException domainException)
 			{
+				_logger.LogError(exception, exception.Message);
 				var result = new ResultDto(false, domainException.Message, domainException!.Code);
 				await context.Response.WriteAsJsonAsync(result, cancellationToken);
 			}

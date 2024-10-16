@@ -58,15 +58,15 @@ namespace MS.Microservice.Core.Dto
 		[MemberNotNullWhen(false, nameof(_error))]
 		public bool IsSuccess { get; private set; }
 		// https://github.com/dotnet/csharplang/blob/main/proposals/TypeUnions.md
-		public Result<TReturn> Switch<TReturn>(Func<T, TReturn> onSuccess, Func<Exception, Exception> onFailure)
+		public Result2<TReturn> Switch<TReturn>(Func<T, TReturn> onSuccess, Func<Exception, Exception> onFailure)
 		{
 			if (IsSuccess)
 			{
-				return Result<TReturn>.Success(onSuccess(_value));
+				return Result2<TReturn>.Success(onSuccess(_value));
 			}
 			else
 			{
-				return Result<TReturn>.Fail(onFailure(_error));
+				return Result2<TReturn>.Fail(onFailure(_error));
 			}
 		}
 
