@@ -10,7 +10,7 @@ namespace MS.Microservice.Core.Tests.Concurrent
 	public class ConcurrentTest
 	{
 		[Fact]
-		public async void SingleFlightTest()
+		public async Task SingleFlightTest()
 		{
 			SingleflightManager singleflightManager = new();
 
@@ -33,7 +33,7 @@ namespace MS.Microservice.Core.Tests.Concurrent
 					return "result";
 				});
 			}
-			Task.WaitAll(tasks);
+			await Task.WhenAll(tasks);
 		}
 	}
 }
