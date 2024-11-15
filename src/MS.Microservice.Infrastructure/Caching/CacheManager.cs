@@ -18,11 +18,11 @@ namespace MS.Microservice.Infrastructure.Caching
 			throw new NotImplementedException();
 		}
 
-		public async Task<CacheItem<T>> GetAsync<T>(string key)
+		public async Task<CacheItem<T>?> GetAsync<T>(string key)
 		{
 			var operation = new CacheOperation
 			{
-				Key = key,
+				//Key = key,
 				OperationType = CacheOperationType.Get,
 				OperationTime = DateTime.UtcNow
 			};
@@ -30,7 +30,7 @@ namespace MS.Microservice.Infrastructure.Caching
 			try
 			{
 				var value = await _cache.GetAsync<CacheItem<T>>(key);
-				if ()
+				if (value != null)
 				{
 					operation.IsSuccess = true;
 					_operationBuffer.AddOperation(operation);
