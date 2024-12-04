@@ -29,7 +29,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 {
     public static class IServiceCollectionExtensions
     {
-        public static IServiceCollection AddFzPlatformServices(this IServiceCollection services, [NotNull] IConfiguration configuration)
+        public static IServiceCollection AddCoreServices(this IServiceCollection services, [NotNull] IConfiguration configuration)
         {
             services
                 .AddCustomMvc(configuration)
