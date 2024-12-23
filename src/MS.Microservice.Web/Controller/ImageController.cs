@@ -52,7 +52,7 @@ namespace MS.Microservice.Web.Controller {
         /// <param name="file"></param>
         /// <returns></returns>
         [HttpPost("excel")]
-        public async Task<IActionResult> ExcelReader([FromForm] IFormFile file)
+        public async Task<IActionResult> ExcelReader(IFormFile file)
         {
             var list = new ExcelHelper()
                 .InitSheetIndex(0)
