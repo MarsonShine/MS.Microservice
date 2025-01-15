@@ -37,7 +37,8 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 .AddMySql(configuration)
                 .AddCustomSwagger(configuration)
                 .AddCustomConfiguration(configuration)
-                .AddCustomAuthentication(configuration);
+                .AddCustomAuthentication(configuration)
+                ;
 
             return services;
         }
@@ -126,7 +127,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
             //services.AddSqlSugarService(configuration);
 
-			return services;
+            return services;
         }
 
         public static IServiceCollection AddCustomConfiguration(this IServiceCollection services, IConfiguration configuration)

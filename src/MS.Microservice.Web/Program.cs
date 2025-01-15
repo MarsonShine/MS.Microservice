@@ -20,6 +20,7 @@ using MS.Microservice.Web.AutofacModules.Extensions;
 using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Infrastructure.Common.Extensions;
 using Microsoft.AspNetCore.ResponseCompression;
+using MS.Microservice.Core.FeatureManager;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,7 @@ AddCollectionService(builder);
 
 void AddCollectionService(WebApplicationBuilder builder)
 {
+	builder.Services.AddFeatureToggle(builder.Configuration);
 	builder.Services.AddControllers()
 	.AddMvcOptions(options =>
 	{
