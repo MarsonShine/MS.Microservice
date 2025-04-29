@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace MS.Microservice.Core.Extension
 {
-	public static class IEnumerableExtensions
+	public static partial class IEnumerableExtensions
 	{
 		public static int FindIndex<T>(this IEnumerable<T> source, Func<T, bool> predicate)
 		{
