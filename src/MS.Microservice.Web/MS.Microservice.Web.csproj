@@ -1,9 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Remove="Application\DomainEventHandlers\**" />
     <Compile Remove="Application\Enums\**" />
@@ -18,20 +16,17 @@
     <None Remove="Application\Enums\**" />
     <None Remove="BackgroundWork\**" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageReference Include="Dapper" Version="2.1.28" />
-    <PackageReference Include="Dapper.SqlBuilder" Version="2.0.78" />
-    <PackageReference Include="FluentValidation" Version="11.9.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Dapper.SqlBuilder" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />
     <ProjectReference Include="..\MS.Microservice.Swagger\MS.Microservice.Swagger.csproj" />
   </ItemGroup>
-
 </Project>
