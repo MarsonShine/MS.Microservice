@@ -16,15 +16,15 @@ namespace MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy
         private readonly TimeSpan _maxDelay = maxDelay == default ? TimeSpan.FromMinutes(5) : maxDelay;
         private readonly double _multiplier = multiplier;
 
-        public bool ShouldRetry(int attempt, Exception? exception)
+        public bool ShouldRetry(RetryContext context)
         {
-            return attempt <= _maxRetries;
+            return context.Attempt <= _maxRetries;
         }
 
-        public TimeSpan GetDelay(int attempt, Exception? exception)
+        public TimeSpan GetDelay(RetryContext context)
         {
             var delay = TimeSpan.FromMilliseconds(
-                _baseDelay.TotalMilliseconds * Math.Pow(_multiplier, attempt - 1));
+                _baseDelay.TotalMilliseconds * Math.Pow(_multiplier, context.Attempt - 1));
 
             return delay > _maxDelay ? _maxDelay : delay;
         }

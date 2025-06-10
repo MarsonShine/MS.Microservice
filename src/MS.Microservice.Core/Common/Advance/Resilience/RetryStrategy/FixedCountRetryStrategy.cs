@@ -7,12 +7,12 @@ namespace MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy
         private readonly int _maxRetries = maxRetries;
         private readonly TimeSpan _delay = delay == default ? TimeSpan.Zero : delay;
 
-        public bool ShouldRetry(int attempt, Exception? exception)
+        public bool ShouldRetry(RetryContext context)
         {
-            return attempt <= _maxRetries;
+            return context.Attempt <= _maxRetries;
         }
 
-        public TimeSpan GetDelay(int attempt, Exception? exception)
+        public TimeSpan GetDelay(RetryContext context)
         {
             return _delay;
         }

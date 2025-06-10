@@ -16,7 +16,7 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
             Func<Task<T>> operation,
             CancellationToken cancellationToken = default)
         {
-            int attempt = 1;
+            var context = new RetryContext();
             while (true)
             {
                 Exception? lastException;
@@ -44,7 +44,7 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
                 }
 
                 // 检查是否应该重试
-                if (!_strategy.ShouldRetry(attempt, lastException))
+                if (!_strategy.ShouldRetry(context))
                 {
                     if (lastException != null)
                         throw lastException;
@@ -52,13 +52,12 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
                 }
 
                 // 等待重试延迟
-                var delay = _strategy.GetDelay(attempt, lastException);
+                var delay = _strategy.GetDelay(context);
                 if (delay > TimeSpan.Zero)
                 {
                     await Task.Delay(delay, cancellationToken);
                 }
-
-                attempt++;
+                context.Attempt++;
             }
         }
 

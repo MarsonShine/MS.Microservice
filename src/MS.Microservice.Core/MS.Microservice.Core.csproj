@@ -1,22 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Library</OutputType>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="Entity\**" />
-    <Compile Remove="EventEntity\**" />
-    <Compile Remove="Repository\**" />
-    <EmbeddedResource Remove="Entity\**" />
-    <EmbeddedResource Remove="EventEntity\**" />
-    <EmbeddedResource Remove="Repository\**" />
-    <None Remove="Entity\**" />
-    <None Remove="EventEntity\**" />
-    <None Remove="Repository\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-  </ItemGroup>
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+	</PropertyGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="MS.Microservice.Core.Tests"/>
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Entity\**" />
+		<Compile Remove="EventEntity\**" />
+		<Compile Remove="Repository\**" />
+		<EmbeddedResource Remove="Entity\**" />
+		<EmbeddedResource Remove="EventEntity\**" />
+		<EmbeddedResource Remove="Repository\**" />
+		<None Remove="Entity\**" />
+		<None Remove="EventEntity\**" />
+		<None Remove="Repository\**" />
+	</ItemGroup>
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+	</ItemGroup>
 </Project>

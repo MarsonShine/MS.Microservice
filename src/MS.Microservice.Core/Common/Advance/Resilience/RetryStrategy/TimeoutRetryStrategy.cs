@@ -9,14 +9,13 @@ namespace MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy
     {
         private readonly TimeSpan _timeout = timeout;
         private readonly TimeSpan _delay = delay == default ? TimeSpan.FromSeconds(1) : delay;
-        private readonly DateTime _startTime = DateTime.UtcNow;
 
-        public bool ShouldRetry(int attempt, Exception? exception)
+        public bool ShouldRetry(RetryContext context)
         {
-            return DateTime.UtcNow - _startTime < _timeout;
+            return context.TotalElapsed < _timeout;
         }
 
-        public TimeSpan GetDelay(int attempt, Exception? exception)
+        public TimeSpan GetDelay(RetryContext context)
         {
             return _delay;
         }

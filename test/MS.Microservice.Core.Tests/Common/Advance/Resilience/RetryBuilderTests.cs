@@ -325,9 +325,9 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
         {
             private readonly int _maxRetries = maxRetries;
 
-            public TimeSpan GetDelay(int attempt, Exception? exception) => TimeSpan.FromMilliseconds(10);
+            public TimeSpan GetDelay(RetryContext context) => TimeSpan.FromMilliseconds(10);
 
-            public bool ShouldRetry(int attempt, Exception? exception) => attempt <= _maxRetries;
+            public bool ShouldRetry(RetryContext context) => context.Attempt <= _maxRetries;
         }
 
         private class MockRetryCondition(bool shouldRetry) : IRetryCondition

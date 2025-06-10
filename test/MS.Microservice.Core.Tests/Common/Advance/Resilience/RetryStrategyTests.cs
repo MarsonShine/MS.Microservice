@@ -1,4 +1,5 @@
-﻿using MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy;
+﻿using MS.Microservice.Core.Common.Advance.Resilience;
+using MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy;
 using System;
 
 namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
@@ -12,10 +13,11 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new FixedCountRetryStrategy(3, TimeSpan.FromMilliseconds(100));
 
             // Act & Assert
-            Assert.True(strategy.ShouldRetry(1, null));
-            Assert.True(strategy.ShouldRetry(2, null));
-            Assert.True(strategy.ShouldRetry(3, null));
-            Assert.False(strategy.ShouldRetry(4, null));
+            var context = new RetryContext();
+            Assert.True(strategy.ShouldRetry(context));
+            Assert.True(strategy.ShouldRetry(new RetryContext { Attempt = 2 }));
+            Assert.True(strategy.ShouldRetry(new RetryContext { Attempt = 3 }));
+            Assert.False(strategy.ShouldRetry(new RetryContext { Attempt = 4 }));
         }
 
         [Fact]
@@ -26,9 +28,10 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new FixedCountRetryStrategy(3, expectedDelay);
 
             // Act & Assert
-            Assert.Equal(expectedDelay, strategy.GetDelay(1, null));
-            Assert.Equal(expectedDelay, strategy.GetDelay(2, null));
-            Assert.Equal(expectedDelay, strategy.GetDelay(3, null));
+            var context = new RetryContext();
+            Assert.Equal(expectedDelay, strategy.GetDelay(context));
+            Assert.Equal(expectedDelay, strategy.GetDelay(new RetryContext { Attempt = 2 }));
+            Assert.Equal(expectedDelay, strategy.GetDelay(new RetryContext { Attempt = 3 }));
         }
 
         [Fact]
@@ -38,10 +41,10 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new ExponentialBackoffRetryStrategy(3, TimeSpan.FromMilliseconds(100));
 
             // Act & Assert
-            Assert.True(strategy.ShouldRetry(1, null));
-            Assert.True(strategy.ShouldRetry(2, null));
-            Assert.True(strategy.ShouldRetry(3, null));
-            Assert.False(strategy.ShouldRetry(4, null));
+            Assert.True(strategy.ShouldRetry(new RetryContext { Attempt = 1 }));
+            Assert.True(strategy.ShouldRetry(new RetryContext { Attempt = 2 }));
+            Assert.True(strategy.ShouldRetry(new RetryContext { Attempt = 3 }));
+            Assert.False(strategy.ShouldRetry(new RetryContext { Attempt = 4 }));
         }
 
         [Fact]
@@ -52,9 +55,9 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new ExponentialBackoffRetryStrategy(3, baseDelay, 2.0);
 
             // Act & Assert
-            Assert.Equal(TimeSpan.FromMilliseconds(100), strategy.GetDelay(1, null));
-            Assert.Equal(TimeSpan.FromMilliseconds(200), strategy.GetDelay(2, null));
-            Assert.Equal(TimeSpan.FromMilliseconds(400), strategy.GetDelay(3, null));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), strategy.GetDelay(new RetryContext { Attempt = 1 }));
+            Assert.Equal(TimeSpan.FromMilliseconds(200), strategy.GetDelay(new RetryContext { Attempt = 2 }));
+            Assert.Equal(TimeSpan.FromMilliseconds(400), strategy.GetDelay(new RetryContext { Attempt = 3 }));
         }
 
         [Fact]
@@ -66,9 +69,9 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new ExponentialBackoffRetryStrategy(3, baseDelay, 2.0, maxDelay);
 
             // Act & Assert
-            Assert.Equal(TimeSpan.FromMilliseconds(100), strategy.GetDelay(1, null));
-            Assert.Equal(TimeSpan.FromMilliseconds(150), strategy.GetDelay(2, null));
-            Assert.Equal(TimeSpan.FromMilliseconds(150), strategy.GetDelay(3, null));
+            Assert.Equal(TimeSpan.FromMilliseconds(100), strategy.GetDelay(new RetryContext { Attempt = 1 }));
+            Assert.Equal(TimeSpan.FromMilliseconds(150), strategy.GetDelay(new RetryContext { Attempt = 2 }));
+            Assert.Equal(TimeSpan.FromMilliseconds(150), strategy.GetDelay(new RetryContext { Attempt = 3 }));
         }
 
         [Fact]
@@ -78,7 +81,7 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new TimeoutRetryStrategy(TimeSpan.FromSeconds(60), TimeSpan.FromMilliseconds(100));
 
             // Act & Assert
-            Assert.True(strategy.ShouldRetry(1, null));
+            Assert.True(strategy.ShouldRetry(new RetryContext { Attempt = 1 }));
         }
 
         [Fact]
@@ -89,8 +92,8 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             var strategy = new TimeoutRetryStrategy(TimeSpan.FromSeconds(60), expectedDelay);
 
             // Act & Assert
-            Assert.Equal(expectedDelay, strategy.GetDelay(1, null));
-            Assert.Equal(expectedDelay, strategy.GetDelay(10, null));
+            Assert.Equal(expectedDelay, strategy.GetDelay(new RetryContext { Attempt = 1 }));
+            Assert.Equal(expectedDelay, strategy.GetDelay(new RetryContext { Attempt = 10 }));
         }
     }
 }
