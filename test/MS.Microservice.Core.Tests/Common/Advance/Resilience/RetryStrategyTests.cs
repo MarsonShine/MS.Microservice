@@ -94,6 +94,7 @@ namespace MS.Microservice.Core.Tests.Common.Advance.Resilience
             // Act & Assert
             Assert.Equal(expectedDelay, strategy.GetDelay(new RetryContext { Attempt = 1 }));
             Assert.Equal(expectedDelay, strategy.GetDelay(new RetryContext { Attempt = 10 }));
+            // test
         }
     }
 }
