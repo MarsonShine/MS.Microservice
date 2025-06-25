@@ -24,6 +24,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="NAudio" />
+    <PackageReference Include="NAudio.Lame" />
     <PackageReference Include="NPOI" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" />
