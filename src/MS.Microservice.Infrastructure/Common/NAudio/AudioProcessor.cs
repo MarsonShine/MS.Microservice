@@ -1,4 +1,5 @@
-﻿using NAudio.Lame;
+﻿using Microsoft.AspNetCore.Components.Forms;
+using NAudio.Lame;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
@@ -244,7 +245,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
             foreach (var file in inputFiles)
             {
-                using var mp3Reader = new Mp3FileReader(file);
+                var mp3Reader = CreateAudioReader(file);
                 using var resampler = new MediaFoundationResampler(mp3Reader, targetFormat)
                 {
                     ResamplerQuality = options.ResamplerQuality
@@ -259,13 +260,43 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             }
         }
 
+        private static IWaveProvider CreateAudioReader(string filePath)
+        {
+            try
+            {
+                var actualFormat = AudioFileFormatDetector.DetectActualFormat(filePath);
+                var extensionFormat = GetInputFormat(filePath);
+                // 如果格式不匹配,记录警告并使用实际格式
+                if (actualFormat != extensionFormat && extensionFormat != AudioFormat.Auto)
+                {
+                    Console.WriteLine($"警告: 文件 {filePath} 的扩展名为 {Path.GetExtension(filePath)}, " +
+                                     $"但实际格式为 {actualFormat}");
+                }
+                return CreateAudioReader(filePath, actualFormat);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("sample rate changes"))
+            {
+                // 尝试使用MediaFoundationReader作为备用
+                try
+                {
+                    return new MediaFoundationReader(filePath);
+                }
+                catch (Exception mediaEx)
+                {
+                    throw new InvalidOperationException(
+                        $"无法读取MP3文件 {filePath}。该文件可能包含不一致的采样率或已损坏。" +
+                        $"原始错误: {ex.Message}. MediaFoundation备用方案也失败: {mediaEx.Message}", ex);
+                }
+            }
+        }
+
         private static void CombineWavFiles(string[] inputFiles, string outputFile, WaveFormat targetFormat, AudioCombineOptions options)
         {
             using var waveWriter = new WaveFileWriter(outputFile, targetFormat);
 
             foreach (var file in inputFiles)
             {
-                using var reader = new AudioFileReader(file);
+                var reader = CreateAudioReader(file);
 
                 if (!reader.WaveFormat.Equals(targetFormat))
                 {
