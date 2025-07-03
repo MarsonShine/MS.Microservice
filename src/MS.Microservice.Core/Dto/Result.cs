@@ -1,10 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MS.Microservice.Core.Dto
 {
@@ -30,7 +25,7 @@ namespace MS.Microservice.Core.Dto
 		[MemberNotNullWhen(false, nameof(_error))]
 		public bool IsSuccess { get; private set; }
 		// https://github.com/dotnet/csharplang/blob/main/proposals/TypeUnions.md
-		public Result<TReturn> Switch<TReturn>(Func<T, TReturn> onSuccess, Func<Exception, Exception> onFailure)
+		public Result<TReturn> Switch<TReturn>(Func<T, TReturn> onSuccess, Func<T, Exception> onFailure)
 		{
 			if (IsSuccess)
 			{
@@ -38,7 +33,7 @@ namespace MS.Microservice.Core.Dto
 			}
 			else
 			{
-				var err = onFailure(_error);
+				var err = onFailure(_value!);
 				return Result<TReturn>.Fail(err);
 			}
 		}
