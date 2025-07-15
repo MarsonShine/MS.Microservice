@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/docs/" />
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
+    <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <Project Path="src/MS.Microservice.Domain/MS.Microservice.Domain.csproj" />
+    <Project Path="src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj" />
+    <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
+    <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Infrastructure.Tests/MS.Microservice.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
