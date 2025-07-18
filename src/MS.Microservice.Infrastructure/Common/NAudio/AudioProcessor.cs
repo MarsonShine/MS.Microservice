@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Forms;
-using NAudio.Lame;
+﻿using NAudio.Lame;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
@@ -27,30 +26,147 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 throw new ArgumentException("输入文件列表不能为空", nameof(inputFiles));
 
             ValidateInputFiles(files);
-            EnsureOutputDirectory(outputFile);
 
-            await Task.Run(() =>
+            // 将文件路径转换为流源
+            var streamSources = files.Select(file => new FileStreamSource(file)).ToArray();
+
+            try
             {
                 if (options.SortByFileName)
                 {
-                    files = files.OrderBy(f => new FileInfo(f).Name).ToArray();
+                    streamSources = streamSources.OrderBy(s => new FileInfo(s.SourcePath).Name).ToArray();
                 }
 
-                var outputFormat = GetOutputFormat(outputFile);
-                var targetFormat = options.TargetFormat ?? new WaveFormat(44100, 16, 2);
-
-                switch (outputFormat)
+                await CombineAudioSourcesAsync(streamSources, outputFile, options);
+            }
+            finally
+            {
+                foreach (var source in streamSources)
                 {
-                    case AudioFormat.Mp3:
-                        CombineMp3Files(files, outputFile, targetFormat, options);
-                        break;
-                    case AudioFormat.Wav:
-                        CombineWavFiles(files, outputFile, targetFormat, options);
-                        break;
-                    default:
-                        throw new NotSupportedException($"不支持的输出格式: {outputFormat}");
+                    source.Dispose();
                 }
-            });
+            }
+        }
+
+        /// <summary>
+        /// 合并多个音频流为一个文件
+        /// </summary>
+        public async ValueTask CombineAudioStreamsAsync(IEnumerable<Stream> inputStreams, string outputFile, AudioCombineOptions? options = null)
+        {
+            options ??= new AudioCombineOptions();
+            var streams = inputStreams.ToArray();
+
+            if (streams.Length == 0)
+                throw new ArgumentException("输入流列表不能为空", nameof(inputStreams));
+
+            // 将流转换为流源
+            var streamSources = streams.Select(stream => new StreamSource(stream)).ToArray();
+
+            try
+            {
+                await CombineAudioSourcesAsync(streamSources, outputFile, options);
+            }
+            finally
+            {
+                foreach (var source in streamSources)
+                {
+                    source.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合并多个音频流并返回结果流
+        /// </summary>
+        public async ValueTask<Stream> CombineAudioStreamsAsync(IEnumerable<Stream> inputStreams, AudioFormat outputFormat, AudioCombineOptions? options = null)
+        {
+            options ??= new AudioCombineOptions();
+            var streams = inputStreams.ToArray();
+
+            if (streams.Length == 0)
+                throw new ArgumentException("输入流列表不能为空", nameof(inputStreams));
+
+            var outputStream = new MemoryStream();
+
+            // 将流转换为流源
+            var streamSources = streams.Select(stream => new StreamSource(stream)).ToArray();
+
+            try
+            {
+                await CombineAudioSourcesAsync(streamSources, outputStream, outputFormat, options);
+                outputStream.Position = 0;
+                return outputStream;
+            }
+            catch
+            {
+                outputStream.Dispose();
+                throw;
+            }
+            finally
+            {
+                foreach (var source in streamSources)
+                {
+                    source.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合并多个音频字节数组为一个文件
+        /// </summary>
+        public async ValueTask CombineAudioDataAsync(IEnumerable<byte[]> inputAudioData, string outputFile, AudioCombineOptions? options = null)
+        {
+            options ??= new AudioCombineOptions();
+            var audioDataArray = inputAudioData.ToArray();
+
+            if (audioDataArray.Length == 0)
+                throw new ArgumentException("输入音频数据列表不能为空", nameof(inputAudioData));
+
+            // 将字节数组转换为流源
+            var streamSources = audioDataArray.Select(data => new StreamSource(new MemoryStream(data))).ToArray();
+
+            try
+            {
+                await CombineAudioSourcesAsync(streamSources, outputFile, options);
+            }
+            finally
+            {
+                foreach (var source in streamSources)
+                {
+                    source.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合并多个音频字节数组并返回结果字节数组
+        /// </summary>
+        public async ValueTask<byte[]> CombineAudioDataAsync(IEnumerable<byte[]> inputAudioData, AudioFormat outputFormat, AudioCombineOptions? options = null)
+        {
+            options ??= new AudioCombineOptions();
+            var audioDataArray = inputAudioData.ToArray();
+
+            if (audioDataArray.Length == 0)
+                throw new ArgumentException("输入音频数据列表不能为空", nameof(inputAudioData));
+
+            var outputStream = new MemoryStream();
+
+            // 将字节数组转换为流源
+            var streamSources = audioDataArray.Select(data => new StreamSource(new MemoryStream(data))).ToArray();
+
+            try
+            {
+                await CombineAudioSourcesAsync(streamSources, outputStream, outputFormat, options);
+                return outputStream.ToArray();
+            }
+            finally
+            {
+                outputStream.Dispose();
+                foreach (var source in streamSources)
+                {
+                    source.Dispose();
+                }
+            }
         }
 
         /// <summary>
@@ -86,17 +202,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                         mixer.AddMixerInput(sampleProvider);
                     }
 
-                    switch (outputFormat)
-                    {
-                        case AudioFormat.Mp3:
-                            WriteMixedAudioToMp3(mixer, outputFile, targetFormat, options);
-                            break;
-                        case AudioFormat.Wav:
-                            WriteMixedAudioToWav(mixer, outputFile, options);
-                            break;
-                        default:
-                            throw new NotSupportedException($"不支持的输出格式: {outputFormat}");
-                    }
+                    WriteAudioToFile(mixer, outputFile, outputFormat, targetFormat, options);
                 }
                 finally
                 {
@@ -181,6 +287,238 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             });
         }
 
+        #region Core Combine Methods (DRY Implementation)
+
+        /// <summary>
+        /// 核心合并方法 - 合并音频源到文件
+        /// </summary>
+        private async ValueTask CombineAudioSourcesAsync(IAudioSource[] sources, string outputFile, AudioCombineOptions options)
+        {
+            EnsureOutputDirectory(outputFile);
+
+            await Task.Run(() =>
+            {
+                var outputFormat = GetOutputFormat(outputFile);
+                var targetFormat = options.TargetFormat ?? new WaveFormat(44100, 16, 2);
+
+                CombineAudioSources(sources, outputFile, outputFormat, targetFormat, options);
+            });
+        }
+
+        /// <summary>
+        /// 核心合并方法 - 合并音频源到流
+        /// </summary>
+        private async ValueTask CombineAudioSourcesAsync(IAudioSource[] sources, Stream outputStream, AudioFormat outputFormat, AudioCombineOptions options)
+        {
+            await Task.Run(() =>
+            {
+                var targetFormat = options.TargetFormat ?? new WaveFormat(44100, 16, 2);
+                CombineAudioSources(sources, outputStream, outputFormat, targetFormat, options);
+            });
+        }
+
+        /// <summary>
+        /// 核心合并逻辑 - 所有合并方法的基础实现
+        /// </summary>
+        private static void CombineAudioSources(IAudioSource[] sources, object output, AudioFormat outputFormat, WaveFormat targetFormat, AudioCombineOptions options)
+        {
+            switch (outputFormat)
+            {
+                case AudioFormat.Mp3:
+                    CombineAudioSourcesAsMp3(sources, output, targetFormat, options);
+                    break;
+                case AudioFormat.Wav:
+                    CombineAudioSourcesAsWav(sources, output, targetFormat, options);
+                    break;
+                default:
+                    throw new NotSupportedException($"不支持的输出格式: {outputFormat}");
+            }
+        }
+
+        /// <summary>
+        /// 将音频源合并为MP3格式
+        /// </summary>
+        private static void CombineAudioSourcesAsMp3(IAudioSource[] sources, object output, WaveFormat targetFormat, AudioCombineOptions options)
+        {
+            using var mp3Writer = CreateMp3Writer(output, targetFormat);
+
+            foreach (var source in sources)
+            {
+                var reader = source.CreateReader();
+                try
+                {
+                    using var resampler = new MediaFoundationResampler(reader, targetFormat)
+                    {
+                        ResamplerQuality = options.ResamplerQuality
+                    };
+
+                    CopyAudioDataToMp3(resampler, mp3Writer);
+
+                    if (options.SilenceDuration > 0)
+                    {
+                        WriteSilenceToMp3(mp3Writer, targetFormat, options.SilenceDuration);
+                    }
+                }
+                finally
+                {
+                    (reader as IDisposable)?.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 将音频源合并为WAV格式
+        /// </summary>
+        private static void CombineAudioSourcesAsWav(IAudioSource[] sources, object output, WaveFormat targetFormat, AudioCombineOptions options)
+        {
+            using var waveWriter = CreateWaveWriter(output, targetFormat);
+
+            foreach (var source in sources)
+            {
+                var reader = source.CreateReader();
+                try
+                {
+                    if (!reader.WaveFormat.Equals(targetFormat))
+                    {
+                        using var resampler = new MediaFoundationResampler(reader, targetFormat)
+                        {
+                            ResamplerQuality = options.ResamplerQuality
+                        };
+                        CopyAudioDataToWav(resampler, waveWriter);
+                    }
+                    else
+                    {
+                        CopyAudioDataToWav(reader, waveWriter);
+                    }
+
+                    if (options.SilenceDuration > 0)
+                    {
+                        WriteSilenceToWav(waveWriter, targetFormat, options.SilenceDuration);
+                    }
+                }
+                finally
+                {
+                    (reader as IDisposable)?.Dispose();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Factory Methods
+
+        /// <summary>
+        /// 创建MP3写入器
+        /// </summary>
+        private static LameMP3FileWriter CreateMp3Writer(object output, WaveFormat targetFormat)
+        {
+            return output switch
+            {
+                string filePath => new LameMP3FileWriter(filePath, targetFormat, LAMEPreset.STANDARD),
+                Stream stream => new LameMP3FileWriter(stream, targetFormat, LAMEPreset.STANDARD),
+                _ => throw new ArgumentException("不支持的输出类型", nameof(output))
+            };
+        }
+
+        /// <summary>
+        /// 创建WAV写入器
+        /// </summary>
+        private static WaveFileWriter CreateWaveWriter(object output, WaveFormat targetFormat)
+        {
+            return output switch
+            {
+                string filePath => new WaveFileWriter(filePath, targetFormat),
+                Stream stream => new WaveFileWriter(stream, targetFormat),
+                _ => throw new ArgumentException("不支持的输出类型", nameof(output))
+            };
+        }
+
+        #endregion
+
+        #region Audio Source Abstractions
+
+        /// <summary>
+        /// 音频源接口
+        /// </summary>
+        private interface IAudioSource : IDisposable
+        {
+            string SourcePath { get; }
+            IWaveProvider CreateReader();
+        }
+
+        /// <summary>
+        /// 文件流音频源
+        /// </summary>
+        private class FileStreamSource : IAudioSource
+        {
+            public string SourcePath { get; }
+
+            public FileStreamSource(string filePath)
+            {
+                SourcePath = filePath;
+            }
+
+            public IWaveProvider CreateReader()
+            {
+                return CreateAudioReader(SourcePath);
+            }
+
+            public void Dispose()
+            {
+                // 文件路径不需要显式释放
+            }
+        }
+
+        /// <summary>
+        /// 内存流音频源
+        /// </summary>
+        private class StreamSource : IAudioSource
+        {
+            private readonly Stream _stream;
+
+            public string SourcePath => "<Stream>";
+
+            public StreamSource(Stream stream)
+            {
+                _stream = stream;
+            }
+
+            public IWaveProvider CreateReader()
+            {
+                _stream.Position = 0;
+                return CreateAudioReaderFromStream(_stream);
+            }
+
+            public void Dispose()
+            {
+                _stream?.Dispose();
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// 写入音频到文件 - 统一混音输出方法
+        /// </summary>
+        private static void WriteAudioToFile(ISampleProvider mixer, string outputFile, AudioFormat outputFormat, WaveFormat targetFormat, AudioMixOptions options)
+        {
+            switch (outputFormat)
+            {
+                case AudioFormat.Mp3:
+                    WriteMixedAudioToMp3(mixer, outputFile, targetFormat, options);
+                    break;
+                case AudioFormat.Wav:
+                    WriteMixedAudioToWav(mixer, outputFile, options);
+                    break;
+                default:
+                    throw new NotSupportedException($"不支持的输出格式: {outputFormat}");
+            }
+        }
+
+        #endregion
+
         #region Private Methods
 
         private static void ValidateInputFiles(string[] files)
@@ -234,32 +572,6 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             };
         }
 
-        private static ISampleProvider ConvertToStereo(ISampleProvider input)
-        {
-            return input.WaveFormat.Channels == 2 ? input : new MonoToStereoSampleProvider(input);
-        }
-
-        private static void CombineMp3Files(string[] inputFiles, string outputFile, WaveFormat targetFormat, AudioCombineOptions options)
-        {
-            using var mp3Writer = new LameMP3FileWriter(outputFile, targetFormat, LAMEPreset.STANDARD);
-
-            foreach (var file in inputFiles)
-            {
-                var mp3Reader = CreateAudioReader(file);
-                using var resampler = new MediaFoundationResampler(mp3Reader, targetFormat)
-                {
-                    ResamplerQuality = options.ResamplerQuality
-                };
-
-                CopyAudioDataToMp3(resampler, mp3Writer);
-
-                if (options.SilenceDuration > 0)
-                {
-                    WriteSilenceToMp3(mp3Writer, targetFormat, options.SilenceDuration);
-                }
-            }
-        }
-
         private static IWaveProvider CreateAudioReader(string filePath)
         {
             try
@@ -290,32 +602,9 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             }
         }
 
-        private static void CombineWavFiles(string[] inputFiles, string outputFile, WaveFormat targetFormat, AudioCombineOptions options)
+        private static ISampleProvider ConvertToStereo(ISampleProvider input)
         {
-            using var waveWriter = new WaveFileWriter(outputFile, targetFormat);
-
-            foreach (var file in inputFiles)
-            {
-                var reader = CreateAudioReader(file);
-
-                if (!reader.WaveFormat.Equals(targetFormat))
-                {
-                    using var resampler = new MediaFoundationResampler(reader, targetFormat)
-                    {
-                        ResamplerQuality = options.ResamplerQuality
-                    };
-                    CopyAudioDataToWav(resampler, waveWriter);
-                }
-                else
-                {
-                    CopyAudioDataToWav(reader, waveWriter);
-                }
-
-                if (options.SilenceDuration > 0)
-                {
-                    WriteSilenceToWav(waveWriter, targetFormat, options.SilenceDuration);
-                }
-            }
+            return input.WaveFormat.Channels == 2 ? input : new MonoToStereoSampleProvider(input);
         }
 
         private static void WriteMixedAudioToMp3(ISampleProvider mixer, string outputFile, WaveFormat targetFormat, AudioMixOptions options)
@@ -419,6 +708,92 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             var silenceBuffer = new byte[totalSamples * bytesPerSample];
 
             output.Write(silenceBuffer, 0, silenceBuffer.Length);
+        }
+
+        private static IWaveProvider CreateAudioReaderFromStream(Stream stream)
+        {
+            try
+            {
+                // 检测流的格式
+                var format = AudioFileFormatDetector.DetectFormatFromStream(stream);
+                stream.Position = 0;
+
+                return format switch
+                {
+                    AudioFormat.Mp3 => new Mp3FileReader(stream),
+                    AudioFormat.Wav => new WaveFileReader(stream),
+                    _ => new StreamAudioFileReader(stream)
+                };
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("sample rate changes"))
+            {
+                // 对于有问题的MP3文件，尝试使用临时文件方案
+                try
+                {
+                    return new StreamAudioFileReader(stream);
+                }
+                catch (Exception mediaEx)
+                {
+                    throw new InvalidOperationException(
+                        $"无法读取音频流。该流可能包含不一致的采样率或已损坏。" +
+                        $"原始错误: {ex.Message}. 备用方案也失败: {mediaEx.Message}", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 支持从流读取的音频文件读取器包装器
+        /// </summary>
+        private class StreamAudioFileReader : IWaveProvider, IDisposable
+        {
+            private readonly string _tempFile;
+            private readonly AudioFileReader _innerReader;
+            private bool _disposed = false;
+
+            public StreamAudioFileReader(Stream stream)
+            {
+                _tempFile = Path.GetTempFileName();
+                try
+                {
+                    stream.Position = 0;
+                    using (var fileStream = new FileStream(_tempFile, FileMode.Create, FileAccess.Write))
+                    {
+                        stream.CopyTo(fileStream);
+                    }
+
+                    _innerReader = new AudioFileReader(_tempFile);
+                }
+                catch
+                {
+                    CleanupTempFile();
+                    throw;
+                }
+            }
+
+            public WaveFormat WaveFormat => _innerReader.WaveFormat;
+
+            public int Read(byte[] buffer, int offset, int count)
+            {
+                return _innerReader.Read(buffer, offset, count);
+            }
+
+            public void Dispose()
+            {
+                if (!_disposed)
+                {
+                    _innerReader?.Dispose();
+                    CleanupTempFile();
+                    _disposed = true;
+                }
+            }
+
+            private void CleanupTempFile()
+            {
+                if (File.Exists(_tempFile))
+                {
+                    try { File.Delete(_tempFile); } catch { }
+                }
+            }
         }
 
         #endregion

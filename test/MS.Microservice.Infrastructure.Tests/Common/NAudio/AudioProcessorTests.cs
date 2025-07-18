@@ -95,6 +95,8 @@ namespace MS.Microservice.Infrastructure.Tests.Common.NAudio
 
         #endregion
 
+
+
         #region CombineAudioFilesAsync 测试
 
         [Fact]
@@ -436,6 +438,328 @@ namespace MS.Microservice.Infrastructure.Tests.Common.NAudio
             // Act & Assert
             Assert.Throws<FileNotFoundException>(
                 () => AudioProcessorExtensions.GetAudioFileInfo(nonExistentFile));
+        }
+
+        #endregion
+
+        #region CombineAudioStreamsAsync 测试
+
+        [Fact]
+        public async Task CombineAudioStreamsAsync_WithValidStreamsToFile_ShouldCreateCombinedFile()
+        {
+            // Arrange
+            var inputStreams = new List<Stream>();
+            try
+            {
+                // 创建音频流
+                inputStreams.Add(new FileStream(Path.Combine(_testDataDirectory, "test1.wav"), FileMode.Open, FileAccess.Read));
+                inputStreams.Add(new FileStream(Path.Combine(_testDataDirectory, "test2.wav"), FileMode.Open, FileAccess.Read));
+
+                var outputFile = Path.Combine(_outputDirectory, "streams_combined.wav");
+                var options = new AudioCombineOptions
+                {
+                    TargetFormat = new WaveFormat(44100, 16, 2),
+                    SilenceDuration = 0.3f,
+                    ResamplerQuality = 60
+                };
+
+                // Act
+                await _audioProcessor.CombineAudioStreamsAsync(inputStreams, outputFile, options);
+
+                // Assert
+                Assert.True(File.Exists(outputFile));
+
+                using var reader = new WaveFileReader(outputFile);
+                Assert.Equal(44100, reader.WaveFormat.SampleRate);
+                Assert.Equal(2, reader.WaveFormat.Channels);
+                Assert.True(reader.TotalTime.TotalSeconds > 3.0); // 应该大于原始文件时长之和
+            }
+            finally
+            {
+                foreach (var stream in inputStreams)
+                {
+                    stream?.Dispose();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CombineAudioStreamsAsync_WithValidStreamsToStream_ShouldReturnCombinedStream()
+        {
+            // Arrange
+            var inputStreams = new List<Stream>();
+            try
+            {
+                // 创建音频流
+                inputStreams.Add(new FileStream(Path.Combine(_testDataDirectory, "test1.wav"), FileMode.Open, FileAccess.Read));
+                inputStreams.Add(new FileStream(Path.Combine(_testDataDirectory, "test2.wav"), FileMode.Open, FileAccess.Read));
+
+                var outputFormat = AudioFormat.Wav;
+                var options = new AudioCombineOptions
+                {
+                    TargetFormat = new WaveFormat(44100, 16, 2),
+                    SilenceDuration = 0.2f
+                };
+
+                // Act
+                var resultStream = await _audioProcessor.CombineAudioStreamsAsync(inputStreams, outputFormat, options);
+
+                // Assert
+                Assert.NotNull(resultStream);
+                Assert.True(resultStream.Length > 0);
+                Assert.Equal(0, resultStream.Position); // 应该重置到开始位置
+
+                // 验证流内容是否为有效的WAV文件
+                using var reader = new WaveFileReader(resultStream);
+                Assert.Equal(44100, reader.WaveFormat.SampleRate);
+                Assert.Equal(2, reader.WaveFormat.Channels);
+                Assert.True(reader.TotalTime.TotalSeconds > 3.0);
+
+                resultStream.Dispose();
+            }
+            finally
+            {
+                foreach (var stream in inputStreams)
+                {
+                    stream?.Dispose();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CombineAudioStreamsAsync_WithEmptyStreams_ShouldThrowArgumentException()
+        {
+            // Arrange
+            var emptyStreams = Array.Empty<Stream>();
+            var outputFile = Path.Combine(_outputDirectory, "empty_streams.wav");
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentException>(
+                async () => await _audioProcessor.CombineAudioStreamsAsync(emptyStreams, outputFile));
+
+            Assert.Equal("inputStreams", exception.ParamName);
+        }
+
+        [Fact]
+        public async Task CombineAudioStreamsAsync_WithNullOptions_ShouldUseDefaultOptions()
+        {
+            // Arrange
+            var inputStreams = new List<Stream>();
+            try
+            {
+                inputStreams.Add(new FileStream(Path.Combine(_testDataDirectory, "test1.wav"), FileMode.Open, FileAccess.Read));
+                var outputFile = Path.Combine(_outputDirectory, "streams_combined_default.wav");
+
+                // Act
+                await _audioProcessor.CombineAudioStreamsAsync(inputStreams, outputFile, null);
+
+                // Assert
+                Assert.True(File.Exists(outputFile));
+            }
+            finally
+            {
+                foreach (var stream in inputStreams)
+                {
+                    stream?.Dispose();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CombineAudioStreamsAsync_WithMemoryStreams_ShouldHandleCorrectly()
+        {
+            // Arrange
+            var inputStreams = new List<Stream>();
+            try
+            {
+                // 读取文件到内存流
+                var file1Data = await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test1.wav"));
+                var file2Data = await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test2.wav"));
+
+                inputStreams.Add(new MemoryStream(file1Data));
+                inputStreams.Add(new MemoryStream(file2Data));
+
+                var outputFile = Path.Combine(_outputDirectory, "memory_streams_combined.wav");
+                var options = new AudioCombineOptions
+                {
+                    TargetFormat = new WaveFormat(44100, 16, 2)
+                };
+
+                // Act
+                await _audioProcessor.CombineAudioStreamsAsync(inputStreams, outputFile, options);
+
+                // Assert
+                Assert.True(File.Exists(outputFile));
+
+                using var reader = new WaveFileReader(outputFile);
+                Assert.Equal(44100, reader.WaveFormat.SampleRate);
+                Assert.Equal(2, reader.WaveFormat.Channels);
+            }
+            finally
+            {
+                foreach (var stream in inputStreams)
+                {
+                    stream?.Dispose();
+                }
+            }
+        }
+
+        #endregion
+
+        #region CombineAudioDataAsync 测试
+
+        [Fact]
+        public async Task CombineAudioDataAsync_WithValidDataToFile_ShouldCreateCombinedFile()
+        {
+            // Arrange
+            var audioData = new List<byte[]>
+            {
+                await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test1.wav")),
+                await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test2.wav"))
+            };
+
+            var outputFile = Path.Combine(_outputDirectory, "data_combined.wav");
+            var options = new AudioCombineOptions
+            {
+                TargetFormat = new WaveFormat(44100, 16, 2),
+                SilenceDuration = 0.4f,
+                ResamplerQuality = 60
+            };
+
+            // Act
+            await _audioProcessor.CombineAudioDataAsync(audioData, outputFile, options);
+
+            // Assert
+            Assert.True(File.Exists(outputFile));
+
+            using var reader = new WaveFileReader(outputFile);
+            Assert.Equal(44100, reader.WaveFormat.SampleRate);
+            Assert.Equal(2, reader.WaveFormat.Channels);
+            Assert.True(reader.TotalTime.TotalSeconds > 3.0); // 应该大于原始文件时长之和
+        }
+
+        [Fact]
+        public async Task CombineAudioDataAsync_WithValidDataToByteArray_ShouldReturnCombinedData()
+        {
+            // Arrange
+            var audioData = new List<byte[]>
+            {
+                await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test1.wav")),
+                await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test2.wav"))
+            };
+
+            var outputFormat = AudioFormat.Wav;
+            var options = new AudioCombineOptions
+            {
+                TargetFormat = new WaveFormat(44100, 16, 2),
+                SilenceDuration = 0.3f
+            };
+
+            // Act
+            var resultData = await _audioProcessor.CombineAudioDataAsync(audioData, outputFormat, options);
+
+            // Assert
+            Assert.NotNull(resultData);
+            Assert.True(resultData.Length > 0);
+
+            // 验证结果数据是否为有效的WAV文件
+            using var resultStream = new MemoryStream(resultData);
+            using var reader = new WaveFileReader(resultStream);
+            Assert.Equal(44100, reader.WaveFormat.SampleRate);
+            Assert.Equal(2, reader.WaveFormat.Channels);
+            Assert.True(reader.TotalTime.TotalSeconds > 3.0);
+        }
+
+        [Fact]
+        public async Task CombineAudioDataAsync_WithEmptyData_ShouldThrowArgumentException()
+        {
+            // Arrange
+            var emptyData = Array.Empty<byte[]>();
+            var outputFile = Path.Combine(_outputDirectory, "empty_data.wav");
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentException>(
+                async () => await _audioProcessor.CombineAudioDataAsync(emptyData, outputFile));
+
+            Assert.Equal("inputAudioData", exception.ParamName);
+        }
+
+        [Fact]
+        public async Task CombineAudioDataAsync_WithNullOptions_ShouldUseDefaultOptions()
+        {
+            // Arrange
+            var audioData = new List<byte[]>
+            {
+                await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test1.wav"))
+            };
+            var outputFile = Path.Combine(_outputDirectory, "data_combined_default.wav");
+
+            // Act
+            await _audioProcessor.CombineAudioDataAsync(audioData, outputFile, null);
+
+            // Assert
+            Assert.True(File.Exists(outputFile));
+        }
+
+        [Fact]
+        public async Task CombineAudioDataAsync_WithSingleFile_ShouldProcessCorrectly()
+        {
+            // Arrange
+            var audioData = new List<byte[]>
+            {
+                await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test1.wav"))
+            };
+
+            var outputFormat = AudioFormat.Wav;
+            var options = new AudioCombineOptions
+            {
+                TargetFormat = new WaveFormat(44100, 16, 2)
+            };
+
+            // Act
+            var resultData = await _audioProcessor.CombineAudioDataAsync(audioData, outputFormat, options);
+
+            // Assert
+            Assert.NotNull(resultData);
+            Assert.True(resultData.Length > 0);
+
+            // 验证结果数据
+            using var resultStream = new MemoryStream(resultData);
+            using var reader = new WaveFileReader(resultStream);
+            Assert.Equal(44100, reader.WaveFormat.SampleRate);
+            Assert.Equal(2, reader.WaveFormat.Channels);
+        }
+
+        [Fact]
+        public async Task CombineAudioDataAsync_WithMultipleIdenticalFiles_ShouldHandleCorrectly()
+        {
+            // Arrange
+            var originalData = await File.ReadAllBytesAsync(Path.Combine(_testDataDirectory, "test1.wav"));
+            var audioData = new List<byte[]>
+            {
+                originalData,
+                originalData,
+                originalData
+            };
+
+            var outputFile = Path.Combine(_outputDirectory, "identical_data_combined.wav");
+            var options = new AudioCombineOptions
+            {
+                TargetFormat = new WaveFormat(44100, 16, 2),
+                SilenceDuration = 0.1f
+            };
+
+            // Act
+            await _audioProcessor.CombineAudioDataAsync(audioData, outputFile, options);
+
+            // Assert
+            Assert.True(File.Exists(outputFile));
+
+            using var reader = new WaveFileReader(outputFile);
+            Assert.Equal(44100, reader.WaveFormat.SampleRate);
+            Assert.Equal(2, reader.WaveFormat.Channels);
+            // 3个2秒文件 + 2个0.1秒间隔 = 约6.2秒
+            Assert.True(reader.TotalTime.TotalSeconds > 6.0);
         }
 
         #endregion
