@@ -1,4 +1,5 @@
-﻿using MS.Microservice.Core.Domain.Entity.Enums;
+﻿using Microsoft.EntityFrameworkCore.Internal;
+using MS.Microservice.Core.Domain.Entity.Enums;
 using MS.Microservice.Core.Domain.Repository;
 using MS.Microservice.Core.Domain.Repository.SqlSugar;
 using MS.Microservice.Core.Dto;
@@ -13,17 +14,13 @@ using System.Threading.Tasks;
 
 namespace MS.Microservice.Infrastructure.DbContext
 {
-	public abstract class SqlSugarDbContext<TEntity> : IRepositoryBase<TEntity>, ISqlSugarUnitOfWork
+	public abstract class SqlSugarDbContext<TEntity>(Func<ISqlSugarClient> clientFactory) : IRepositoryBase<TEntity>, ISqlSugarUnitOfWork
 		where TEntity : class, new()
 	{
-		public SqlSugarDbContext(ISqlSugarClient sqlSugarClient)
-		{
-			Db = sqlSugarClient;
-		}
+        private readonly Lazy<ISqlSugarClient> _lazyDb = new(clientFactory);
 
-
-		[NotNull]
-		public ISqlSugarClient Db { get; }//用来处理事务多表查询和复杂的操作
+        [NotNull]
+		public ISqlSugarClient Db => _lazyDb.Value;//用来处理事务多表查询和复杂的操作
 
 		/// <summary>
 		/// 判断是否存在

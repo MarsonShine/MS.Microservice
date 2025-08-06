@@ -104,6 +104,7 @@ namespace Microsoft.Extension.DependencyInjection
 			services.Configure<SqlSugarOptions>(configuration);
 			services.Configure<ShardingOptions>(configuration);
 			services.AddTransient<IUserHashSplitSqlSugarClientFactory, UserHashSplitSqlSugarClientFactory>();
+			services.AddTransient<IUserSpecificSqlSugarClientProvider, UserSpecificSqlSugarClientProvider>();
 		}
 
 		private static void UserEntityConfiguration(EntityColumnInfo entity)
