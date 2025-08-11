@@ -3,7 +3,7 @@
 		<OutputType>Library</OutputType>
 	</PropertyGroup>
 	<ItemGroup>
-		<InternalsVisibleTo Include="MS.Microservice.Core.Tests"/>
+		<InternalsVisibleTo Include="MS.Microservice.Core.Tests" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="Entity\**" />

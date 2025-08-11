@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.System.Collection;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -73,5 +74,55 @@ namespace MS.Microservice.Core.Extension
 		}
 
 		public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> source) => source.ToArray().Shuffle();
-	}
+
+        public static IEnumerable<T> Flatten<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>?> childrenSelector)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(childrenSelector);
+
+            return FlattenInternal(source, childrenSelector);
+        }
+
+        private static IEnumerable<T> FlattenInternal<T>(IEnumerable<T> source, Func<T, IEnumerable<T>?> childrenSelector)
+        {
+            var disposables = new Stack<IEnumerator<T>>(); // 可以用 DisposableStack<T> 简化代码
+            var current = source.GetEnumerator();
+
+            try
+            {
+                while (true)
+                {
+                    if (current.MoveNext())
+                    {
+                        var item = current.Current;
+                        yield return item;
+
+                        var children = childrenSelector(item);
+                        if (children != null)
+                        {
+                            disposables.Push(current);
+                            current = children.GetEnumerator();
+                        }
+                    }
+                    else if (disposables.TryPop(out var parent))
+                    {
+                        current.Dispose();
+                        current = parent;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                current.Dispose();
+                while (disposables.TryPop(out var enumerator))
+                {
+                    enumerator.Dispose();
+                }
+            }
+        }
+    }
 }
