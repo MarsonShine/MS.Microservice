@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace MS.Microservice.Infrastructure.Utils
@@ -16,51 +17,82 @@ namespace MS.Microservice.Infrastructure.Utils
     /// </summary>
     public class ExcelHelper : IExcelImport, IExcelExport, IDisposable
     {
-        private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> _typeColumnMapCache
-            = [];
-        private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _typePropsCache = [];
+        // 类型级别的强缓存：包含已排序列定义、已编译 Getter/Setter、构造委托等（与具体 sheet 无关）
+        private static readonly ConcurrentDictionary<Type, TypeMeta> _typeMetaCache = [];
+        // 当前实例针对选中 sheet 的列映射（与 sheet 的标题行有关）
+        private readonly Dictionary<PropertyInfo, int> _columnMap = [];
 
         private IWorkbook? _workbook = null;
         private ISheet? _sheet = null;
-        private readonly Dictionary<PropertyInfo, int> _columnMap = [];
+        private ColumnMeta[]? _activeColumns;// 本次实际匹配到的列（按声明顺序，便于顺序遍历）
+
         private int _titleRowIndex = -1, _contentRowIndex = -1;
         private int _sheetIndex = 0;
         private string? _sheetName;
 
         #region Export
-
         public byte[] Export<T>(List<T> source, string sheetName)
         {
             ArgumentNullException.ThrowIfNull(source);
             if (string.IsNullOrWhiteSpace(sheetName)) throw new ArgumentNullException(nameof(sheetName));
 
-            var wb = new XSSFWorkbook();
+            var meta = GetTypeMeta(typeof(T));
+
+            using var wb = new XSSFWorkbook();
             var sheet = wb.CreateSheet(sheetName);
 
-            // 取带有 ExcelColumnAttribute 的属性，并按 Order 排序
-            var props = typeof(T)
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.IsDefined(typeof(ExcelColumnAttribute), false))
-                .OrderBy(p => p.GetCustomAttribute<ExcelColumnAttribute>()!.Order)
-                .ToArray();
+            // 预创建常用样式（日期样式）
+            var dateStyle = wb.CreateCellStyle();
+            var dataFormat = wb.CreateDataFormat();
+            dateStyle.DataFormat = dataFormat.GetFormat("yyyy-mm-dd HH:mm:ss");
 
             // 标题行
             var titleRow = sheet.CreateRow(0);
-            for (int i = 0; i < props.Length; i++)
+            for (int i = 0; i < meta.Columns.Length; i++)
             {
-                var attr = props[i].GetCustomAttribute<ExcelColumnAttribute>()!;
-                titleRow.CreateCell(i).SetCellValue(attr.Name!);
+                titleRow.CreateCell(i).SetCellValue(meta.Columns[i].Title);
             }
 
-            // 内容行
+            // 内容行（使用已编译的 Getter，避免反射 GetValue；使用强类型 SetCellValue，避免字符串中转）
             for (int r = 0; r < source.Count; r++)
             {
                 var row = sheet.CreateRow(r + 1);
                 var item = source[r];
-                for (int c = 0; c < props.Length; c++)
+
+                for (int c = 0; c < meta.Columns.Length; c++)
                 {
-                    var val = props[c].GetValue(item)?.ToString() ?? string.Empty;
-                    row.CreateCell(c).SetCellValue(val);
+                    var col = meta.Columns[c];
+                    var val = col.Getter(item!);
+
+                    if (val is null)
+                    {
+                        row.CreateCell(c).SetCellValue(string.Empty);
+                        continue;
+                    }
+
+                    var cell = row.CreateCell(c);
+                    switch (val)
+                    {
+                        case string s: cell.SetCellValue(s); break;
+                        case DateTime dt: 
+                            cell.SetCellValue(dt); 
+                            cell.CellStyle = dateStyle;
+                            break;
+                        case bool b: cell.SetCellValue(b); break;
+                        case double d: cell.SetCellValue(d); break;
+                        case float f: cell.SetCellValue(f); break;
+                        case decimal m: cell.SetCellValue((double)m); break;
+                        case int i32: cell.SetCellValue(i32); break;
+                        case long i64: cell.SetCellValue((double)i64); break;
+                        case short i16: cell.SetCellValue(i16); break;
+                        case byte u8: cell.SetCellValue(u8); break;
+                        case sbyte s8: cell.SetCellValue((double)s8); break;
+                        case uint u32: cell.SetCellValue(u32); break;
+                        case ulong u64: cell.SetCellValue((double)u64); break;
+                        case ushort u16: cell.SetCellValue(u16); break;
+                        case Enum e: cell.SetCellValue(e.ToString()); break;
+                        default: cell.SetCellValue(val.ToString()); break;
+                    }
                 }
             }
 
@@ -68,11 +100,9 @@ namespace MS.Microservice.Infrastructure.Utils
             wb.Write(ms);
             return ms.ToArray();
         }
-
         #endregion
 
         #region Import
-
         public ExcelHelper InitSheetIndex(int sheetIndex)
         {
             _sheetIndex = sheetIndex;
@@ -95,7 +125,7 @@ namespace MS.Microservice.Infrastructure.Utils
         }
 
         public List<T> Import<T>(byte[] data)
-            => Import<T>(Path.GetExtension("dummy" + Guid.NewGuid()) ?? ".xlsx", new MemoryStream(data));
+            => Import<T>(".xlsx", new MemoryStream(data));
 
         public List<T> Import<T>(string fileName, byte[] data)
             => Import<T>(fileName, new MemoryStream(data));
@@ -117,97 +147,78 @@ namespace MS.Microservice.Infrastructure.Utils
                 ? _workbook.GetSheet(_sheetName!) ?? throw new ArgumentException($"不存在名为 \"{_sheetName}\" 的工作表。")
                 : _workbook.GetSheetAt(_sheetIndex);
 
-            // 3. 构建属性列映射
-            BuildColumnMapWithCache<T>();
+            // 3. 构建属性列映射（类型元数据 + 当前 sheet 标题行 -> 列索引）
+            BuildColumnMap<T>();
 
             // 4. 读取数据行
             return ReadDataRows<T>();
         }
 
-        private void BuildColumnMapWithCache<T>()
+        private void BuildColumnMap<T>()
         {
-            var type = typeof(T);
+            var meta = GetTypeMeta(typeof(T));
+            var headerRow = _sheet!.GetRow(_titleRowIndex)
+                            ?? throw new InvalidOperationException($"在行 {_titleRowIndex} 未发现标题行。");
 
-            // 从缓存中取属性列表（已按 Order 排序）
-            var props = _typePropsCache.GetOrAdd(type, t =>
-                [.. t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                 .Where(p => p.IsDefined(typeof(ExcelColumnAttribute), false))
-                 .OrderBy(p => p.GetCustomAttribute<ExcelColumnAttribute>()!.Order)]
-            );
-
-            // 从缓存中取“列名->Property”
-            var nameMap = _typeColumnMapCache.GetOrAdd(type, t =>
+            // 将标题行一次性读入 Dictionary，避免多重循环 O(H^2)
+            var headerIndex = new Dictionary<string, int>(headerRow.LastCellNum, StringComparer.OrdinalIgnoreCase);
+            for (int c = 0; c < headerRow.LastCellNum; c++)
             {
-                var headerRow = _sheet!.GetRow(_titleRowIndex)
-                                ?? throw new InvalidOperationException($"在行 {_titleRowIndex} 未发现标题行。");
-                var dict = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+                var title = headerRow.GetCell(c)?.ToString()?.Trim();
+                if (!string.IsNullOrEmpty(title) && !headerIndex.ContainsKey(title))
+                    headerIndex[title] = c;
+            }
 
-                for (int c = 0; c < headerRow.LastCellNum; c++)
-                {
-                    var cell = headerRow.GetCell(c);
-                    if (cell == null) continue;
-                    var title = cell.ToString()?.Trim();
-                    if (string.IsNullOrEmpty(title)) continue;
-
-                    // 找到属性
-                    var prop = props.FirstOrDefault(p =>
-                        string.Equals(p.GetCustomAttribute<ExcelColumnAttribute>()!.Name, title, StringComparison.OrdinalIgnoreCase));
-                    if (prop != null)
-                        dict[title] = prop;
-                }
-                return dict;
-            });
-
-            // 将字典转换为 PropertyInfo->列号 的映射
             _columnMap.Clear();
-            foreach (var kv in nameMap)
+            var active = new List<ColumnMeta>(meta.Columns.Length);
+
+            foreach (var col in meta.Columns)
             {
-                // 再次查列号（因为缓存 key 是列名，值是 Property）
-                for (int c = 0; c < _sheet!.GetRow(_titleRowIndex)!.LastCellNum; c++)
+                if (headerIndex.TryGetValue(col.Title, out var idx))
                 {
-                    if (_sheet.GetRow(_titleRowIndex).GetCell(c)?.ToString()?.Trim() == kv.Key)
-                    {
-                        _columnMap[kv.Value] = c;
-                        break;
-                    }
+                    _columnMap[col.Property] = idx;
+                    active.Add(col);
                 }
             }
+
+            _activeColumns = [.. active];
         }
 
         private List<T> ReadDataRows<T>()
         {
             var result = new List<T>();
-            var props = _columnMap.Keys.ToArray();
+            var meta = GetTypeMeta(typeof(T));
+            var cols = _activeColumns ?? meta.Columns; // 理论上 _activeColumns 已初始化
 
-            for (int r = _contentRowIndex; r <= _sheet!.LastRowNum; r++)
+            var lastRow = _sheet!.LastRowNum;
+            var expected = Math.Max(0, lastRow - _contentRowIndex + 1);
+            if (expected > 0) result.EnsureCapacity(expected);
+
+            for (int r = _contentRowIndex; r <= lastRow; r++)
             {
                 var row = _sheet.GetRow(r);
                 if (row == null) continue;
 
-                var obj = Activator.CreateInstance<T>()!;
+                var obj = (T)meta.Ctor();
                 bool anyCellHasValue = false;
 
-                foreach (var prop in props)
+                foreach (var col in cols)
                 {
-                    var colIndex = _columnMap[prop];
+                    if (!_columnMap.TryGetValue(col.Property, out var colIndex)) continue;
                     var cell = row.GetCell(colIndex);
                     if (cell == null) continue;
 
-                    string? raw = cell.CellType switch
-                    {
-                        CellType.String => cell.StringCellValue,
-                        CellType.Numeric when DateUtil.IsCellDateFormatted(cell) => cell.DateCellValue.ToString(),
-                        CellType.Numeric => cell.NumericCellValue.ToString(),
-                        CellType.Boolean => cell.BooleanCellValue.ToString(),
-                        CellType.Formula => cell.ToString(),
-                        _ => string.Empty
-                    };
+                    var raw = GetRawCellValue(cell);
+                    if (raw is null) continue;
 
-                    if (string.IsNullOrWhiteSpace(raw)) continue;
+                    // 空字符串判作无值
+                    if (raw is string s && string.IsNullOrWhiteSpace(s)) continue;
+
+                    var converted = ConvertValue(raw, col.Property.PropertyType);
+                    if (converted is null) continue;
+
+                    col.Setter(obj!, converted);
                     anyCellHasValue = true;
-
-                    object? converted = ConvertValue(raw, prop.PropertyType);
-                    prop.SetValue(obj, converted);
                 }
 
                 if (anyCellHasValue)
@@ -217,19 +228,91 @@ namespace MS.Microservice.Infrastructure.Utils
             return result;
         }
 
-        private static object? ConvertValue(string raw, Type targetType)
+        private static object? GetRawCellValue(ICell cell)
+        {
+            // 优先使用原生类型，减少字符串中转与解析
+            return cell.CellType switch
+            {
+                CellType.String => cell.StringCellValue,
+                CellType.Boolean => cell.BooleanCellValue,
+                CellType.Numeric when DateUtil.IsCellDateFormatted(cell) => cell.DateCellValue,
+                CellType.Numeric => cell.NumericCellValue, // double
+                CellType.Formula => cell.CachedFormulaResultType switch
+                {
+                    CellType.String => cell.StringCellValue,
+                    CellType.Boolean => cell.BooleanCellValue,
+                    CellType.Numeric when DateUtil.IsCellDateFormatted(cell) => cell.DateCellValue,
+                    CellType.Numeric => cell.NumericCellValue,
+                    _ => cell.ToString()
+                },
+                _ => null
+            };
+        }
+
+        private static object? ConvertValue(object raw, Type targetType)
         {
             var underlying = Nullable.GetUnderlyingType(targetType) ?? targetType;
-            if (underlying == typeof(string)) return raw;
-            if (underlying == typeof(DateTime) && DateTime.TryParse(raw, out var dt)) return dt;
-            if (underlying == typeof(bool) && bool.TryParse(raw, out var bb)) return bb;
-            if (underlying == typeof(int) && int.TryParse(raw, out var ii)) return ii;
-            if (underlying == typeof(long) && long.TryParse(raw, out var ll)) return ll;
-            if (underlying == typeof(double) && double.TryParse(raw, out var dd)) return dd;
-            if (underlying.IsEnum && Enum.TryParse(underlying, raw, true, out var eo)) return eo;
-            // fallback to ChangeType
-            try { return Convert.ChangeType(raw, underlying); }
-            catch { return null; }
+
+            // 已是目标类型
+            if (underlying.IsInstanceOfType(raw)) return raw;
+
+            try
+            {
+                switch (raw)
+                {
+                    case string s:
+                        return ConvertFromString(s, underlying);
+                    case DateTime dt:
+                        if (underlying == typeof(DateTime)) return dt;
+                        if (underlying == typeof(string)) return dt.ToString();
+                        return null;
+
+                    case bool b:
+                        if (underlying == typeof(bool)) return b;
+                        if (underlying == typeof(string)) return b.ToString();
+                        return null;
+
+                    case double d:
+                        if (underlying == typeof(double)) return d;
+                        if (underlying == typeof(float)) return (float)d;
+                        if (underlying == typeof(decimal)) return (decimal)d;
+                        if (underlying == typeof(int)) return (int)d;
+                        if (underlying == typeof(long)) return (long)d;
+                        if (underlying == typeof(string)) return d.ToString();
+                        if (underlying == typeof(DateTime))
+                            return DateUtil.GetJavaDate(d); // 数字转日期（Excel 存储）
+                        return null;
+
+                    default:
+                        // 其他数值类型或枚举
+                        if (underlying.IsEnum)
+                        {
+                            if (raw is string es && Enum.TryParse(underlying, es, true, out var ev)) return ev;
+                            var num = System.Convert.ChangeType(raw, Enum.GetUnderlyingType(underlying));
+                            return Enum.ToObject(underlying, num!);
+                        }
+                        return System.Convert.ChangeType(raw, underlying);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static object ConvertFromString(string s, Type underlying)
+        {
+            if (underlying == typeof(string)) return s;
+            if (underlying == typeof(DateTime) && DateTime.TryParse(s, out var dt)) return dt;
+            if (underlying == typeof(bool) && bool.TryParse(s, out var bb)) return bb;
+            if (underlying == typeof(int) && int.TryParse(s, out var ii)) return ii;
+            if (underlying == typeof(long) && long.TryParse(s, out var ll)) return ll;
+            if (underlying == typeof(double) && double.TryParse(s, out var dd)) return dd;
+            if (underlying == typeof(float) && float.TryParse(s, out var ff)) return ff;
+            if (underlying == typeof(decimal) && decimal.TryParse(s, out var mm)) return mm;
+            if (underlying.IsEnum && Enum.TryParse(underlying, s, true, out var eo)) return eo;
+            // 兜底
+            return Convert.ChangeType(s, underlying);
         }
 
         #endregion
@@ -240,6 +323,7 @@ namespace MS.Microservice.Infrastructure.Utils
             // 只释放实例持有的资源
             _workbook?.Dispose();
             _sheet = null;
+            _activeColumns = null;
             _columnMap.Clear();
             // 调用 GC.SuppressFinalize 以防止派生类需要重新实现 IDisposable
             GC.SuppressFinalize(this);
@@ -247,8 +331,7 @@ namespace MS.Microservice.Infrastructure.Utils
 
         public static void ClearCache()
         {
-            _typePropsCache.Clear();
-            _typeColumnMapCache.Clear();
+            _typeMetaCache.Clear();
         }
         #endregion
 
@@ -268,52 +351,144 @@ namespace MS.Microservice.Infrastructure.Utils
 
         public static Dictionary<PropertyInfo, int> BuildColumnMap<T>(ISheet sheet, int titleRowIndex)
         {
-            var type = typeof(T);
+            ArgumentNullException.ThrowIfNull(sheet);
 
-            // 1. 取已缓存的属性列表（按 Order 排序）
-            var props = _typePropsCache.GetOrAdd(type, t =>
-                [.. t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                 .Where(p => p.IsDefined(typeof(ExcelColumnAttribute), false))
-                 .OrderBy(p => p.GetCustomAttribute<ExcelColumnAttribute>()!.Order)]
-            );
+            var headerRow = sheet.GetRow(titleRowIndex)
+                           ?? throw new InvalidOperationException($"在行 {titleRowIndex} 未发现标题行。");
 
-            // 2. 取已缓存的“列名→PropertyInfo”
-            var nameMap = _typeColumnMapCache.GetOrAdd(type, t =>
+            // 使用已缓存的类型元数据（包含列标题 Title 与属性 Property）
+            var meta = GetTypeMeta(typeof(T));
+
+            // 标题行：列名 -> 列索引
+            var headerIndex = new Dictionary<string, int>(headerRow.LastCellNum, StringComparer.OrdinalIgnoreCase);
+            for (int c = 0; c < headerRow.LastCellNum; c++)
             {
-                var header = sheet.GetRow(titleRowIndex)
-                             ?? throw new InvalidOperationException($"在行 {titleRowIndex} 未发现标题行。");
-                var dict = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
-                for (int c = 0; c < header.LastCellNum; c++)
-                {
-                    var cell = header.GetCell(c);
-                    if (cell == null) continue;
-                    var title = cell.ToString()?.Trim();
-                    if (string.IsNullOrEmpty(title)) continue;
-
-                    var prop = props.FirstOrDefault(p =>
-                        string.Equals(p.GetCustomAttribute<ExcelColumnAttribute>()!.Name, title, StringComparison.OrdinalIgnoreCase));
-                    if (prop != null)
-                        dict[title] = prop;
-                }
-                return dict;
-            });
-
-            // 3. 从列名→PropertyInfo 转为 PropertyInfo→列号
-            var map = new Dictionary<PropertyInfo, int>();
-            var headerRow = sheet.GetRow(titleRowIndex)!;
-            foreach (var kv in nameMap)
-            {
-                // 再扫一遍列号，保证准确
-                for (int c = 0; c < headerRow.LastCellNum; c++)
-                {
-                    if (headerRow.GetCell(c)?.ToString()?.Trim() == kv.Key)
-                    {
-                        map[kv.Value] = c;
-                        break;
-                    }
-                }
+                var title = headerRow.GetCell(c)?.ToString()?.Trim();
+                if (!string.IsNullOrEmpty(title) && !headerIndex.ContainsKey(title))
+                    headerIndex[title] = c;
             }
+
+            // 将匹配到的列写入映射：PropertyInfo -> 列索引
+            var map = new Dictionary<PropertyInfo, int>();
+            foreach (var col in meta.Columns)
+            {
+                if (headerIndex.TryGetValue(col.Title, out var idx))
+                    map[col.Property] = idx;
+            }
+
             return map;
         }
+
+        #region Type metadata
+        private sealed class TypeMeta
+        {
+            public required ColumnMeta[] Columns { get; init; }
+            public required Func<object> Ctor { get; init; }
+        }
+
+        private sealed class ColumnMeta
+        {
+            public required PropertyInfo Property { get; init; }
+            public required string Title { get; init; }
+            public required int Order { get; init; }
+            public required Func<object, object?> Getter { get; init; }
+            public required Action<object, object?> Setter { get; init; }
+        }
+
+        private static TypeMeta GetTypeMeta(Type type)
+        {
+            return _typeMetaCache.GetOrAdd(type, t =>
+            {
+                // 获取所有公开实例属性；如果未标注 ExcelColumnAttribute，则默认使用属性名
+                var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+                var items = new List<(PropertyInfo Prop, string Title, int Order)>(props.Length);
+                foreach (var p in props)
+                {
+                    var attr = p.GetCustomAttribute<ExcelColumnAttribute>(inherit: false);
+
+                    // 显式忽略
+                    if (attr?.Ignore == true) continue;
+
+                    var title = string.IsNullOrWhiteSpace(attr?.Name)
+                        ? p.Name
+                        : attr!.Name!.Trim();
+
+                    var order = attr is not null ? attr.Order : int.MaxValue;
+
+                    items.Add((p, title, order));
+                }
+
+                // 排序：先按 Order，再按声明顺序（MetadataToken 近似）
+                items.Sort((a, b) =>
+                {
+                    var cmp = a.Order.CompareTo(b.Order);
+                    return cmp != 0 ? cmp : a.Prop.MetadataToken.CompareTo(b.Prop.MetadataToken);
+                });
+
+                var columns = new List<ColumnMeta>(items.Count);
+                foreach (var (prop, title, order) in items)
+                {
+                    // 已编译 Getter/Setter，避免反射调用
+                    var getter = CompileGetter(t, prop);
+                    var setter = CompileSetter(t, prop);
+
+                    columns.Add(new ColumnMeta
+                    {
+                        Property = prop,
+                        Title = title,
+                        Order = order,
+                        Getter = getter,
+                        Setter = setter
+                    });
+                }
+
+                // 无参构造委托
+                var ctor = CompileCtor(t);
+
+                return new TypeMeta
+                {
+                    Columns = [.. columns],
+                    Ctor = ctor
+                };
+            });
+        }
+
+        private static Func<object> CompileCtor(Type t)
+        {
+            var ci = t.GetConstructor(Type.EmptyTypes)
+                     ?? throw new InvalidOperationException($"{t.FullName} 缺少无参构造函数。");
+            var newExpr = Expression.New(ci);
+            var lambda = Expression.Lambda<Func<object>>(Expression.Convert(newExpr, typeof(object)));
+            return lambda.Compile();
+        }
+
+        private static Func<object, object?> CompileGetter(Type declaringType, PropertyInfo prop)
+        {
+            var getMi = prop.GetGetMethod(true)!;
+            var objParam = Expression.Parameter(typeof(object), "obj");
+            var castObj = Expression.Convert(objParam, declaringType);
+            var call = Expression.Call(castObj, getMi);
+            var result = Expression.Convert(call, typeof(object));
+            return Expression.Lambda<Func<object, object?>>(result, objParam).Compile();
+        }
+
+        private static Action<object, object?> CompileSetter(Type declaringType, PropertyInfo prop)
+        {
+            var setMi = prop.GetSetMethod(true);
+            if (setMi == null)
+            {
+                // 不可写属性：返回空实现以避免判空分支
+                return static (_, __) => { };
+            }
+
+            var objParam = Expression.Parameter(typeof(object), "obj");
+            var valParam = Expression.Parameter(typeof(object), "val");
+            var castObj = Expression.Convert(objParam, declaringType);
+            var castVal = Expression.Convert(valParam, prop.PropertyType);
+            var call = Expression.Call(castObj, setMi, castVal);
+            return Expression.Lambda<Action<object, object?>>(call, objParam, valParam).Compile();
+        }
+        #endregion
     }
 }

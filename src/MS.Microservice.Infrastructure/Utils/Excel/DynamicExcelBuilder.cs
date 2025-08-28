@@ -18,8 +18,17 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
 
         public DynamicExcelBuilder<T> InitInsertRow(int startRowIndex)
         {
-            int count = _items.Count;
-            _sheet.ShiftRows(startRowIndex, _sheet.LastRowNum, count);
+            ArgumentOutOfRangeException.ThrowIfLessThan(startRowIndex, 0);
+
+            int count = _items?.Count ?? 0;
+            if (count <= 0) return this;
+
+            int lastRow = _sheet.LastRowNum;
+            // 仅当起始行在现有最后一行之内时才移动（避免 NPOI 要求 first<=last 的异常）
+            if (startRowIndex <= lastRow)
+            {
+                _sheet.ShiftRows(startRowIndex, lastRow, count);
+            }
 
             var titleRow = _sheet.GetRow(_titleRowIndex)
                            ?? throw new ArgumentException($"行 {_titleRowIndex} 不存在");
@@ -30,8 +39,12 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
                 var row = _sheet.CreateRow(startRowIndex + i);
                 row.Height = titleRow.Height;
                 if (style != null)
+                {
                     foreach (var cell in titleRow.Cells)
+                    {
                         row.CreateCell(cell.ColumnIndex).CellStyle = style;
+                    }
+                }
             }
             return this;
         }
