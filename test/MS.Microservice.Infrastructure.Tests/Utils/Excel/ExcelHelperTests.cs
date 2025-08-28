@@ -340,8 +340,64 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             var builder = excel.OpenExcel(items, template, "Data", titleRowIndex: 0);
 
             // Act
-            builder.InitInsertRow(startRowIndex: 1)
-                   .InsertCellValue(startRowIndex: 1);
+            builder.UseTypedCells()
+                .InitInsertRow(startRowIndex: 1)
+                .InsertCellValue(startRowIndex: 1);
+            var outBytes = await builder.WriteAsync();
+
+            // Assert
+            using var ms = new MemoryStream(outBytes);
+            using var outWb = new XSSFWorkbook(ms);
+            var outSheet = outWb.GetSheet("Data");
+
+            var r1 = outSheet.GetRow(1);
+            r1.GetCell(0).NumericCellValue.Should().Be(10);
+            r1.GetCell(1).StringCellValue.Should().Be("A");
+            r1.GetCell(2).NumericCellValue.Should().Be(1.2);
+            r1.GetCell(3).DateCellValue.Should().Be(new DateTime(2024, 1, 1)); // DynamicExcelBuilder 按字符串写入
+            r1.GetCell(4).BooleanCellValue.Should().Be(true);
+            r1.GetCell(5).StringCellValue.Should().Be("B");
+
+            var r2 = outSheet.GetRow(2);
+            r2.GetCell(0).NumericCellValue.Should().Be(11);
+            r2.GetCell(1).StringCellValue.Should().Be("B");
+            r2.GetCell(2).NumericCellValue.Should().Be(3.4);
+            r2.GetCell(3).DateCellValue.Should().Be(new DateTime(2024, 1, 2));
+            r2.GetCell(4).BooleanCellValue.Should().Be(false);
+            r2.GetCell(5).StringCellValue.Should().Be("A");
+        }
+
+        [Fact]
+        public async Task DynamicExcelBuilder_ShouldInsertRowsAccordingToColumnMap_TextWriteModel()
+        {
+            // Arrange: 模板工作簿，只有表头
+            var wb = new XSSFWorkbook();
+            var sheet = wb.CreateSheet("Data");
+            var header = sheet.CreateRow(0);
+            header.CreateCell(0).SetCellValue("ID");
+            header.CreateCell(1).SetCellValue("名称");
+            header.CreateCell(2).SetCellValue("金额");
+            header.CreateCell(3).SetCellValue("日期");
+            header.CreateCell(4).SetCellValue("启用");
+            header.CreateCell(5).SetCellValue("状态");
+
+            using var template = new MemoryStream();
+            wb.Write(template, leaveOpen: true);
+            template.Position = 0;
+
+            var items = new List<SampleRow>
+            {
+                new SampleRow { Id = 10, Name = "A", Amount = 1.2m, Date = new DateTime(2024,1,1), Enabled = true, Status = MyEnum.B },
+                new SampleRow { Id = 11, Name = "B", Amount = 3.4m, Date = new DateTime(2024,1,2), Enabled = false, Status = MyEnum.A }
+            };
+
+            var excel = new ExcelHelper();
+            var builder = excel.OpenExcel(items, template, "Data", titleRowIndex: 0);
+
+            // Act
+            builder.UseTextCells()
+                .InitInsertRow(startRowIndex: 1)
+                .InsertCellValue(startRowIndex: 1);
             var outBytes = await builder.WriteAsync();
 
             // Assert

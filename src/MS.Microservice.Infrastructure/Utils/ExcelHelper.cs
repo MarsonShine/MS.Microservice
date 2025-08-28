@@ -33,27 +33,31 @@ namespace MS.Microservice.Infrastructure.Utils
         #region Export
         public byte[] Export<T>(List<T> source, string sheetName)
         {
+            using var ms = new MemoryStream();
+            ExportToStream<T>(source, sheetName, ms);
+            return ms.ToArray();
+        }
+
+        public void ExportToStream<T>(List<T> source, string sheetName, Stream destination)
+        {
             ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(destination);
             if (string.IsNullOrWhiteSpace(sheetName)) throw new ArgumentNullException(nameof(sheetName));
 
             var meta = GetTypeMeta(typeof(T));
-
             using var wb = new XSSFWorkbook();
             var sheet = wb.CreateSheet(sheetName);
 
-            // 预创建常用样式（日期样式）
+            // 预创建日期样式
             var dateStyle = wb.CreateCellStyle();
-            var dataFormat = wb.CreateDataFormat();
-            dateStyle.DataFormat = dataFormat.GetFormat("yyyy-mm-dd HH:mm:ss");
+            dateStyle.DataFormat = wb.CreateDataFormat().GetFormat("yyyy-mm-dd");
 
-            // 标题行
+            // 标题
             var titleRow = sheet.CreateRow(0);
             for (int i = 0; i < meta.Columns.Length; i++)
-            {
                 titleRow.CreateCell(i).SetCellValue(meta.Columns[i].Title);
-            }
 
-            // 内容行（使用已编译的 Getter，避免反射 GetValue；使用强类型 SetCellValue，避免字符串中转）
+            // 行
             for (int r = 0; r < source.Count; r++)
             {
                 var row = sheet.CreateRow(r + 1);
@@ -63,21 +67,14 @@ namespace MS.Microservice.Infrastructure.Utils
                 {
                     var col = meta.Columns[c];
                     var val = col.Getter(item!);
-
-                    if (val is null)
-                    {
-                        row.CreateCell(c).SetCellValue(string.Empty);
-                        continue;
-                    }
-
                     var cell = row.CreateCell(c);
+
+                    if (val is null) { cell.SetCellValue(string.Empty); continue; }
+
                     switch (val)
                     {
                         case string s: cell.SetCellValue(s); break;
-                        case DateTime dt: 
-                            cell.SetCellValue(dt); 
-                            cell.CellStyle = dateStyle;
-                            break;
+                        case DateTime dt: cell.SetCellValue(dt); cell.CellStyle = dateStyle; break;
                         case bool b: cell.SetCellValue(b); break;
                         case double d: cell.SetCellValue(d); break;
                         case float f: cell.SetCellValue(f); break;
@@ -96,9 +93,7 @@ namespace MS.Microservice.Infrastructure.Utils
                 }
             }
 
-            using var ms = new MemoryStream();
-            wb.Write(ms);
-            return ms.ToArray();
+            wb.Write(destination, leaveOpen: false); // 无 ToArray 复制
         }
         #endregion
 
@@ -154,6 +149,12 @@ namespace MS.Microservice.Infrastructure.Utils
             return ReadDataRows<T>();
         }
 
+        public IEnumerable<T> ImportAsEnumerable<T>(string fileName, Stream stream)
+        {
+            var list = Import<T>(fileName, stream);
+            foreach (var item in list) yield return item; // 若要彻底流式，需重构内部从 “返回 List” 改为“逐行 yield”
+        }
+
         private void BuildColumnMap<T>()
         {
             var meta = GetTypeMeta(typeof(T));
@@ -202,19 +203,19 @@ namespace MS.Microservice.Infrastructure.Utils
                 var obj = (T)meta.Ctor();
                 bool anyCellHasValue = false;
 
-                foreach (var col in cols)
+                for (int i = 0; i < cols.Length; i++)
                 {
+                    var col = cols[i];
                     if (!_columnMap.TryGetValue(col.Property, out var colIndex)) continue;
+
                     var cell = row.GetCell(colIndex);
                     if (cell == null) continue;
 
                     var raw = GetRawCellValue(cell);
                     if (raw is null) continue;
-
-                    // 空字符串判作无值
                     if (raw is string s && string.IsNullOrWhiteSpace(s)) continue;
 
-                    var converted = ConvertValue(raw, col.Property.PropertyType);
+                    var converted = ConvertValueFast(raw, col.UnderlyingType); // 使用 fast-path
                     if (converted is null) continue;
 
                     col.Setter(obj!, converted);
@@ -300,6 +301,48 @@ namespace MS.Microservice.Infrastructure.Utils
             }
         }
 
+        // Fast-path：目标类型已知为非可空类型
+        private static object? ConvertValueFast(object raw, Type underlying)
+        {
+            try
+            {
+                switch (raw)
+                {
+                    case string s:
+                        return ConvertFromString(s, underlying);
+                    case DateTime dt:
+                        if (underlying == typeof(DateTime)) return dt;
+                        if (underlying == typeof(string)) return dt.ToString();
+                        return null;
+                    case bool b:
+                        if (underlying == typeof(bool)) return b;
+                        if (underlying == typeof(string)) return b.ToString();
+                        return null;
+                    case double d:
+                        if (underlying == typeof(double)) return d;
+                        if (underlying == typeof(float)) return (float)d;
+                        if (underlying == typeof(decimal)) return (decimal)d;
+                        if (underlying == typeof(int)) return (int)d;
+                        if (underlying == typeof(long)) return (long)d;
+                        if (underlying == typeof(string)) return d.ToString();
+                        if (underlying == typeof(DateTime)) return DateUtil.GetJavaDate(d);
+                        return null;
+                    default:
+                        if (underlying.IsEnum)
+                        {
+                            if (raw is string es && Enum.TryParse(underlying, es, true, out var ev)) return ev;
+                            var num = Convert.ChangeType(raw, Enum.GetUnderlyingType(underlying));
+                            return Enum.ToObject(underlying, num!);
+                        }
+                        return Convert.ChangeType(raw, underlying);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private static object ConvertFromString(string s, Type underlying)
         {
             if (underlying == typeof(string)) return s;
@@ -352,30 +395,31 @@ namespace MS.Microservice.Infrastructure.Utils
         public static Dictionary<PropertyInfo, int> BuildColumnMap<T>(ISheet sheet, int titleRowIndex)
         {
             ArgumentNullException.ThrowIfNull(sheet);
-
             var headerRow = sheet.GetRow(titleRowIndex)
                            ?? throw new InvalidOperationException($"在行 {titleRowIndex} 未发现标题行。");
-
-            // 使用已缓存的类型元数据（包含列标题 Title 与属性 Property）
             var meta = GetTypeMeta(typeof(T));
 
-            // 标题行：列名 -> 列索引
             var headerIndex = new Dictionary<string, int>(headerRow.LastCellNum, StringComparer.OrdinalIgnoreCase);
             for (int c = 0; c < headerRow.LastCellNum; c++)
             {
-                var title = headerRow.GetCell(c)?.ToString()?.Trim();
+                var cell = headerRow.GetCell(c);
+                if (cell == null) continue;
+
+                string? title = null;
+                if (cell.CellType == CellType.String) title = cell.StringCellValue; //先走 StringCellValue，减少 ToString 分配
+                else title = cell.ToString();
+
+                title = title?.Trim();
                 if (!string.IsNullOrEmpty(title) && !headerIndex.ContainsKey(title))
                     headerIndex[title] = c;
             }
 
-            // 将匹配到的列写入映射：PropertyInfo -> 列索引
             var map = new Dictionary<PropertyInfo, int>();
             foreach (var col in meta.Columns)
             {
                 if (headerIndex.TryGetValue(col.Title, out var idx))
                     map[col.Property] = idx;
             }
-
             return map;
         }
 
@@ -393,64 +437,45 @@ namespace MS.Microservice.Infrastructure.Utils
             public required int Order { get; init; }
             public required Func<object, object?> Getter { get; init; }
             public required Action<object, object?> Setter { get; init; }
+            public required Type UnderlyingType { get; init; }
         }
 
         private static TypeMeta GetTypeMeta(Type type)
         {
             return _typeMetaCache.GetOrAdd(type, t =>
             {
-                // 获取所有公开实例属性；如果未标注 ExcelColumnAttribute，则默认使用属性名
-                var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                     .Select(p => new
+                     {
+                         Prop = p,
+                         Attr = p.GetCustomAttribute<ExcelColumnAttribute>(false)
+                     })
+                     .Where(x => x.Attr?.Ignore != true) // 支持“无特性默认使用属性名”的行为
+                     .OrderBy(x => x.Attr?.Order ?? int.MaxValue)
+                     .ThenBy(x => x.Prop.MetadataToken)
+                     .ToArray();
 
-                var items = new List<(PropertyInfo Prop, string Title, int Order)>(props.Length);
-                foreach (var p in props)
+                var columns = new List<ColumnMeta>(props.Length);
+                foreach (var x in props)
                 {
-                    var attr = p.GetCustomAttribute<ExcelColumnAttribute>(inherit: false);
-
-                    // 显式忽略
-                    if (attr?.Ignore == true) continue;
-
-                    var title = string.IsNullOrWhiteSpace(attr?.Name)
-                        ? p.Name
-                        : attr!.Name!.Trim();
-
-                    var order = attr is not null ? attr.Order : int.MaxValue;
-
-                    items.Add((p, title, order));
-                }
-
-                // 排序：先按 Order，再按声明顺序（MetadataToken 近似）
-                items.Sort((a, b) =>
-                {
-                    var cmp = a.Order.CompareTo(b.Order);
-                    return cmp != 0 ? cmp : a.Prop.MetadataToken.CompareTo(b.Prop.MetadataToken);
-                });
-
-                var columns = new List<ColumnMeta>(items.Count);
-                foreach (var (prop, title, order) in items)
-                {
-                    // 已编译 Getter/Setter，避免反射调用
-                    var getter = CompileGetter(t, prop);
-                    var setter = CompileSetter(t, prop);
+                    var title = string.IsNullOrWhiteSpace(x.Attr?.Name) ? x.Prop.Name : x.Attr!.Name!.Trim();
+                    var getter = CompileGetter(t, x.Prop);
+                    var setter = CompileSetter(t, x.Prop);
+                    var underlying = Nullable.GetUnderlyingType(x.Prop.PropertyType) ?? x.Prop.PropertyType;
 
                     columns.Add(new ColumnMeta
                     {
-                        Property = prop,
+                        Property = x.Prop,
                         Title = title,
-                        Order = order,
+                        Order = x.Attr?.Order ?? int.MaxValue,
                         Getter = getter,
-                        Setter = setter
+                        Setter = setter,
+                        UnderlyingType = underlying
                     });
                 }
 
-                // 无参构造委托
                 var ctor = CompileCtor(t);
-
-                return new TypeMeta
-                {
-                    Columns = [.. columns],
-                    Ctor = ctor
-                };
+                return new TypeMeta { Columns = [.. columns], Ctor = ctor };
             });
         }
 
