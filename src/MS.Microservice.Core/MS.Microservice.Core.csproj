@@ -1,7 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<OutputType>Library</OutputType>
-	</PropertyGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="MS.Microservice.Core.Tests" />
 	</ItemGroup>
@@ -17,9 +14,10 @@
 		<None Remove="Repository\**" />
 	</ItemGroup>
 	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 </Project>

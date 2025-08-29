@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using MS.Microservice.Core.Security.Cryptology;
+﻿using MS.Microservice.Core.Security.Cryptology;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Security.Cryptography;

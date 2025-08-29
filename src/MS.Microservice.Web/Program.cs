@@ -1,13 +1,8 @@
 using Autofac.Extensions.DependencyInjection;
-using MS.Microservice.Infrastructure.DbContext;
-using MS.Microservice.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Extension;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Builder;
-using System;
 using Microsoft.AspNetCore.HttpOverrides;
 using MS.Microservice.Web.Infrastructure.Extensions;
 using MS.Microservice.Web.Infrastructure.Mvc.ModelBinder.Extension;
@@ -21,8 +16,14 @@ using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Infrastructure.Common.Extensions;
 using Microsoft.AspNetCore.ResponseCompression;
 using MS.Microservice.Core.FeatureManager;
+using MS.Microservice.Swagger.Microsoft.Extensions.DependencyInjection;
+using MS.Microservice.Web.Infrastructure.LogUtils.Nlog;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.ConfigurePlatformLogging(cfg =>
+{
+    cfg.NLogConfiguration();
+});
 
 AddCollectionService(builder);
 
@@ -43,13 +44,6 @@ void AddCollectionService(WebApplicationBuilder builder)
 		// options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
 	});
 
-#if NET9_0_OR_GREATER
-	builder.Services.AddHybridCache();
-#else
-	builder.Services.AddMemoryCache()
-		.AddDistributedMemoryCache();
-#endif
-
 	builder.Services.Configure<ForwardedHeadersOptions>(options =>
 	{
 		options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -65,7 +59,6 @@ void AddCollectionService(WebApplicationBuilder builder)
 	FluentValidation.ValidatorOptions.Global.DefaultRuleLevelCascadeMode = FluentValidation.CascadeMode.Stop;
 
 	builder.Services.AddCoreServices(builder.Configuration);
-
 }
 
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory())
@@ -86,12 +79,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 #endregion
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-	c.OAuthClientId("activationswaggerui");
-	c.OAuthAppName("ActivationSystem Swagger UI");
-});
+app.UsePlatformSwagger();
 
 // Configure middleware pipeline
 app.UseForwardedHeaders();
@@ -115,5 +103,6 @@ app.MapHealthChecks("/hc");
 app.UseEnableBuffering();
 
 app.UseResponseCompression();
+app.UsePlatformLogger();
 
 app.Run();

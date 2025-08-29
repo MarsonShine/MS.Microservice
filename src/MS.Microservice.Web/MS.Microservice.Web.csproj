@@ -23,10 +23,18 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="NLog" />
+    <PackageReference Include="NLog.Web.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />
     <ProjectReference Include="..\MS.Microservice.Swagger\MS.Microservice.Swagger.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Update="nlog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

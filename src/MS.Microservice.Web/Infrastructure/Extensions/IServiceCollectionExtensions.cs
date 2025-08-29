@@ -24,6 +24,7 @@ using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Web.Infrastructure.Filters;
+using MS.Microservice.Web.Infrastructure.LogUtils.Nlog;
 
 namespace MS.Microservice.Web.Infrastructure.Extensions
 {
@@ -31,6 +32,12 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
     {
         public static IServiceCollection AddCoreServices(this IServiceCollection services, [NotNull] IConfiguration configuration)
         {
+            services.AddMSLoggerService().WithNLogger(cfg =>
+            {
+                // 可从配置读取最小级别等，也可以保持默认
+                cfg.LogLevel = configuration["Logging:LogLevel:Default"] ?? cfg.LogLevel;
+            }); // NLog日志
+
             services
                 .AddCustomMvc(configuration)
                 .AddHealthChecks(configuration)
@@ -66,6 +73,9 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 option.IsAllCors = cors.IsAllCors;
             });
 
+#if NET9_0_OR_GREATER
+            services.AddHybridCache();
+#else
             services.AddMemoryCache(options =>
             {
                 var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
@@ -75,16 +85,17 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
                     options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
                 });
+#endif
 
             services.AddHttpClient<LogHttpClient>();
 
             // 异常处理，可以管道化
             services.AddExceptionHandler<GlobalExceptionHandler>();  // 处理第一个异常
-			//// 管道化
-			//services.AddExceptionHandler<GlobalExceptionHandler2>(); // 紧接着处理第二个异常
-			//services.AddExceptionHandler<GlobalExceptionHandler3>(); // 最后处理第三个异常
+                                                                     //// 管道化
+                                                                     //services.AddExceptionHandler<GlobalExceptionHandler2>(); // 紧接着处理第二个异常
+                                                                     //services.AddExceptionHandler<GlobalExceptionHandler3>(); // 最后处理第三个异常
 
-			return services;
+            return services;
         }
 
         public static void AddCorsService(this IServiceCollection services, Action<CorsOptions> config)
@@ -154,6 +165,9 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     option.EnabledSecurity = swaggerOption.EnabledSecurity;
                     option.IsEnabled = swaggerOption.IsEnabled;
                     option.SwaggerXmlFile = swaggerOption.SwaggerXmlFile;
+                    option.IsAuth = swaggerOption.IsAuth;
+                    option.Name = swaggerOption.Name;
+                    option.RoutePrefix = swaggerOption.RoutePrefix;
                 });
             return services;
         }
