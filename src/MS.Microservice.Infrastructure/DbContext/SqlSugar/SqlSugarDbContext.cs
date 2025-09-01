@@ -3,6 +3,8 @@ using MS.Microservice.Core.Domain.Entity.Enums;
 using MS.Microservice.Core.Domain.Repository;
 using MS.Microservice.Core.Domain.Repository.SqlSugar;
 using MS.Microservice.Core.Dto;
+using MS.Microservice.Core.Specification;
+using MS.Microservice.Infrastructure.SqlSugar;
 using SqlSugar;
 using System;
 using System.Collections.Generic;
@@ -10,6 +12,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MS.Microservice.Infrastructure.DbContext
@@ -194,6 +197,26 @@ namespace MS.Microservice.Infrastructure.DbContext
 		{
 			await Db.Ado.RollbackTranAsync();
 		}
-		#endregion
-	}
+        #endregion
+
+        #region Specification 操作
+        public async Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec, CancellationToken ct = default)
+        {
+            return await Db.Queryable<TEntity>().ApplySpecification(spec).FirstAsync(ct);
+        }
+
+        public async Task<TResult?> FirstOrDefaultAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default)
+        {
+            return await Db.Queryable<TEntity>().ApplySpecification(spec).FirstAsync(ct);
+        }
+
+        public async Task<List<TEntity>> ListAsync(ISpecification<TEntity> spec, CancellationToken ct = default) => await Db.Queryable<TEntity>().ApplySpecification(spec).ToListAsync(ct);
+
+        public async Task<List<TResult>> ListAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default) => await Db.Queryable<TEntity>().ApplySpecification(spec).ToListAsync(ct);
+
+        public async ValueTask<int> CountAsync(ISpecification<TEntity> spec, CancellationToken ct = default) => await Db.Queryable<TEntity>().ApplySpecification(spec, evaluateCriteriaOnly: true).CountAsync(ct);
+
+        public async ValueTask<bool> AnyAsync(ISpecification<TEntity> spec, CancellationToken ct = default) => await Db.Queryable<TEntity>().ApplySpecification(spec, evaluateCriteriaOnly: true).AnyAsync(ct);
+        #endregion
+    }
 }

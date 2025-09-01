@@ -1,8 +1,10 @@
 ﻿using MS.Microservice.Core.Domain.Entity.Enums;
 using MS.Microservice.Core.Dto;
+using MS.Microservice.Core.Specification;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MS.Microservice.Core.Domain.Repository
@@ -123,6 +125,17 @@ namespace MS.Microservice.Core.Domain.Repository
         /// <param name="where">Expression<Func<T, bool>></param>
         /// <returns></returns>
         Task<bool> DeleteAsync(Expression<Func<T, bool>> where);
+        #endregion
+
+        #region Specification 操作
+        Task<T?> FirstOrDefaultAsync(ISpecification<T> spec, CancellationToken ct = default);
+        Task<TResult?> FirstOrDefaultAsync<TResult>(ISpecification<T, TResult> spec, CancellationToken ct = default);
+
+        Task<List<T>> ListAsync(ISpecification<T> spec, CancellationToken ct = default);
+        Task<List<TResult>> ListAsync<TResult>(ISpecification<T, TResult> spec, CancellationToken ct = default);
+
+        ValueTask<int> CountAsync(ISpecification<T> spec, CancellationToken ct = default);
+        ValueTask<bool> AnyAsync(ISpecification<T> spec, CancellationToken ct = default);
         #endregion
     }
 }

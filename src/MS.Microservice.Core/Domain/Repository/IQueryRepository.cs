@@ -22,7 +22,7 @@ namespace MS.Microservice.Core.Repository
         /// <param name="specification"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<T> GetBySpecAsync<Spec>(Spec specification, CancellationToken cancellationToken = default) where Spec : ISingleResultSpecification, ISpecification<T>;
+        Task<T> GetBySpecAsync<Spec>(Spec specification, CancellationToken cancellationToken = default) where Spec : ISpecification<T>;
         /// <summary>
         /// 获取所有列表
         /// </summary>
