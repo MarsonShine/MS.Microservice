@@ -5,10 +5,10 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
 {
     public interface IExcelImport
     {
-        List<T> Import<T>(byte[] data);
-        List<T> Import<T>(string fileName, byte[] data);
-        List<T> Import<T>(string fileName, Stream stream);
-        IEnumerable<T> ImportAsEnumerable<T>(string fileName, Stream stream);
+        List<T> Import<T>(byte[] data) where T : class, new();
+        List<T> Import<T>(string fileName, byte[] data) where T : class, new();
+        List<T> Import<T>(string fileName, Stream stream) where T : class, new();
+        IEnumerable<T> ImportAsEnumerable<T>(string fileName, Stream stream) where T : class, new();
     }
 
     public interface IExcelExport

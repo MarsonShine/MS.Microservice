@@ -119,13 +119,13 @@ namespace MS.Microservice.Infrastructure.Utils
             return this;
         }
 
-        public List<T> Import<T>(byte[] data)
+        public List<T> Import<T>(byte[] data) where T : class, new()
             => Import<T>(".xlsx", new MemoryStream(data));
 
-        public List<T> Import<T>(string fileName, byte[] data)
+        public List<T> Import<T>(string fileName, byte[] data) where T : class, new()
             => Import<T>(fileName, new MemoryStream(data));
 
-        public List<T> Import<T>(string fileName, Stream stream)
+        public List<T> Import<T>(string fileName, Stream stream) where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(stream);
             if (_titleRowIndex < 0 || _contentRowIndex < 0)
@@ -149,7 +149,7 @@ namespace MS.Microservice.Infrastructure.Utils
             return ReadDataRows<T>();
         }
 
-        public IEnumerable<T> ImportAsEnumerable<T>(string fileName, Stream stream)
+        public IEnumerable<T> ImportAsEnumerable<T>(string fileName, Stream stream) where T : class, new()
         {
             var list = Import<T>(fileName, stream);
             foreach (var item in list) yield return item; // 若要彻底流式，需重构内部从 “返回 List” 改为“逐行 yield”
@@ -185,7 +185,7 @@ namespace MS.Microservice.Infrastructure.Utils
             _activeColumns = [.. active];
         }
 
-        private List<T> ReadDataRows<T>()
+        private List<T> ReadDataRows<T>() where T : class, new()
         {
             var result = new List<T>();
             var meta = GetTypeMeta(typeof(T));

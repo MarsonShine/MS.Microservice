@@ -24,6 +24,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="MiniExcel" />
     <PackageReference Include="NAudio" />
     <PackageReference Include="NAudio.Lame" />
     <PackageReference Include="NPOI" />
