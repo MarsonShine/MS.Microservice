@@ -123,7 +123,89 @@ namespace MS.Microservice.Core.Extension
 						 .Concat(target.Where(item => !indexMap.ContainsKey(item)));
 		}
 
-		public static IEnumerable<TB> OrderByReference<TA, TB, TKey>(
+        public static List<T> SafeOrderByReference<T>(
+            this IEnumerable<T> target,
+            IEnumerable<T> reference)
+            where T : notnull
+        {
+            const int DICTIONARY_THRESHOLD = 100;
+
+            var targetList = target.ToList();
+            var referenceList = reference.ToList();
+
+            if (targetList.Count <= DICTIONARY_THRESHOLD)
+            {
+                return SafeOrderByReferenceSmall(targetList, referenceList);
+            }
+
+            return SafeOrderByReferenceLarge(targetList, referenceList);
+        }
+
+        private static List<T> SafeOrderByReferenceSmall<T>(
+            List<T> target,
+            List<T> reference)
+            where T : notnull
+        {
+            var used = new bool[target.Count];
+            var result = new List<T>(target.Count);
+
+            // 线性查找，适合小数据集
+            foreach (var refItem in reference)
+            {
+                for (int i = 0; i < target.Count; i++)
+                {
+                    if (!used[i] && EqualityComparer<T>.Default.Equals(target[i], refItem))
+                    {
+                        result.Add(target[i]);
+                        used[i] = true;
+                        break;
+                    }
+                }
+            }
+
+            // 添加未匹配的项
+            for (int i = 0; i < target.Count; i++)
+            {
+                if (!used[i])
+                {
+                    result.Add(target[i]);
+                }
+            }
+
+            return result;
+        }
+
+        private static List<T> SafeOrderByReferenceLarge<T>(
+            List<T> target,
+            List<T> reference)
+            where T : notnull
+        {
+            var targetQueues = target.GroupBy(x => x)
+                                    .ToDictionary(g => g.Key, g => new Queue<T>(g));
+
+            var result = new List<T>(target.Count);
+
+            foreach (var refItem in reference)
+            {
+                if (targetQueues.TryGetValue(refItem, out var queue) && queue.Count > 0)
+                {
+                    result.Add(queue.Dequeue());
+                }
+            }
+
+            // 添加剩余未匹配的项
+            foreach (var queue in targetQueues.Values)
+            {
+                while (queue.Count > 0)
+                {
+                    result.Add(queue.Dequeue());
+                }
+            }
+
+            return result;
+        }
+
+        public static IEnumerable<TB> OrderByReference<TA, TB, TKey>(
 			this IEnumerable<TB> target,
 			IEnumerable<TA> reference,
 			Func<TA, TKey> referenceSelector,
@@ -138,7 +220,98 @@ namespace MS.Microservice.Core.Extension
 						 .OrderBy(item => indexMap[targetSelector(item)])
 						 .Concat(target.Where(item => !indexMap.ContainsKey(targetSelector(item))));
 		}
-	}
+
+        public static IEnumerable<TB> SafeOrderByReference<TA, TB, TKey>(
+            this IEnumerable<TB> target,
+            IEnumerable<TA> reference,
+            Func<TA, TKey> referenceSelector,
+            Func<TB, TKey> targetSelector)
+            where TKey : notnull
+        {
+            const int QUEUE_THRESHOLD = 100; // 阈值可以根据实际测试调整
+
+            var targetList = target.ToList();
+            var referenceList = reference.ToList();
+
+            // 小数据集：使用简单的线性查找（减少内存分配）
+            if (targetList.Count <= QUEUE_THRESHOLD)
+            {
+                return OrderByReferenceSmall(targetList, referenceList, referenceSelector, targetSelector);
+            }
+
+            // 大数据集：使用队列优化
+            return OrderByReferenceLarge(targetList, referenceList, referenceSelector, targetSelector);
+        }
+
+        private static List<TB> OrderByReferenceSmall<TB, TA, TKey>(List<TB> target, List<TA> reference, Func<TA, TKey> referenceSelector, Func<TB, TKey> targetSelector) where TKey : notnull
+        {
+            var used = new bool[target.Count];
+            var result = new List<TB>(target.Count);
+
+            // 线性扫描，内存友好
+            foreach (var refItem in reference)
+            {
+                var refKey = referenceSelector(refItem);
+                if (refKey == null) continue;
+
+                for (int i = 0; i < target.Count; i++)
+                {
+                    if (!used[i] && EqualityComparer<TKey>.Default.Equals(targetSelector(target[i]), refKey))
+                    {
+                        result.Add(target[i]);
+                        used[i] = true;
+                        break;
+                    }
+                }
+            }
+
+            // 添加未使用的项
+            for (int i = 0; i < target.Count; i++)
+            {
+                if (!used[i])
+                {
+                    result.Add(target[i]);
+                }
+            }
+
+            return result;
+        }
+
+        // 大数据集的队列实现
+        private static List<TB> OrderByReferenceLarge<TA, TB, TKey>(
+            List<TB> target,
+            List<TA> reference,
+            Func<TA, TKey> referenceSelector,
+            Func<TB, TKey> targetSelector)
+            where TKey : notnull
+        {
+            var targetQueues = target.GroupBy(targetSelector)
+                                    .ToDictionary(g => g.Key, g => new Queue<TB>(g));
+
+            var result = new List<TB>(target.Count);
+
+            foreach (var refItem in reference)
+            {
+                var refKey = referenceSelector(refItem);
+                if (refKey != null &&
+                    targetQueues.TryGetValue(refKey, out var queue) &&
+                    queue.Count > 0)
+                {
+                    result.Add(queue.Dequeue());
+                }
+            }
+
+            foreach (var queue in targetQueues.Values)
+            {
+                while (queue.Count > 0)
+                {
+                    result.Add(queue.Dequeue());
+                }
+            }
+
+            return result;
+        }
+    }
 
 	public static class ListHelper
 	{
