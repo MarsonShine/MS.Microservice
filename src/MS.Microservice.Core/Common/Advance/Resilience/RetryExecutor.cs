@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MS.Microservice.Core.Common.Advance.Resilience
 {
@@ -12,13 +14,22 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
         private readonly IRetryStrategy _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
         private readonly IRetryCondition _condition = condition ?? throw new ArgumentNullException(nameof(condition));
 
+        private ILogger _logger = NullLogger<RetryExecutor>.Instance;
+        public ILogger Logger
+        {
+            get => _logger;
+            set => _logger = value ?? NullLogger<RetryExecutor>.Instance;
+        }
+
         public async Task<T> ExecuteAsync<T>(
             Func<Task<T>> operation,
             CancellationToken cancellationToken = default)
         {
+            if (operation == null) throw new ArgumentNullException(nameof(operation));
             var context = new RetryContext();
             while (true)
             {
+                _logger.LogDebug("Retry attempt {Attempt} starting", context.Attempt + 1);
                 Exception? lastException;
                 try
                 {
@@ -26,11 +37,13 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
 
                     if (!_condition.ShouldRetry(result, null))
                     {
+                        _logger.LogDebug("Operation succeeded on attempt {Attempt}", context.Attempt + 1);
                         return result;
                     }
 
                     // 结果不满足条件，需要重试
                     lastException = new InvalidOperationException("Result does not meet retry condition");
+                    _logger.LogWarning(lastException, "Result does not meet retry condition on attempt {Attempt}", context.Attempt + 1);
                 }
                 catch (Exception ex)
                 {
@@ -39,13 +52,16 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
                     // 检查异常是否需要重试
                     if (!_condition.ShouldRetry<object?>(null, ex))
                     {
+                        _logger.LogError(ex, "Operation failed with non-retriable exception on attempt {Attempt}", context.Attempt + 1);
                         throw;
                     }
+                    _logger.LogWarning(ex, "Operation failed with retriable exception on attempt {Attempt}", context.Attempt + 1);
                 }
 
                 // 检查是否应该重试
                 if (!_strategy.ShouldRetry(context))
                 {
+                    _logger.LogError(lastException, "Retry attempts exhausted after {Attempts} attempts", context.Attempt + 1);
                     if (lastException != null)
                         throw lastException;
                     throw new InvalidOperationException("Retry attempts exhausted");
@@ -55,6 +71,7 @@ namespace MS.Microservice.Core.Common.Advance.Resilience
                 var delay = _strategy.GetDelay(context);
                 if (delay > TimeSpan.Zero)
                 {
+                    _logger.LogInformation("Waiting {Delay} before next retry attempt {NextAttempt}", delay, context.Attempt + 2);
                     await Task.Delay(delay, cancellationToken);
                 }
                 context.Attempt++;
