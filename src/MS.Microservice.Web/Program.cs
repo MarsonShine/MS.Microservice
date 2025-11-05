@@ -38,8 +38,9 @@ void AddCollectionService(WebApplicationBuilder builder)
 	})
 	.AddJsonOptions(options =>
 	{
-		options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
-		options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        // 如果是纯API场景，可以考虑使用 UnsafeRelaxedJsonEscaping 来避免对非 ASCII 字符进行转义，每次序列化都是共享同一个实例，性能更好
+        options.JsonSerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping; // JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs, UnicodeRanges.CjkSymbolsandPunctuation, UnicodeRanges.HangulSyllables);
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 		options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
 		// options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
 	});
