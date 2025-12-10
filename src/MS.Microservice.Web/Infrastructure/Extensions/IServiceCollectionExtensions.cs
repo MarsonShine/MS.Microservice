@@ -135,8 +135,8 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
         public static IServiceCollection AddMySql(this IServiceCollection services, IConfiguration configuration)
         {
-            //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
-            //services.AddSqlSugarService(configuration);
+            services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
+            services.AddSqlSugarService(configuration);
 
             return services;
         }

@@ -28,7 +28,6 @@
     <PackageReference Include="NAudio" />
     <PackageReference Include="NAudio.Lame" />
     <PackageReference Include="NPOI" />
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
