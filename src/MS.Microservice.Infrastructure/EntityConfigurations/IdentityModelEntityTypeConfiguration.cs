@@ -111,9 +111,9 @@ namespace MS.Microservice.Infrastructure.EntityConfigurations
         }
     }
 
-    public class IdentityActionEntityTypeConfiguration : IEntityTypeConfiguration<Action>
+    public class IdentityActionEntityTypeConfiguration : IEntityTypeConfiguration<Domain.Aggregates.IdentityModel.Action>
     {
-        public void Configure(EntityTypeBuilder<Action> builder)
+        public void Configure(EntityTypeBuilder<Domain.Aggregates.IdentityModel.Action> builder)
         {
             builder.ToTable("Actions");
             builder.Ignore(p => p.DomainEvents);

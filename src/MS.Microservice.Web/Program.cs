@@ -8,7 +8,6 @@ using MS.Microservice.Web.Infrastructure.Extensions;
 using MS.Microservice.Web.Infrastructure.Mvc.ModelBinder.Extension;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Unicode;
 using Autofac;
 using Microsoft.Extensions.Configuration;
 using MS.Microservice.Web.AutofacModules.Extensions;

@@ -169,7 +169,8 @@ namespace MS.Microservice.Infrastructure.DbContext
             var configuration = BuildConfiguration();
             var connectionString = configuration.GetConnectionString("ActivationConnection");
             var builder = new DbContextOptionsBuilder<ActivationDbContext>()
-                .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+                //.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+                .UseNpgsql(connectionString);
 
             return new ActivationDbContext(builder.Options, configuration, new NoMediator());
         }
