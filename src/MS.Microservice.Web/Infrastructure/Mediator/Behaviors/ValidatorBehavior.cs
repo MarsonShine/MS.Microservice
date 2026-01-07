@@ -1,47 +1,45 @@
 ﻿using FluentValidation;
 using MS.Microservice.Core.Reflection;
 using MS.Microservice.Domain.Exception;
-using MediatR;
-using Microsoft.Extensions.Logging;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MS.Microservice.Web.Infrastructure.Mediator.Behaviors
 {
-    public class ValidatorBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
+    /// <summary>
+    /// Validator utility for Wolverine handlers. 
+    /// Can be called directly from handlers or used as a middleware pattern.
+    /// </summary>
+    public class ValidatorMiddleware
     {
-        private readonly ILogger<ValidatorBehavior<TRequest, TResponse>> _logger;
-        private readonly IValidator<TRequest>[] _validators;
-
-        public ValidatorBehavior(IValidator<TRequest>[] validators, ILogger<ValidatorBehavior<TRequest, TResponse>> logger)
+        /// <summary>
+        /// Validates a message using FluentValidation validators
+        /// </summary>
+        public static async Task ValidateAsync<T>(
+            T message,
+            ILogger logger,
+            IValidator<T>[]? validators = null)
         {
-            _validators = validators;
-            _logger = logger;
-        }
+            if (validators == null || validators.Length == 0)
+            {
+                return;
+            }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-        {
-            var typeName = TypeHelper.GetGenericTypeName(request);
+            var typeName = TypeHelper.GetGenericTypeName(message!);
 
-            _logger.LogInformation("----- Validating command {CommandType}", typeName);
+            logger.LogInformation("----- Validating command {CommandType}", typeName);
 
-            var failures = _validators
-                .Select(v => v.Validate(request))
+            var failures = validators
+                .Select(v => v.Validate(message))
                 .SelectMany(result => result.Errors)
                 .Where(error => error != null)
                 .ToList();
 
             if (failures.Any())
             {
-                _logger.LogWarning("Validation errors - {CommandType} - Command: {@Command} - Errors: {@ValidationErrors}", typeName, request, failures);
+                logger.LogWarning("Validation errors - {CommandType} - Command: {@Command} - Errors: {@ValidationErrors}", typeName, message, failures);
 
                 throw new DomainException(
-                    $"Command Validation Errors for type {typeof(TRequest).Name}", new ValidationException("Validation exception", failures));
+                    $"Command Validation Errors for type {typeof(T).Name}", new ValidationException("Validation exception", failures));
             }
-
-            return await next();
         }
     }
 }

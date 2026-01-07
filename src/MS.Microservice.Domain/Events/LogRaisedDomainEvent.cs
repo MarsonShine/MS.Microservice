@@ -1,9 +1,8 @@
-﻿using MediatR;
-using MS.Microservice.Domain.Aggregates.LogAggregate;
+﻿using MS.Microservice.Domain.Aggregates.LogAggregate;
 
 namespace MS.Microservice.Domain.Events
 {
-    public class LogRaisedDomainEvent : INotification
+    public class LogRaisedDomainEvent : IDomainEvent
     {
         public LogRaisedDomainEvent(string name, LogEventTypeEnum eventType, string method, object data, string description)
         {

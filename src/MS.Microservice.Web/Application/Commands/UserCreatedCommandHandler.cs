@@ -1,17 +1,12 @@
 ﻿using MS.Microservice.Web.Application.Validations;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
-using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Core.Extension;
 
 namespace MS.Microservice.Web.Application.Commands
 {
-    public class UserCreatedCommandHandler : IRequestHandler<UserCreatedCommand, (bool, string?)>
+    public class UserCreatedCommandHandler
     {
         private readonly IUserDomainService _userDomainService;
         private readonly CurrentUser _currentUser;

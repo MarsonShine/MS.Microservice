@@ -1,24 +1,20 @@
 ﻿using MS.Microservice.Core.Reflection;
-using MediatR;
-using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MS.Microservice.Web.Infrastructure.Mediator.Behaviors
 {
-    public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
+    /// <summary>
+    /// Wolverine middleware for logging
+    /// </summary>
+    public class LoggingMiddleware
     {
-        private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
-        public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger) => _logger = logger;
-
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        public static void Before<T>(T message, ILogger<LoggingMiddleware> logger)
         {
-            _logger.LogInformation("----- Handling command {CommandName} ({@Command})", TypeHelper.GetGenericTypeName(request), request);
-            var response = await next();
-            _logger.LogInformation("----- Command {CommandName} handled - response: {@Response}", TypeHelper.GetGenericTypeName(request), response);
+            logger.LogInformation("----- Handling command {CommandName} ({@Command})", TypeHelper.GetGenericTypeName(message!), message);
+        }
 
-            return response;
+        public static void After<T, TResponse>(T message, TResponse response, ILogger<LoggingMiddleware> logger)
+        {
+            logger.LogInformation("----- Command {CommandName} handled - response: {@Response}", TypeHelper.GetGenericTypeName(message!), response);
         }
     }
 }

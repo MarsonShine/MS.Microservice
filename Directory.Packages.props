@@ -13,6 +13,7 @@
     <PackageVersion Include="FluentValidation" Version="11.9.0" />
     <PackageVersion Include="IdentityModel" Version="7.0.0" />
     <PackageVersion Include="MediatR" Version="13.0.0" />
+    <PackageVersion Include="WolverineFx" Version="5.9.2" />
     <PackageVersion Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
@@ -49,3 +50,4 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.1" />
   </ItemGroup>
 </Project>
+

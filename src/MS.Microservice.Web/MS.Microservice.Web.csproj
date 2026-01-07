@@ -16,16 +16,15 @@
     <None Remove="Application\DomainEventHandlers\**" />
     <None Remove="Application\Enums\**" />
     <None Remove="BackgroundWork\**" />
-  </ItemGroup>
-  <ItemGroup>
+  </ItemGroup>  <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="Dapper.SqlBuilder" />
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-    <PackageReference Include="NLog" />
-    <PackageReference Include="NLog.Web.AspNetCore" />
+    <PackageReference Include="NLog" />    <PackageReference Include="NLog.Web.AspNetCore" />
+    <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />

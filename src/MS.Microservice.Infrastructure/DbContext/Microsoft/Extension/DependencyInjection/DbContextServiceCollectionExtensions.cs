@@ -6,8 +6,27 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    public static class DbContextServiceCollectionExtensions
+    public static partial class DbContextServiceCollectionExtensions
     {
+        extension(IServiceCollection services)
+        {
+            public void AddEntityFrameworkNpgSql([NotNull] string connectionString)
+            {
+                if (connectionString.IsNullOrEmpty())
+                {
+                    throw new ArgumentNullException(nameof(connectionString));
+                }
+
+                services.AddDbContext<ActivationDbContext>(
+                    dbContextOptions =>
+                    {
+                        dbContextOptions.UseNpgsql(
+                            connectionString,
+                            optionBuilder => optionBuilder.MigrationsHistoryTable("__MigrationsHistory")
+                        );
+                    }, contextLifetime: ServiceLifetime.Scoped);
+            }
+        }
         //public static void AddEntityFrameworkMySql(this IServiceCollection services, [NotNull] string connectionString)
         //{
         //    if (connectionString.IsNullOrEmpty())
@@ -31,22 +50,5 @@ namespace Microsoft.Extensions.DependencyInjection
 
         //        }, contextLifetime: ServiceLifetime.Scoped);
         //}
-
-        public static void AddEntityFrameworkNpgSql(this IServiceCollection services, [NotNull] string connectionString)
-        {
-            if (connectionString.IsNullOrEmpty())
-            {
-                throw new ArgumentNullException(nameof(connectionString));
-            }
-
-            services.AddDbContext<ActivationDbContext>(
-                dbContextOptions =>
-                {
-                    dbContextOptions.UseNpgsql(
-                        connectionString,
-                        optionBuilder => optionBuilder.MigrationsHistoryTable("__MigrationsHistory")
-                    );
-                }, contextLifetime: ServiceLifetime.Scoped);
-        }
     }
 }

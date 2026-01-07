@@ -1,12 +1,11 @@
-﻿using MediatR;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
 
 namespace MS.Microservice.Web.Application.Commands
 {
-    public class UserModifyCommand : IRequest<(bool, string?)>
+    public class UserModifyCommand
     {
         private string _password;
 

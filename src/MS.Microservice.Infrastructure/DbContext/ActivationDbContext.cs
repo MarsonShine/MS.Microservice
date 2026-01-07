@@ -2,7 +2,7 @@
 using MS.Microservice.Core.Domain.Repository;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Infrastructure.EntityConfigurations;
-using MediatR;
+using Wolverine;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -34,15 +34,15 @@ namespace MS.Microservice.Infrastructure.DbContext
         [NotNull]
         public DbSet<LogAggregateRoot>? Logs { get; set; }
         //public DbSet<MerchandiseSubject> MerchandiseSubjects { get; set; }
-        private readonly IMediator _mediator;
+        private readonly IMessageBus _messageBus;
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
 
         public ActivationDbContext(
             DbContextOptions<ActivationDbContext> options,
             IConfiguration configuration,
-            IMediator mediator) : base(options)
+            IMessageBus messageBus) : base(options)
         {
-            _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+            _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
             _platformDbContextOption = configuration.GetSection("FzPlatformDbContextSettings").Get<MsPlatformDbContextSettings>()!;
         }
 
@@ -114,11 +114,9 @@ namespace MS.Microservice.Infrastructure.DbContext
                 }
             }
             return await base.SaveChangesAsync(cancellationToken);
-        }
-
-        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+        }        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
         {
-            await _mediator.DispatchDomainEventsAsync(this);
+            await _messageBus.DispatchDomainEventsAsync(this);
             await SaveChangesAsync(cancellationToken);
             return true;
         }
@@ -163,8 +161,7 @@ namespace MS.Microservice.Infrastructure.DbContext
     }
 
     public class ActivationDbContextDesignFactory : IDesignTimeDbContextFactory<ActivationDbContext>
-    {
-        public ActivationDbContext CreateDbContext(string[] args)
+    {        public ActivationDbContext CreateDbContext(string[] args)
         {
             var configuration = BuildConfiguration();
             var connectionString = configuration.GetConnectionString("ActivationConnection");
@@ -172,7 +169,7 @@ namespace MS.Microservice.Infrastructure.DbContext
                 //.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                 .UseNpgsql(connectionString);
 
-            return new ActivationDbContext(builder.Options, configuration, new NoMediator());
+            return new ActivationDbContext(builder.Options, configuration, new NoMessageBus());
         }
 
         private static IConfigurationRoot BuildConfiguration()
@@ -184,41 +181,75 @@ namespace MS.Microservice.Infrastructure.DbContext
             return builder.Build();
         }
 
-        class NoMediator : IMediator
+        /// <summary>
+        /// A no-op implementation of IMessageBus for design-time DbContext creation
+        /// </summary>
+        class NoMessageBus : IMessageBus
         {
-            public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
+            public string? CorrelationId { get; set; }
+            public string? TenantId { get; set; }
+
+            public ValueTask SendAsync<T>(T message, DeliveryOptions? options = null)
             {
-                return default!;
+                return ValueTask.CompletedTask;
             }
 
-            public IAsyncEnumerable<object> CreateStream(object request, CancellationToken cancellationToken = default)
+            public ValueTask PublishAsync<T>(T message, DeliveryOptions? options = null)
             {
-                return default!;
+                return ValueTask.CompletedTask;
             }
 
-            public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default) where TNotification : INotification
+            public ValueTask BroadcastToTopicAsync(string topicName, object message, DeliveryOptions? options = null)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            public Task<T> InvokeAsync<T>(object message, CancellationToken cancellation = default, TimeSpan? timeout = null)
+            {
+                return Task.FromResult<T>(default!);
+            }
+
+            public Task<T> InvokeAsync<T>(object message, DeliveryOptions options, CancellationToken cancellation = default, TimeSpan? timeout = null)
+            {
+                return Task.FromResult<T>(default!);
+            }
+
+            public Task InvokeAsync(object message, CancellationToken cancellation = default, TimeSpan? timeout = null)
             {
                 return Task.CompletedTask;
             }
 
-            public Task Publish(object notification, CancellationToken cancellationToken = default)
+            public Task InvokeAsync(object message, DeliveryOptions options, CancellationToken cancellation = default, TimeSpan? timeout = null)
+            {
+                return Task.CompletedTask;
+            }            public Task<T> InvokeForTenantAsync<T>(string tenantId, object message, CancellationToken cancellation = default, TimeSpan? timeout = null)
+            {
+                return Task.FromResult<T>(default!);
+            }
+
+            public Task InvokeForTenantAsync(string tenantId, object message, CancellationToken cancellation = default, TimeSpan? timeout = null)
             {
                 return Task.CompletedTask;
             }
 
-            public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+            public IDestinationEndpoint EndpointFor(string endpointName)
             {
-                return Task.FromResult<TResponse>(default!);
+                return null!;
             }
 
-            public Task<object?> Send(object request, CancellationToken cancellationToken = default)
+            public IDestinationEndpoint EndpointFor(Uri uri)
             {
-                return Task.FromResult(default(object));
+                return null!;
             }
 
-            public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
+            public IReadOnlyList<Envelope> PreviewSubscriptions(object message, DeliveryOptions? options = null)
             {
-                return Task.FromResult(default(object));
+                return Array.Empty<Envelope>();
+            }
+
+            public IReadOnlyList<Envelope> PreviewSubscriptions(object message)
+            {
+                return Array.Empty<Envelope>();
             }
         }
     }
