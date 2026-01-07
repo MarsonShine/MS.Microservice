@@ -1,5 +1,4 @@
 ﻿using Autofac;
-using MS.Microservice.Web.AutofacModules.Extensions;
 
 namespace MS.Microservice.Web.AutofacModules
 {
@@ -7,7 +6,7 @@ namespace MS.Microservice.Web.AutofacModules
     {
         protected override void Load(ContainerBuilder builder)
         {
-            builder.RegisterMediatorService();
+
         }
     }
 }
