@@ -45,11 +45,11 @@ namespace MS.Microservice.Infrastructure.Utils
         public byte[] Export<T>(List<T> source, string sheetName)
         {
             using var ms = new MemoryStream();
-            ExportToStream(source, sheetName, ms);
+            Export(source, sheetName, ms);
             return ms.ToArray();
         }
 
-        public void ExportToStream<T>(List<T> source, string sheetName, Stream destination)
+        public void Export<T>(List<T> source, string sheetName, Stream destination)
         {
             ArgumentNullException.ThrowIfNull(source);
             ArgumentNullException.ThrowIfNull(destination);
@@ -98,13 +98,6 @@ namespace MS.Microservice.Infrastructure.Utils
             if (extraSkip > 0) rows = rows.Skip(extraSkip);
 
             return rows.ToList();
-        }
-
-        public IEnumerable<T> ImportAsEnumerable<T>(string fileName, Stream stream) where T : class, new()
-        {
-            // 为避免外部释放流导致枚举异常，先物化再 yield
-            var list = Import<T>(fileName, stream);
-            foreach (var item in list) yield return item;
         }
 
         private static Stream EnsureSeekable(Stream stream)
