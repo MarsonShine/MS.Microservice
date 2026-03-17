@@ -100,7 +100,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
         public static void AddCorsService(this IServiceCollection services, Action<CorsOptions> config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            ArgumentNullException.ThrowIfNull(config);
             services.Configure(config);
 
             var option = new CorsOptions();
@@ -137,6 +137,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
         {
             //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
             //services.AddSqlSugarService(configuration);
+            services.AddEntityFrameworkNpgSql(configuration.GetConnectionString("ActivationConnection")!);
 
             return services;
         }

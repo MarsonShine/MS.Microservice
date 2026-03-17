@@ -1,6 +1,5 @@
 ﻿using MS.Microservice.Web.Application.Validations;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
-using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Linq;
@@ -11,10 +10,11 @@ using MS.Microservice.Domain.Consts;
 using MS.Microservice.Core.Extension;
 using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Infrastructure.Caching.Consts;
+using Wolverine;
 
 namespace MS.Microservice.Web.Application.Commands
 {
-    public class UserModifyCommandHandler : IRequestHandler<UserModifyCommand, (bool, string?)>
+    public class UserModifyCommandHandler
     {
         private readonly IUserDomainService _userDomainService;
         private readonly CurrentUser _currentUser;

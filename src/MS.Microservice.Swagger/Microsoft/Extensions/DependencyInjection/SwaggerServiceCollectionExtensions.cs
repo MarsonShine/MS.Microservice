@@ -1,8 +1,10 @@
-﻿using MS.Microservice.Swagger.Swagger;
+﻿using Microsoft.OpenApi;
+using MS.Microservice.Swagger.Swagger;
 using MS.Microservice.Swagger.Swagger.Autherication;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -10,14 +12,14 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static void AddPlatformSwagger(this IServiceCollection service, [AllowNull] Action<SwaggerOptions> setupAction = null)
         {
-            SwaggerOptions option = new SwaggerOptions();
+            SwaggerOptions option = new();
             setupAction?.Invoke(option);
 
             if (option.IsEnabled)
             {
                 service.AddSwaggerGen(options =>
                 {
-                    options.SwaggerDoc("v1", new OpenApi.Models.OpenApiInfo
+                    options.SwaggerDoc("v1", new OpenApiInfo
                     {
                         Title = Consts.DOC_TITLE,
                         Version = Consts.DOC_VERSION,
@@ -27,12 +29,8 @@ namespace Microsoft.Extensions.DependencyInjection
                         options.ApplyBearerAuthorication();
                     }
 
-                    // comments
-                    var xmlPath = Path.Combine(AppContext.BaseDirectory, option.SwaggerXmlFile!);
-                    if (File.Exists(xmlPath))
-                    {
-                        options.IncludeXmlComments(xmlPath);
-                    }
+                    options.IncludeXmlComments(Assembly.GetExecutingAssembly());
+                    // or options.IncludeXmlComments(typeof(MyController).Assembly));
 
                 });
 

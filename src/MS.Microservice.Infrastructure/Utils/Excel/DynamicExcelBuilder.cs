@@ -1,173 +1,190 @@
 ﻿using NPOI.SS.UserModel;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
+using System.IO.Pipelines;
 using System.Reflection;
-using System.Threading.Tasks;
 
-namespace MS.Microservice.Infrastructure.Utils.Excel
+namespace MS.Microservice.Infrastructure.Utils.Excel;
+
+public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source)
 {
-    public class DynamicExcelBuilder<T>
+    private readonly IWorkbook _workbook = workbook;
+    private readonly ISheet _sheet = sheetAt;
+    private readonly IReadOnlyList<T> _items = source;
+    private readonly PropertyInfo[] _properties = typeof(T).GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+    private readonly Dictionary<string, int> _columnMapping = [];
+    private ColumnBinding[] _bindings = [];
+
+    public DynamicExcelBuilder<T> InitInsertRow(int titleRowIndex, int startRowIndex)
     {
-        private enum CellWriteMode { Typed, Text }
-        private readonly IWorkbook _workbook;
-        private readonly ISheet _sheet;
-        private readonly List<T> _items;
-        private readonly Dictionary<PropertyInfo, int> _columnMap;
-        private readonly int _titleRowIndex;
+        IRow titleRow = _sheet.GetRow(titleRowIndex) ?? throw new InvalidOperationException("未找到标题行");
+        ReadTitle(titleRow);
 
-        // 为映射到列的属性编译 Getter，避免反射 GetValue
-        private readonly Dictionary<PropertyInfo, Func<T, object?>> _getters = [];
-        private CellWriteMode _writeMode = CellWriteMode.Typed; // 默认高性能：强类型写入
-        public DynamicExcelBuilder(IWorkbook workbook, ISheet sheetAt, List<T> source, int titleRowIndex)
-        {
-            _workbook = workbook ?? throw new ArgumentNullException(nameof(workbook));
-            _sheet = sheetAt ?? throw new ArgumentNullException(nameof(sheetAt));
-            _items = source ?? [];
-            _titleRowIndex = titleRowIndex;
-
-            _columnMap = ExcelHelper.BuildColumnMap<T>(_sheet, _titleRowIndex);
-            _getters = BuildGetters(_columnMap.Keys);
-        }
-
-        private static Dictionary<PropertyInfo, Func<T, object?>> BuildGetters(IEnumerable<PropertyInfo> props)
-        {
-            var dict = new Dictionary<PropertyInfo, Func<T, object?>>();
-            foreach (var prop in props)
-            {
-                var param = Expression.Parameter(typeof(T), "x");
-                // 兼容声明类型与泛型 T 不一致的场景
-                var instance = prop.DeclaringType != typeof(T)
-                    ? Expression.Convert(param, prop.DeclaringType!)
-                    : param as Expression;
-                var access = Expression.Property(instance!, prop);
-                var box = Expression.Convert(access, typeof(object));
-                var lambda = Expression.Lambda<Func<T, object?>>(box, param).Compile();
-                dict[prop] = lambda;
-            }
-            return dict;
-        }
-
-        public DynamicExcelBuilder<T> UseTextCells()
-        {
-            _writeMode = CellWriteMode.Text;
+        if (_items.Count == 0)
             return this;
-        }
 
-        public DynamicExcelBuilder<T> UseTypedCells()
+        int itemCount = _items.Count;
+        _sheet.ShiftRows(startRowIndex, _sheet.LastRowNum + itemCount + 1, itemCount);
+
+        for (int i = startRowIndex; i < startRowIndex + _items.Count; i++)
         {
-            _writeMode = CellWriteMode.Typed;
-            return this;
-        }
+            IRow contentRow = _sheet.CreateRow(i);
+            contentRow.Height = titleRow.Height;
 
-        public DynamicExcelBuilder<T> InitInsertRow(int startRowIndex)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(startRowIndex, 0);
-
-            int count = _items?.Count ?? 0;
-            if (count <= 0) return this;
-
-            int lastRow = _sheet.LastRowNum;
-            // 仅当起始行在现有最后一行之内时才移动（避免 NPOI 要求 first<=last 的异常）
-            if (startRowIndex <= lastRow)
+            foreach (ICell cell in titleRow.Cells)
             {
-                _sheet.ShiftRows(startRowIndex, lastRow, count);
+                ICell contentCell = contentRow.CreateCell(cell.ColumnIndex);
+                contentCell.CellStyle = cell.CellStyle;
             }
-
-            var titleRow = _sheet.GetRow(_titleRowIndex)
-                           ?? throw new ArgumentException($"行 {_titleRowIndex} 不存在");
-            var style = titleRow.Cells.FirstOrDefault()?.CellStyle;
-
-            for (int i = 0; i < count; i++)
-            {
-                var row = _sheet.CreateRow(startRowIndex + i);
-                row.Height = titleRow.Height;
-                if (style != null)
-                {
-                    foreach (var cell in titleRow.Cells)
-                    {
-                        row.CreateCell(cell.ColumnIndex).CellStyle = style;
-                    }
-                }
-            }
-            return this;
         }
-
-        /// <summary>
-        /// 按已有 _columnMap，将 Items 的属性值写入对应列
-        /// </summary>
-        public DynamicExcelBuilder<T> InsertCellValue(int startRowIndex)
-        {
-            if (_writeMode == CellWriteMode.Text)
-            {
-                for (int i = 0; i < _items.Count; i++)
-                {
-                    var row = _sheet.GetRow(startRowIndex + i)
-                           ?? _sheet.CreateRow(startRowIndex + i);
-                    var obj = _items[i];
-                    foreach (var kv in _columnMap)
-                    {
-                        var prop = kv.Key;
-                        var col = kv.Value;
-                        var cell = row.GetCell(col) ?? row.CreateCell(col);
-                        var val = prop.GetValue(obj);
-                        cell.SetCellValue(val?.ToString() ?? string.Empty);
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < _items.Count; i++)
-                {
-                    var row = _sheet.GetRow(startRowIndex + i) ?? _sheet.CreateRow(startRowIndex + i);
-                    var obj = _items[i];
-
-                    foreach (var kv in _columnMap)
-                    {
-                        var prop = kv.Key;
-                        var col = kv.Value;
-                        var cell = row.GetCell(col) ?? row.CreateCell(col);
-
-                        var val = _getters.TryGetValue(prop, out var getter) ? getter(obj) : prop.GetValue(obj);
-
-                        if (val is null) { cell.SetCellValue(string.Empty); continue; }
-                        switch (val)
-                        {
-                            case string s: cell.SetCellValue(s); break;
-                            case DateTime dt: cell.SetCellValue(dt); break;
-                            case bool b: cell.SetCellValue(b); break;
-                            case double d: cell.SetCellValue(d); break;
-                            case float f: cell.SetCellValue(f); break;
-                            case decimal m: cell.SetCellValue((double)m); break;
-                            case int i32: cell.SetCellValue(i32); break;
-                            case long i64: cell.SetCellValue((double)i64); break;
-                            case short i16: cell.SetCellValue(i16); break;
-                            case byte u8: cell.SetCellValue(u8); break;
-                            case sbyte s8: cell.SetCellValue((double)s8); break;
-                            case uint u32: cell.SetCellValue(u32); break;
-                            case ulong u64: cell.SetCellValue((double)u64); break;
-                            case ushort u16: cell.SetCellValue(u16); break;
-                            case Enum e: cell.SetCellValue(e.ToString()); break;
-                            default: cell.SetCellValue(val.ToString()); break;
-                        }
-                    }
-                }
-            }
-            return this;
-        }
-
-        public async Task<byte[]> WriteAsync()
-        {
-            using var ms = new MemoryStream();
-            _workbook.Write(ms, leaveOpen: true);
-            return await Task.FromResult(ms.ToArray());
-        }
-
-        public IWorkbook Workbook { get { return _workbook; } }
-
-        public List<T> Items { get { return _items; } }
+        return this;
     }
+
+    private void ReadTitle(IRow titleRow)
+    {
+        _columnMapping.Clear();
+        var titles = titleRow.Cells;
+        if (titles.Count == 0)
+        {
+            for (int columnIndex = 0; columnIndex < _properties.Length; columnIndex++)
+            {
+                ExcelColumnAttribute? attribute = _properties[columnIndex].GetCustomAttribute<ExcelColumnAttribute>();
+                if (attribute != null)
+                {
+                    _columnMapping[attribute.Name ?? _properties[columnIndex].Name] = columnIndex;
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < titles.Count; i++)
+            {
+                string title = titles[i].ToString()?.Trim() ?? string.Empty;
+                if (!string.IsNullOrEmpty(title))
+                {
+                    _columnMapping[title] = titles[i].ColumnIndex;
+                }
+            }
+        }
+
+        _bindings = _properties
+            .Select(property => new { Property = property, Attribute = property.GetCustomAttribute<ExcelColumnAttribute>() })
+            .Where(item => item.Attribute != null)
+            .Select(item =>
+            {
+                string key = item.Attribute!.Name ?? item.Property.Name;
+                return _columnMapping.TryGetValue(key, out int columnIndex)
+                    ? new ColumnBinding(item.Property, columnIndex)
+                    : (ColumnBinding?)null;
+            })
+            .Where(binding => binding.HasValue)
+            .Select(binding => binding!.Value)
+            .ToArray();
+    }
+
+    public DynamicExcelBuilder<T> InsertCellValue(int contentRowIndex)
+    {
+        if (Items.Count == 0)
+        {
+            return this;
+        }
+
+        for (int i = 0; i < Items.Count; i++)
+        {
+            int rowIndex = contentRowIndex++;
+            IRow row = _sheet.GetRow(rowIndex) ?? _sheet.CreateRow(rowIndex);
+            T obj = Items[i];
+            foreach (ColumnBinding binding in _bindings)
+            {
+                ICell cell = row.GetCell(binding.ColumnIndex) ?? row.CreateCell(binding.ColumnIndex);
+                object? value = binding.Property.GetValue(obj);
+                if (value != null)
+                {
+                    SetCellValue(cell, value);
+                }
+            }
+        }
+        return this;
+    }
+
+    public void Write(Stream destination)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        _workbook.Write(destination, leaveOpen: true);
+    }
+
+    public void Write(PipeWriter destination)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        using Stream writerStream = destination.AsStream(leaveOpen: true);
+        _workbook.Write(writerStream, leaveOpen: true);
+        writerStream.Flush();
+    }
+
+    public async ValueTask WriteAsync(Stream destination, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Write(destination);
+        await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask WriteAsync(PipeWriter destination, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using Stream writerStream = destination.AsStream(leaveOpen: true);
+        _workbook.Write(writerStream, leaveOpen: true);
+        await writerStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<byte[]> WriteAsync()
+    {
+        using MemoryStream stream = new();
+        Write(stream);
+        return Task.FromResult(stream.ToArray());
+    }
+
+    public IWorkbook Workbook { get { return _workbook; } }
+
+    public IReadOnlyList<T> Items { get { return _items; } }
+
+    private static void SetCellValue(ICell cell, object value)
+    {
+        switch (value)
+        {
+            case string stringValue:
+                cell.SetCellValue(stringValue);
+                break;
+            case DateTime dateTimeValue:
+                cell.SetCellValue(dateTimeValue);
+                break;
+            case bool boolValue:
+                cell.SetCellValue(boolValue);
+                break;
+            case short shortValue:
+                cell.SetCellValue(shortValue);
+                break;
+            case int intValue:
+                cell.SetCellValue(intValue);
+                break;
+            case long longValue:
+                cell.SetCellValue(longValue);
+                break;
+            case float floatValue:
+                cell.SetCellValue(floatValue);
+                break;
+            case double doubleValue:
+                cell.SetCellValue(doubleValue);
+                break;
+            case decimal decimalValue:
+                cell.SetCellValue((double)decimalValue);
+                break;
+            default:
+                cell.SetCellValue(value.ToString());
+                break;
+        }
+    }
+
+    private readonly record struct ColumnBinding(PropertyInfo Property, int ColumnIndex);
 }
