@@ -18,20 +18,23 @@ namespace MS.WebHttpClient
         {
             public async Task<T> GetAsync<T>(string api, object body)
             {
-                var message = await client.GetAsync(api, body);
+                var message = await GetAsyncCore(client, api, body);
                 return await ReadAsObjectAsync<T>(message);
             }
 
-            public async Task<HttpResponseMessage> GetAsync(string api, object body)
+            public Task<HttpResponseMessage> GetAsync(string api, object body)
+                => GetAsyncCore(client, api, body);
+        }
+
+        private static async Task<HttpResponseMessage> GetAsyncCore(HttpClient client, string api, object body)
+        {
+            if (client == null) throw new ArgumentNullException(nameof(client));
+            string queryString = "";
+            if (body != null)
             {
-                if (client == null) throw new ArgumentNullException(nameof(client));
-                string queryString = "";
-                if (body != null)
-                {
-                    queryString = "?" + BuildQueryString(body);
-                }
-                return await client.GetAsync(api + queryString);
+                queryString = "?" + BuildQueryString(body);
             }
+            return await client.GetAsync(api + queryString);
         }
 
         private static string BuildQueryString(object queryBody)

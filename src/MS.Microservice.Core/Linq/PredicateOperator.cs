@@ -12,7 +12,7 @@ namespace System.Linq
         And
     }
 
-    public static class PredicateBuilder
+    public static partial class PredicateBuilder
     {
         private class RebindParameterVisitor : ExpressionVisitor
         {
@@ -41,30 +41,31 @@ namespace System.Linq
             return new ExpressionStarter<T>(defaultExpression);
         }
 
-        public static Expression<Func<T, bool>> Or<T>([NotNull] this Expression<Func<T, bool>> expr1, [NotNull] Expression<Func<T, bool>> expr2)
+        extension<T>(Expression<Func<T, bool>> expr1)
         {
-            var expr2Body = new RebindParameterVisitor(expr2.Parameters[0], expr1.Parameters[0]).Visit(expr2.Body);
+            public Expression<Func<T, bool>> Or(Expression<Func<T, bool>> expr2)
+            {
+                var expr2Body = new RebindParameterVisitor(expr2.Parameters[0], expr1.Parameters[0]).Visit(expr2.Body);
+                return Expression.Lambda<Func<T, bool>>(Expression.OrElse(expr1.Body, expr2Body), expr1.Parameters);
+            }
 
-            return Expression.Lambda<Func<T, bool>>(Expression.OrElse(expr1.Body, expr2Body), expr1.Parameters);
+            public Expression<Func<T, bool>> And(Expression<Func<T, bool>> expr2)
+            {
+                var expr2Body = new RebindParameterVisitor(expr2.Parameters[0], expr1.Parameters[0]).Visit(expr2.Body);
+                return Expression.Lambda<Func<T, bool>>(Expression.AndAlso(expr1.Body, expr2Body), expr1.Parameters);
+            }
+
+            public Expression<Func<T, bool>> Not()
+                => Expression.Lambda<Func<T, bool>>(Expression.Not(expr1.Body), expr1.Parameters);
+
+            public Expression<Func<T, bool>> Extend(Expression<Func<T, bool>> second, PredicateOperator @operator = PredicateOperator.Or)
+                => @operator == PredicateOperator.Or ? expr1.Or(second) : expr1.And(second);
         }
 
-        public static Expression<Func<T, bool>> And<T>([NotNull] this Expression<Func<T, bool>> expr1, [NotNull] Expression<Func<T, bool>> expr2)
+        extension<T>(ExpressionStarter<T> first)
         {
-            var expr2Body = new RebindParameterVisitor(expr2.Parameters[0], expr1.Parameters[0]).Visit(expr2.Body);
-            return Expression.Lambda<Func<T, bool>>(Expression.AndAlso(expr1.Body, expr2Body), expr1.Parameters);
-        }
-
-        public static Expression<Func<T, bool>> Not<T>(this Expression<Func<T, bool>> expr)
-            => Expression.Lambda<Func<T, bool>>(Expression.Not(expr.Body), expr.Parameters);
-
-        public static Expression<Func<T, bool>> Extend<T>([NotNull] this Expression<Func<T, bool>> first, [NotNull] Expression<Func<T, bool>> second, PredicateOperator @operator = PredicateOperator.Or)
-        {
-            return @operator == PredicateOperator.Or ? first.Or(second) : first.And(second);
-        }
-
-        public static Expression<Func<T, bool>> Extend<T>([NotNull] this ExpressionStarter<T> first, [NotNull] Expression<Func<T, bool>> second, PredicateOperator @operator = PredicateOperator.Or)
-        {
-            return @operator == PredicateOperator.Or ? first.Or(second) : first.And(second);
+            public Expression<Func<T, bool>> Extend(Expression<Func<T, bool>> second, PredicateOperator @operator = PredicateOperator.Or)
+                => @operator == PredicateOperator.Or ? first.Or(second) : first.And(second);
         }
     }
 }

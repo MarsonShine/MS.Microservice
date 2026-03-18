@@ -95,12 +95,15 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
         }
     }
 
-    public static class CustomLoggerExtensions
+    public static partial class CustomLoggerExtensions
     {
-        public static ILoggerFactory AddMSLogger(this ILoggerFactory factory, IHttpContextAccessor accessor)
+        extension(ILoggerFactory factory)
         {
-            factory.AddProvider(new MSLoggerProvider(accessor));
-            return factory;
+            public ILoggerFactory AddMSLogger(IHttpContextAccessor accessor)
+            {
+                factory.AddProvider(new MSLoggerProvider(accessor));
+                return factory;
+            }
         }
     }
 }

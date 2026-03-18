@@ -5,16 +5,19 @@ using System.Linq.Expressions;
 
 namespace MS.Microservice.Core.Specification;
 
-internal static class ExpressionCombiner
+internal static partial class ExpressionCombiner
 {
-    public static Expression<T> Compose<T>(this Expression<T> first, Expression<T> second, Func<Expression, Expression, Expression> merge)
+    extension<T>(Expression<T> first)
     {
-        var map = first.Parameters
-            .Select((f, i) => new { f, s = second.Parameters[i] })
-            .ToDictionary(p => p.s, p => p.f);
+        public Expression<T> Compose(Expression<T> second, Func<Expression, Expression, Expression> merge)
+        {
+            var map = first.Parameters
+                .Select((f, i) => new { f, s = second.Parameters[i] })
+                .ToDictionary(p => p.s, p => p.f);
 
-        var secondBody = new ParameterReplacer(map).Visit(second.Body)!;
-        return Expression.Lambda<T>(merge(first.Body, secondBody), first.Parameters);
+            var secondBody = new ParameterReplacer(map).Visit(second.Body)!;
+            return Expression.Lambda<T>(merge(first.Body, secondBody), first.Parameters);
+        }
     }
 
     public static Expression<Func<T, bool>> AndAlso<T>(Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
