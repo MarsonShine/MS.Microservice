@@ -4,26 +4,32 @@ using System.Collections.Concurrent;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
-    public class MSLoggerProvider : ILoggerProvider
+    /// <summary>
+    /// 自定义 LoggerProvider，为每个 categoryName 缓存一个 MSLoggerEvent 实例。
+    /// </summary>
+    public sealed class MSLoggerProvider : ILoggerProvider
     {
-        private readonly ConcurrentDictionary<string, MSLoggerEvent> _loggers =
-        new ConcurrentDictionary<string, MSLoggerEvent>();
+        private readonly ConcurrentDictionary<string, MSLoggerEvent> _loggers = new();
         private readonly IHttpContextAccessor _accessor;
+        private bool _disposed;
 
         public MSLoggerProvider(IHttpContextAccessor accessor)
         {
-            _accessor = accessor;
+            _accessor = accessor ?? throw new System.ArgumentNullException(nameof(accessor));
         }
 
         public ILogger CreateLogger(string categoryName)
         {
-
-            var logger = _loggers.GetOrAdd(categoryName, name => new MSLoggerEvent(name, _accessor));
-            return logger;
+            return _loggers.GetOrAdd(categoryName, static (name, acc) => new MSLoggerEvent(name, acc), _accessor);
         }
 
-        public void Dispose() { }
-
-
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _loggers.Clear();
+                _disposed = true;
+            }
+        }
     }
 }

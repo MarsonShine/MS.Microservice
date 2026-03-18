@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "The review flags early materialization of all orders before filtering.",
+      "passed": true,
+      "evidence": "The review says the method now loads the entire orders table before filtering and explains that filtering moved from SQL to in-memory LINQ."
+    },
+    {
+      "text": "The review flags over-fetching or unnecessary `Include(o => o.Items)` for this query.",
+      "passed": true,
+      "evidence": "The review explicitly mentions eager loading of all `Order.Items` for every order."
+    },
+    {
+      "text": "The review flags missing `CancellationToken` propagation on async EF Core calls.",
+      "passed": false,
+      "evidence": "The output never mentions `CancellationToken` or missing cancellation propagation on `ToListAsync`/`SaveChangesAsync`."
+    },
+    {
+      "text": "The review mentions a consistency or transactional risk around `SaveChangesAsync()` followed by `auditWriter.WriteAsync(...)`, or explicitly states that the context is insufficient to confirm it.",
+      "passed": false,
+      "evidence": "The output is focused entirely on `GetOpenOrdersAsync` and does not mention `CancelAsync`, write-audit ordering, or context limitations."
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "failed": 2,
+    "total": 4,
+    "pass_rate": 0.5
+  },
+  "execution_metrics": {
+    "tool_calls": {},
+    "total_tool_calls": 0,
+    "total_steps": 1,
+    "errors_encountered": 0,
+    "output_chars": 894,
+    "transcript_chars": 1848
+  },
+  "timing": {
+    "duration_ms": 25000,
+    "total_duration_seconds": 25.0,
+    "executor_duration_seconds": 25.0
+  },
+  "claims": [],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Token counts were not exposed by read_agent, so timing data includes duration only."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "No suggestions, evals look solid"
+  }
+}

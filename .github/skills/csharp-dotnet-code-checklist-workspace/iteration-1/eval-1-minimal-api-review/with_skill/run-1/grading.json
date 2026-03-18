@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "The review flags sync-over-async caused by `.Result` on `customerApi.GetAsync`.",
+      "passed": true,
+      "evidence": "Finding 1 explicitly quotes `customerApi.GetAsync(request.CustomerId).Result` and calls it a sync-over-async issue."
+    },
+    {
+      "text": "The review flags leaking raw exception details through `Results.BadRequest(ex.ToString())`.",
+      "passed": true,
+      "evidence": "Finding 2 quotes `return Results.BadRequest(ex.ToString());` and explains that it exposes stack traces/internal details."
+    },
+    {
+      "text": "The review flags missing or incorrect cancellation propagation such as passing `default` into `CreateAsync`.",
+      "passed": true,
+      "evidence": "Finding 3 quotes `await service.CreateAsync(request, default);` and recommends passing a `CancellationToken`."
+    },
+    {
+      "text": "The review uses severity-tagged findings rather than a single unstructured paragraph.",
+      "passed": true,
+      "evidence": "The output is organized into numbered findings with explicit severities: `High` and `Medium`."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {},
+    "total_tool_calls": 0,
+    "total_steps": 1,
+    "errors_encountered": 0,
+    "output_chars": 2652,
+    "transcript_chars": 3445
+  },
+  "timing": {
+    "duration_ms": 40000,
+    "total_duration_seconds": 40.0,
+    "executor_duration_seconds": 40.0
+  },
+  "claims": [],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Token counts were not exposed by read_agent, so timing data includes duration only."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "No suggestions, evals look solid"
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "metadata": {
+    "skill_name": "csharp-dotnet-code-checklist",
+    "skill_path": "C:\\Users\\shuai.mao\\.copilot\\skills\\csharp-dotnet-code-checklist",
+    "executor_model": "gpt-5.4",
+    "analyzer_model": "gpt-5.4",
+    "timestamp": "2026-03-18T02:47:21Z",
+    "evals_run": [
+      1,
+      2,
+      3
+    ],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 40.0,
+        "tokens": 2652,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The review flags sync-over-async caused by `.Result` on `customerApi.GetAsync`.",
+          "passed": true,
+          "evidence": "Finding 1 explicitly quotes `customerApi.GetAsync(request.CustomerId).Result` and calls it a sync-over-async issue."
+        },
+        {
+          "text": "The review flags leaking raw exception details through `Results.BadRequest(ex.ToString())`.",
+          "passed": true,
+          "evidence": "Finding 2 quotes `return Results.BadRequest(ex.ToString());` and explains that it exposes stack traces/internal details."
+        },
+        {
+          "text": "The review flags missing or incorrect cancellation propagation such as passing `default` into `CreateAsync`.",
+          "passed": true,
+          "evidence": "Finding 3 quotes `await service.CreateAsync(request, default);` and recommends passing a `CancellationToken`."
+        },
+        {
+          "text": "The review uses severity-tagged findings rather than a single unstructured paragraph.",
+          "passed": true,
+          "evidence": "The output is organized into numbered findings with explicit severities: `High` and `Medium`."
+        }
+      ],
+      "notes": [
+        "Token counts were not exposed by read_agent, so timing data includes duration only."
+      ]
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 58.0,
+        "tokens": 2932,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The review flags early materialization of all orders before filtering.",
+          "passed": true,
+          "evidence": "Finding 1 states that `ToListAsync()` happens before `Where(...)`, causing all orders to be loaded before filtering."
+        },
+        {
+          "text": "The review flags over-fetching or unnecessary `Include(o => o.Items)` for this query.",
+          "passed": true,
+          "evidence": "Finding 1 and the residual risk section both call out loading the full item graph and note that `Include` should be used only if callers need `Items`."
+        },
+        {
+          "text": "The review flags missing `CancellationToken` propagation on async EF Core calls.",
+          "passed": true,
+          "evidence": "Finding 3 explicitly says repository async APIs do not support cancellation propagation and recommends adding `CancellationToken`."
+        },
+        {
+          "text": "The review mentions a consistency or transactional risk around `SaveChangesAsync()` followed by `auditWriter.WriteAsync(...)`, or explicitly states that the context is insufficient to confirm it.",
+          "passed": true,
+          "evidence": "Residual risks mention that `CancelAsync` saves before writing the audit record and recommends a transaction/outbox pattern if audit logging is required."
+        }
+      ],
+      "notes": [
+        "Token counts were not exposed by read_agent, so timing data includes duration only."
+      ]
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 27.0,
+        "tokens": 3645,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The review flags per-iteration `new HttpClient()` creation.",
+          "passed": true,
+          "evidence": "The `HttpClient` lifetime finding explicitly says creating and disposing `HttpClient` inside the loop is an anti-pattern."
+        },
+        {
+          "text": "The review flags missing cancellation propagation to the HTTP call and/or `Task.Delay(1000)`.",
+          "passed": true,
+          "evidence": "One finding flags `Task.Delay(1000)` ignoring cancellation, and another flags the HTTP request not using the worker cancellation token."
+        },
+        {
+          "text": "The review flags unsafe null suppression on `JsonSerializer.Deserialize(... )!`.",
+          "passed": true,
+          "evidence": "A dedicated nullability finding calls out `JsonSerializer.Deserialize<Dictionary<string, decimal>>(json)!;` as unsafe suppression."
+        },
+        {
+          "text": "The review flags thread-safety or concurrency risk around updating `_cache` and raising `SyncCompleted` from the worker loop.",
+          "passed": true,
+          "evidence": "The output has explicit findings for `_cache` shared mutable state and inline `SyncCompleted` event invocation risks."
+        }
+      ],
+      "notes": [
+        "Token counts were not exposed by read_agent, so timing data includes duration only."
+      ]
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 23.0,
+        "tokens": 1976,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The review flags sync-over-async caused by `.Result` on `customerApi.GetAsync`.",
+          "passed": true,
+          "evidence": "Finding 1 explicitly flags `.Result` as sync-over-async in the request pipeline."
+        },
+        {
+          "text": "The review flags leaking raw exception details through `Results.BadRequest(ex.ToString())`.",
+          "passed": true,
+          "evidence": "Finding 2 quotes `Results.BadRequest(ex.ToString())` and calls out internal detail leakage."
+        },
+        {
+          "text": "The review flags missing or incorrect cancellation propagation such as passing `default` into `CreateAsync`.",
+          "passed": true,
+          "evidence": "Finding 3 explicitly says cancellation is ignored because `default` is passed to `CreateAsync`."
+        },
+        {
+          "text": "The review uses severity-tagged findings rather than a single unstructured paragraph.",
+          "passed": true,
+          "evidence": "The response contains numbered findings with `High`, `Medium`, and `Low` severities."
+        }
+      ],
+      "notes": [
+        "Token counts were not exposed by read_agent, so timing data includes duration only."
+      ]
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 2,
+        "failed": 2,
+        "total": 4,
+        "time_seconds": 25.0,
+        "tokens": 894,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The review flags early materialization of all orders before filtering.",
+          "passed": true,
+          "evidence": "The review says the method now loads the entire orders table before filtering and explains that filtering moved from SQL to in-memory LINQ."
+        },
+        {
+          "text": "The review flags over-fetching or unnecessary `Include(o => o.Items)` for this query.",
+          "passed": true,
+          "evidence": "The review explicitly mentions eager loading of all `Order.Items` for every order."
+        },
+        {
+          "text": "The review flags missing `CancellationToken` propagation on async EF Core calls.",
+          "passed": false,
+          "evidence": "The output never mentions `CancellationToken` or missing cancellation propagation on `ToListAsync`/`SaveChangesAsync`."
+        },
+        {
+          "text": "The review mentions a consistency or transactional risk around `SaveChangesAsync()` followed by `auditWriter.WriteAsync(...)`, or explicitly states that the context is insufficient to confirm it.",
+          "passed": false,
+          "evidence": "The output is focused entirely on `GetOpenOrdersAsync` and does not mention `CancelAsync`, write-audit ordering, or context limitations."
+        }
+      ],
+      "notes": [
+        "Token counts were not exposed by read_agent, so timing data includes duration only."
+      ]
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 27.0,
+        "tokens": 1661,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The review flags per-iteration `new HttpClient()` creation.",
+          "passed": true,
+          "evidence": "Finding 2 explicitly says creating and disposing a new `HttpClient` every second is incorrect."
+        },
+        {
+          "text": "The review flags missing cancellation propagation to the HTTP call and/or `Task.Delay(1000)`.",
+          "passed": true,
+          "evidence": "Finding 1 says both `GetStringAsync(...)` and `Task.Delay(1000)` do not receive `stoppingToken`."
+        },
+        {
+          "text": "The review flags unsafe null suppression on `JsonSerializer.Deserialize(... )!`.",
+          "passed": true,
+          "evidence": "Finding 3 explicitly calls out the null-forgiving operator on `JsonSerializer.Deserialize<Dictionary<string, decimal>>(json)!`."
+        },
+        {
+          "text": "The review flags thread-safety or concurrency risk around updating `_cache` and raising `SyncCompleted` from the worker loop.",
+          "passed": true,
+          "evidence": "Finding 4 flags `_cache` publication/thread-safety, and Finding 5 notes that exceptions thrown by a `SyncCompleted` subscriber can fault the worker loop."
+        }
+      ],
+      "notes": [
+        "Token counts were not exposed by read_agent, so timing data includes duration only."
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 41.6667,
+        "stddev": 15.5671,
+        "min": 27.0,
+        "max": 58.0
+      },
+      "tokens": {
+        "mean": 3076.3333,
+        "stddev": 511.9925,
+        "min": 2652,
+        "max": 3645
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.8333,
+        "stddev": 0.2887,
+        "min": 0.5,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 25.0,
+        "stddev": 2.0,
+        "min": 23.0,
+        "max": 27.0
+      },
+      "tokens": {
+        "mean": 1510.3333,
+        "stddev": 556.5127,
+        "min": 894,
+        "max": 1976
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.17",
+      "time_seconds": "+16.7",
+      "tokens": "+1566"
+    }
+  },
+  "notes": [
+    "The skill improved total pass rate from 83.3% to 100% in this iteration, with the clearest gain on the EF Core review eval where the skill expanded the review beyond the obvious query regression.",
+    "Eval 1 and Eval 3 were non-discriminating in this run: both with-skill and baseline outputs satisfied all current assertions, so those evals validate minimum coverage more than unique skill value.",
+    "With-skill runs were slower and longer on average because the skill encouraged broader, more structured reviews. The added cost bought more complete issue coverage on Eval 2.",
+    "The benchmark's token column is an output-size proxy derived from `metrics.json` because `read_agent` did not expose total_tokens for these runs. Duration values are real elapsed times from the completed agents."
+  ]
+}

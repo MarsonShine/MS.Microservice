@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "eval_name": "minimal-api-review",
+  "prompt": "Review this ASP.NET Core 10 minimal API diff like a senior C# reviewer. Use a checklist-based PR review, focus on meaningful issues only, and provide severity, evidence, and suggested fixes.\n\n```diff\n+ app.MapPost(\"/orders\", async (CreateOrderRequest request, OrdersService service, CustomerApi customerApi, ILogger<Program> logger) =>\n+ {\n+     try\n+     {\n+         var customer = customerApi.GetAsync(request.CustomerId).Result;\n+         var order = await service.CreateAsync(request, default);\n+         logger.LogInformation($\"Created order {order.Id} for {request.CustomerId}\");\n+         return Results.Ok(order);\n+     }\n+     catch (Exception ex)\n+     {\n+         return Results.BadRequest(ex.ToString());\n+     }\n+ });\n```",
+  "assertions": [
+    "The review flags sync-over-async caused by `.Result` on `customerApi.GetAsync`.",
+    "The review flags leaking raw exception details through `Results.BadRequest(ex.ToString())`.",
+    "The review flags missing or incorrect cancellation propagation such as passing `default` into `CreateAsync`.",
+    "The review uses severity-tagged findings rather than a single unstructured paragraph."
+  ]
+}

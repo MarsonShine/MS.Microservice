@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "background-worker-review",
+  "prompt": "Review this background worker diff using a C# /.NET 10 PR checklist. Prioritize async correctness, lifetimes, nullability, and thread-safety.\n\n```diff\n public sealed class PriceSyncWorker(ILogger<PriceSyncWorker> logger) : BackgroundService\n {\n     private Dictionary<string, decimal> _cache = new();\n     public event EventHandler? SyncCompleted;\n \n     protected override async Task ExecuteAsync(CancellationToken stoppingToken)\n     {\n         while (!stoppingToken.IsCancellationRequested)\n         {\n+            using var client = new HttpClient();\n+            var json = await client.GetStringAsync(\"https://prices.internal/api/latest\");\n+            _cache = JsonSerializer.Deserialize<Dictionary<string, decimal>>(json)!;\n+            SyncCompleted?.Invoke(this, EventArgs.Empty);\n+            await Task.Delay(1000);\n         }\n     }\n }\n```",
+  "assertions": [
+    "The review flags per-iteration `new HttpClient()` creation.",
+    "The review flags missing cancellation propagation to the HTTP call and/or `Task.Delay(1000)`.",
+    "The review flags unsafe null suppression on `JsonSerializer.Deserialize(... )!`.",
+    "The review flags thread-safety or concurrency risk around updating `_cache` and raising `SyncCompleted` from the worker loop."
+  ]
+}

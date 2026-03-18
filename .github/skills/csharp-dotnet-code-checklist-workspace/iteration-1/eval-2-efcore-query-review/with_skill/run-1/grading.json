@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "The review flags early materialization of all orders before filtering.",
+      "passed": true,
+      "evidence": "Finding 1 states that `ToListAsync()` happens before `Where(...)`, causing all orders to be loaded before filtering."
+    },
+    {
+      "text": "The review flags over-fetching or unnecessary `Include(o => o.Items)` for this query.",
+      "passed": true,
+      "evidence": "Finding 1 and the residual risk section both call out loading the full item graph and note that `Include` should be used only if callers need `Items`."
+    },
+    {
+      "text": "The review flags missing `CancellationToken` propagation on async EF Core calls.",
+      "passed": true,
+      "evidence": "Finding 3 explicitly says repository async APIs do not support cancellation propagation and recommends adding `CancellationToken`."
+    },
+    {
+      "text": "The review mentions a consistency or transactional risk around `SaveChangesAsync()` followed by `auditWriter.WriteAsync(...)`, or explicitly states that the context is insufficient to confirm it.",
+      "passed": true,
+      "evidence": "Residual risks mention that `CancelAsync` saves before writing the audit record and recommends a transaction/outbox pattern if audit logging is required."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {},
+    "total_tool_calls": 0,
+    "total_steps": 1,
+    "errors_encountered": 0,
+    "output_chars": 2932,
+    "transcript_chars": 3886
+  },
+  "timing": {
+    "duration_ms": 58000,
+    "total_duration_seconds": 58.0,
+    "executor_duration_seconds": 58.0
+  },
+  "claims": [],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Token counts were not exposed by read_agent, so timing data includes duration only."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "No suggestions, evals look solid"
+  }
+}

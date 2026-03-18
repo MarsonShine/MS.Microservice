@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Configs;
 using MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LayoutRenderers;
 using NLog;
@@ -9,9 +8,10 @@ using System.IO;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
-    public class MSLoggerBuilder
+    public sealed class MSLoggerBuilder
     {
         private readonly IServiceCollection _services;
+
         public MSLoggerBuilder(IServiceCollection services)
         {
             _services = services;
@@ -26,13 +26,14 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
             NetAddressLayoutRenderer.Value = loggerConfig.NetAddress;
             LogLevelLayoutRenderer.Value = loggerConfig.LogLevel;
 
+            // 将 DI 中注册的 TimeProvider 传递给 LayoutRenderer（支持测试中替换）
+            var sp = _services.BuildServiceProvider();
+            RequestDurationLayoutRenderer.TimeProvider = sp.GetService<TimeProvider>() ?? TimeProvider.System;
+
             // Register NLog.Web and custom layout renderers (Before loading config)
             LogManager.Setup().SetupExtensions(ext =>
             {
-                // Register built-in NLog.Web AspNetCore extensions (aspnet-* layout renderers)
                 ext.RegisterNLogWeb();
-
-                // Register custom layout renderers
                 ext.RegisterLayoutRenderer<RequestDurationLayoutRenderer>("RequestDuration");
                 ext.RegisterLayoutRenderer<YearLayoutRenderer>("Year");
                 ext.RegisterLayoutRenderer<MonthLayoutRenderer>("Month");

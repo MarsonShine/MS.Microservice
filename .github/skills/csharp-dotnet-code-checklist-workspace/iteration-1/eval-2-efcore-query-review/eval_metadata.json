@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "eval_name": "efcore-query-review",
+  "prompt": "Review this EF Core repository diff with a .NET 10 best-practices checklist. Focus on correctness, data access quality, and production impact.\n\n```diff\n public sealed class OrderRepository(AppDbContext db) : IOrderRepository\n {\n     public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Guid customerId)\n     {\n-        return await db.Orders.Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Open).ToListAsync();\n+        var orders = await db.Orders.Include(o => o.Items).ToListAsync();\n+        return orders.Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Open).ToList();\n     }\n \n     public async Task CancelAsync(Guid id)\n     {\n         var order = await db.Orders.FirstAsync(o => o.Id == id);\n         order.Status = OrderStatus.Cancelled;\n         await db.SaveChangesAsync();\n         await auditWriter.WriteAsync($\"cancelled {id}\");\n     }\n }\n```",
+  "assertions": [
+    "The review flags early materialization of all orders before filtering.",
+    "The review flags over-fetching or unnecessary `Include(o => o.Items)` for this query.",
+    "The review flags missing `CancellationToken` propagation on async EF Core calls.",
+    "The review mentions a consistency or transactional risk around `SaveChangesAsync()` followed by `auditWriter.WriteAsync(...)`, or explicitly states that the context is insufficient to confirm it."
+  ]
+}

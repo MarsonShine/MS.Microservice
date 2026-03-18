@@ -1,38 +1,41 @@
 ﻿using Microsoft.AspNetCore.Http;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using NLog;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LogEnrichers
 {
-    //public class AspNetRequestEnricher : ILogEventEnricher
-    //{
-    //    private readonly HttpContext _context;
-    //    public AspNetRequestEnricher(HttpContext context)
-    //    {
-    //        _context = context ?? throw new ArgumentNullException(nameof(context));
-    //    }
+    /// <summary>
+    /// NLog 日志事件丰富器：从 HttpContext 中提取请求上下文属性并注入到 NLog LogEventInfo。
+    /// 零分配：直接使用 StringValues 索引器访问 header 值，避免 ToString() 分配。
+    /// </summary>
+    public static class AspNetRequestEnricher
+    {
+        private const string RequestIdHeader = "requestId";
+        private const string PlatformIdHeader = "platformId";
+        private const string UserFlagHeader = "userflag";
 
-    //    public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
-    //    {
-    //        logEvent.AddPropertyIfAbsent(
-    //            propertyFactory.CreateProperty("AppRequestId", getHeaders(_context, "RequestId"))
-    //            );
-    //        logEvent.AddPropertyIfAbsent(
-    //            propertyFactory.CreateProperty("PlatformId", getHeaders(_context, "PlatformId"))
-    //            );
-    //        logEvent.AddPropertyIfAbsent(
-    //            propertyFactory.CreateProperty("UserFlag", getHeaders(_context, "UserFlag"))
-    //            );
+        /// <summary>
+        /// 将 HTTP 请求上下文属性（RequestId, PlatformId, UserFlag）注入到 NLog 日志事件中。
+        /// </summary>
+        public static void Enrich(LogEventInfo logEvent, HttpContext? httpContext)
+        {
+            if (httpContext is null) return;
 
-    //        static string getHeaders(HttpContext context, string key)
-    //        {
-    //            if (context == null) return default;
-    //            if (context.Request.Headers.TryGetValue(key, out var val))
-    //                return val.ToString();
-    //            else
-    //                return default;
-    //        }
-    //    }
-    //}
+            var headers = httpContext.Request.Headers;
+
+            if (headers.TryGetValue(RequestIdHeader, out var requestId) && requestId.Count > 0)
+            {
+                logEvent.Properties["AppRequestId"] = requestId[0]!;
+            }
+
+            if (headers.TryGetValue(PlatformIdHeader, out var platformId) && platformId.Count > 0)
+            {
+                logEvent.Properties["PlatformId"] = platformId[0]!;
+            }
+
+            if (headers.TryGetValue(UserFlagHeader, out var userFlag) && userFlag.Count > 0)
+            {
+                logEvent.Properties["UserFlag"] = userFlag[0]!;
+            }
+        }
+    }
 }

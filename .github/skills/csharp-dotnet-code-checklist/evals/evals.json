@@ -1,0 +1,41 @@
+{
+  "skill_name": "csharp-dotnet-code-checklist",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review this ASP.NET Core 10 minimal API diff like a senior C# reviewer. Use a checklist-based PR review, focus on meaningful issues only, and provide severity, evidence, and suggested fixes.\n\n```diff\n+ app.MapPost(\"/orders\", async (CreateOrderRequest request, OrdersService service, CustomerApi customerApi, ILogger<Program> logger) =>\n+ {\n+     try\n+     {\n+         var customer = customerApi.GetAsync(request.CustomerId).Result;\n+         var order = await service.CreateAsync(request, default);\n+         logger.LogInformation($\"Created order {order.Id} for {request.CustomerId}\");\n+         return Results.Ok(order);\n+     }\n+     catch (Exception ex)\n+     {\n+         return Results.BadRequest(ex.ToString());\n+     }\n+ });\n```",
+      "expected_output": "The review should flag blocking async work, poor cancellation propagation, exception detail leakage, and weak boundary handling. It should keep style-only comments secondary or omit them.",
+      "files": [],
+      "expectations": [
+        "The review flags sync-over-async caused by `.Result` on `customerApi.GetAsync`.",
+        "The review flags leaking raw exception details through `Results.BadRequest(ex.ToString())`.",
+        "The review flags missing or incorrect cancellation propagation such as passing `default` into `CreateAsync`.",
+        "The review uses severity-tagged findings rather than a single unstructured paragraph."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review this EF Core repository diff with a .NET 10 best-practices checklist. Focus on correctness, data access quality, and production impact.\n\n```diff\n public sealed class OrderRepository(AppDbContext db) : IOrderRepository\n {\n     public async Task<IReadOnlyList<Order>> GetOpenOrdersAsync(Guid customerId)\n     {\n-        return await db.Orders.Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Open).ToListAsync();\n+        var orders = await db.Orders.Include(o => o.Items).ToListAsync();\n+        return orders.Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Open).ToList();\n     }\n \n     public async Task CancelAsync(Guid id)\n     {\n         var order = await db.Orders.FirstAsync(o => o.Id == id);\n         order.Status = OrderStatus.Cancelled;\n         await db.SaveChangesAsync();\n         await auditWriter.WriteAsync($\"cancelled {id}\");\n     }\n }\n```",
+      "expected_output": "The review should catch early materialization, unnecessary graph loading, missing cancellation tokens, and any consistency or transactional risks around the write-plus-audit flow if justified by the code.",
+      "files": [],
+      "expectations": [
+        "The review flags early materialization of all orders before filtering.",
+        "The review flags over-fetching or unnecessary `Include(o => o.Items)` for this query.",
+        "The review flags missing `CancellationToken` propagation on async EF Core calls.",
+        "The review mentions a consistency or transactional risk around `SaveChangesAsync()` followed by `auditWriter.WriteAsync(...)`, or explicitly states that the context is insufficient to confirm it."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review this background worker diff using a C# /.NET 10 PR checklist. Prioritize async correctness, lifetimes, nullability, and thread-safety.\n\n```diff\n public sealed class PriceSyncWorker(ILogger<PriceSyncWorker> logger) : BackgroundService\n {\n     private Dictionary<string, decimal> _cache = new();\n     public event EventHandler? SyncCompleted;\n \n     protected override async Task ExecuteAsync(CancellationToken stoppingToken)\n     {\n         while (!stoppingToken.IsCancellationRequested)\n         {\n+            using var client = new HttpClient();\n+            var json = await client.GetStringAsync(\"https://prices.internal/api/latest\");\n+            _cache = JsonSerializer.Deserialize<Dictionary<string, decimal>>(json)!;\n+            SyncCompleted?.Invoke(this, EventArgs.Empty);\n+            await Task.Delay(1000);\n         }\n     }\n }\n```",
+      "expected_output": "The review should identify per-iteration HttpClient creation, missing cancellation propagation, unsafe null suppression, and possible concurrency or eventing concerns around shared mutable state.",
+      "files": [],
+      "expectations": [
+        "The review flags per-iteration `new HttpClient()` creation.",
+        "The review flags missing cancellation propagation to the HTTP call and/or `Task.Delay(1000)`.",
+        "The review flags unsafe null suppression on `JsonSerializer.Deserialize(... )!`.",
+        "The review flags thread-safety or concurrency risk around updating `_cache` and raising `SyncCompleted` from the worker loop."
+      ]
+    }
+  ]
+}
