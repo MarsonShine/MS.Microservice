@@ -4,22 +4,24 @@ using System.Linq;
 
 namespace MS.Microservice.Infrastructure.Common.Http.Extensions
 {
-    public static class HttpRequestExtensions
+    public static partial class HttpRequestExtensions
     {
-        public static string? BearerAuthorization(this HttpRequest request)
+        extension(HttpRequest request)
         {
-            return request.Headers[HeaderNames.Authorization].FirstOrDefault()?.Split(" ").Last();
+            public string? BearerAuthorization()
+                => request.Headers[HeaderNames.Authorization].FirstOrDefault()?.Split(" ").Last();
+
+            public void EnableBufferingAndSeekBegin()
+            {
+                request.EnableBuffering();
+                request.Body.Seek(0, System.IO.SeekOrigin.Begin);
+            }
         }
 
-        public static void EnableBufferingAndSeekBegin(this HttpRequest request)
+        extension(HttpContext context)
         {
-            request.EnableBuffering();
-            request.Body.Seek(0, System.IO.SeekOrigin.Begin);
-        }
-
-        public static string GetIP(this HttpContext context)
-        {
-            return context.Request.HttpContext.Connection.RemoteIpAddress!.MapToIPv4().ToString() + ":" + context.Request.HttpContext.Connection.RemotePort;
+            public string GetIP()
+                => context.Request.HttpContext.Connection.RemoteIpAddress!.MapToIPv4().ToString() + ":" + context.Request.HttpContext.Connection.RemotePort;
         }
     }
 }

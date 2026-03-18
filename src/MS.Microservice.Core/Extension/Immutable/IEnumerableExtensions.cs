@@ -6,49 +6,59 @@ namespace MS.Microservice.Core.Extension
 {
     public static partial class IEnumerableExtensions
     {
-        public static ImmutableDictionary<TKey, TValue> ToImmutableReferenceDictionary<TSource, TKey, TValue>(
-        this IEnumerable<TSource> source,
-        Func<TSource, TKey> keySelector,
-        Func<TSource, TValue> valueSelector) where TKey : class
+        extension<TSource, TKey, TValue>(IEnumerable<TSource> source) where TKey : class
         {
-            return source.ToImmutableDictionary(
-                keySelector,
-                valueSelector,
-                (IEqualityComparer<TKey>)ReferenceEqualityComparer.Instance);
+            public ImmutableDictionary<TKey, TValue> ToImmutableReferenceDictionary(
+                Func<TSource, TKey> keySelector,
+                Func<TSource, TValue> valueSelector)
+            {
+                return source.ToImmutableDictionary(
+                    keySelector,
+                    valueSelector,
+                    (IEqualityComparer<TKey>)ReferenceEqualityComparer.Instance);
+            }
         }
 
-        public static ImmutableDictionary<TKey, TSource> ToImmutableReferenceDictionary<TSource, TKey>(
-        this IEnumerable<TSource> source,
-        Func<TSource, TKey> keySelector) where TKey : class
+        extension<TSource, TKey>(IEnumerable<TSource> source) where TKey : class
         {
-            return source.ToImmutableDictionary(
-                keySelector,
-                (IEqualityComparer<TKey>)ReferenceEqualityComparer.Instance);
+            public ImmutableDictionary<TKey, TSource> ToImmutableReferenceDictionary(
+                Func<TSource, TKey> keySelector)
+            {
+                return source.ToImmutableDictionary(
+                    keySelector,
+                    (IEqualityComparer<TKey>)ReferenceEqualityComparer.Instance);
+            }
         }
 
-        public static ImmutableDictionary<TKey, TValue> ToImmutableReferenceDictionary<TKey, TValue>(
-        this IDictionary<TKey, TValue> source) where TKey : class
+        extension<TKey, TValue>(IDictionary<TKey, TValue> source) where TKey : class
         {
-            return source.ToImmutableDictionary(
-                ReferenceEqualityComparer.Instance);
+            public ImmutableDictionary<TKey, TValue> ToImmutableReferenceDictionary()
+            {
+                return source.ToImmutableDictionary(
+                    ReferenceEqualityComparer.Instance);
+            }
         }
 
-        public static ImmutableDictionary<TKey, TValue> ToImmutableReferenceDictionary<TKey, TValue, TSourceValue>(
-        this IDictionary<TKey, TSourceValue> source,
-        Func<KeyValuePair<TKey, TSourceValue>, TValue> valueSelector) where TKey : class
+        extension<TKey, TValue, TSourceValue>(IDictionary<TKey, TSourceValue> source) where TKey : class
         {
-            return source.ToImmutableDictionary(
-                pair => pair.Key,
-                valueSelector,
-                (IEqualityComparer<TKey>)ReferenceEqualityComparer.Instance);
+            public ImmutableDictionary<TKey, TValue> ToImmutableReferenceDictionary(
+                Func<KeyValuePair<TKey, TSourceValue>, TValue> valueSelector)
+            {
+                return source.ToImmutableDictionary(
+                    pair => pair.Key,
+                    valueSelector,
+                    (IEqualityComparer<TKey>)ReferenceEqualityComparer.Instance);
+            }
         }
 
-        public static ImmutableDictionary<string, TValue> ToImmutableOrdinalDictionary<TSource, TValue>(
-            this IEnumerable<TSource> source,
-            Func<TSource, string> keySelector,
-            Func<TSource, TValue> valueSelector)
+        extension<TSource, TValue>(IEnumerable<TSource> source)
         {
-            return source.ToImmutableDictionary(keySelector, valueSelector, StringComparer.Ordinal);
+            public ImmutableDictionary<string, TValue> ToImmutableOrdinalDictionary(
+                Func<TSource, string> keySelector,
+                Func<TSource, TValue> valueSelector)
+            {
+                return source.ToImmutableDictionary(keySelector, valueSelector, StringComparer.Ordinal);
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.OpenApi;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi;
 using MS.Microservice.Swagger.Swagger;
 using MS.Microservice.Swagger.Swagger.Autherication;
 using System;
@@ -8,34 +9,37 @@ using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    public static class SwaggerServiceCollectionExtensions
+    public static partial class SwaggerServiceCollectionExtensions
     {
-        public static void AddPlatformSwagger(this IServiceCollection service, [AllowNull] Action<SwaggerOptions> setupAction = null)
+        extension(IServiceCollection service)
         {
-            SwaggerOptions option = new();
-            setupAction?.Invoke(option);
-
-            if (option.IsEnabled)
+            public void AddPlatformSwagger([AllowNull] Action<SwaggerOptions>? setupAction = null)
             {
-                service.AddSwaggerGen(options =>
+                SwaggerOptions option = new();
+                setupAction?.Invoke(option);
+
+                if (option.IsEnabled)
                 {
-                    options.SwaggerDoc("v1", new OpenApiInfo
+                    service.AddSwaggerGen(options =>
                     {
-                        Title = Consts.DOC_TITLE,
-                        Version = Consts.DOC_VERSION,
+                        options.SwaggerDoc("v1", new OpenApiInfo
+                        {
+                            Title = Consts.DOC_TITLE,
+                            Version = Consts.DOC_VERSION,
+                        });
+                        if (option.EnabledSecurity)
+                        {
+                            options.ApplyBearerAuthorication();
+                        }
+
+                        options.IncludeXmlComments(Assembly.GetExecutingAssembly());
+                        // or options.IncludeXmlComments(typeof(MyController).Assembly));
+
                     });
-                    if (option.EnabledSecurity)
-                    {
-                        options.ApplyBearerAuthorication();
-                    }
 
-                    options.IncludeXmlComments(Assembly.GetExecutingAssembly());
-                    // or options.IncludeXmlComments(typeof(MyController).Assembly));
-
-                });
+                }
 
             }
-
         }
     }
 }

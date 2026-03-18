@@ -2,16 +2,15 @@
 
 namespace FluentValidation
 {
-    public static class FluentValidatorExtensions
+    public static partial class FluentValidatorExtensions
     {
-        public static IRuleBuilderOptions<T, string> Password<T>(this IRuleBuilder<T, string> ruleBuilder, int minLength, int? maxLength = null)
+        extension<T>(IRuleBuilder<T, string> ruleBuilder)
         {
-            return ruleBuilder.SetValidator(new PasswordValidator<T>(minLength, maxLength));
-        }
+            public IRuleBuilderOptions<T, string> Password(int minLength, int? maxLength = null)
+                => ruleBuilder.SetValidator(new PasswordValidator<T>(minLength, maxLength));
 
-        public static IRuleBuilderOptions<T, string> Telephone<T>(this IRuleBuilder<T, string> ruleBuilder)
-        {
-            return ruleBuilder.Matches(@"^1(3|4|5|6|7|8|9)\d{9}$");
+            public IRuleBuilderOptions<T, string> Telephone()
+                => ruleBuilder.Matches(@"^1(3|4|5|6|7|8|9)\d{9}$");
         }
     }
 }

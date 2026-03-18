@@ -1,14 +1,17 @@
 ﻿namespace Dapper
 {
-    public static class SqlBuilderExtensions
+    public static partial class SqlBuilderExtensions
     {
-        public static SqlBuilder WhereIf(this SqlBuilder builder, bool condition, string sql, object? parameters = null)
+        extension(SqlBuilder builder)
         {
-            if (condition)
+            public SqlBuilder WhereIf(bool condition, string sql, object? parameters = null)
             {
-                builder.Where(sql, parameters);
+                if (condition)
+                {
+                    builder.Where(sql, parameters);
+                }
+                return builder;
             }
-            return builder;
         }
     }
 }

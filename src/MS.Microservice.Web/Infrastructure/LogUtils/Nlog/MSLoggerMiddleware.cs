@@ -57,18 +57,21 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
         }
     }
 
-    public static class PlatformLoggingApplicationBuilderExtensions
+    public static partial class PlatformLoggingApplicationBuilderExtensions
     {
-        /// <summary>
-        /// 注册平台日志中间件，确保 NLog 在应用停止时安全关闭。
-        /// 自动从 DI 解析 <see cref="TimeProvider"/>（未注册时回退到 <see cref="TimeProvider.System"/>）。
-        /// </summary>
-        public static IApplicationBuilder UsePlatformLogger(this IApplicationBuilder builder)
+        extension(IApplicationBuilder builder)
         {
-            var lifetime = builder.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-            lifetime.ApplicationStopped.Register(LogManager.Shutdown);
-            builder.UseMiddleware<MSLoggerMiddleware>();
-            return builder;
+            /// <summary>
+            /// 注册平台日志中间件，确保 NLog 在应用停止时安全关闭。
+            /// 自动从 DI 解析 <see cref="TimeProvider"/>（未注册时回退到 <see cref="TimeProvider.System"/>）。
+            /// </summary>
+            public IApplicationBuilder UsePlatformLogger()
+            {
+                var lifetime = builder.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+                lifetime.ApplicationStopped.Register(LogManager.Shutdown);
+                builder.UseMiddleware<MSLoggerMiddleware>();
+                return builder;
+            }
         }
     }
 }
