@@ -17,6 +17,7 @@ namespace MS.Microservice.Infrastructure.Utils
         private ISheet? sheet;
         private int[]? columnsIndex;
         private int sheetIndex = -1, titleRowIndex = -1, contentRowIndex = -1;
+        private string? sheetNameForImport;
 
         public IWorkbook? Workbook => workbook;
 
@@ -164,13 +165,13 @@ namespace MS.Microservice.Infrastructure.Utils
             }
         }
 
-        public List<T> Import<T>(byte[] data)
+        public List<T> Import<T>(byte[] data) where T : class, new()
         {
             using MemoryStream ms = new(data, writable: false);
             return Import<T>("unknown.xlsx", ms);
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default) where T : class, new()
         {
             return await ImportAsync<T>("unknown.xlsx", data, cancellationToken);
         }
@@ -250,20 +251,20 @@ namespace MS.Microservice.Infrastructure.Utils
             return list;
         }
 
-        public List<T> Import<T>(string fileName, byte[] data)
+        public List<T> Import<T>(string fileName, byte[] data) where T : class, new()
         {
             using MemoryStream ms = new(data, writable: false);
             return Import<T>(fileName, ms);
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default) where T : class, new()
         {
             cancellationToken.ThrowIfCancellationRequested();
             using MemoryStream ms = new(data, writable: false);
             return await ImportAsync<T>(fileName, ms, cancellationToken).ConfigureAwait(false);
         }
 
-        public List<T> Import<T>(string fileName, Stream stream)
+        public List<T> Import<T>(string fileName, Stream stream) where T : class, new()
         {
             try
             {
@@ -271,7 +272,13 @@ namespace MS.Microservice.Infrastructure.Utils
                 PrepareStreamForRead(stream);
 
                 workbook = CreateWorkbookForRead(fileName, stream);
-                if (sheetIndex == -1)
+                if (!string.IsNullOrEmpty(sheetNameForImport))
+                {
+                    int idx = workbook.GetSheetIndex(sheetNameForImport);
+                    if (idx < 0) throw new InvalidOperationException($"工作表 '{sheetNameForImport}' 未找到");
+                    sheetIndex = idx;
+                }
+                else if (sheetIndex == -1)
                 {
                     AutoAnalyzeSheetIndex();
                 }
@@ -294,7 +301,7 @@ namespace MS.Microservice.Infrastructure.Utils
             }
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default) where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(stream);
             cancellationToken.ThrowIfCancellationRequested();
@@ -310,7 +317,7 @@ namespace MS.Microservice.Infrastructure.Utils
             return Import<T>(fileName, bufferedStream);
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default) where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(reader);
             cancellationToken.ThrowIfCancellationRequested();
@@ -325,6 +332,14 @@ namespace MS.Microservice.Infrastructure.Utils
         public ExcelHelper InitSheetIndex(int sheetIndex)
         {
             this.sheetIndex = sheetIndex;
+            this.sheetNameForImport = null;
+            return this;
+        }
+
+        public ExcelHelper InitSheetName(string sheetName)
+        {
+            this.sheetNameForImport = sheetName ?? throw new ArgumentNullException(nameof(sheetName));
+            this.sheetIndex = -1;
             return this;
         }
 
@@ -398,6 +413,46 @@ namespace MS.Microservice.Infrastructure.Utils
         {
             using Stream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return OpenExcel(fileStream, source);
+        }
+
+        /// <summary>Opens a template stream and creates a <see cref="DynamicExcelBuilder{T}"/> for the named sheet.</summary>
+        public DynamicExcelBuilder<T> OpenExcel<T>(IReadOnlyList<T> source, Stream template, string sheetName, int titleRowIndex = 0)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(template);
+            ArgumentNullException.ThrowIfNull(sheetName);
+
+            PrepareStreamForRead(template);
+            IWorkbook wb = WorkbookFactory.Create(template);
+            ISheet sh = wb.GetSheet(sheetName) ?? throw new InvalidOperationException($"工作表 '{sheetName}' 未找到");
+            return new DynamicExcelBuilder<T>(wb, sh, source, titleRowIndex);
+        }
+
+        /// <summary>Builds a column-index map from <typeparamref name="T"/>'s <see cref="ExcelColumnAttribute"/> names to cell indices in <paramref name="sheet"/>.</summary>
+        public static Dictionary<PropertyInfo, int> BuildColumnMap<T>(ISheet sheet, int titleRowIndex)
+        {
+            ArgumentNullException.ThrowIfNull(sheet);
+            var result = new Dictionary<PropertyInfo, int>();
+            IRow? row = sheet.GetRow(titleRowIndex);
+            if (row == null) return result;
+
+            var properties = GetExcelProperties(typeof(T));
+            for (int i = 0; i < row.LastCellNum; i++)
+            {
+                ICell? cell = row.GetCell(i);
+                if (cell == null) continue;
+                var title = cell.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(title)) continue;
+                foreach (var prop in properties)
+                {
+                    if (string.Equals(prop.ColumnName, title, StringComparison.Ordinal))
+                    {
+                        result[prop.Property] = i;
+                        break;
+                    }
+                }
+            }
+            return result;
         }
 
         private static void PrepareStreamForRead(Stream stream)

@@ -11,7 +11,7 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
     /// <summary>
     /// 高性能请求日志中间件。
-    /// 使用 <see cref="TimeProvider.GetTimestamp"/> / <see cref="TimeProvider.GetElapsedTime"/>
+    /// 使用 <see cref="TimeProvider.GetTimestamp"/> / <see cref="TimeProvider.GetElapsedTime(long)"/>
     /// 进行高精度计时，既避免直接依赖系统时钟，也让单元测试可以注入假时钟控制时间。
     /// </summary>
     public sealed class MSLoggerMiddleware

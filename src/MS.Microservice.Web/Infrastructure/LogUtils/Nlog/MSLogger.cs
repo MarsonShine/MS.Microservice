@@ -35,7 +35,8 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
                 return;
 
             var message = formatter(state, exception);
-            var logEventInfo = NLog.LogEventInfo.Create(nlogLevel, _nlogLogger.Name, exception, message);
+            var logEventInfo = NLog.LogEventInfo.Create(nlogLevel, _nlogLogger.Name, message);
+            logEventInfo.Exception = exception;
 
             // 将结构化属性零拷贝传递给 NLog（for 循环避免迭代器分配）
             if (state is IReadOnlyList<KeyValuePair<string, object>> properties)

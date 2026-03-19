@@ -1,7 +1,6 @@
 ﻿using Microsoft.OpenApi;
 using MS.Microservice.Swagger.Swagger;
 using MS.Microservice.Swagger.Swagger.Autherication;
-using System.IO;
 using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection

@@ -22,6 +22,23 @@ namespace MS.Microservice.Core.Extension
 				return -1;
 			}
 
+			public void ForEach(Action<T> doAction)
+			{
+				if (source == null) throw new ArgumentNullException(nameof(source));
+				if (doAction == null) throw new ArgumentNullException(nameof(doAction));
+				foreach (T item in source)
+				{
+					doAction(item);
+				}
+			}
+
+			public void ForEach(Action<T, int> doAction)
+			{
+				if (source == null) throw new ArgumentNullException(nameof(source));
+				if (doAction == null) throw new ArgumentNullException(nameof(doAction));
+				ForEachInterator(source, doAction);
+			}
+
 			public IEnumerable<T> Shuffle() => source.ToArray().Shuffle();
 
 			public IEnumerable<T> Flatten(Func<T, IEnumerable<T>?> childrenSelector)
@@ -33,25 +50,8 @@ namespace MS.Microservice.Core.Extension
 			}
 		}
 
-		extension<TSource>(IEnumerable<TSource> source)
+		extension<T>(IEnumerable<T>? source)
 		{
-			public void ForEach(Action<TSource> doAction)
-			{
-				if (source == null) throw new ArgumentNullException(nameof(source));
-				if (doAction == null) throw new ArgumentNullException(nameof(doAction));
-				foreach (TSource item in source)
-				{
-					doAction(item);
-				}
-			}
-
-			public void ForEach(Action<TSource, int> doAction)
-			{
-				if (source == null) throw new ArgumentNullException(nameof(source));
-				if (doAction == null) throw new ArgumentNullException(nameof(doAction));
-				ForEachInterator(source, doAction);
-			}
-
 			public string JoinAsString(string separator)
 			{
 				return source == null ? throw new ArgumentNullException(nameof(source)) : string.Join(separator, source);

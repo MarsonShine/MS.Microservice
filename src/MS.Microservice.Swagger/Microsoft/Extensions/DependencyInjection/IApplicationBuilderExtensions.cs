@@ -37,7 +37,7 @@ namespace MS.Microservice.Swagger.Microsoft.Extensions.DependencyInjection
                         var jsonEndpoint = $"/{routePrefix}/v1/swagger.json";
 
                         c.InjectJavascript("/swagger-custom.js");
-                        c.SwaggerEndpoint("/swagger/v1/swagger.json", swaggerOption.Name);
+                        c.SwaggerEndpoint(jsonEndpoint, swaggerOption.Name);
                         c.RoutePrefix = swaggerOption.RoutePrefix;
 
                         // 如果启用了认证，添加一些 UI 配置
