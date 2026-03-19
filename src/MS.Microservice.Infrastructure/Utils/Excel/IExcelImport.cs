@@ -6,17 +6,17 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
 {
     public interface IExcelImport
     {
-        List<T> Import<T>(byte[] data);
-        List<T> Import<T>(string fileName, byte[] data);
-        List<T> Import<T>(string fileName, Stream stream);
+        List<T> Import<T>(byte[] data) where T : class, new();
+        List<T> Import<T>(string fileName, byte[] data) where T : class, new();
+        List<T> Import<T>(string fileName, Stream stream) where T : class, new();
     }
 
     public interface IAsyncExcelImport
     {
-        ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default);
-        ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default);
-        ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default);
-        ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default);
+        ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default) where T : class, new();
+        ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default) where T : class, new();
+        ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default) where T : class, new();
+        ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default) where T : class, new();
     }
 
     public interface IExcelExport

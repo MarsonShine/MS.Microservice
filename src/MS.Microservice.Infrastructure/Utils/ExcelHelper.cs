@@ -17,6 +17,7 @@ namespace MS.Microservice.Infrastructure.Utils
         private ISheet? sheet;
         private int[]? columnsIndex;
         private int sheetIndex = -1, titleRowIndex = -1, contentRowIndex = -1;
+        private string? _sheetName;
 
         public IWorkbook? Workbook => workbook;
 
@@ -164,13 +165,13 @@ namespace MS.Microservice.Infrastructure.Utils
             }
         }
 
-        public List<T> Import<T>(byte[] data)
+        public List<T> Import<T>(byte[] data) where T : class, new()
         {
             using MemoryStream ms = new(data, writable: false);
             return Import<T>("unknown.xlsx", ms);
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default) where T : class, new()
         {
             return await ImportAsync<T>("unknown.xlsx", data, cancellationToken);
         }
@@ -235,6 +236,13 @@ namespace MS.Microservice.Infrastructure.Utils
                         continue;
                     }
 
+                    if (properties[propertyLocation].TargetType == typeof(DateTime)
+                        && TryGetDateCellValue(cell, out DateTime dateValue))
+                    {
+                        SetPropertyValue(obj, properties[propertyLocation], dateValue);
+                        continue;
+                    }
+
                     var value = formatter.FormatCellValue(cell, evaluator);
                     if (string.IsNullOrWhiteSpace(value))
                     {
@@ -250,20 +258,20 @@ namespace MS.Microservice.Infrastructure.Utils
             return list;
         }
 
-        public List<T> Import<T>(string fileName, byte[] data)
+        public List<T> Import<T>(string fileName, byte[] data) where T : class, new()
         {
             using MemoryStream ms = new(data, writable: false);
             return Import<T>(fileName, ms);
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default) where T : class, new()
         {
             cancellationToken.ThrowIfCancellationRequested();
             using MemoryStream ms = new(data, writable: false);
             return await ImportAsync<T>(fileName, ms, cancellationToken).ConfigureAwait(false);
         }
 
-        public List<T> Import<T>(string fileName, Stream stream)
+        public List<T> Import<T>(string fileName, Stream stream) where T : class, new()
         {
             try
             {
@@ -271,9 +279,17 @@ namespace MS.Microservice.Infrastructure.Utils
                 PrepareStreamForRead(stream);
 
                 workbook = CreateWorkbookForRead(fileName, stream);
-                if (sheetIndex == -1)
+                if (!string.IsNullOrEmpty(_sheetName))
                 {
-                    AutoAnalyzeSheetIndex();
+                    sheet = workbook.GetSheet(_sheetName) ?? throw new InvalidOperationException($"工作表 '{_sheetName}' 不存在");
+                }
+                else
+                {
+                    if (sheetIndex == -1)
+                    {
+                        AutoAnalyzeSheetIndex();
+                    }
+                    sheet = workbook.GetSheetAt(sheetIndex);
                 }
 
                 if (titleRowIndex == -1 || contentRowIndex == -1)
@@ -281,7 +297,6 @@ namespace MS.Microservice.Infrastructure.Utils
                     throw new InvalidOperationException($"无效操作：请初始化 {nameof(titleRowIndex)} 与 {nameof(contentRowIndex)}，您在解析文件之前应调用方法 InitStartReadRowIndex");
                 }
 
-                sheet = workbook.GetSheetAt(sheetIndex);
                 var properties = GetExcelProperties(typeof(T));
                 var formatter = new DataFormatter(CultureInfo.InvariantCulture);
                 var evaluator = workbook.GetCreationHelper().CreateFormulaEvaluator();
@@ -294,7 +309,7 @@ namespace MS.Microservice.Infrastructure.Utils
             }
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default) where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(stream);
             cancellationToken.ThrowIfCancellationRequested();
@@ -310,7 +325,7 @@ namespace MS.Microservice.Infrastructure.Utils
             return Import<T>(fileName, bufferedStream);
         }
 
-        public async ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default)
+        public async ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default) where T : class, new()
         {
             ArgumentNullException.ThrowIfNull(reader);
             cancellationToken.ThrowIfCancellationRequested();
@@ -325,6 +340,14 @@ namespace MS.Microservice.Infrastructure.Utils
         public ExcelHelper InitSheetIndex(int sheetIndex)
         {
             this.sheetIndex = sheetIndex;
+            _sheetName = null;
+            return this;
+        }
+
+        public ExcelHelper InitSheetName(string sheetName)
+        {
+            _sheetName = sheetName ?? throw new ArgumentNullException(nameof(sheetName));
+            sheetIndex = -1;
             return this;
         }
 
@@ -349,6 +372,41 @@ namespace MS.Microservice.Infrastructure.Utils
             }
 
             sheetIndex = sheetCount - 1;
+        }
+
+        public static Dictionary<PropertyInfo, int> BuildColumnMap<T>(ISheet sheet, int headerRowIndex)
+        {
+            ArgumentNullException.ThrowIfNull(sheet);
+            var properties = GetExcelProperties(typeof(T));
+            var headerRow = sheet.GetRow(headerRowIndex) ?? throw new InvalidOperationException("Header row not found");
+            var result = new Dictionary<PropertyInfo, int>();
+            for (int i = 0; i < headerRow.LastCellNum; i++)
+            {
+                var cell = headerRow.GetCell(i);
+                if (cell == null) continue;
+                var headerText = cell.ToString()?.Trim();
+                if (string.IsNullOrEmpty(headerText)) continue;
+                foreach (var prop in properties)
+                {
+                    if (string.Equals(prop.ColumnName, headerText, StringComparison.Ordinal))
+                    {
+                        result[prop.Property] = i;
+                        break;
+                    }
+                }
+            }
+            return result;
+        }
+
+        public DynamicExcelBuilder<T> OpenExcel<T>(IReadOnlyList<T> items, Stream template, string sheetName, int titleRowIndex)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            ArgumentNullException.ThrowIfNull(template);
+            ArgumentException.ThrowIfNullOrEmpty(sheetName);
+            PrepareStreamForRead(template);
+            IWorkbook wb = WorkbookFactory.Create(template);
+            ISheet sheetAt = wb.GetSheet(sheetName) ?? throw new InvalidOperationException($"工作表 '{sheetName}' 不存在");
+            return new DynamicExcelBuilder<T>(wb, sheetAt, items, titleRowIndex);
         }
 
         public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, List<T> source)
@@ -437,13 +495,13 @@ namespace MS.Microservice.Infrastructure.Utils
                         Property = property,
                         Attribute = property.GetCustomAttribute<ExcelColumnAttribute>(inherit: false)
                     })
-                    .Where(item => item.Attribute != null)
-                    .OrderBy(item => item.Attribute!.Order)
+                    .Where(item => item.Attribute?.Ignore != true)
+                    .OrderBy(item => item.Attribute?.Order ?? int.MaxValue)
                     .Select(item => new ExcelPropertyDescriptor(
                         item.Property,
-                        item.Attribute!,
+                        item.Attribute,
                         Nullable.GetUnderlyingType(item.Property.PropertyType) ?? item.Property.PropertyType,
-                        item.Attribute!.Name?.Trim() ?? item.Property.Name))
+                        string.IsNullOrWhiteSpace(item.Attribute?.Name) ? item.Property.Name : item.Attribute!.Name!.Trim()))
                     .ToArray());
         }
 
@@ -455,6 +513,11 @@ namespace MS.Microservice.Infrastructure.Utils
             }
 
             property.Property.SetValue(target, convertedValue);
+        }
+
+        private static void SetPropertyValue<T>(T target, ExcelPropertyDescriptor property, DateTime value)
+        {
+            property.Property.SetValue(target, value);
         }
 
         private static bool TryConvertValue(string value, Type targetType, out object? convertedValue)
@@ -543,6 +606,7 @@ namespace MS.Microservice.Infrastructure.Utils
                     break;
                 case DateTime dateTimeValue:
                     cell.SetCellValue(dateTimeValue);
+                    ApplyDateStyle(cell);
                     break;
                 case bool boolValue:
                     cell.SetCellValue(boolValue);
@@ -571,6 +635,42 @@ namespace MS.Microservice.Infrastructure.Utils
             }
         }
 
-        private sealed record ExcelPropertyDescriptor(PropertyInfo Property, ExcelColumnAttribute Attribute, Type TargetType, string ColumnName);
+        private static bool TryGetDateCellValue(ICell cell, out DateTime value)
+        {
+            if (cell.CellType == CellType.Numeric || cell.CellType == CellType.Formula)
+            {
+                try
+                {
+                    var dateCellValue = cell.DateCellValue;
+                    if (dateCellValue.HasValue)
+                    {
+                        value = dateCellValue.Value;
+                        return true;
+                    }
+                }
+                catch
+                {
+                    if (DateUtil.IsValidExcelDate(cell.NumericCellValue))
+                    {
+                        value = DateUtil.GetJavaDate(cell.NumericCellValue);
+                        return true;
+                    }
+                }
+            }
+
+            value = default;
+            return false;
+        }
+
+        private static void ApplyDateStyle(ICell cell)
+        {
+            IWorkbook workbook = cell.Sheet.Workbook;
+            ICellStyle style = workbook.CreateCellStyle();
+            style.CloneStyleFrom(cell.CellStyle);
+            style.DataFormat = workbook.CreateDataFormat().GetFormat("yyyy-mm-dd HH:mm:ss");
+            cell.CellStyle = style;
+        }
+
+        private sealed record ExcelPropertyDescriptor(PropertyInfo Property, ExcelColumnAttribute? Attribute, Type TargetType, string ColumnName);
     }
 }

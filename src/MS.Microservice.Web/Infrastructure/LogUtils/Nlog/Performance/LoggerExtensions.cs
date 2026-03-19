@@ -23,53 +23,75 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Performance
         [LoggerMessage(EventId = 1000, Level = LogLevel.Information, Message = "{Message}")]
         public static partial void LogInfo(this ILogger logger, string message);
 
-        [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "{Message} {Arg1}")]
-        public static partial void LogInfo<T1>(this ILogger logger, string message, T1 arg1);
+        private static readonly Action<ILogger, string, object?, Exception?> _logInfo1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Information, new EventId(1001), "{Message} {Arg1}");
+        public static void LogInfo(this ILogger logger, string message, object? arg1) =>
+            _logInfo1(logger, message, arg1, null);
 
-        [LoggerMessage(EventId = 1002, Level = LogLevel.Information, Message = "{Message} {Arg1} {Arg2}")]
-        public static partial void LogInfo<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2);
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logInfo2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Information, new EventId(1002), "{Message} {Arg1} {Arg2}");
+        public static void LogInfo(this ILogger logger, string message, object? arg1, object? arg2) =>
+            _logInfo2(logger, message, arg1, arg2, null);
 
-        [LoggerMessage(EventId = 1003, Level = LogLevel.Information, Message = "{Message} {Arg1} {Arg2} {Arg3}")]
-        public static partial void LogInfo<T1, T2, T3>(this ILogger logger, string message, T1 arg1, T2 arg2, T3 arg3);
+        private static readonly Action<ILogger, string, object?, object?, object?, Exception?> _logInfo3 =
+            LoggerMessage.Define<string, object?, object?, object?>(LogLevel.Information, new EventId(1003), "{Message} {Arg1} {Arg2} {Arg3}");
+        public static void LogInfo(this ILogger logger, string message, object? arg1, object? arg2, object? arg3) =>
+            _logInfo3(logger, message, arg1, arg2, arg3, null);
 
         // ── Warning ────────────────────────────────────────────────────────────────
 
         [LoggerMessage(EventId = 2000, Level = LogLevel.Warning, Message = "{Message}")]
         public static partial void LogWarn(this ILogger logger, string message);
 
-        [LoggerMessage(EventId = 2001, Level = LogLevel.Warning, Message = "{Message} {Arg1}")]
-        public static partial void LogWarn<T1>(this ILogger logger, string message, T1 arg1);
+        private static readonly Action<ILogger, string, object?, Exception?> _logWarn1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Warning, new EventId(2001), "{Message} {Arg1}");
+        public static void LogWarn(this ILogger logger, string message, object? arg1) =>
+            _logWarn1(logger, message, arg1, null);
 
-        [LoggerMessage(EventId = 2002, Level = LogLevel.Warning, Message = "{Message} {Arg1} {Arg2}")]
-        public static partial void LogWarn<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2);
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logWarn2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Warning, new EventId(2002), "{Message} {Arg1} {Arg2}");
+        public static void LogWarn(this ILogger logger, string message, object? arg1, object? arg2) =>
+            _logWarn2(logger, message, arg1, arg2, null);
 
-        [LoggerMessage(EventId = 2003, Level = LogLevel.Warning, Message = "{Message} {Arg1} {Arg2} {Arg3}")]
-        public static partial void LogWarn<T1, T2, T3>(this ILogger logger, string message, T1 arg1, T2 arg2, T3 arg3);
+        private static readonly Action<ILogger, string, object?, object?, object?, Exception?> _logWarn3 =
+            LoggerMessage.Define<string, object?, object?, object?>(LogLevel.Warning, new EventId(2003), "{Message} {Arg1} {Arg2} {Arg3}");
+        public static void LogWarn(this ILogger logger, string message, object? arg1, object? arg2, object? arg3) =>
+            _logWarn3(logger, message, arg1, arg2, arg3, null);
 
         // ── Error ──────────────────────────────────────────────────────────────────
 
         [LoggerMessage(EventId = 3000, Level = LogLevel.Error, Message = "{Message}")]
         public static partial void LogErr(this ILogger logger, string message, Exception? exception = null);
 
-        [LoggerMessage(EventId = 3001, Level = LogLevel.Error, Message = "{Message} {Arg1}")]
-        public static partial void LogErr<T1>(this ILogger logger, string message, T1 arg1, Exception? exception = null);
+        private static readonly Action<ILogger, string, object?, Exception?> _logErr1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Error, new EventId(3001), "{Message} {Arg1}");
+        public static void LogErr(this ILogger logger, string message, object? arg1, Exception? exception = null) =>
+            _logErr1(logger, message, arg1, exception);
 
-        [LoggerMessage(EventId = 3002, Level = LogLevel.Error, Message = "{Message} {Arg1} {Arg2}")]
-        public static partial void LogErr<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2, Exception? exception = null);
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logErr2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Error, new EventId(3002), "{Message} {Arg1} {Arg2}");
+        public static void LogErr(this ILogger logger, string message, object? arg1, object? arg2, Exception? exception = null) =>
+            _logErr2(logger, message, arg1, arg2, exception);
 
-        [LoggerMessage(EventId = 3003, Level = LogLevel.Error, Message = "{Message} {Arg1} {Arg2} {Arg3}")]
-        public static partial void LogErr<T1, T2, T3>(this ILogger logger, string message, T1 arg1, T2 arg2, T3 arg3, Exception? exception = null);
+        private static readonly Action<ILogger, string, object?, object?, object?, Exception?> _logErr3 =
+            LoggerMessage.Define<string, object?, object?, object?>(LogLevel.Error, new EventId(3003), "{Message} {Arg1} {Arg2} {Arg3}");
+        public static void LogErr(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, Exception? exception = null) =>
+            _logErr3(logger, message, arg1, arg2, arg3, exception);
 
         // ── Debug ──────────────────────────────────────────────────────────────────
 
         [LoggerMessage(EventId = 4000, Level = LogLevel.Debug, Message = "{Message}")]
         public static partial void LogDbg(this ILogger logger, string message);
 
-        [LoggerMessage(EventId = 4001, Level = LogLevel.Debug, Message = "{Message} {Arg1}")]
-        public static partial void LogDbg<T1>(this ILogger logger, string message, T1 arg1);
+        private static readonly Action<ILogger, string, object?, Exception?> _logDbg1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Debug, new EventId(4001), "{Message} {Arg1}");
+        public static void LogDbg(this ILogger logger, string message, object? arg1) =>
+            _logDbg1(logger, message, arg1, null);
 
-        [LoggerMessage(EventId = 4002, Level = LogLevel.Debug, Message = "{Message} {Arg1} {Arg2}")]
-        public static partial void LogDbg<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2);
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logDbg2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Debug, new EventId(4002), "{Message} {Arg1} {Arg2}");
+        public static void LogDbg(this ILogger logger, string message, object? arg1, object? arg2) =>
+            _logDbg2(logger, message, arg1, arg2, null);
 
         // ── HTTP 请求日志（中间件专用，固定模板） ──────────────────────────────────
 

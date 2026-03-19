@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using FluentAssertions;
 using NPOI.SS.UserModel;
@@ -420,6 +421,128 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             r2.GetCell(3).StringCellValue.Should().Be(new DateTime(2024, 1, 2).ToString());
             r2.GetCell(4).StringCellValue.Should().Be("False");
             r2.GetCell(5).StringCellValue.Should().Be("A");
+        }
+
+        [Fact]
+        public async Task ExportAsync_ShouldWriteHeadersAndValues_Correctly()
+        {
+            var helper = new ExcelHelper();
+            var data = new List<SampleRow>
+            {
+                new SampleRow
+                {
+                    Id = 7,
+                    Name = "赵六",
+                    Amount = 45.67m,
+                    Date = new DateTime(2024, 6, 7),
+                    Enabled = true,
+                    Status = MyEnum.A
+                }
+            };
+
+            await using var ms = new MemoryStream();
+            await helper.ExportAsync(data, "AsyncSheet", ms);
+            ms.Position = 0;
+
+            using var wb = new XSSFWorkbook(ms);
+            var sheet = wb.GetSheet("AsyncSheet");
+
+            sheet.GetRow(0).GetCell(0).StringCellValue.Should().Be("ID");
+            sheet.GetRow(1).GetCell(0).NumericCellValue.Should().Be(7);
+            sheet.GetRow(1).GetCell(1).StringCellValue.Should().Be("赵六");
+            sheet.GetRow(1).GetCell(5).StringCellValue.Should().Be("A");
+        }
+
+        [Fact]
+        public async Task ImportAsync_ShouldMapBySheetName_Correctly()
+        {
+            var wb = new XSSFWorkbook();
+            var sheet = wb.CreateSheet("AsyncImport");
+            var header = sheet.CreateRow(0);
+            header.CreateCell(0).SetCellValue("ID");
+            header.CreateCell(1).SetCellValue("名称");
+            header.CreateCell(2).SetCellValue("金额");
+            header.CreateCell(3).SetCellValue("日期");
+            header.CreateCell(4).SetCellValue("启用");
+            header.CreateCell(5).SetCellValue("状态");
+
+            var row = sheet.CreateRow(1);
+            row.CreateCell(0).SetCellValue(8);
+            row.CreateCell(1).SetCellValue("异步");
+            row.CreateCell(2).SetCellValue(88.5);
+            row.CreateCell(3).SetCellValue(new DateTime(2024, 7, 8));
+            row.CreateCell(4).SetCellValue(true);
+            row.CreateCell(5).SetCellValue("B");
+
+            await using var ms = new MemoryStream();
+            wb.Write(ms, leaveOpen: true);
+            ms.Position = 0;
+
+            var rows = await new ExcelHelper()
+                .InitSheetName("AsyncImport")
+                .InitStartReadRowIndex(0, 1)
+                .ImportAsync<SampleRow>("async.xlsx", ms);
+
+            rows.Should().HaveCount(1);
+            rows[0].Id.Should().Be(8);
+            rows[0].Name.Should().Be("异步");
+            rows[0].Amount.Should().Be(88.5m);
+            rows[0].Enabled.Should().BeTrue();
+            rows[0].Status.Should().Be(MyEnum.B);
+        }
+
+        [Fact]
+        public void Export_DataTable_ShouldWriteHeadersAndValues_Correctly()
+        {
+            var table = new DataTable();
+            table.Columns.Add("ColA", typeof(int));
+            table.Columns.Add("ColB", typeof(string));
+            table.Rows.Add(1, "row1");
+
+            var bytes = new ExcelHelper().Export(table, "TableSheet");
+
+            using var ms = new MemoryStream(bytes);
+            using var wb = new XSSFWorkbook(ms);
+            var sheet = wb.GetSheet("TableSheet");
+
+            sheet.GetRow(0).GetCell(0).StringCellValue.Should().Be("ColA");
+            sheet.GetRow(0).GetCell(1).StringCellValue.Should().Be("ColB");
+            sheet.GetRow(1).GetCell(0).NumericCellValue.Should().Be(1);
+            sheet.GetRow(1).GetCell(1).StringCellValue.Should().Be("row1");
+        }
+
+        [Fact]
+        public void OpenExcel_ShouldThrow_WhenSheetDoesNotExist()
+        {
+            var wb = new XSSFWorkbook();
+            wb.CreateSheet("Exists");
+
+            using var template = new MemoryStream();
+            wb.Write(template, leaveOpen: true);
+            template.Position = 0;
+
+            var act = () => new ExcelHelper().OpenExcel(new List<SampleRow>(), template, "Missing", 0);
+
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("*工作表 'Missing' 不存在*");
+        }
+
+        [Fact]
+        public void DynamicExcelBuilder_InitInsertRow_WithoutDefaultTitleRowIndex_ShouldThrow()
+        {
+            var wb = new XSSFWorkbook();
+            wb.CreateSheet("Data");
+
+            using var template = new MemoryStream();
+            wb.Write(template, leaveOpen: true);
+            template.Position = 0;
+
+            var builder = new ExcelHelper().OpenExcel(template, new List<SampleRow>());
+
+            var act = () => builder.InitInsertRow(startRowIndex: 1);
+
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("*titleRowIndex was not set*");
         }
     }
 }

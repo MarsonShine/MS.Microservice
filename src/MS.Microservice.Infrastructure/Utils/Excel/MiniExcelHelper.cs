@@ -49,7 +49,7 @@ namespace MS.Microservice.Infrastructure.Utils
             return ms.ToArray();
         }
 
-        public void Export<T>(List<T> source, string sheetName, Stream destination)
+        public void Export<T>(IReadOnlyList<T> source, string sheetName, Stream destination)
         {
             ArgumentNullException.ThrowIfNull(source);
             ArgumentNullException.ThrowIfNull(destination);

@@ -4,14 +4,27 @@ using System.Reflection;
 
 namespace MS.Microservice.Infrastructure.Utils.Excel;
 
-public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source)
+public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source, int titleRowIndex = -1)
 {
     private readonly IWorkbook _workbook = workbook;
     private readonly ISheet _sheet = sheetAt;
     private readonly IReadOnlyList<T> _items = source;
     private readonly PropertyInfo[] _properties = typeof(T).GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
     private readonly Dictionary<string, int> _columnMapping = [];
+    private readonly int _defaultTitleRowIndex = titleRowIndex;
     private ColumnBinding[] _bindings = [];
+    private bool _useTextCells;
+
+    public DynamicExcelBuilder<T> UseTypedCells() { _useTextCells = false; return this; }
+
+    public DynamicExcelBuilder<T> UseTextCells() { _useTextCells = true; return this; }
+
+    public DynamicExcelBuilder<T> InitInsertRow(int startRowIndex)
+    {
+        if (_defaultTitleRowIndex < 0)
+            throw new InvalidOperationException("titleRowIndex was not set. Use the OpenExcel overload that accepts titleRowIndex.");
+        return InitInsertRow(_defaultTitleRowIndex, startRowIndex);
+    }
 
     public DynamicExcelBuilder<T> InitInsertRow(int titleRowIndex, int startRowIndex)
     {
@@ -80,7 +93,7 @@ public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnl
             .ToArray();
     }
 
-    public DynamicExcelBuilder<T> InsertCellValue(int contentRowIndex)
+    public DynamicExcelBuilder<T> InsertCellValue(int startRowIndex)
     {
         if (Items.Count == 0)
         {
@@ -89,7 +102,7 @@ public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnl
 
         for (int i = 0; i < Items.Count; i++)
         {
-            int rowIndex = contentRowIndex++;
+            int rowIndex = startRowIndex++;
             IRow row = _sheet.GetRow(rowIndex) ?? _sheet.CreateRow(rowIndex);
             T obj = Items[i];
             foreach (ColumnBinding binding in _bindings)
@@ -98,7 +111,10 @@ public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnl
                 object? value = binding.Property.GetValue(obj);
                 if (value != null)
                 {
-                    SetCellValue(cell, value);
+                    if (_useTextCells)
+                        cell.SetCellValue(value.ToString());
+                    else
+                        SetCellValue(cell, value);
                 }
             }
         }
