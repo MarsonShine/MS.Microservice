@@ -1,30 +1,17 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using NLog;
-using System;
-using System.Threading.Tasks;
+﻿using NLog;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
     /// <summary>
     /// 高性能请求日志中间件。
-    /// 使用 <see cref="TimeProvider.GetTimestamp"/> / <see cref="TimeProvider.GetElapsedTime"/>
+    /// 使用 <see cref="TimeProvider.GetTimestamp"/> / <see cref="TimeProvider.GetElapsedTime(long)"/>
     /// 进行高精度计时，既避免直接依赖系统时钟，也让单元测试可以注入假时钟控制时间。
     /// </summary>
-    public sealed class MSLoggerMiddleware
+    public sealed class MSLoggerMiddleware(RequestDelegate next, TimeProvider timeProvider)
     {
-        private readonly RequestDelegate _next;
-        private readonly TimeProvider _timeProvider;
+        private readonly RequestDelegate _next = next;
+        private readonly TimeProvider _timeProvider = timeProvider;
         private static readonly Logger NLogger = LogManager.GetCurrentClassLogger();
-
-        public MSLoggerMiddleware(RequestDelegate next, TimeProvider timeProvider)
-        {
-            _next = next;
-            _timeProvider = timeProvider;
-        }
 
         public async Task InvokeAsync(HttpContext context)
         {
@@ -59,16 +46,19 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 
     public static class PlatformLoggingApplicationBuilderExtensions
     {
-        /// <summary>
-        /// 注册平台日志中间件，确保 NLog 在应用停止时安全关闭。
-        /// 自动从 DI 解析 <see cref="TimeProvider"/>（未注册时回退到 <see cref="TimeProvider.System"/>）。
-        /// </summary>
-        public static IApplicationBuilder UsePlatformLogger(this IApplicationBuilder builder)
+        extension(IApplicationBuilder builder)
         {
-            var lifetime = builder.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-            lifetime.ApplicationStopped.Register(LogManager.Shutdown);
-            builder.UseMiddleware<MSLoggerMiddleware>();
-            return builder;
+            /// <summary>
+            /// 注册平台日志中间件，确保 NLog 在应用停止时安全关闭。
+            /// 自动从 DI 解析 <see cref="TimeProvider"/>（未注册时回退到 <see cref="TimeProvider.System"/>）。
+            /// </summary>
+            public IApplicationBuilder UsePlatformLogger()
+            {
+                var lifetime = builder.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+                lifetime.ApplicationStopped.Register(LogManager.Shutdown);
+                builder.UseMiddleware<MSLoggerMiddleware>();
+                return builder;
+            }
         }
     }
 }
