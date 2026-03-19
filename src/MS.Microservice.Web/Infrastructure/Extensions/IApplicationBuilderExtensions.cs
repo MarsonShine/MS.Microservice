@@ -2,11 +2,13 @@
 
 namespace MS.Microservice.Web.Infrastructure.Extensions
 {
-    public static class IApplicationBuilderExtensions
+    public static partial class IApplicationBuilderExtensions
     {
-        public static void UseHealthCheck(this IApplicationBuilder builder)
+        extension(IApplicationBuilder builder)
         {
-
+            public void UseHealthCheck()
+            {
+            }
         }
     }
 }

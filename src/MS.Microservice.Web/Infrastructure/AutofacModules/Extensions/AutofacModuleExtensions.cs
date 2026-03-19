@@ -7,15 +7,18 @@ namespace MS.Microservice.Web.AutofacModules.Extensions
     /// Wolverine auto-discovers handlers, so this method is now mostly empty.
     /// Keep this method for backward compatibility or remove if not needed.
     /// </summary>
-    public static class AutofacModuleExtensions
+    public static partial class AutofacModuleExtensions
     {
-        public static void RegisterPlatformAutofacModule(this ContainerBuilder builder, IConfiguration configuration)
+        extension(ContainerBuilder builder)
         {
-            builder
-                .RegisterModule<CommonInfrastructureModule>()
-                .RegisterModule<DomainServiceModule>()
-                .RegisterModule(new AppServiceModule(configuration.GetConnectionString("ActivationReaderConnection")!))
-                ;
+            public void RegisterPlatformAutofacModule(IConfiguration configuration)
+            {
+                builder
+                    .RegisterModule<CommonInfrastructureModule>()
+                    .RegisterModule<DomainServiceModule>()
+                    .RegisterModule(new AppServiceModule(configuration.GetConnectionString("ActivationReaderConnection")!))
+                    ;
+            }
         }
     }
 }

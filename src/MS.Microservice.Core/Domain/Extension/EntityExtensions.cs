@@ -2,8 +2,11 @@
 
 namespace MS.Microservice.Core.Domain.Extension
 {
-    public static class EntityExtensions
+    public static partial class EntityExtensions
     {
-        public static bool IsNull(this IEntity entity) => entity == null;
+        extension(IEntity entity)
+        {
+            public bool IsNull() => entity == null;
+        }
     }
 }

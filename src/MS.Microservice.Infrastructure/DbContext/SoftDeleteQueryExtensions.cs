@@ -7,20 +7,22 @@ using System.Reflection;
 
 namespace MS.Microservice.Infrastructure.DbContext
 {
-    public static class SoftDeletedQueryExtensions
+    public static partial class SoftDeletedQueryExtensions
     {
-        public static void AddSoftDeletedQueryFilter(
-        this IMutableEntityType entityData)
+        extension(IMutableEntityType entityData)
         {
-            var methodToCall = typeof(SoftDeletedQueryExtensions)?
-                .GetMethod(nameof(GetSoftDeleteFilter),
-                    BindingFlags.NonPublic | BindingFlags.Static)?
-                .MakeGenericMethod(entityData.ClrType);
-            var filter = methodToCall?.Invoke(null, Array.Empty<object>());
+            public void AddSoftDeletedQueryFilter()
+            {
+                var methodToCall = typeof(SoftDeletedQueryExtensions)?
+                    .GetMethod(nameof(GetSoftDeleteFilter),
+                        BindingFlags.NonPublic | BindingFlags.Static)?
+                    .MakeGenericMethod(entityData.ClrType);
+                var filter = methodToCall?.Invoke(null, Array.Empty<object>());
 
-            entityData.SetQueryFilter((LambdaExpression)filter!);
-            entityData.AddIndex(entityData.
-                 FindProperty(nameof(ISoftDeleted.DeletedAt))!);
+                entityData.SetQueryFilter((LambdaExpression)filter!);
+                entityData.AddIndex(entityData.
+                     FindProperty(nameof(ISoftDeleted.DeletedAt))!);
+            }
         }
 
         private static LambdaExpression GetSoftDeleteFilter<TEntity>()

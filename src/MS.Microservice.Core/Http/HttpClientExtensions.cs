@@ -12,14 +12,21 @@ using System.Threading.Tasks;
 
 namespace MS.WebHttpClient
 {
-    public static class HttpClientExtensions
+    public static partial class HttpClientExtensions
     {
-        public static async Task<T> GetAsync<T>(this HttpClient client, string api, object body)
+        extension(HttpClient client)
         {
-            var message = await GetAsync(client, api, body);
-            return await ReadAsObjectAsync<T>(message);
+            public async Task<T> GetAsync<T>(string api, object body)
+            {
+                var message = await GetAsyncCore(client, api, body);
+                return await ReadAsObjectAsync<T>(message);
+            }
+
+            public Task<HttpResponseMessage> GetAsync(string api, object body)
+                => GetAsyncCore(client, api, body);
         }
-        public static async Task<HttpResponseMessage> GetAsync(this HttpClient client, string api, object body)
+
+        private static async Task<HttpResponseMessage> GetAsyncCore(HttpClient client, string api, object body)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
             string queryString = "";

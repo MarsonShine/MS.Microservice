@@ -28,191 +28,194 @@ using MS.Microservice.Web.Infrastructure.LogUtils.Nlog;
 
 namespace MS.Microservice.Web.Infrastructure.Extensions
 {
-    public static class IServiceCollectionExtensions
+    public static partial class IServiceCollectionExtensions
     {
-        public static IServiceCollection AddCoreServices(this IServiceCollection services, [NotNull] IConfiguration configuration)
+        extension(IServiceCollection services)
         {
-            services.AddMSLoggerService().WithNLogger(cfg =>
+            public IServiceCollection AddCoreServices([NotNull] IConfiguration configuration)
             {
-                // 可从配置读取最小级别等，也可以保持默认
-                cfg.LogLevel = configuration["Logging:LogLevel:Default"] ?? cfg.LogLevel;
-            }); // NLog日志
+                services.AddMSLoggerService().WithNLogger(cfg =>
+                {
+                    // 可从配置读取最小级别等，也可以保持默认
+                    cfg.LogLevel = configuration["Logging:LogLevel:Default"] ?? cfg.LogLevel;
+                }); // NLog日志
 
-            services
-                .AddCustomMvc(configuration)
-                .AddHealthChecks(configuration)
-                .AddMySql(configuration)
-                .AddCustomSwagger(configuration)
-                .AddCustomConfiguration(configuration)
-                .AddCustomAuthentication(configuration)
-                ;
+                services
+                    .AddCustomMvc(configuration)
+                    .AddHealthChecks(configuration)
+                    .AddMySql(configuration)
+                    .AddCustomSwagger(configuration)
+                    .AddCustomConfiguration(configuration)
+                    .AddCustomAuthentication(configuration)
+                    ;
 
-            return services;
-        }
+                return services;
+            }
 
-        public static IServiceCollection AddCustomMvc(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-
-            services.AddControllers(options =>
+            public IServiceCollection AddCustomMvc(IConfiguration configuration)
             {
-                //options.Filters.Add(typeof(HttpGlobalExceptionFilter));
-            }).AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.WriteIndented = true;
-                // 这里添加自定义json转换器
-                // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
-            });
+                services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
-            services.AddCorsService(option =>
-            {
-                var cors = configuration.GetSection("CorsOptions").Get<CorsOptions>() ?? throw new ArgumentException(nameof(CorsOptions));
-                option.IsEnabled = cors.IsEnabled;
-                option.PolicyName = cors.PolicyName;
-                option.Origins = cors.Origins;
-                option.IsAllCors = cors.IsAllCors;
-            });
+                services.AddControllers(options =>
+                {
+                    //options.Filters.Add(typeof(HttpGlobalExceptionFilter));
+                }).AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.WriteIndented = true;
+                    // 这里添加自定义json转换器
+                    // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
+                });
+
+                services.AddCorsService(option =>
+                {
+                    var cors = configuration.GetSection("CorsOptions").Get<CorsOptions>() ?? throw new ArgumentException(nameof(CorsOptions));
+                    option.IsEnabled = cors.IsEnabled;
+                    option.PolicyName = cors.PolicyName;
+                    option.Origins = cors.Origins;
+                    option.IsAllCors = cors.IsAllCors;
+                });
 
 #if NET9_0_OR_GREATER
-            services.AddHybridCache();
+                services.AddHybridCache();
 #else
-            services.AddMemoryCache(options =>
-            {
-                var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
-                options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
-            }).AddDistributedMemoryCache(options =>
+                services.AddMemoryCache(options =>
                 {
                     var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
                     options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
-                });
+                }).AddDistributedMemoryCache(options =>
+                    {
+                        var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
+                        options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
+                    });
 #endif
 
-            services.AddHttpClient<LogHttpClient>();
+                services.AddHttpClient<LogHttpClient>();
 
-            // 异常处理，可以管道化
-            services.AddExceptionHandler<GlobalExceptionHandler>();  // 处理第一个异常
-                                                                     //// 管道化
-                                                                     //services.AddExceptionHandler<GlobalExceptionHandler2>(); // 紧接着处理第二个异常
-                                                                     //services.AddExceptionHandler<GlobalExceptionHandler3>(); // 最后处理第三个异常
+                // 异常处理，可以管道化
+                services.AddExceptionHandler<GlobalExceptionHandler>();  // 处理第一个异常
+                                                                         //// 管道化
+                                                                         //services.AddExceptionHandler<GlobalExceptionHandler2>(); // 紧接着处理第二个异常
+                                                                         //services.AddExceptionHandler<GlobalExceptionHandler3>(); // 最后处理第三个异常
 
-            return services;
-        }
-
-        public static void AddCorsService(this IServiceCollection services, Action<CorsOptions> config)
-        {
-            ArgumentNullException.ThrowIfNull(config);
-            services.Configure(config);
-
-            var option = new CorsOptions();
-            config.Invoke(option);
-            if (option.IsEnabled)
-            {
-                string policyName = option.PolicyName;
-                services.AddCors(options =>
-                {
-                    options.AddPolicy(policyName, builder =>
-                    {
-                        builder.AllowAnyOrigin()
-                            .WithOrigins(option.Origins)
-                            .AllowAnyMethod()
-                            //.AllowCredentials()
-                            .AllowAnyHeader()
-                            .SetPreflightMaxAge(TimeSpan.FromSeconds(1728000));
-                        //通过配置设置是否允许全部来源跨域  CORE 2.1之后不允许AllowAnyOrigin和AllowCredentials同时使用必须指定 origin 来源                        
-                        builder.SetIsOriginAllowed(origin => option.IsAllCors);
-                    });
-                });
+                return services;
             }
-        }
 
-        public static IServiceCollection AddHealthChecks(this IServiceCollection services, IConfiguration configuration)
-        {
-            var hcBuilder = services.AddHealthChecks();
-            hcBuilder.AddCheck("self", () => HealthCheckResult.Healthy());
-            hcBuilder.AddCheck<SqlHealthCheck>(SqlHealthCheck.Name);
-            return services;
-        }
-
-        public static IServiceCollection AddMySql(this IServiceCollection services, IConfiguration configuration)
-        {
-            //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
-            //services.AddSqlSugarService(configuration);
-            services.AddEntityFrameworkNpgSql(configuration.GetConnectionString("ActivationConnection")!);
-
-            return services;
-        }
-
-        public static IServiceCollection AddCustomConfiguration(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.AddOptions();
-
-            services.Configure<MsPlatformDbContextSettings>(option =>
+            public void AddCorsService(Action<CorsOptions> config)
             {
-                var setting = configuration.Get<MsPlatformDbContextSettings>() ?? throw new ArgumentException(nameof(MsPlatformDbContextSettings));
-                option.AutoTimeTracker = setting.AutoTimeTracker;
-                option.EnabledSoftDeleted = setting.EnabledSoftDeleted;
-            });
-            // ...这里添加Option配置
-            services.Configure<IdentityOptions>(configuration.GetSection(IdentityOptions.Name));
-            return services;
-        }
+                ArgumentNullException.ThrowIfNull(config);
+                services.Configure(config);
 
-        public static IServiceCollection AddCustomSwagger(this IServiceCollection services, IConfiguration configuration)
-        {
-            var swaggerOption = configuration.GetSection("SwaggerOptions").Get<SwaggerOptions>();
-            if (swaggerOption != null)
-                services.AddPlatformSwagger(option =>
+                var option = new CorsOptions();
+                config.Invoke(option);
+                if (option.IsEnabled)
                 {
-                    option.EnabledSecurity = swaggerOption.EnabledSecurity;
-                    option.IsEnabled = swaggerOption.IsEnabled;
-                    option.SwaggerXmlFile = swaggerOption.SwaggerXmlFile;
-                    option.IsAuth = swaggerOption.IsAuth;
-                    option.Name = swaggerOption.Name;
-                    option.RoutePrefix = swaggerOption.RoutePrefix;
-                });
-            return services;
-        }
-
-        public static IServiceCollection AddCustomAuthentication(this IServiceCollection services, IConfiguration configuration)
-        {
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    var jwtBearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
-                    options.SaveToken = true;
-                    options.RequireHttpsMetadata = false;
-
-                    // 设置token属性
-                    options.TokenValidationParameters = new TokenValidationParameters()
+                    string policyName = option.PolicyName;
+                    services.AddCors(options =>
                     {
-                        ValidateIssuerSigningKey = true,
-                        ValidateAudience = true,
-                        ValidAudiences = jwtBearerOption.Audiences,
-                        ValidateLifetime = true,
-                        ValidateIssuer = true,
-                        ValidIssuers = jwtBearerOption.Issuers,
-                        ClockSkew = System.TimeSpan.Zero,
-                        RequireExpirationTime = true,
-                        NameClaimType = JwtClaimTypes.NickName,
-                        RoleClaimType = JwtClaimTypes.Role,
-                    };
-                    if (jwtBearerOption.SecurityKeys?.Length > 0)
-                    {
-                        var securityKeys = jwtBearerOption.SecurityKeys
-                            .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
-                        options.TokenValidationParameters.IssuerSigningKeys = securityKeys;
-                    }
-                });
-            services.AddAuthorization(option =>
+                        options.AddPolicy(policyName, builder =>
+                        {
+                            builder.AllowAnyOrigin()
+                                .WithOrigins(option.Origins)
+                                .AllowAnyMethod()
+                                //.AllowCredentials()
+                                .AllowAnyHeader()
+                                .SetPreflightMaxAge(TimeSpan.FromSeconds(1728000));
+                            //通过配置设置是否允许全部来源跨域  CORE 2.1之后不允许AllowAnyOrigin和AllowCredentials同时使用必须指定 origin 来源                        
+                            builder.SetIsOriginAllowed(origin => option.IsAllCors);
+                        });
+                    });
+                }
+            }
+
+            public IServiceCollection AddHealthChecks(IConfiguration configuration)
             {
-                var bearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
-                // TODO
-                option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(bearerOption.Issuers!, ClaimTypes.Role, "")));
-            });
+                var hcBuilder = services.AddHealthChecks();
+                hcBuilder.AddCheck("self", () => HealthCheckResult.Healthy());
+                hcBuilder.AddCheck<SqlHealthCheck>(SqlHealthCheck.Name);
+                return services;
+            }
 
-            services.AddSingleton<IAuthorizationHandler, RbacAuthorizationHandler>();
+            public IServiceCollection AddMySql(IConfiguration configuration)
+            {
+                //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
+                //services.AddSqlSugarService(configuration);
+                services.AddEntityFrameworkNpgSql(configuration.GetConnectionString("ActivationConnection")!);
 
-            return services;
+                return services;
+            }
+
+            public IServiceCollection AddCustomConfiguration(IConfiguration configuration)
+            {
+                services.AddOptions();
+
+                services.Configure<MsPlatformDbContextSettings>(option =>
+                {
+                    var setting = configuration.Get<MsPlatformDbContextSettings>() ?? throw new ArgumentException(nameof(MsPlatformDbContextSettings));
+                    option.AutoTimeTracker = setting.AutoTimeTracker;
+                    option.EnabledSoftDeleted = setting.EnabledSoftDeleted;
+                });
+                // ...这里添加Option配置
+                services.Configure<IdentityOptions>(configuration.GetSection(IdentityOptions.Name));
+                return services;
+            }
+
+            public IServiceCollection AddCustomSwagger(IConfiguration configuration)
+            {
+                var swaggerOption = configuration.GetSection("SwaggerOptions").Get<SwaggerOptions>();
+                if (swaggerOption != null)
+                    services.AddPlatformSwagger(option =>
+                    {
+                        option.EnabledSecurity = swaggerOption.EnabledSecurity;
+                        option.IsEnabled = swaggerOption.IsEnabled;
+                        option.SwaggerXmlFile = swaggerOption.SwaggerXmlFile;
+                        option.IsAuth = swaggerOption.IsAuth;
+                        option.Name = swaggerOption.Name;
+                        option.RoutePrefix = swaggerOption.RoutePrefix;
+                    });
+                return services;
+            }
+
+            public IServiceCollection AddCustomAuthentication(IConfiguration configuration)
+            {
+                services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                    .AddJwtBearer(options =>
+                    {
+                        var jwtBearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
+                        options.SaveToken = true;
+                        options.RequireHttpsMetadata = false;
+
+                        // 设置token属性
+                        options.TokenValidationParameters = new TokenValidationParameters()
+                        {
+                            ValidateIssuerSigningKey = true,
+                            ValidateAudience = true,
+                            ValidAudiences = jwtBearerOption.Audiences,
+                            ValidateLifetime = true,
+                            ValidateIssuer = true,
+                            ValidIssuers = jwtBearerOption.Issuers,
+                            ClockSkew = System.TimeSpan.Zero,
+                            RequireExpirationTime = true,
+                            NameClaimType = JwtClaimTypes.NickName,
+                            RoleClaimType = JwtClaimTypes.Role,
+                        };
+                        if (jwtBearerOption.SecurityKeys?.Length > 0)
+                        {
+                            var securityKeys = jwtBearerOption.SecurityKeys
+                                .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
+                            options.TokenValidationParameters.IssuerSigningKeys = securityKeys;
+                        }
+                    });
+                services.AddAuthorization(option =>
+                {
+                    var bearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
+                    // TODO
+                    option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(bearerOption.Issuers!, ClaimTypes.Role, "")));
+                });
+
+                services.AddSingleton<IAuthorizationHandler, RbacAuthorizationHandler>();
+
+                return services;
+            }
         }
     }
 }

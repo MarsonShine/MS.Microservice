@@ -44,7 +44,7 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
         }
     }
 
-    public static class PlatformLoggingApplicationBuilderExtensions
+    public static partial class PlatformLoggingApplicationBuilderExtensions
     {
         extension(IApplicationBuilder builder)
         {

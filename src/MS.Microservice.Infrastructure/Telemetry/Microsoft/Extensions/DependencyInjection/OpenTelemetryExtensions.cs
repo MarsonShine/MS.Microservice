@@ -4,26 +4,29 @@ using OpenTelemetry.Trace;
 
 namespace MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection
 {
-    public static class OpenTelemetryExtensions
+    public static partial class OpenTelemetryExtensions
     {
-        public static IServiceCollection AddMsOpenTelemetry(this IServiceCollection services)
+        extension(IServiceCollection services)
         {
-            services.AddOpenTelemetry()
-                .ConfigureResource(resourceBuilder =>
-                {
-                    // TODO: 配置化
-                    resourceBuilder.AddService("Fz.OrderPlatform.Admin in OTel Service");
-                })
-                .WithTracing(cfg =>
-                {
-                    // TODO: 配置化
-                    cfg.AddSource("Fz.OrderPlatform.Admin in OTel Source")
-                    .AddConsoleExporter()
-                    .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddOtlpExporter();
-                });
-            return services;
+            public IServiceCollection AddMsOpenTelemetry()
+            {
+                services.AddOpenTelemetry()
+                    .ConfigureResource(resourceBuilder =>
+                    {
+                        // TODO: 配置化
+                        resourceBuilder.AddService("Fz.OrderPlatform.Admin in OTel Service");
+                    })
+                    .WithTracing(cfg =>
+                    {
+                        // TODO: 配置化
+                        cfg.AddSource("Fz.OrderPlatform.Admin in OTel Source")
+                        .AddConsoleExporter()
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddOtlpExporter();
+                    });
+                return services;
+            }
         }
     }
 }

@@ -4,24 +4,27 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace MS.Microservice.Swagger.Swagger.Autherication
 {
-    public static class AuthSwaggerGenOptionExtensions
+    public static partial class AuthSwaggerGenOptionExtensions
     {
-        // TODO:待参数化
-        public static void ApplyBearerAuthorication(this SwaggerGenOptions options)
+        extension(SwaggerGenOptions options)
         {
-            const string name = "bearer";
-            options.AddSecurityDefinition(name, new OpenApiSecurityScheme
+            // TODO:待参数化
+            public void ApplyBearerAuthorication()
             {
-                In = ParameterLocation.Header,
-                Type = SecuritySchemeType.Http,
-                Scheme = name,
-                BearerFormat = "JWT",
-                Description = "JWT Authorization header using the Bearer scheme."
-            });
-            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-            {
-                [new OpenApiSecuritySchemeReference(name, document)] = []
-            });
+                const string name = "bearer";
+                options.AddSecurityDefinition(name, new OpenApiSecurityScheme
+                {
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = name,
+                    BearerFormat = "JWT",
+                    Description = "JWT Authorization header using the Bearer scheme."
+                });
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference(name, document)] = []
+                });
+            }
         }
     }
 }

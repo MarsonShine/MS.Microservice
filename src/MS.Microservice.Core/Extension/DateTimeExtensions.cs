@@ -2,21 +2,27 @@
 
 namespace MS.Microservice.Core.Extension
 {
-    public static class DateTimeExtensions
+    public static partial class DateTimeExtensions
     {
-        public static long ToLocalTimeMilliseconds(this DateTimeOffset dateTime)
+        extension(DateTimeOffset dateTime)
         {
-            TimeSpan duration = dateTime - DateTimeOffset.UnixEpoch;
-            return duration.Ticks / TimeSpan.TicksPerMillisecond;
+            public long ToLocalTimeMilliseconds()
+            {
+                TimeSpan duration = dateTime - DateTimeOffset.UnixEpoch;
+                return duration.Ticks / TimeSpan.TicksPerMillisecond;
+            }
+
+            public long ToLocalTimeSeconds()
+            {
+                TimeSpan duration = dateTime - DateTimeOffset.UnixEpoch;
+                return duration.Ticks / TimeSpan.TicksPerSecond;
+            }
         }
 
-        public static long ToLocalTimeSeconds(this DateTimeOffset dateTime)
+        extension(long localTimestamp)
         {
-            TimeSpan duration = dateTime - DateTimeOffset.UnixEpoch;
-            return duration.Ticks / TimeSpan.TicksPerSecond;
+            public DateTimeOffset FromUnixTimeMilliseconds() => DateTimeOffset.FromUnixTimeMilliseconds(localTimestamp);
+            public DateTimeOffset FromUnixTimeSeconds() => DateTimeOffset.FromUnixTimeSeconds(localTimestamp);
         }
-
-        public static DateTimeOffset FromUnixTimeMilliseconds(this long localTimestamp) => DateTimeOffset.FromUnixTimeMilliseconds(localTimestamp);
-        public static DateTimeOffset FromUnixTimeSeconds(this long localTimestamp) => DateTimeOffset.FromUnixTimeSeconds(localTimestamp);
     }
 }
