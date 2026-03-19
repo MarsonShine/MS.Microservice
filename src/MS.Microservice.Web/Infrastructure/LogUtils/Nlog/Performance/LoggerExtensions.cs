@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Performance
@@ -15,8 +15,6 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Performance
     ///
     /// 限制：消息模板必须是编译期常量（字符串字面量或 const）。
     /// 对于运行期动态模板，仍可使用 <see cref="HighPerformanceLog"/>。
-    /// 注意：[LoggerMessage] 源生成器不支持方法上的泛型类型参数，
-    /// 泛型重载 (T1, T2, T3) 使用手写实现以保持相同语义。
     /// </summary>
     public static partial class LoggerExtensions
     {
@@ -25,86 +23,75 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Performance
         [LoggerMessage(EventId = 1000, Level = LogLevel.Information, Message = "{Message}")]
         public static partial void LogInfo(this ILogger logger, string message);
 
-        public static void LogInfo<T1>(this ILogger logger, string message, T1 arg1)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-                logger.LogInformation(1001, "{Message} {Arg1}", message, arg1);
-        }
+        private static readonly Action<ILogger, string, object?, Exception?> _logInfo1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Information, new EventId(1001), "{Message} {Arg1}");
+        public static void LogInfo(this ILogger logger, string message, object? arg1) =>
+            _logInfo1(logger, message, arg1, null);
 
-        public static void LogInfo<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-                logger.LogInformation(1002, "{Message} {Arg1} {Arg2}", message, arg1, arg2);
-        }
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logInfo2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Information, new EventId(1002), "{Message} {Arg1} {Arg2}");
+        public static void LogInfo(this ILogger logger, string message, object? arg1, object? arg2) =>
+            _logInfo2(logger, message, arg1, arg2, null);
 
-        public static void LogInfo<T1, T2, T3>(this ILogger logger, string message, T1 arg1, T2 arg2, T3 arg3)
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-                logger.LogInformation(1003, "{Message} {Arg1} {Arg2} {Arg3}", message, arg1, arg2, arg3);
-        }
+        private static readonly Action<ILogger, string, object?, object?, object?, Exception?> _logInfo3 =
+            LoggerMessage.Define<string, object?, object?, object?>(LogLevel.Information, new EventId(1003), "{Message} {Arg1} {Arg2} {Arg3}");
+        public static void LogInfo(this ILogger logger, string message, object? arg1, object? arg2, object? arg3) =>
+            _logInfo3(logger, message, arg1, arg2, arg3, null);
 
         // ── Warning ────────────────────────────────────────────────────────────────
 
         [LoggerMessage(EventId = 2000, Level = LogLevel.Warning, Message = "{Message}")]
         public static partial void LogWarn(this ILogger logger, string message);
 
-        public static void LogWarn<T1>(this ILogger logger, string message, T1 arg1)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-                logger.LogWarning(2001, "{Message} {Arg1}", message, arg1);
-        }
+        private static readonly Action<ILogger, string, object?, Exception?> _logWarn1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Warning, new EventId(2001), "{Message} {Arg1}");
+        public static void LogWarn(this ILogger logger, string message, object? arg1) =>
+            _logWarn1(logger, message, arg1, null);
 
-        public static void LogWarn<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-                logger.LogWarning(2002, "{Message} {Arg1} {Arg2}", message, arg1, arg2);
-        }
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logWarn2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Warning, new EventId(2002), "{Message} {Arg1} {Arg2}");
+        public static void LogWarn(this ILogger logger, string message, object? arg1, object? arg2) =>
+            _logWarn2(logger, message, arg1, arg2, null);
 
-        public static void LogWarn<T1, T2, T3>(this ILogger logger, string message, T1 arg1, T2 arg2, T3 arg3)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-                logger.LogWarning(2003, "{Message} {Arg1} {Arg2} {Arg3}", message, arg1, arg2, arg3);
-        }
+        private static readonly Action<ILogger, string, object?, object?, object?, Exception?> _logWarn3 =
+            LoggerMessage.Define<string, object?, object?, object?>(LogLevel.Warning, new EventId(2003), "{Message} {Arg1} {Arg2} {Arg3}");
+        public static void LogWarn(this ILogger logger, string message, object? arg1, object? arg2, object? arg3) =>
+            _logWarn3(logger, message, arg1, arg2, arg3, null);
 
         // ── Error ──────────────────────────────────────────────────────────────────
 
         [LoggerMessage(EventId = 3000, Level = LogLevel.Error, Message = "{Message}")]
         public static partial void LogErr(this ILogger logger, string message, Exception? exception = null);
 
-        public static void LogErr<T1>(this ILogger logger, string message, T1 arg1, Exception? exception = null)
-        {
-            if (logger.IsEnabled(LogLevel.Error))
-                logger.LogError(exception, "{Message} {Arg1}", message, arg1);
-        }
+        private static readonly Action<ILogger, string, object?, Exception?> _logErr1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Error, new EventId(3001), "{Message} {Arg1}");
+        public static void LogErr(this ILogger logger, string message, object? arg1, Exception? exception = null) =>
+            _logErr1(logger, message, arg1, exception);
 
-        public static void LogErr<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2, Exception? exception = null)
-        {
-            if (logger.IsEnabled(LogLevel.Error))
-                logger.LogError(exception, "{Message} {Arg1} {Arg2}", message, arg1, arg2);
-        }
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logErr2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Error, new EventId(3002), "{Message} {Arg1} {Arg2}");
+        public static void LogErr(this ILogger logger, string message, object? arg1, object? arg2, Exception? exception = null) =>
+            _logErr2(logger, message, arg1, arg2, exception);
 
-        public static void LogErr<T1, T2, T3>(this ILogger logger, string message, T1 arg1, T2 arg2, T3 arg3, Exception? exception = null)
-        {
-            if (logger.IsEnabled(LogLevel.Error))
-                logger.LogError(exception, "{Message} {Arg1} {Arg2} {Arg3}", message, arg1, arg2, arg3);
-        }
+        private static readonly Action<ILogger, string, object?, object?, object?, Exception?> _logErr3 =
+            LoggerMessage.Define<string, object?, object?, object?>(LogLevel.Error, new EventId(3003), "{Message} {Arg1} {Arg2} {Arg3}");
+        public static void LogErr(this ILogger logger, string message, object? arg1, object? arg2, object? arg3, Exception? exception = null) =>
+            _logErr3(logger, message, arg1, arg2, arg3, exception);
 
         // ── Debug ──────────────────────────────────────────────────────────────────
 
         [LoggerMessage(EventId = 4000, Level = LogLevel.Debug, Message = "{Message}")]
         public static partial void LogDbg(this ILogger logger, string message);
 
-        public static void LogDbg<T1>(this ILogger logger, string message, T1 arg1)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug(4001, "{Message} {Arg1}", message, arg1);
-        }
+        private static readonly Action<ILogger, string, object?, Exception?> _logDbg1 =
+            LoggerMessage.Define<string, object?>(LogLevel.Debug, new EventId(4001), "{Message} {Arg1}");
+        public static void LogDbg(this ILogger logger, string message, object? arg1) =>
+            _logDbg1(logger, message, arg1, null);
 
-        public static void LogDbg<T1, T2>(this ILogger logger, string message, T1 arg1, T2 arg2)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-                logger.LogDebug(4002, "{Message} {Arg1} {Arg2}", message, arg1, arg2);
-        }
+        private static readonly Action<ILogger, string, object?, object?, Exception?> _logDbg2 =
+            LoggerMessage.Define<string, object?, object?>(LogLevel.Debug, new EventId(4002), "{Message} {Arg1} {Arg2}");
+        public static void LogDbg(this ILogger logger, string message, object? arg1, object? arg2) =>
+            _logDbg2(logger, message, arg1, arg2, null);
 
         // ── HTTP 请求日志（中间件专用，固定模板） ──────────────────────────────────
 

@@ -1,11 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using NLog;
-using System;
-using System.Threading.Tasks;
+﻿using NLog;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
@@ -14,17 +7,11 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
     /// 使用 <see cref="TimeProvider.GetTimestamp"/> / <see cref="TimeProvider.GetElapsedTime(long)"/>
     /// 进行高精度计时，既避免直接依赖系统时钟，也让单元测试可以注入假时钟控制时间。
     /// </summary>
-    public sealed class MSLoggerMiddleware
+    public sealed class MSLoggerMiddleware(RequestDelegate next, TimeProvider timeProvider)
     {
-        private readonly RequestDelegate _next;
-        private readonly TimeProvider _timeProvider;
+        private readonly RequestDelegate _next = next;
+        private readonly TimeProvider _timeProvider = timeProvider;
         private static readonly Logger NLogger = LogManager.GetCurrentClassLogger();
-
-        public MSLoggerMiddleware(RequestDelegate next, TimeProvider timeProvider)
-        {
-            _next = next;
-            _timeProvider = timeProvider;
-        }
 
         public async Task InvokeAsync(HttpContext context)
         {

@@ -43,10 +43,10 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
                 // UseNLog() 通过扩展方法同样支持 IHostApplicationBuilder
                 _appBuilder.UseNLog();
             }
-            else if (_hostBuilder is not null)
+            else
             {
                 // IHostBuilder 路径（builder.Host）——向后兼容
-                _hostBuilder.ConfigureLogging(logging =>
+                _hostBuilder?.ConfigureLogging(logging =>
                 {
                     logging.ClearProviders();
                     if (logLevel.HasValue)

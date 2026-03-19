@@ -35,8 +35,7 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
                 return;
 
             var message = formatter(state, exception);
-            var logEventInfo = NLog.LogEventInfo.Create(nlogLevel, _nlogLogger.Name, message);
-            logEventInfo.Exception = exception;
+            var logEventInfo = NLog.LogEventInfo.Create(nlogLevel, _nlogLogger.Name, exception, null, message);
 
             // 将结构化属性零拷贝传递给 NLog（for 循环避免迭代器分配）
             if (state is IReadOnlyList<KeyValuePair<string, object>> properties)
@@ -96,15 +95,12 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
         }
     }
 
-    public static partial class CustomLoggerExtensions
+    public static class CustomLoggerExtensions
     {
-        extension(ILoggerFactory factory)
+        public static ILoggerFactory AddMSLogger(this ILoggerFactory factory, IHttpContextAccessor accessor)
         {
-            public ILoggerFactory AddMSLogger(IHttpContextAccessor accessor)
-            {
-                factory.AddProvider(new MSLoggerProvider(accessor));
-                return factory;
-            }
+            factory.AddProvider(new MSLoggerProvider(accessor));
+            return factory;
         }
     }
 }

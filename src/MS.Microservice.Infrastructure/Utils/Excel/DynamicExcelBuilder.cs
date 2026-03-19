@@ -4,29 +4,26 @@ using System.Reflection;
 
 namespace MS.Microservice.Infrastructure.Utils.Excel;
 
-public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source, int storedTitleRowIndex = -1)
+public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source, int titleRowIndex = -1)
 {
     private readonly IWorkbook _workbook = workbook;
     private readonly ISheet _sheet = sheetAt;
     private readonly IReadOnlyList<T> _items = source;
     private readonly PropertyInfo[] _properties = typeof(T).GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
     private readonly Dictionary<string, int> _columnMapping = [];
+    private readonly int _defaultTitleRowIndex = titleRowIndex;
     private ColumnBinding[] _bindings = [];
-    private readonly int _storedTitleRowIndex = storedTitleRowIndex;
-    private bool _useTextCells = false;
+    private bool _useTextCells;
 
-    /// <summary>Switches to writing all cell values as strings.</summary>
-    public DynamicExcelBuilder<T> UseTextCells() { _useTextCells = true; return this; }
-
-    /// <summary>Writes cell values using their native types (default behaviour).</summary>
     public DynamicExcelBuilder<T> UseTypedCells() { _useTextCells = false; return this; }
 
-    /// <summary>Single-arg overload that uses the title row index supplied when constructing this builder via <c>OpenExcel(..., titleRowIndex)</c>.</summary>
+    public DynamicExcelBuilder<T> UseTextCells() { _useTextCells = true; return this; }
+
     public DynamicExcelBuilder<T> InitInsertRow(int startRowIndex)
     {
-        if (_storedTitleRowIndex < 0)
-            throw new InvalidOperationException("titleRowIndex は OpenExcel に渡すか、InitInsertRow(titleRowIndex, startRowIndex) を使ってください。");
-        return InitInsertRow(_storedTitleRowIndex, startRowIndex);
+        if (_defaultTitleRowIndex < 0)
+            throw new InvalidOperationException("titleRowIndex was not set. Use the OpenExcel overload that accepts titleRowIndex.");
+        return InitInsertRow(_defaultTitleRowIndex, startRowIndex);
     }
 
     public DynamicExcelBuilder<T> InitInsertRow(int titleRowIndex, int startRowIndex)
