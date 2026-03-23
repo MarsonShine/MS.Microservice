@@ -7,16 +7,16 @@ using System.Text;
 namespace MS.Microservice.Core.Tests.Cryptology
 {
     public class EncryptTest
-    {
-        [Fact]
+    {        [Fact]
         public void TestEncrypt()
         {
-            string cipherText = "hello world";
-            string key = "1234567890123456";
-            string encrypt = CryptologyHelper.DesCrypt.Encrypt(cipherText, key);
+            string plainText = "hello world";
+            // TripleDES requires a 24-byte key
+            string key = "123456789012345678901234";
+            string encrypted = CryptologyHelper.DesCrypt.Encrypt(plainText, key);
 
-            string decrypt = CryptologyHelper.DesCrypt.Decrypt(cipherText, key);
-            Assert.Equal(encrypt, decrypt);
+            string decrypted = CryptologyHelper.DesCrypt.Decrypt(encrypted, key);
+            Assert.Equal(plainText, decrypted);
         }
         /*
          TransformFinalBlock 方法和 FlushFinalBlock 方法可以实现相同的加密效果，但在某些情况下，它们可能会产生不同的结果。
@@ -26,12 +26,12 @@ namespace MS.Microservice.Core.Tests.Cryptology
         FlushFinalBlock 方法用于确保所有数据都被加密，并且将加密后的数据写入到底层流中。这个方法不返回加密结果，而是将加密后的数据直接写入到流中。它适用于流式处理数据的场景。
 
         这两种方法的实现细节和使用方式略有不同，因此在一些特定的情况下，它们可能会产生不同的加密结果。一种常见的情况是当使用了填充模式（如 PKCS7）时，TransformFinalBlock 方法会将最后的数据块进行填充后再进行加密，而 FlushFinalBlock 方法则不会填充数据块，直接进行加密。这可能会导致最后一个数据块的加密结果不同。
-         */
-        [Fact]
+         */        [Fact]
         public void TestEncrypt2()
         {
             string cipherText = "hello world";
-            string key = "1234567890123456";
+            // TripleDES requires a 24-byte key
+            string key = "123456789012345678901234";
             string encrypt = CryptologyHelper.DesCrypt.Encrypt(cipherText, key);
 
             string encrypt2 = Encrypt(cipherText, key, "12345678");

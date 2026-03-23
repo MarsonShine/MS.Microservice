@@ -14,6 +14,7 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
     <Project Path="test/MS.Microservice.Infrastructure.Tests/MS.Microservice.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

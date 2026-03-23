@@ -419,7 +419,6 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 _ => throw new ArgumentException("不支持的输出类型", nameof(output))
             };
         }
-
         /// <summary>
         /// 创建WAV写入器
         /// </summary>
@@ -428,7 +427,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             return output switch
             {
                 string filePath => new WaveFileWriter(filePath, targetFormat),
-                Stream stream => new WaveFileWriter(stream, targetFormat),
+                Stream stream => new WaveFileWriter(new NonClosingStreamWrapper(stream), targetFormat),
                 _ => throw new ArgumentException("不支持的输出类型", nameof(output))
             };
         }
@@ -488,11 +487,29 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 _stream.Position = 0;
                 return CreateAudioReaderFromStream(_stream);
             }
-
             public void Dispose()
             {
                 _stream?.Dispose();
             }
+        }
+
+        /// <summary>
+        /// A stream wrapper that prevents the underlying stream from being closed/disposed
+        /// when the wrapping writer (e.g. WaveFileWriter) is disposed.
+        /// </summary>
+        private sealed class NonClosingStreamWrapper(Stream inner) : Stream
+        {
+            public override bool CanRead => inner.CanRead;
+            public override bool CanSeek => inner.CanSeek;
+            public override bool CanWrite => inner.CanWrite;
+            public override long Length => inner.Length;
+            public override long Position { get => inner.Position; set => inner.Position = value; }
+            public override void Flush() => inner.Flush();
+            public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+            public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+            public override void SetLength(long value) => inner.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+            protected override void Dispose(bool disposing) { /* Do not dispose inner stream */ }
         }
 
         #endregion
