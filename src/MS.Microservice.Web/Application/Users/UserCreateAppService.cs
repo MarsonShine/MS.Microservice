@@ -34,16 +34,16 @@ namespace MS.Microservice.Web.Application.Users
                         .Map(validRequest => validRequest.ToDomainUser(currentUser, _userDomainService.PasswordSalt()));
 
                     return await maybeUser.MatchAsync(
-                        none: () => Task.FromResult((false, "错误的角色参数")),
+                        none: () => Task.FromResult<(bool Success, string? Message)>((false, "错误的角色参数")),
                         some: async user =>
                         {
                             var success = await _userDomainService.CreateUserAsync(user, cancellationToken);
                             return success
-                                ? (true, null)
+                                ? (true, (string?)null)
                                 : (false, "用户创建失败");
                         });
                 },
-                some: message => Task.FromResult((false, message)));
+                some: message => Task.FromResult<(bool Success, string? Message)>((false, message)));
         }
     }
 }

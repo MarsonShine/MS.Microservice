@@ -4,6 +4,7 @@ using MS.Microservice.Web.Application.Commands;
 using MS.Microservice.Web.Application.Users;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 using System.Text;
+using Xunit;
 
 namespace MS.Microservice.Core.Tests.Functional
 {

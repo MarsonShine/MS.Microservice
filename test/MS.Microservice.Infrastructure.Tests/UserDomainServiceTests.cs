@@ -7,6 +7,7 @@ using MS.Microservice.Domain.Exception;
 using MS.Microservice.Domain.Services;
 using NSubstitute;
 using System.Linq.Expressions;
+using Xunit;
 
 namespace MS.Microservice.Infrastructure.Tests
 {
@@ -21,7 +22,10 @@ namespace MS.Microservice.Infrastructure.Tests
         {
             var repository = Substitute.For<IUserRepository>();
             var service = new UserDomainService(repository);
-            var existingUser = new User("demo", "Password123", "salt", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "");
+            var existingUser = new User("demo", "Password123", "salt", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "")
+            {
+                Id = 1
+            };
 
             repository.FindOptionAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>())
                 .Returns((Option<User>)existingUser);
