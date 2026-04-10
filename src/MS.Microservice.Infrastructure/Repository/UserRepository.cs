@@ -1,16 +1,12 @@
-﻿using MS.Microservice.Core.Domain.Repository;
+using MS.Microservice.Core.Domain.Repository;
 using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Aggregates.IdentityModel.Repository;
 using MS.Microservice.Infrastructure.DbContext;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MS.Microservice.Infrastructure.Repository
 {
@@ -40,6 +36,12 @@ namespace MS.Microservice.Infrastructure.Repository
                 .Where(predicate)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        /// <summary>
+        /// 供函数式领域服务使用，把数据库缺失结果安全地提升为 Option。
+        /// </summary>
+        public async Task<Option<User>> FindOptionAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
+            => await FindAsync(predicate, cancellationToken);
 
         public async Task<List<Role>> GetAllRoleAsync(CancellationToken cancellationToken = default)
         {

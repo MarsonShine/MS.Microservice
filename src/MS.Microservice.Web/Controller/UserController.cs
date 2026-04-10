@@ -1,23 +1,23 @@
-﻿using MS.Microservice.Web.Application.Commands;
-using MS.Microservice.Web.Application.Models;
-using MS.Microservice.Web.Application.Queries.Constract;
-using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using MS.Microservice.Domain.Aggregates.IdentityModel.Repository;
 using MS.Microservice.Core.Dto;
+using MS.Microservice.Web.Application.Commands;
+using MS.Microservice.Web.Application.Models;
+using MS.Microservice.Web.Application.Queries.Constract;
+using MS.Microservice.Web.Application.Users;
+using System.Net;
+using Wolverine;
 
 namespace MS.Microservice.Web.Controller
 {
     [ApiController]
     [Route("api/v1/[controller]")]
     [Authorize(Policy = "Manage")]
-    public class UserController(IMessageBus messageBus, IUserRepository userRepository, IUserQuery userQuery) : ControllerBase
+    public class UserController(IMessageBus messageBus, IUserQuery userQuery, IUserCreateAppService userCreateAppService) : ControllerBase
     {
         private readonly IMessageBus _messageBus = messageBus;
-        private readonly IUserRepository _userRepository = userRepository;
         private readonly IUserQuery _userQuery = userQuery;
+        private readonly IUserCreateAppService _userCreateAppService = userCreateAppService;
 
         /// <summary>
         /// 创建用户
@@ -30,7 +30,7 @@ namespace MS.Microservice.Web.Controller
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> CreateUser([FromBody] UserCreatedCommand request)
         {
-            (bool success, string? message) = await _messageBus.InvokeAsync<(bool, string?)>(request);
+            (bool success, string? message) = await _userCreateAppService.CreateAsync(request, HttpContext.RequestAborted);
             return Ok(new ResultDto<bool>(success, success, message ?? "", 200));
         }
 
@@ -62,7 +62,8 @@ namespace MS.Microservice.Web.Controller
         {
             var list = await _userQuery.GetAllRoleAsync();
             return Ok(new ResultDto<List<RoleResponse>>(list));
-        }        
+        }
+
         /// <summary>
         /// 修改用户(角色)
         /// </summary>
@@ -73,7 +74,6 @@ namespace MS.Microservice.Web.Controller
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Modify([FromBody] UserModifyCommand request)
         {
-
             (bool success, string? message) = await _messageBus.InvokeAsync<(bool, string?)>(request);
             return Ok(new ResultDto<bool>(success, success, message ?? "", 200));
         }

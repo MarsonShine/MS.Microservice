@@ -1,6 +1,7 @@
-﻿using Autofac;
+using Autofac;
 using MS.Microservice.Web.Application.Queries;
 using MS.Microservice.Web.Application.Queries.Constract;
+using MS.Microservice.Web.Application.Users;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 
 namespace MS.Microservice.Web.AutofacModules
@@ -24,6 +25,10 @@ namespace MS.Microservice.Web.AutofacModules
 
             builder.Register(c => new UserQuery(ConnectionString))
                 .As<IUserQuery>()
+                .InstancePerLifetimeScope();
+
+            builder.RegisterType<UserCreateAppService>()
+                .As<IUserCreateAppService>()
                 .InstancePerLifetimeScope();
         }
     }

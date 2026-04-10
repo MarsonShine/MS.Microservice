@@ -1,61 +1,19 @@
-﻿using MS.Microservice.Web.Application.Validations;
-using MS.Microservice.Web.Infrastructure.Applications.Users;
-using Microsoft.Extensions.Caching.Distributed;
-using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Core.Extension;
+using MS.Microservice.Web.Application.Users;
 
 namespace MS.Microservice.Web.Application.Commands
 {
-    public class UserCreatedCommandHandler
+    /// <summary>
+    /// 兼容 Wolverine 消息入口。
+    /// 实际用例逻辑下沉到 <see cref="IUserCreateAppService"/>，让 API 与消息入口共享同一条函数式流程。
+    /// </summary>
+    public class UserCreatedCommandHandler(IUserCreateAppService userCreateAppService)
     {
-        private readonly IUserDomainService _userDomainService;
-        private readonly CurrentUser _currentUser;
-        private readonly IDistributedCache _cache;
-        public UserCreatedCommandHandler(
-            IUserDomainService userDomainService,
-            IDistributedCache cache,
-            CurrentUserResolver currentUserResolver)
-        {
-            _userDomainService = userDomainService;
-            _currentUser = currentUserResolver.CurrentUser() ?? throw new ArgumentException(nameof(CurrentUserResolver));
-            _cache = cache;
-        }
+        private readonly IUserCreateAppService _userCreateAppService = userCreateAppService;
+
         public async Task<(bool, string?)> Handle(UserCreatedCommand request, CancellationToken cancellationToken)
         {
-            var validator = new UserCreatedCommandValidator();
-            var result = await validator.ValidateAsync(request, cancellationToken);
-            if (!result.IsValid)
-            {
-                return (false, result.ToString());
-            }
-            if (request.Roles.Count > 0)
-            {
-                var roles = await _userDomainService.GetAllRolesAsync(cancellationToken);
-                var roleIds = roles.Select(r => r.Id).ToArray();
-                foreach (var r in request.Roles)
-                {
-                    if (roleIds.Contains(r.Id) == false)
-                    {
-                        return (false, "错误的角色参数");
-                    }
-                }
-            }
-            // 这里调用领域服务
-            string salt = _userDomainService.PasswordSalt();
-            var user = new Domain.Aggregates.IdentityModel.User(request.Account, request.Passowrd, salt, false, request.Telephone, _currentUser.Id, _currentUser.Id, request.Email, request.UserName, request.Account, "");
-            if (request.Roles?.Count > 0)
-            {
-                user.Roles.AddIfNotContains(
-                   request.Roles.Select(r => new Domain.Aggregates.IdentityModel.Role(r.Id, r.Name!, ""))
-               );
-            }
-
-            await _userDomainService.CreateUserAsync(user, cancellationToken);
-
-            //清理缓存
-            //await _cache.RemoveAsync(CacheConsts.UserAccountKey + user.Account);
-
-            return (true, null);
+            var result = await _userCreateAppService.CreateAsync(request, cancellationToken);
+            return (result.Success, result.Message);
         }
     }
 }
