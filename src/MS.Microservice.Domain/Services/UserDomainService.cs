@@ -1,4 +1,6 @@
-using MS.Microservice.Core.Extension;
+﻿using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Domain.Repository.Extensions;
+using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Aggregates.IdentityModel.Repository;
@@ -17,7 +19,7 @@ namespace MS.Microservice.Domain.Services
             _userRepository = userRepository;
         }
 
-        public async Task<bool> CreateUserAsync(User user, CancellationToken cancellationToken = default)
+        public async Task<Result<bool>> CreateUserResultAsync(User user, CancellationToken cancellationToken = default)
         {
             var existUser = await _userRepository.FindOptionAsync(p => p.Account == user.Account, cancellationToken);
 
@@ -27,13 +29,24 @@ namespace MS.Microservice.Domain.Services
                     none: async () =>
                     {
                         user.ChangePassword();
-                        _ = await _userRepository.InsertAsync(user, cancellationToken);
-
-                        //string cacheKey2 = CacheConsts.UserAccountKey + userInfo.Account;
-                        //_cache.Remove(cacheKey2);
-                        return await _userRepository.UnitOfWork.SaveChangesAsync(cancellationToken) > 0;
+                        var insertResult = await _userRepository.InsertResultAsync(user, cancellationToken);
+                        return await insertResult.BindAsync(async _ =>
+                        {
+                            var saveResult = await _userRepository.UnitOfWork.SaveChangesResultAsync(cancellationToken);
+                            return saveResult
+                                .Ensure(changed => changed > 0, () => new DomainException("用户创建失败"))
+                                .Map(_ => true);
+                        });
                     },
-                    some: _ => Task.FromException<bool>(new DomainException(ExceptionConsts.UserExisted)));
+                    some: _ => Task.FromResult(Result<bool>.Fail(new DomainException(ExceptionConsts.UserExisted))));
+        }
+
+        public async Task<bool> CreateUserAsync(User user, CancellationToken cancellationToken = default)
+        {
+            var result = await CreateUserResultAsync(user, cancellationToken);
+            return result.Match(
+                onSuccess: success => success,
+                onFailure: exception => throw exception);
         }
 
         public async Task<bool> DeleteUserAsync(int userId, CancellationToken cancellationToken = default)

@@ -13,7 +13,9 @@ namespace MS.Microservice.Web.Application.Commands
         public async Task<(bool, string?)> Handle(UserCreatedCommand request, CancellationToken cancellationToken)
         {
             var result = await _userCreateAppService.CreateAsync(request, cancellationToken);
-            return (result.Success, result.Message);
+            return result.Match(
+                onSuccess: success => (success, (string?)null),
+                onFailure: exception => (false, exception.Message));
         }
     }
 }

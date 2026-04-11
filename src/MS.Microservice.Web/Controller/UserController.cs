@@ -30,8 +30,11 @@ namespace MS.Microservice.Web.Controller
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> CreateUser([FromBody] UserCreatedCommand request)
         {
-            (bool success, string? message) = await _userCreateAppService.CreateAsync(request, HttpContext.RequestAborted);
-            return Ok(new ResultDto<bool>(success, success, message ?? "", 200));
+            var result = await _userCreateAppService.CreateAsync(request, HttpContext.RequestAborted);
+            var response = result.Match(
+                onSuccess: success => new ResultDto<bool>(success, true, "", 200),
+                onFailure: exception => new ResultDto<bool>(false, false, exception.Message, 200));
+            return Ok(response);
         }
 
 

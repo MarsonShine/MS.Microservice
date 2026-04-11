@@ -1,4 +1,5 @@
-using MS.Microservice.Core.Domain.Repository;
+﻿using MS.Microservice.Core.Domain.Repository;
+using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Extension;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
@@ -42,6 +43,9 @@ namespace MS.Microservice.Infrastructure.Repository
         /// </summary>
         public async Task<Option<User>> FindOptionAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
             => await FindAsync(predicate, cancellationToken);
+
+        public Task<Result<User>> InsertResultAsync([NotNull] User entity, CancellationToken cancellationToken = default)
+            => ResultExtensions.TryAsync(() => InsertAsync(entity, cancellationToken));
 
         public async Task<List<Role>> GetAllRoleAsync(CancellationToken cancellationToken = default)
         {

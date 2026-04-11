@@ -53,6 +53,16 @@ namespace MS.Microservice.Core.Dto
 		/// </summary>
 		public bool IsFailure => !IsSuccess;
 
+		/// <summary>
+		/// 成功时返回内部值；失败时抛出异常。
+		/// </summary>
+		public T Value => IsSuccess ? _value : throw new InvalidOperationException("Result 处于失败状态，无法读取 Value。");
+
+		/// <summary>
+		/// 失败时返回内部异常；成功时抛出异常。
+		/// </summary>
+		public Exception Error => IsFailure ? _error : throw new InvalidOperationException("Result 处于成功状态，无法读取 Error。");
+
 		// ── Match（模式匹配）──────────────────────────────────────────────────────
 
 		/// <summary>
@@ -115,4 +125,3 @@ namespace MS.Microservice.Core.Dto
 		public static implicit operator Result<T>(T value) => Success(value);
 	}
 }
-

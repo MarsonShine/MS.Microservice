@@ -1,4 +1,5 @@
-using MS.Microservice.Core.Extension;
+﻿using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Web.Application.Commands;
@@ -28,6 +29,15 @@ namespace MS.Microservice.Web.Application.Users
                     : (Option<string>)F.Some(validationResult.ToString());
             }
 
+            public async Task<Result<UserCreatedCommand>> ValidateResultAsync(CancellationToken cancellationToken = default)
+            {
+                var validator = new UserCreatedCommandValidator();
+                var validationResult = await validator.ValidateAsync(request, cancellationToken);
+                return validationResult.IsValid
+                    ? Result<UserCreatedCommand>.Success(request)
+                    : Result<UserCreatedCommand>.Fail(new ArgumentException(validationResult.ToString()));
+            }
+
             /// <summary>
             /// 确认命令中的角色 Id 都存在于领域层给出的角色集合中。
             /// 成功时返回原命令，便于继续进入函数式管道；失败时返回 None。
@@ -44,6 +54,11 @@ namespace MS.Microservice.Web.Application.Users
                     ? F.Some(request)
                     : F.None;
             }
+
+            public Result<UserCreatedCommand> EnsureRolesExistResult(IReadOnlyCollection<Role> roles)
+                => EnsureRolesExist(roles).Match(
+                    none: () => Result<UserCreatedCommand>.Fail(new ArgumentException("错误的角色参数")),
+                    some: Result<UserCreatedCommand>.Success);
 
             /// <summary>
             /// 将 API 命令映射为领域聚合。
@@ -72,6 +87,9 @@ namespace MS.Microservice.Web.Application.Users
 
                 return user;
             }
+
+            public Result<User> ToDomainUserResult(CurrentUser currentUser, string salt)
+                => ResultExtensions.Try(() => ToDomainUser(currentUser, salt));
         }
     }
 }

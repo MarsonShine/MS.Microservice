@@ -18,7 +18,7 @@ namespace MS.Microservice.Infrastructure.Tests
     public class UserDomainServiceTests
     {
         [Fact]
-        public async Task CreateUserAsync_WhenUserAlreadyExists_ThrowsDomainException()
+        public async Task CreateUserResultAsync_WhenUserAlreadyExists_ReturnsFailure()
         {
             var repository = Substitute.For<IUserRepository>();
             var service = new UserDomainService(repository);
@@ -32,20 +32,21 @@ namespace MS.Microservice.Infrastructure.Tests
 
             var candidate = new User("demo", "Password123", "salt", false, "13800138001", 1, 1, "demo2@example.com", "Demo2", "", "");
 
-            var exception = await Assert.ThrowsAsync<DomainException>(() => service.CreateUserAsync(candidate));
+            var result = await service.CreateUserResultAsync(candidate);
 
-            Assert.Equal(ExceptionConsts.UserExisted, exception.Message);
+            Assert.True(result.IsFailure);
+            Assert.Equal(ExceptionConsts.UserExisted, result.Error.Message);
         }
 
         [Fact]
-        public async Task CreateUserAsync_WhenUserDoesNotExist_PersistsAndReturnsTrue()
+        public async Task CreateUserResultAsync_WhenUserDoesNotExist_PersistsAndReturnsTrue()
         {
             var repository = Substitute.For<IUserRepository>();
             var unitOfWork = Substitute.For<IUnitOfWork>();
             repository.UnitOfWork.Returns(unitOfWork);
             repository.FindOptionAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>())
                 .Returns((Option<User>)F.None);
-            repository.InsertAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+            repository.InsertResultAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
                 .Returns(call => call.Arg<User>());
             unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
                 .Returns(1);
@@ -53,11 +54,12 @@ namespace MS.Microservice.Infrastructure.Tests
             var service = new UserDomainService(repository);
             var candidate = new User("demo", "Password123", "salt", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "");
 
-            var result = await service.CreateUserAsync(candidate);
+            var result = await service.CreateUserResultAsync(candidate);
 
-            Assert.True(result);
+            Assert.True(result.IsSuccess);
+            Assert.True(result.Value);
             Assert.NotEqual("Password123", candidate.Password);
-            await repository.Received(1).InsertAsync(candidate, Arg.Any<CancellationToken>());
+            await repository.Received(1).InsertResultAsync(candidate, Arg.Any<CancellationToken>());
             await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         }
     }

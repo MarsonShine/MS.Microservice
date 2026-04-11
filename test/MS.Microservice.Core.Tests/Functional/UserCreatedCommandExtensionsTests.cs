@@ -63,6 +63,46 @@ namespace MS.Microservice.Core.Tests.Functional
             Assert.True(result.IsNone);
         }
 
+        [Fact]
+        public async Task ValidateResultAsync_WhenCommandIsValid_ReturnsSuccess()
+        {
+            var command = CreateCommand();
+
+            var result = await command.ValidateResultAsync();
+
+            Assert.True(result.IsSuccess);
+            Assert.Same(command, result.Value);
+        }
+
+        [Fact]
+        public void EnsureRolesExistResult_WhenRoleMissing_ReturnsFailure()
+        {
+            var command = CreateCommand([new RoleDto { Id = 9, Name = "Ghost" }]);
+            var roles = new List<Role> { new(1, "Admin", "管理员") };
+
+            var result = command.EnsureRolesExistResult(roles);
+
+            Assert.True(result.IsFailure);
+            Assert.Equal("错误的角色参数", result.Error.Message);
+        }
+
+        [Fact]
+        public void ToDomainUserResult_WhenPasswordIsNotBase64_ReturnsFailure()
+        {
+            var command = new UserCreatedCommand(
+                account: "demo-account",
+                userName: "示例用户",
+                passowrd: "not-base64",
+                telephone: "13800138000",
+                email: "demo@example.com",
+                roles: []);
+            var currentUser = new CurrentUser(7, "creator", "creator@demo.local", "13800138000", []);
+
+            var result = command.ToDomainUserResult(currentUser, "salt-value");
+
+            Assert.True(result.IsFailure);
+        }
+
         private static UserCreatedCommand CreateCommand(List<RoleDto>? roles = null)
         {
             var rawPassword = "Password123";

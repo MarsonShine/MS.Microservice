@@ -1,4 +1,5 @@
-using MS.Microservice.Core.Functional;
+﻿using MS.Microservice.Core.Dto;
+using MS.Microservice.Core.Extension;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Web.Application.Commands;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
@@ -20,30 +21,25 @@ namespace MS.Microservice.Web.Application.Users
         /// 组合输入校验、角色校验、DTO 映射和领域调用。
         /// 其中可选值分支统一使用 Option 的 Match/Map 处理，避免散落的 null 判断。
         /// </summary>
-        public async Task<(bool Success, string? Message)> CreateAsync(UserCreatedCommand request, CancellationToken cancellationToken = default)
+        public async Task<Result<bool>> CreateAsync(UserCreatedCommand request, CancellationToken cancellationToken = default)
         {
-            var currentUser = _currentUserResolver.CurrentUser() ?? throw new ArgumentException(nameof(CurrentUserResolver));
-            var validationError = await request.ValidateAsync(cancellationToken);
-
-            return await validationError.MatchAsync(
-                none: async () =>
+            var currentUserResult = await _currentUserResolver.CurrentUserResultAsync(cancellationToken);
+            return await currentUserResult.BindAsync(async currentUser =>
+            {
+                var validationResult = await request.ValidateResultAsync(cancellationToken);
+                return await validationResult.BindAsync(async validRequest =>
                 {
-                    var roles = await _userDomainService.GetAllRolesAsync(cancellationToken);
-                    var maybeUser = request
-                        .EnsureRolesExist(roles)
-                        .Map(validRequest => validRequest.ToDomainUser(currentUser, _userDomainService.PasswordSalt()));
+                    var rolesResult = await ResultExtensions.TryAsync(() => _userDomainService.GetAllRolesAsync(cancellationToken));
+                    return await rolesResult.BindAsync(async roles =>
+                    {
+                        var userResult = validRequest
+                            .EnsureRolesExistResult(roles)
+                            .Bind(validCommand => validCommand.ToDomainUserResult(currentUser, _userDomainService.PasswordSalt()));
 
-                    return await maybeUser.MatchAsync(
-                        none: () => Task.FromResult<(bool Success, string? Message)>((false, "错误的角色参数")),
-                        some: async user =>
-                        {
-                            var success = await _userDomainService.CreateUserAsync(user, cancellationToken);
-                            return success
-                                ? (true, (string?)null)
-                                : (false, "用户创建失败");
-                        });
-                },
-                some: message => Task.FromResult<(bool Success, string? Message)>((false, message)));
+                        return await userResult.BindAsync(user => _userDomainService.CreateUserResultAsync(user, cancellationToken));
+                    });
+                });
+            });
         }
     }
 }
