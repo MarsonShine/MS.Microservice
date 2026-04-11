@@ -58,6 +58,7 @@ namespace MS.Microservice.Infrastructure.Tests
 
             Assert.True(result.IsSuccess);
             Assert.True(result.Value);
+            Assert.False(string.IsNullOrWhiteSpace(candidate.Password));
             Assert.NotEqual("Password123", candidate.Password);
             await repository.Received(1).InsertResultAsync(candidate, Arg.Any<CancellationToken>());
             await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());

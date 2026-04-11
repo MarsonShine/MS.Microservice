@@ -56,12 +56,12 @@ namespace MS.Microservice.Core.Dto
 		/// <summary>
 		/// 成功时返回内部值；失败时抛出异常。
 		/// </summary>
-		public T Value => IsSuccess ? _value : throw new InvalidOperationException("Result 处于失败状态，无法读取 Value。");
+		public T Value => IsSuccess ? _value! : throw new InvalidOperationException("Result 处于失败状态，无法读取 Value。");
 
 		/// <summary>
 		/// 失败时返回内部异常；成功时抛出异常。
 		/// </summary>
-		public Exception Error => IsFailure ? _error : throw new InvalidOperationException("Result 处于成功状态，无法读取 Error。");
+		public Exception Error => IsFailure ? _error! : throw new InvalidOperationException("Result 处于成功状态，无法读取 Error。");
 
 		// ── Match（模式匹配）──────────────────────────────────────────────────────
 
@@ -73,15 +73,15 @@ namespace MS.Microservice.Core.Dto
 		/// <param name="onSuccess">成功分支，接收成功值。</param>
 		/// <param name="onFailure">失败分支，接收异常。</param>
 		public R Match<R>(Func<T, R> onSuccess, Func<Exception, R> onFailure)
-			=> IsSuccess ? onSuccess(_value) : onFailure(_error);
+			=> IsSuccess ? onSuccess(_value!) : onFailure(_error!);
 
 		/// <summary>
 		/// 对 Result 进行副作用式模式匹配，返回 <see cref="Unit"/> 以保持函数式风格。
 		/// </summary>
 		public Unit Match(Action<T> onSuccess, Action<Exception> onFailure)
 		{
-			if (IsSuccess) onSuccess(_value);
-			else onFailure(_error);
+			if (IsSuccess) onSuccess(_value!);
+			else onFailure(_error!);
 			return Unit.Default;
 		}
 

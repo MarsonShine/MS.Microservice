@@ -18,7 +18,7 @@ namespace MS.Microservice.Core.Domain.Repository.Extensions
             public async Task<Result<bool>> SaveEntitiesResultAsync(CancellationToken cancellationToken = default)
             {
                 var result = await ResultExtensions.TryAsync(() => unitOfWork.SaveEntitiesAsync(cancellationToken));
-                return result.Ensure(saved => saved, () => new InvalidOperationException("持久化实体失败。"));
+                return result.Ensure(saved => saved, () => new InvalidOperationException("持久化实体失败：SaveEntitiesAsync 返回 false。"));
             }
         }
 

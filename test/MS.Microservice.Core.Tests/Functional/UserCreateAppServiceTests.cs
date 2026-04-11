@@ -53,7 +53,7 @@ namespace MS.Microservice.Core.Tests.Functional
                 Arg.Is<MS.Microservice.Domain.Aggregates.IdentityModel.User>(user =>
                     user.Account == "demo-account"
                     && user.Salt == "salt-value"
-                    && user.CreateUserId == 7
+                    && user.CreatorId == 7
                     && user.Roles.Count == 1
                     && user.Roles.Single().Id == 1),
                 Arg.Any<CancellationToken>());

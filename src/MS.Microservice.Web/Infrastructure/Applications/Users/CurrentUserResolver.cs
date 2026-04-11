@@ -6,6 +6,7 @@ using MS.Microservice.Core.Extension;
 using MS.Microservice.Domain.Services.Interfaces;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MS.Microservice.Web.Infrastructure.Applications.Users
@@ -34,7 +35,7 @@ namespace MS.Microservice.Web.Infrastructure.Applications.Users
             var result = await CurrentUserResultAsync(cancellationToken);
             return result.Match(
                 onSuccess: user => user,
-                onFailure: _ => null);
+                onFailure: _ => (CurrentUser?)null);
         }
 
         public Task<Result<CurrentUser>> CurrentUserResultAsync(CancellationToken cancellationToken = default)

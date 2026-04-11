@@ -56,7 +56,7 @@ namespace MS.Microservice.Web.Application.Users
             }
 
             public Result<UserCreatedCommand> EnsureRolesExistResult(IReadOnlyCollection<Role> roles)
-                => EnsureRolesExist(roles).Match(
+                => request.EnsureRolesExist(roles).Match(
                     none: () => Result<UserCreatedCommand>.Fail(new ArgumentException("错误的角色参数")),
                     some: Result<UserCreatedCommand>.Success);
 
@@ -89,7 +89,7 @@ namespace MS.Microservice.Web.Application.Users
             }
 
             public Result<User> ToDomainUserResult(CurrentUser currentUser, string salt)
-                => ResultExtensions.Try(() => ToDomainUser(currentUser, salt));
+                => ResultExtensions.Try(() => request.ToDomainUser(currentUser, salt));
         }
     }
 }
