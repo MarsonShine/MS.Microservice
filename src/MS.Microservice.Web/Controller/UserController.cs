@@ -14,11 +14,16 @@ namespace MS.Microservice.Web.Controller
     [ApiController]
     [Route("api/v1/[controller]")]
     [Authorize(Policy = "Manage")]
-    public class UserController(IMessageBus messageBus, IUserQuery userQuery, IUserCreateAppService userCreateAppService) : ControllerBase
+    public class UserController(
+        IMessageBus messageBus,
+        IUserQuery userQuery,
+        IUserCreateAppService userCreateAppService,
+        IUserModifyAppService userModifyAppService) : ControllerBase
     {
         private readonly IMessageBus _messageBus = messageBus;
         private readonly IUserQuery _userQuery = userQuery;
         private readonly IUserCreateAppService _userCreateAppService = userCreateAppService;
+        private readonly IUserModifyAppService _userModifyAppService = userModifyAppService;
 
         /// <summary>
         /// 创建用户
@@ -80,6 +85,23 @@ namespace MS.Microservice.Web.Controller
         {
             (bool success, string? message) = await _messageBus.InvokeAsync<(bool, string?)>(request);
             return Ok(new ResultDto<bool>(success, success, message ?? "", 200));
+        }
+
+        /// <summary>
+        /// 修改用户(角色) - 函数式组合示例
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("modify-functional")]
+        [ProducesResponseType(typeof(ResultDto<bool>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public async Task<IActionResult> ModifyFunctional([FromBody] UserModifyCommand request)
+        {
+            var result = await _userModifyAppService.ModifyAsync(request, HttpContext.RequestAborted);
+            var response = result.Match(
+                left: error => new ResultDto<bool>(false, false, error.ToDisplayMessage(), 200),
+                right: success => new ResultDto<bool>(success, true, "", 200));
+            return Ok(response);
         }
     }
 }

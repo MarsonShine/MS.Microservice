@@ -30,6 +30,10 @@ namespace MS.Microservice.Web.AutofacModules
             builder.RegisterType<UserCreateAppService>()
                 .As<IUserCreateAppService>()
                 .InstancePerLifetimeScope();
+
+            builder.RegisterType<UserModifyAppService>()
+                .As<IUserModifyAppService>()
+                .InstancePerLifetimeScope();
         }
     }
 }
