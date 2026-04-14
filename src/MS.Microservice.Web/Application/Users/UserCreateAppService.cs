@@ -21,24 +21,11 @@ namespace MS.Microservice.Web.Application.Users
         /// 其中可选值分支统一使用 Option 的 Match/Map 处理，避免散落的 null 判断。
         /// </summary>
         public async Task<Either<Error, bool>> CreateAsync(UserCreatedCommand request, CancellationToken cancellationToken = default)
-        {
-            var currentUserResult = await _currentUserResolver.CurrentUserEitherAsync(cancellationToken);
-            return await currentUserResult.BindAsync(async currentUser =>
-            {
-                var validationResult = await request.ValidateEitherAsync(cancellationToken);
-                return await validationResult.BindAsync(async validRequest =>
-                {
-                    var rolesResult = await EitherExtensions.TryAsync(() => _userDomainService.GetAllRolesAsync(cancellationToken), code: "user.roles");
-                    return await rolesResult.BindAsync(async roles =>
-                    {
-                        var userResult = validRequest
-                            .EnsureRolesExistEither(roles)
-                            .Bind(validCommand => validCommand.ToDomainUserEither(currentUser, _userDomainService.PasswordSalt()));
-
-                        return await userResult.BindAsync(user => _userDomainService.CreateUserEitherAsync(user, cancellationToken));
-                    });
-                });
-            });
-        }
+            => await _currentUserResolver.CurrentUserEitherAsync(cancellationToken)
+                .BindAsync(currentUser => request.ValidateEitherAsync(cancellationToken)
+                    .BindAsync(validRequest => EitherExtensions.TryAsync(() => _userDomainService.GetAllRolesAsync(cancellationToken), code: "user.roles")
+                        .Bind(roles => validRequest.EnsureRolesExistEither(roles))
+                        .Bind(validCommand => validCommand.ToDomainUserEither(currentUser, _userDomainService.PasswordSalt()))
+                        .BindAsync(user => _userDomainService.CreateUserEitherAsync(user, cancellationToken))));
     }
 }

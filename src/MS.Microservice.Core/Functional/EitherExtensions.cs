@@ -5,6 +5,15 @@ namespace MS.Microservice.Core.Functional
     /// </summary>
     public static partial class EitherExtensions
     {
+        public static Task<Either<L, R>> AsTask<L, R>(this Either<L, R> either)
+            => Task.FromResult(either);
+
+        public static Task<Either<L, R>> RightAsync<L, R>(R value)
+            => Task.FromResult((Either<L, R>)F.Right(value));
+
+        public static Task<Either<L, R>> LeftAsync<L, R>(L value)
+            => Task.FromResult((Either<L, R>)F.Left(value));
+
         public static Either<Error, R> Try<R>(Func<R> operation, string code = "unexpected")
         {
             try
@@ -43,8 +52,52 @@ namespace MS.Microservice.Core.Functional
                 return Unit.Default;
             }, code);
 
+        public static async Task<Either<L, RR>> Map<L, R, RR>(this Task<Either<L, R>> eitherTask, Func<R, RR> mapper)
+            => (await eitherTask).Map(mapper);
+
+        public static async Task<Either<LL, R>> MapLeft<L, R, LL>(this Task<Either<L, R>> eitherTask, Func<L, LL> mapper)
+            => (await eitherTask).MapLeft(mapper);
+
+        public static async Task<Either<L, RR>> Bind<L, R, RR>(this Task<Either<L, R>> eitherTask, Func<R, Either<L, RR>> binder)
+            => (await eitherTask).Bind(binder);
+
+        public static async Task<Either<L, RR>> BindAsync<L, R, RR>(this Task<Either<L, R>> eitherTask, Func<R, Task<Either<L, RR>>> binder)
+        {
+            var either = await eitherTask;
+            return await either.BindAsync(binder);
+        }
+
+        public static async Task<Either<L, RR>> MapAsync<L, R, RR>(this Task<Either<L, R>> eitherTask, Func<R, Task<RR>> mapper)
+        {
+            var either = await eitherTask;
+            return await either.MapAsync(mapper);
+        }
+
+        public static async Task<Either<L, R>> Tap<L, R>(this Task<Either<L, R>> eitherTask, Action<R> effect)
+            => (await eitherTask).Tap(effect);
+
+        public static async Task<Either<L, R>> TapAsync<L, R>(this Task<Either<L, R>> eitherTask, Func<R, Task> effect)
+        {
+            var either = await eitherTask;
+            return await either.TapAsync(effect);
+        }
+
+        public static async Task<Either<L, R>> Where<L, R>(this Task<Either<L, R>> eitherTask, Func<R, bool> predicate, Func<R, L> leftFactory)
+            => (await eitherTask).Where(predicate, leftFactory);
+
+        public static async Task<T> MatchAsync<L, R, T>(this Task<Either<L, R>> eitherTask, Func<L, Task<T>> left, Func<R, Task<T>> right)
+            => await (await eitherTask).MatchAsync(left, right);
+
+        public static async Task<T> MatchAsync<L, R, T>(this Task<Either<L, R>> eitherTask, Func<L, T> left, Func<R, T> right)
+            => (await eitherTask).Match(left, right);
+
         extension<L, R>(Either<L, R> either)
         {
+            public Either<LL,RR> Map<LL,RR>(Func<L,LL> left, Func<R,RR> right) 
+                => either.Match<Either<LL, RR>>(
+                    left: l => F.Left(left(l)), 
+                    right: r => F.Right(right(r)));
+
             public Either<L, RR> Map<RR>(Func<R, RR> mapper)
                 => either.Match<Either<L, RR>>(
                     left: l => (Either<L, RR>)F.Left<L>(l),
