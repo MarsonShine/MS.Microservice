@@ -51,6 +51,26 @@ namespace MS.Microservice.Core.Functional
         public static Right<R> Right<R>(R value) => new(value);
 
         /// <summary>
+        /// 创建一个 Validation 的 Invalid 容器。
+        /// </summary>
+        public static Invalid Invalid(Error error) => new(error);
+
+        /// <summary>
+        /// 创建一个 Validation 的 Valid 容器。
+        /// </summary>
+        public static Valid<T> Valid<T>(T value) => new(value);
+
+        /// <summary>
+        /// 创建一个 Exceptional 的异常分支容器。
+        /// </summary>
+        public static ExceptionThrown ExceptionThrown(Exception exception) => new(exception);
+
+        /// <summary>
+        /// 创建一个 Exceptional 的成功分支容器。
+        /// </summary>
+        public static Success<T> Success<T>(T value) => new(value);
+
+        /// <summary>
         /// 返回 <see cref="Unit"/> 的唯一实例，用于将无返回值的操作（<c>Action</c>）
         /// 提升为可在函数式管道中传递的函数。
         /// </summary>
