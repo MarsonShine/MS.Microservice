@@ -38,6 +38,15 @@ namespace MS.Microservice.Web.Application.Users
                     : Result<UserCreatedCommand>.Fail(new ArgumentException(validationResult.ToString()));
             }
 
+            public async Task<Either<Error, UserCreatedCommand>> ValidateEitherAsync(CancellationToken cancellationToken = default)
+            {
+                var validator = new UserCreatedCommandValidator();
+                var validationResult = await validator.ValidateAsync(request, cancellationToken);
+                return validationResult.IsValid
+                    ? F.Right(request)
+                    : F.Left(Error.Validation("用户创建命令校验失败", validationResult.Errors.Select(error => error.ErrorMessage).ToArray()));
+            }
+
             /// <summary>
             /// 确认命令中的角色 Id 都存在于领域层给出的角色集合中。
             /// 成功时返回原命令，便于继续进入函数式管道；失败时返回 None。
@@ -59,6 +68,11 @@ namespace MS.Microservice.Web.Application.Users
                 => request.EnsureRolesExist(roles).Match(
                     none: () => Result<UserCreatedCommand>.Fail(new ArgumentException("错误的角色参数")),
                     some: Result<UserCreatedCommand>.Success);
+
+            public Either<Error, UserCreatedCommand> EnsureRolesExistEither(IReadOnlyCollection<Role> roles)
+                => request.EnsureRolesExist(roles).Match<Either<Error, UserCreatedCommand>>(
+                    none: () => (Either<Error, UserCreatedCommand>)F.Left(Error.Validation("角色校验失败", ["传入的角色 Id 在系统中不存在。"])),
+                    some: validRequest => (Either<Error, UserCreatedCommand>)F.Right(validRequest));
 
             /// <summary>
             /// 将 API 命令映射为领域聚合。
@@ -90,6 +104,10 @@ namespace MS.Microservice.Web.Application.Users
 
             public Result<User> ToDomainUserResult(CurrentUser currentUser, string salt)
                 => ResultExtensions.Try(() => request.ToDomainUser(currentUser, salt));
+
+            public Either<Error, User> ToDomainUserEither(CurrentUser currentUser, string salt)
+                => EitherExtensions.Try(() => request.ToDomainUser(currentUser, salt), code: "user.mapping")
+                    .MapLeft(error => error with { Message = "用户命令映射为领域对象失败" });
         }
     }
 }

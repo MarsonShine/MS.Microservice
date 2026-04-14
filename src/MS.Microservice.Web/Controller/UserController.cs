@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MS.Microservice.Core.Dto;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Web.Application.Commands;
 using MS.Microservice.Web.Application.Models;
 using MS.Microservice.Web.Application.Queries.Constract;
@@ -32,8 +33,8 @@ namespace MS.Microservice.Web.Controller
         {
             var result = await _userCreateAppService.CreateAsync(request, HttpContext.RequestAborted);
             var response = result.Match(
-                onSuccess: success => new ResultDto<bool>(success, true, "", 200),
-                onFailure: exception => new ResultDto<bool>(false, false, exception.Message, 200));
+                left: error => new ResultDto<bool>(false, false, error.ToDisplayMessage(), 200),
+                right: success => new ResultDto<bool>(success, true, "", 200));
             return Ok(response);
         }
 

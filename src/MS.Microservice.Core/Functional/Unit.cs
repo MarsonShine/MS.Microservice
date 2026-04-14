@@ -44,7 +44,7 @@ namespace MS.Microservice.Core.Functional
         /// <summary>两个 <see cref="Unit"/> 值永远相等。</summary>
         public static bool operator ==(Unit left, Unit right) => true;
 
-        /// <summary>两个 <see cref="Unit"/> 值永远不等。</summary>
+        /// <summary>两个 <see cref="Unit"/> 值永远不会“不相等”。</summary>
         public static bool operator !=(Unit left, Unit right) => false;
     }
 }

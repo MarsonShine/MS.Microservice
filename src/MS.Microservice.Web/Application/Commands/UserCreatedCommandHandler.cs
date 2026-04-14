@@ -14,8 +14,8 @@ namespace MS.Microservice.Web.Application.Commands
         {
             var result = await _userCreateAppService.CreateAsync(request, cancellationToken);
             return result.Match(
-                onSuccess: success => (success, (string?)null),
-                onFailure: exception => (false, exception.Message));
+                left: error => (false, error.ToDisplayMessage()),
+                right: success => (success, (string?)null));
         }
     }
 }

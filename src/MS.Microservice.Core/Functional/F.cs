@@ -1,8 +1,8 @@
 namespace MS.Microservice.Core.Functional
 {
     /// <summary>
-    /// 函数式编程核心工厂类，提供 <see cref="Option{T}"/>、<see cref="Some{T}"/>、
-    /// <see cref="NoneType"/> 以及 <see cref="Unit"/> 的快捷构造方法。
+    /// 函数式编程核心工厂类，提供 <see cref="Option{T}"/>、<see cref="Either{L, R}"/>、
+    /// <see cref="Some{T}"/>、<see cref="NoneType"/> 和 <see cref="Unit"/> 的快捷构造方法。
     /// </summary>
     /// <remarks>
     /// <para>
@@ -39,6 +39,16 @@ namespace MS.Microservice.Core.Functional
         /// </code>
         /// </example>
         public static Some<T> Some<T>(T value) => new(value);
+
+        /// <summary>
+        /// 创建一个 Left 容器，按约定表示错误分支。
+        /// </summary>
+        public static Left<L> Left<L>(L value) => new(value);
+
+        /// <summary>
+        /// 创建一个 Right 容器，按约定表示成功分支。
+        /// </summary>
+        public static Right<R> Right<R>(R value) => new(value);
 
         /// <summary>
         /// 返回 <see cref="Unit"/> 的唯一实例，用于将无返回值的操作（<c>Action</c>）

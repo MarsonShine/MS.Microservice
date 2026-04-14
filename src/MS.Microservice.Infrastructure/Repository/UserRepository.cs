@@ -44,6 +44,9 @@ namespace MS.Microservice.Infrastructure.Repository
         public async Task<Option<User>> FindOptionAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
             => await FindAsync(predicate, cancellationToken);
 
+        public Task<Either<Error, User>> InsertEitherAsync([NotNull] User entity, CancellationToken cancellationToken = default)
+            => EitherExtensions.TryAsync(() => InsertAsync(entity, cancellationToken), code: "user.insert");
+
         public Task<Result<User>> InsertResultAsync([NotNull] User entity, CancellationToken cancellationToken = default)
             => ResultExtensions.TryAsync(() => InsertAsync(entity, cancellationToken));
 

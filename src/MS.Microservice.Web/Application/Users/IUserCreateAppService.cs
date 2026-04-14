@@ -1,4 +1,4 @@
-﻿using MS.Microservice.Core.Dto;
+﻿using MS.Microservice.Core.Functional;
 using MS.Microservice.Web.Application.Commands;
 
 namespace MS.Microservice.Web.Application.Users
@@ -12,6 +12,6 @@ namespace MS.Microservice.Web.Application.Users
         /// <summary>
         /// 执行创建用户用例。
         /// </summary>
-        Task<Result<bool>> CreateAsync(UserCreatedCommand request, CancellationToken cancellationToken = default);
+        Task<Either<Error, bool>> CreateAsync(UserCreatedCommand request, CancellationToken cancellationToken = default);
     }
 }

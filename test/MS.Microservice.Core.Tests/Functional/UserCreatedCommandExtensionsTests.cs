@@ -64,43 +64,45 @@ namespace MS.Microservice.Core.Tests.Functional
         }
 
         [Fact]
-        public async Task ValidateResultAsync_WhenCommandIsValid_ReturnsSuccess()
+        public async Task ValidateEitherAsync_WhenCommandIsValid_ReturnsRight()
         {
             var command = CreateCommand();
 
-            var result = await command.ValidateResultAsync();
+            var result = await command.ValidateEitherAsync();
 
-            Assert.True(result.IsSuccess);
-            Assert.Same(command, result.Value);
+            Assert.True(result.IsRight);
+            Assert.Same(command, result.Right);
         }
 
         [Fact]
-        public void EnsureRolesExistResult_WhenRoleMissing_ReturnsFailure()
+        public void EnsureRolesExistEither_WhenRoleMissing_ReturnsLeft()
         {
             var command = CreateCommand([new RoleDto { Id = 9, Name = "Ghost" }]);
             var roles = new List<Role> { new(1, "Admin", "管理员") };
 
-            var result = command.EnsureRolesExistResult(roles);
+            var result = command.EnsureRolesExistEither(roles);
 
-            Assert.True(result.IsFailure);
-            Assert.Equal("错误的角色参数", result.Error.Message);
+            Assert.True(result.IsLeft);
+            Assert.Equal("validation", result.Left.Code);
+            Assert.Equal("角色校验失败", result.Left.Message);
         }
 
         [Fact]
-        public void ToDomainUserResult_WhenPasswordIsNotBase64_ReturnsFailure()
+        public void ToDomainUserEither_WhenPasswordIsNotBase64_ReturnsLeft()
         {
             var command = new UserCreatedCommand(
-                account: "demo-account",
-                userName: "示例用户",
-                passowrd: "not-base64",
-                telephone: "13800138000",
-                email: "demo@example.com",
-                roles: []);
+                "demo-account",
+                "示例用户",
+                "not-base64",
+                "13800138000",
+                "demo@example.com",
+                []);
             var currentUser = new CurrentUser(7, "creator", "creator@demo.local", "13800138000", []);
 
-            var result = command.ToDomainUserResult(currentUser, "salt-value");
+            var result = command.ToDomainUserEither(currentUser, "salt-value");
 
-            Assert.True(result.IsFailure);
+            Assert.True(result.IsLeft);
+            Assert.Equal("user.mapping", result.Left.Code);
         }
 
         private static UserCreatedCommand CreateCommand(List<RoleDto>? roles = null)

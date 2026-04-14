@@ -1,5 +1,6 @@
 using IdentityModel;
 using Microsoft.AspNetCore.Http;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Web.Application.Commands;
@@ -28,8 +29,8 @@ namespace MS.Microservice.Core.Tests.Functional
                 .Returns([new Role(1, "Admin", "管理员")]);
             userDomainService.PasswordSalt()
                 .Returns("salt-value");
-            userDomainService.CreateUserResultAsync(Arg.Any<MS.Microservice.Domain.Aggregates.IdentityModel.User>(), Arg.Any<CancellationToken>())
-                .Returns(MS.Microservice.Core.Dto.Result<bool>.Success(true));
+            userDomainService.CreateUserEitherAsync(Arg.Any<MS.Microservice.Domain.Aggregates.IdentityModel.User>(), Arg.Any<CancellationToken>())
+                .Returns((Either<Error, bool>)F.Right(true));
 
             var httpContext = new DefaultHttpContext();
             httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -47,9 +48,9 @@ namespace MS.Microservice.Core.Tests.Functional
 
             var result = await service.CreateAsync(CreateCommand([new RoleDto { Id = 1, Name = "Admin" }]));
 
-            Assert.True(result.IsSuccess);
-            Assert.True(result.Value);
-            await userDomainService.Received(1).CreateUserResultAsync(
+            Assert.True(result.IsRight);
+            Assert.True(result.Right);
+            await userDomainService.Received(1).CreateUserEitherAsync(
                 Arg.Is<MS.Microservice.Domain.Aggregates.IdentityModel.User>(user =>
                     user.Account == "demo-account"
                     && user.Salt == "salt-value"

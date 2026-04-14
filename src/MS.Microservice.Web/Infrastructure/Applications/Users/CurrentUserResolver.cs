@@ -1,8 +1,8 @@
-﻿using IdentityModel;
+using IdentityModel;
 using Microsoft.AspNetCore.Http;
 using MS.Microservice.Core;
 using MS.Microservice.Core.Dto;
-using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Services.Interfaces;
 using System;
 using System.Linq;
@@ -32,15 +32,15 @@ namespace MS.Microservice.Web.Infrastructure.Applications.Users
 
         public async Task<CurrentUser?> CurrentUserAsync(CancellationToken cancellationToken = default)
         {
-            var result = await CurrentUserResultAsync(cancellationToken);
+            var result = await CurrentUserEitherAsync(cancellationToken);
             return result.Match(
-                onSuccess: user => user,
-                onFailure: _ => (CurrentUser?)null);
+                left: _ => (CurrentUser?)null,
+                right: user => user);
         }
 
-        public Task<Result<CurrentUser>> CurrentUserResultAsync(CancellationToken cancellationToken = default)
+        public Task<Either<Error, CurrentUser>> CurrentUserEitherAsync(CancellationToken cancellationToken = default)
         {
-            return ResultExtensions.TryAsync(async () =>
+            return EitherExtensions.TryAsync(async () =>
             {
                 var claims = _httpContext.User.Claims;
                 if (!claims.Any(p => p.Type == JwtClaimTypes.Id))
@@ -62,7 +62,15 @@ namespace MS.Microservice.Web.Infrastructure.Applications.Users
                 }
 
                 return new CurrentUser(userId, name, email, phone, roles);
-            });
+            }, code: "user.current");
+        }
+
+        public async Task<Result<CurrentUser>> CurrentUserResultAsync(CancellationToken cancellationToken = default)
+        {
+            var either = await CurrentUserEitherAsync(cancellationToken);
+            return either.Match(
+                left: error => Result<CurrentUser>.Fail(new InvalidOperationException(error.ToDisplayMessage())),
+                right: Result<CurrentUser>.Success);
         }
     }
 }

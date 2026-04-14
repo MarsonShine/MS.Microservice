@@ -19,7 +19,7 @@ namespace MS.Microservice.Domain.Services
             _userRepository = userRepository;
         }
 
-        public async Task<Result<bool>> CreateUserResultAsync(User user, CancellationToken cancellationToken = default)
+        public async Task<Either<Error, bool>> CreateUserEitherAsync(User user, CancellationToken cancellationToken = default)
         {
             var existUser = await _userRepository.FindOptionAsync(p => p.Account == user.Account, cancellationToken);
 
@@ -29,16 +29,26 @@ namespace MS.Microservice.Domain.Services
                     none: async () =>
                     {
                         user.ChangePassword();
-                        var insertResult = await _userRepository.InsertResultAsync(user, cancellationToken);
+                        var insertResult = await _userRepository.InsertEitherAsync(user, cancellationToken);
                         return await insertResult.BindAsync(async _ =>
                         {
-                            var saveResult = await _userRepository.UnitOfWork.SaveChangesResultAsync(cancellationToken);
+                            var saveResult = await _userRepository.UnitOfWork.SaveChangesEitherAsync(cancellationToken);
                             return saveResult
-                                .Ensure(changed => changed > 0, () => new DomainException("用户创建失败"))
+                                .Where(
+                                    predicate: changed => changed > 0,
+                                    leftFactory: _ => Error.Unexpected("用户创建失败", ["SaveChangesAsync returned 0."]))
                                 .Map(_ => true);
                         });
                     },
-                    some: _ => Task.FromResult(Result<bool>.Fail(new DomainException(ExceptionConsts.UserExisted))));
+                    some: _ => Task.FromResult((Either<Error, bool>)F.Left(Error.Conflict(ExceptionConsts.UserExisted, [$"Account={user.Account}"]))));
+        }
+
+        public async Task<Result<bool>> CreateUserResultAsync(User user, CancellationToken cancellationToken = default)
+        {
+            var either = await CreateUserEitherAsync(user, cancellationToken);
+            return either.Match(
+                left: error => Result<bool>.Fail(new DomainException(error.ToDisplayMessage())),
+                right: Result<bool>.Success);
         }
 
         public async Task<bool> CreateUserAsync(User user, CancellationToken cancellationToken = default)
