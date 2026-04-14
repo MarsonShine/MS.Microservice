@@ -100,17 +100,17 @@ namespace MS.Microservice.Core.Functional
 
             public Either<L, RR> Map<RR>(Func<R, RR> mapper)
                 => either.Match<Either<L, RR>>(
-                    left: l => (Either<L, RR>)F.Left<L>(l),
-                    right: r => (Either<L, RR>)F.Right(mapper(r)));
+                    left: l => F.Left<L>(l),
+                    right: r => F.Right(mapper(r)));
 
             public Either<LL, R> MapLeft<LL>(Func<L, LL> mapper)
                 => either.Match<Either<LL, R>>(
-                    left: l => (Either<LL, R>)F.Left(mapper(l)),
-                    right: r => (Either<LL, R>)F.Right<R>(r));
+                    left: l => F.Left(mapper(l)),
+                    right: r => F.Right<R>(r));
 
             public Either<L, RR> Bind<RR>(Func<R, Either<L, RR>> binder)
                 => either.Match<Either<L, RR>>(
-                    left: l => (Either<L, RR>)F.Left<L>(l),
+                    left: l => F.Left<L>(l),
                     right: binder);
 
             public Task<Either<L, RR>> BindAsync<RR>(Func<R, Task<Either<L, RR>>> binder)
@@ -121,7 +121,7 @@ namespace MS.Microservice.Core.Functional
             public Task<Either<L, RR>> MapAsync<RR>(Func<R, Task<RR>> mapper)
                 => either.Match<Task<Either<L, RR>>>(
                     left: l => Task.FromResult((Either<L, RR>)F.Left<L>(l)),
-                    right: async r => (Either<L, RR>)F.Right(await mapper(r)));
+                    right: async r => F.Right(await mapper(r)));
 
             public Either<L, R> Tap(Action<R> effect)
             {
@@ -160,10 +160,10 @@ namespace MS.Microservice.Core.Functional
 
             public Either<L, R> Where(Func<R, bool> predicate, Func<R, L> leftFactory)
                 => either.Match<Either<L, R>>(
-                    left: l => (Either<L, R>)F.Left<L>(l),
+                    left: l => F.Left<L>(l),
                     right: r => predicate(r)
-                        ? (Either<L, R>)F.Right(r)
-                        : (Either<L, R>)F.Left(leftFactory(r)));
+                        ? F.Right(r)
+                        : F.Left(leftFactory(r)));
 
             public Task<T> MatchAsync<T>(Func<L, Task<T>> left, Func<R, Task<T>> right)
                 => either.Match(left, right);

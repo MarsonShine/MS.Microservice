@@ -52,7 +52,7 @@ namespace MS.Microservice.Core.Functional
             /// </remarks>
             public Option<R> Map<R>(Func<T, R> f)
                 => opt.Match(
-                    none: () => (Option<R>)F.None,
+                    none: () => F.None,
                     some: t => (Option<R>)F.Some(f(t)));
 
             // ── Bind（单子操作）───────────────────────────────────────────────────
@@ -219,9 +219,9 @@ namespace MS.Microservice.Core.Functional
             /// </example>
             public Option<RR> SelectMany<R, RR>(Func<T, Option<R>> bind, Func<T, R, RR> project)
                 => opt.Match(
-                    none: () => (Option<RR>)F.None,
+                    none: () => F.None,
                     some: t => bind(t).Match(
-                        none: () => (Option<RR>)F.None,
+                        none: () => F.None,
                         some: r => (Option<RR>)F.Some(project(t, r))));
         }
     }
