@@ -3,13 +3,14 @@ using MS.Microservice.Web.Application.Queries;
 using MS.Microservice.Web.Application.Queries.Constract;
 using MS.Microservice.Web.Application.Users;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
+using MS.Microservice.Web.Infrastructure.Dapper;
 
 namespace MS.Microservice.Web.AutofacModules
 {
     public class AppServiceModule : Module
     {
-        public string ConnectionString { get; }
-        public AppServiceModule(string connectionString)
+        public ConnectionString ConnectionString { get; }
+        public AppServiceModule(ConnectionString connectionString)
         {
             ConnectionString = connectionString;
         }

@@ -1,9 +1,10 @@
 ﻿using Dapper;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Security;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Web.Application.Models;
 using MS.Microservice.Web.Application.Queries.Constract;
-using MySqlConnector;
+using MS.Microservice.Web.Infrastructure.Dapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,22 +15,19 @@ namespace MS.Microservice.Web.Application.Queries
 {
     public class UserQuery : IUserQuery
     {
-        private readonly string _connectionString = string.Empty;
+        private readonly ConnectionString _connectionString;
 
-        public UserQuery(string constr)
+        public UserQuery(ConnectionString connectionString)
         {
-            _connectionString = !string.IsNullOrWhiteSpace(constr) ? constr : throw new ArgumentNullException(nameof(constr));
+            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
         public async Task<List<RoleResponse>> GetAllRoleAsync(CancellationToken cancellationToken = default)
         {
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
             var builder = new SqlBuilder();
-
             var selector = builder.AddTemplate(@"select * from roles /**where**/ /**orderby**/");
-
-            var list = await connection.QueryAsync<dynamic>(selector.RawSql, selector.Parameters);
+            var queryAsync = _connectionString.QueryAsync<dynamic>();
+            var list = await queryAsync(selector.RawSql)((object?)selector.Parameters)(cancellationToken);
 
             var logs = list.Select(p => new RoleResponse
             {
@@ -44,17 +42,16 @@ namespace MS.Microservice.Web.Application.Queries
 
         public async Task<PagedResultDto<UserPagedResponse>> GetPagedAsync(string account, int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
-            using var connection = new MySqlConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
             var builder = new SqlBuilder();
-
             var selector = builder.AddTemplate(@"select Account,IsDisabled,Telephone,creatorId,updatorId,Email,Name,FzAccount,FzId,RoleIds from users as u left join(select UserId,GROUP_CONCAT(RoleId) as RoleIds from userroles group by UserId) as r1 on u.Id = r1.UserId /**where**/ /**orderby**/");
             var counter = builder.AddTemplate(@"select count(*) from users /**where**/");
             builder.WhereIf(account?.Length > 0, "account = @account", new { account = account });
-            var totalCount = await connection.ExecuteScalarAsync<long>(counter.RawSql, counter.Parameters);
+            var executeScalarAsync = _connectionString.ExecuteScalarAsync<long>();
+            var totalCount = await executeScalarAsync(counter.RawSql)((object?)counter.Parameters)(cancellationToken);
 
             builder.OrderBy("Id asc limit @PageIndex,@PageSize", new { pageIndex = (pageIndex - 1) * pageSize, pageSize });
-            var list = await connection.QueryAsync<dynamic>(selector.RawSql, selector.Parameters);
+            var queryAsync = _connectionString.QueryAsync<dynamic>();
+            var list = await queryAsync(selector.RawSql)((object?)selector.Parameters)(cancellationToken);
 
             var logs = list.Select(p => new UserPagedResponse
             {
