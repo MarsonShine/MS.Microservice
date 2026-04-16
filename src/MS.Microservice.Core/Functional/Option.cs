@@ -147,6 +147,48 @@ namespace MS.Microservice.Core.Functional
         public R Match<R>(Func<R> none, Func<T, R> some)
             => _isSome ? some(_value!) : none();
 
+        /// <summary>
+        /// <b>Match</b> 重载：允许 <paramref name="none"/> 分支直接写 <c>() => F.None</c>，
+        /// <paramref name="some"/> 分支返回 <see cref="Option{R}"/>，与书中 Applicative 示例写法保持一致。
+        /// </summary>
+        /// <typeparam name="R">some 分支返回的 Option 内部值类型。</typeparam>
+        /// <param name="none">
+        /// None 分支，惯用写法为 <c>() => F.None</c>；
+        /// 该 lambda 的返回值被忽略，实际直接短路为 <c>Option&lt;R&gt;.None</c>。
+        /// </param>
+        /// <param name="some">
+        /// Some 分支，接收内部值并返回 <see cref="Option{R}"/>。
+        /// <c>Some&lt;R&gt;</c> 可通过隐式转换自动提升为 <see cref="Option{R}"/>。
+        /// </param>
+        /// <remarks>
+        /// <para>
+        /// 为什么需要此重载：C# 泛型类型推断不使用隐式转换，因此当两个分支
+        /// 分别返回 <see cref="NoneType"/> 和 <see cref="Some{R}"/> 时，
+        /// 编译器无法为 <c>Match&lt;R&gt;(Func&lt;R&gt;, Func&lt;T, R&gt;)</c> 推断出统一的 R。
+        /// 此重载将 none 签名显式声明为 <c>Func&lt;NoneType&gt;</c>，
+        /// 编译器据此选择本重载并从 some 分支推断 R，再通过隐式转换将 <c>NoneType</c> 提升为 <c>Option&lt;R&gt;</c>。
+        /// </para>
+        /// <para>
+        /// 来源：《C# 函数式编程》第 5.3 节 — Applicative 风格 Option 组合。
+        /// </para>
+        /// </remarks>
+        public Option<R> Match<R>(Func<NoneType> none, Func<T, Option<R>> some)
+            => _isSome ? some(_value!) : none();
+
+        /// <summary>
+        /// <b>Match</b> 重载：允许 <paramref name="some"/> 分支直接返回 <see cref="Some{R}"/>
+        /// （即 <c>t => F.Some(expr)</c> 写法），配合 <c>none: () => F.None</c> 消除类型推断歧义。
+        /// </summary>
+        /// <typeparam name="R">Some 分支包装的值类型。</typeparam>
+        /// <remarks>
+        /// 与 <c>Match&lt;R&gt;(Func&lt;NoneType&gt;, Func&lt;T, Option&lt;R&gt;&gt;)</c> 互补：
+        /// 当 some lambda 直接返回 <c>F.Some(...)</c>（推断类型为 <see cref="Some{R}"/>）时，
+        /// 编译器无法将 <c>Some&lt;R&gt;</c> 映射到 <c>Option&lt;R&gt;</c>，需要此重载显式指定返回类型。
+        /// <see cref="Some{R}"/> 通过隐式转换自动提升为 <see cref="Option{R}"/>。
+        /// </remarks>
+        public Option<R> Match<R>(Func<NoneType> none, Func<T, Some<R>> some)
+            => _isSome ? some(_value!) : none();
+
         // ── 相等性 ────────────────────────────────────────────────────────────────
 
         /// <inheritdoc/>

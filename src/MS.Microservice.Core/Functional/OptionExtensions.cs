@@ -55,6 +55,9 @@ namespace MS.Microservice.Core.Functional
                     none: () => F.None,
                     some: t => (Option<R>)F.Some(f(t)));
 
+            public Option<Func<T2, R>> Map<T2, R>(Func<T, T2, R> f)
+                => opt.Map(f.Curry());
+
             // ── Bind（单子操作）───────────────────────────────────────────────────
 
             /// <summary>
@@ -223,6 +226,85 @@ namespace MS.Microservice.Core.Functional
                     some: t => bind(t).Match(
                         none: () => F.None,
                         some: r => (Option<RR>)F.Some(project(t, r))));
+        }
+
+        // ── Apply（应用函子 / Applicative Functor）───────────────────────────────
+
+        extension<T, R>(Option<Func<T, R>> optF)
+        {
+            /// <summary>
+            /// <b>Apply</b>（应用函子）：将包裹在 <see cref="Option{T}"/> 中的函数应用到
+            /// 同样包裹在 <see cref="Option{T}"/> 中的参数上。
+            /// </summary>
+            /// <param name="arg">包含待应用参数的 Option。</param>
+            /// <returns>
+            /// 若函数与参数都为 Some，则返回 Some(f(arg))；
+            /// 任意一方为 None，则返回 None。
+            /// </returns>
+            /// <remarks>
+            /// <para>
+            /// Apply 实现了"应用函子"（Applicative Functor）的核心操作：
+            /// 允许将包裹在容器中的多元函数逐步应用到各自包裹在容器中的参数上，
+            /// 最终仍保持在容器语义中，None 在任意一环即短路整条链。
+            /// </para>
+            /// <para>
+            /// 典型用法（与 Map 协同实现多参数可选值的安全组合）：
+            /// <code>
+            /// Func&lt;int, int, int&gt; add = (x, y) => x + y;
+            /// Option&lt;int&gt; optX = F.Some(3), optY = F.Some(4);
+            ///
+            /// // 先用 Map 提升为 Option&lt;Func&lt;int, int&gt;&gt;，再用 Apply 应用第二个参数
+            /// Option&lt;int&gt; result = optX.Map(add).Apply(optY); // Some(7)
+            /// </code>
+            /// </para>
+            /// <para>
+            /// 来源：《C# 函数式编程》第 5.3 节 — Apply 与应用函子。
+            /// </para>
+            /// </remarks>
+            public Option<R> Apply(Option<T> arg)
+                => optF.Match(
+                    none: () => F.None,
+                    some: f => arg.Map(f));
+        }
+
+        extension<T1, T2, R>(Option<Func<T1, T2, R>> optF)
+        {
+            /// <summary>
+            /// <b>Apply</b> 重载：将包裹在 Option 中的二元函数部分应用第一个参数，
+            /// 返回包裹在 Option 中的一元函数。
+            /// </summary>
+            /// <remarks>
+            /// 对应签名：<c>A&lt;T1 -&gt; T2 -&gt; R&gt; -&gt; A&lt;T1&gt; -&gt; A&lt;T2 -&gt; R&gt;</c>。
+            /// 典型用法：先 <c>Map(f)</c> 将二元函数提升，再逐步 Apply 各参数：
+            /// <code>
+            /// optX.Map(multiply).Apply(optY) // Some(result)
+            /// </code>
+            /// 来源：《C# 函数式编程》第 7 章 — 高级界域中的 Apply 重载。
+            /// </remarks>
+            public Option<Func<T2, R>> Apply(Option<T1> arg)
+                => optF.Match(
+                    none: () => F.None,
+                    some: f => arg.Map(f.Curry()));
+        }
+
+        extension<T1, T2, T3, R>(Option<Func<T1, T2, T3, R>> optF)
+        {
+            /// <summary>
+            /// <b>Apply</b> 重载：将包裹在 Option 中的三元函数部分应用第一个参数，
+            /// 返回包裹在 Option 中的柯里化二元函数。
+            /// </summary>
+            /// <remarks>
+            /// 对应签名：<c>A&lt;T1 -&gt; T2 -&gt; T3 -&gt; R&gt; -&gt; A&lt;T1&gt; -&gt; A&lt;T2 -&gt; T3 -&gt; R&gt;</c>。
+            /// 书中箭头符号 <c>T2→T3→R</c> 为柯里化形式，对应 <see cref="Func{T2, TResult}"/>
+            /// 其中 TResult 为 <c>Func&lt;T3, R&gt;</c>。
+            /// 来源：《C# 函数式编程》第 7 章 — 高级界域中的 Apply 重载。
+            /// </remarks>
+            public Option<Func<T2, Func<T3, R>>> Apply(Option<T1> arg)
+                => optF.Match(
+                    none: () => (Option<Func<T2, Func<T3, R>>>)F.None,
+                    some: f => arg.Map(f.Curry()));
+            //// 等同于下面
+            //=> Apply(optF.Map(FuncExtensions.Curry), arg);
         }
     }
 }

@@ -39,6 +39,27 @@ namespace MS.Microservice.Web.Application.Queries
 
             }).ToList();
 
+            Func<int, int, int> multiply = (x, y) => x * y;
+            Option<int> optX = F.Some(3),
+                        optY = F.Some(4);
+
+            var result3 = optX.Map(multiply).Match( 
+                () => F.None,
+                (f) => optX.Match(
+                    () => F.None,
+                    (y) => F.Some(f(y))
+                    )
+                );
+
+            var result4 =
+                optX.Match(
+                    none: () => F.None,
+                    some: x => optY.Match(
+                        none: () => F.None,
+                        some: y => F.Some(multiply(x, y))));
+
+            var result5 = optX.Map(multiply).Apply(optY);
+
             return logs.AsList();
         }
 
