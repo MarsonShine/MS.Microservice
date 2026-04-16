@@ -81,5 +81,14 @@ namespace MS.Microservice.Core.Functional
         /// </code>
         /// </example>
         public static Unit UnitValue => Functional.Unit.Default;
+
+        public static int Remainder(int dividend, int divisor)
+        {
+            int r = dividend % divisor;
+            return r < 0 ? r + Math.Abs(divisor) : r;
+        }
+
+        public static Func<A, R> ApplyR<A, B, R>(Func<A, B, R> f, B b) => a => f(a, b);
+        public static Func<A, B, R> ApplyR<A, B, C, R>(Func<A, B, C, R> f, C c) => (a, b) => f(a, b, c);
     }
 }
