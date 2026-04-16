@@ -35,7 +35,7 @@ namespace MS.Microservice.Web.Infrastructure.Dapper
                         ((connection, token) => connection.ExecuteScalarAsync<TResult>(new CommandDefinition(sql, parameters, cancellationToken: token)))
                         (cancellationToken);
 
-                    return result ?? throw new InvalidOperationException("ExecuteScalarAsync 返回了空值。");
+                    return result ?? throw new InvalidOperationException("ExecuteScalarAsync returned null.");
                 })
                     .Curry();
         }

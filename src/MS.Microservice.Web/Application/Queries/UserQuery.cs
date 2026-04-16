@@ -27,7 +27,9 @@ namespace MS.Microservice.Web.Application.Queries
             var builder = new SqlBuilder();
             var selector = builder.AddTemplate(@"select * from roles /**where**/ /**orderby**/");
             var queryAsync = _connectionString.QueryAsync<dynamic>();
-            var list = await queryAsync(selector.RawSql)((object?)selector.Parameters)(cancellationToken);
+            var queryRoles = queryAsync(selector.RawSql);
+            var queryRolesWithParameters = queryRoles((object?)selector.Parameters);
+            var list = await queryRolesWithParameters(cancellationToken);
 
             var logs = list.Select(p => new RoleResponse
             {
@@ -47,11 +49,15 @@ namespace MS.Microservice.Web.Application.Queries
             var counter = builder.AddTemplate(@"select count(*) from users /**where**/");
             builder.WhereIf(account?.Length > 0, "account = @account", new { account = account });
             var executeScalarAsync = _connectionString.ExecuteScalarAsync<long>();
-            var totalCount = await executeScalarAsync(counter.RawSql)((object?)counter.Parameters)(cancellationToken);
+            var countUsers = executeScalarAsync(counter.RawSql);
+            var countUsersWithParameters = countUsers((object?)counter.Parameters);
+            var totalCount = await countUsersWithParameters(cancellationToken);
 
             builder.OrderBy("Id asc limit @PageIndex,@PageSize", new { pageIndex = (pageIndex - 1) * pageSize, pageSize });
             var queryAsync = _connectionString.QueryAsync<dynamic>();
-            var list = await queryAsync(selector.RawSql)((object?)selector.Parameters)(cancellationToken);
+            var queryUsers = queryAsync(selector.RawSql);
+            var queryUsersWithParameters = queryUsers((object?)selector.Parameters);
+            var list = await queryUsersWithParameters(cancellationToken);
 
             var logs = list.Select(p => new UserPagedResponse
             {
