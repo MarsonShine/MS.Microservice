@@ -56,7 +56,8 @@ namespace MS.Microservice.Web.Application.Demo
             // 第二步：验证通过才调用 save，否则直接返回 Left(error)
             // 这与书中 BookTransferController 的做法完全一致
             return validation.Match<Task<Either<Error, bool>>>(
-                invalid: error => Task.FromResult((Either<Error, bool>)F.Left(error)),
+                invalid: errors => Task.FromResult((Either<Error, bool>)F.Left(
+                    Error.Validation("校验失败", errors.SelectMany(e => e.DetailsOrEmpty).ToList()))),
                 valid: validCmd => _save(validCmd));
         }
     }

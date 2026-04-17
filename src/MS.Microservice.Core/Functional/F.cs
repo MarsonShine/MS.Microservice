@@ -13,7 +13,7 @@ namespace MS.Microservice.Core.Functional
     /// 来源：《C# 函数式编程》第 3 章 — 设计函数签名与类型。
     /// </para>
     /// </remarks>
-    public static class F
+    public static partial class F
     {
         /// <summary>
         /// 全局唯一的 None 值，可隐式转换为任意 <see cref="Option{T}"/>。
@@ -49,16 +49,6 @@ namespace MS.Microservice.Core.Functional
         /// 创建一个 Right 容器，按约定表示成功分支。
         /// </summary>
         public static Right<R> Right<R>(R value) => new(value);
-
-        /// <summary>
-        /// 创建一个 Validation 的 Invalid 容器。
-        /// </summary>
-        public static Invalid Invalid(Error error) => new(error);
-
-        /// <summary>
-        /// 创建一个 Validation 的 Valid 容器。
-        /// </summary>
-        public static Valid<T> Valid<T>(T value) => new(value);
 
         /// <summary>
         /// 创建一个 Exceptional 的异常分支容器。

@@ -59,7 +59,8 @@ namespace MS.Microservice.Web.Application.Demo
             var validation = _validate(command);
 
             return validation.Match<Task<Either<Error, bool>>>(
-                invalid: error => Task.FromResult((Either<Error, bool>)F.Left(error)),
+                invalid: errors => Task.FromResult((Either<Error, bool>)F.Left(
+                    Error.Validation("校验失败", errors.SelectMany(e => e.DetailsOrEmpty).ToList()))),
                 valid: validCmd => _save(validCmd));
         }
     }
