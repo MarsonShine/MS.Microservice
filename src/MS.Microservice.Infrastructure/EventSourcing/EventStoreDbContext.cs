@@ -1,13 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using System;
+using EfCoreDbContext = Microsoft.EntityFrameworkCore.DbContext;
+using EfCoreDbContextOptions = Microsoft.EntityFrameworkCore.DbContextOptions<MS.Microservice.Infrastructure.EventSourcing.EventStoreDbContext>;
 
 namespace MS.Microservice.Infrastructure.EventSourcing
 {
-    public class EventStoreDbContext : DbContext
+    public class EventStoreDbContext : EfCoreDbContext
     {
         public const string DefaultSchema = "event_sourcing";
 
-        public EventStoreDbContext(DbContextOptions<EventStoreDbContext> options)
+        public EventStoreDbContext(EfCoreDbContextOptions options)
             : base(options)
         {
         }

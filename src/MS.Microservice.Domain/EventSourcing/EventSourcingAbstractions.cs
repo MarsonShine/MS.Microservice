@@ -73,7 +73,7 @@ namespace MS.Microservice.Domain.EventSourcing
         Task StoreAsync(string projectionName, long lastGlobalPosition, CancellationToken cancellationToken = default);
     }
 
-    public sealed class EventStoreConcurrencyException : Exception
+    public sealed class EventStoreConcurrencyException : System.Exception
     {
         public EventStoreConcurrencyException(string streamId, int expectedVersion, int actualVersion)
             : base($"事件流 {streamId} 发生并发冲突，期望版本 {expectedVersion}，实际版本 {actualVersion}。")
@@ -83,7 +83,7 @@ namespace MS.Microservice.Domain.EventSourcing
             ActualVersion = actualVersion;
         }
 
-        public EventStoreConcurrencyException(string streamId, int expectedVersion, int actualVersion, Exception innerException)
+        public EventStoreConcurrencyException(string streamId, int expectedVersion, int actualVersion, System.Exception innerException)
             : base($"事件流 {streamId} 发生并发冲突，期望版本 {expectedVersion}，实际版本 {actualVersion}。", innerException)
         {
             StreamId = streamId;

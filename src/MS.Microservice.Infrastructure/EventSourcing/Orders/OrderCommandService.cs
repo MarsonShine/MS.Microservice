@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static MS.Microservice.Core.Functional.F;
 
 namespace MS.Microservice.Infrastructure.EventSourcing.Orders
 {
@@ -39,7 +40,7 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Orders
             var decision = OrderAggregate.Decide(state, command);
             if (decision.IsLeft)
             {
-                return decision.Left;
+                return Left(decision.Left);
             }
 
             await _eventStore.AppendToStreamAsync(
@@ -63,7 +64,7 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Orders
                     cancellationToken);
             }
 
-            return decision.Right;
+            return Right<IReadOnlyList<OrderEvent>>(decision.Right);
         }
 
         private bool ShouldCreateSnapshot(int version)
