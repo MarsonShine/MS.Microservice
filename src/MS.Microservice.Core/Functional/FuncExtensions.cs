@@ -5,6 +5,13 @@ namespace MS.Microservice.Core.Functional
     /// </summary>
     public static partial class F
     {
+        extension<T, TResult>(Func<T> func)
+        {
+            public Func<TResult> Map(Func<T,TResult> g) => () => g(func());
+
+            public Func<TResult> Bind(Func<T, Func<TResult>> g) => () => g(func())();
+        }
+
         extension<T1, T2, TResult>(Func<T1, T2, TResult> func)
         {
             /// <summary>
