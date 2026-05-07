@@ -1,310 +1,309 @@
-namespace MS.Microservice.Core.Functional
+namespace MS.Microservice.Core.Functional;
+
+/// <summary>
+/// 为 <see cref="Option{T}"/> 提供函数式编程核心操作的扩展方法集合。
+/// </summary>
+/// <remarks>
+/// <para>
+/// 涵盖以下操作类别：
+/// <list type="bullet">
+///   <item><description><b>Map</b>（函子 / Functor）：对 Some 中的值进行变换。</description></item>
+///   <item><description><b>Bind</b>（单子 / Monad）：链接多个可能返回 None 的操作。</description></item>
+///   <item><description><b>Match</b>：穷举式模式匹配。</description></item>
+///   <item><description><b>GetOrElse / OrElse</b>：提取值或提供备用值。</description></item>
+///   <item><description><b>Where</b>（Filter）：按谓词过滤。</description></item>
+///   <item><description><b>ForEach</b>：对 Some 执行副作用。</description></item>
+///   <item><description><b>AsEnumerable</b>：将 Option 转为序列。</description></item>
+///   <item><description><b>Select / SelectMany</b>：支持 LINQ 查询语法。</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// 来源：《C# 函数式编程》第 3.4 节 — 使用 Map 和 Bind 组合 Option 值。
+/// </para>
+/// </remarks>
+public static class OptionExtensions
 {
-    /// <summary>
-    /// 为 <see cref="Option{T}"/> 提供函数式编程核心操作的扩展方法集合。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// 涵盖以下操作类别：
-    /// <list type="bullet">
-    ///   <item><description><b>Map</b>（函子 / Functor）：对 Some 中的值进行变换。</description></item>
-    ///   <item><description><b>Bind</b>（单子 / Monad）：链接多个可能返回 None 的操作。</description></item>
-    ///   <item><description><b>Match</b>：穷举式模式匹配。</description></item>
-    ///   <item><description><b>GetOrElse / OrElse</b>：提取值或提供备用值。</description></item>
-    ///   <item><description><b>Where</b>（Filter）：按谓词过滤。</description></item>
-    ///   <item><description><b>ForEach</b>：对 Some 执行副作用。</description></item>
-    ///   <item><description><b>AsEnumerable</b>：将 Option 转为序列。</description></item>
-    ///   <item><description><b>Select / SelectMany</b>：支持 LINQ 查询语法。</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// 来源：《C# 函数式编程》第 3.4 节 — 使用 Map 和 Bind 组合 Option 值。
-    /// </para>
-    /// </remarks>
-    public static class OptionExtensions
+    extension<T>(Option<T> opt)
     {
-        extension<T>(Option<T> opt)
-        {
-            // ── Map（函子操作）────────────────────────────────────────────────────
+        // ── Map（函子操作）────────────────────────────────────────────────────
 
-            /// <summary>
-            /// <b>Map</b>：将 Option 内部的值通过函数 <paramref name="f"/> 变换为新类型，
-            /// 返回包含变换结果的 Option。
-            /// </summary>
-            /// <typeparam name="R">变换后的值类型。</typeparam>
-            /// <param name="f">值变换函数。</param>
-            /// <returns>
-            /// 若当前 Option 为 Some(t)，则返回 Some(f(t))；
-            /// 若为 None，则直接返回 None，<paramref name="f"/> 不会被执行。
-            /// </returns>
-            /// <remarks>
-            /// <para>
-            /// Map 体现了"函子"（Functor）的核心概念：在保持容器结构不变的情况下，
-            /// 对容器内的值应用一个普通函数。
-            /// </para>
-            /// <para>
-            /// 此处使用 .NET 10 / C# 最新的 <c>extension</c> 语法声明扩展成员，
-            /// 让函数式能力直接挂载到 <see cref="Option{T}"/> 上。
-            /// </para>
-            /// <para>
-            /// 来源：《C# 函数式编程》第 3.4 节 — Map（函子操作）。
-            /// </para>
-            /// </remarks>
-            public Option<R> Map<R>(Func<T, R> f)
-                => opt.Match(
+        /// <summary>
+        /// <b>Map</b>：将 Option 内部的值通过函数 <paramref name="f"/> 变换为新类型，
+        /// 返回包含变换结果的 Option。
+        /// </summary>
+        /// <typeparam name="R">变换后的值类型。</typeparam>
+        /// <param name="f">值变换函数。</param>
+        /// <returns>
+        /// 若当前 Option 为 Some(t)，则返回 Some(f(t))；
+        /// 若为 None，则直接返回 None，<paramref name="f"/> 不会被执行。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// Map 体现了"函子"（Functor）的核心概念：在保持容器结构不变的情况下，
+        /// 对容器内的值应用一个普通函数。
+        /// </para>
+        /// <para>
+        /// 此处使用 .NET 10 / C# 最新的 <c>extension</c> 语法声明扩展成员，
+        /// 让函数式能力直接挂载到 <see cref="Option{T}"/> 上。
+        /// </para>
+        /// <para>
+        /// 来源：《C# 函数式编程》第 3.4 节 — Map（函子操作）。
+        /// </para>
+        /// </remarks>
+        public Option<TResult> Map<TResult>(Func<T, TResult> f)
+            => opt.Match(
+                none: () => F.None,
+                some: t => (Option<TResult>)F.Some(f(t)));
+
+        public Option<Func<T2, TResult>> Map<T2, TResult>(Func<T, T2, TResult> f)
+            => opt.Map(f.Curry());
+
+        // ── Bind（单子操作）───────────────────────────────────────────────────
+
+        /// <summary>
+        /// <b>Bind</b>（又称 FlatMap / SelectMany）：
+        /// 将 Option 内部的值传递给一个返回 Option 的函数 <paramref name="f"/>，
+        /// 并将结果"展平"为单层 Option。
+        /// </summary>
+        /// <typeparam name="R">结果 Option 的值类型。</typeparam>
+        /// <param name="f">接收值并返回 Option 的函数（Cross-world 函数）。</param>
+        /// <returns>
+        /// 若当前 Option 为 Some(t)，则返回 f(t)（可能为 Some 或 None）；
+        /// 若为 None，则直接返回 None，<paramref name="f"/> 不会被执行。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// Bind 体现了"单子"（Monad）的核心概念：将多个可能失败（返回 None）的操作
+        /// 串联在一起，只要任意一步返回 None，整条链路即短路为 None。
+        /// </para>
+        /// <para>
+        /// 来源：《C# 函数式编程》第 3.4 节 — Bind（单子操作）。
+        /// </para>
+        /// </remarks>
+        public Option<TResult> Bind<TResult>(Func<T, Option<TResult>> f)
+            => opt.Match(
+                none: () => F.None,
+                some: f);
+
+        /// <summary>
+        /// 异步版本的 <b>Bind</b>，用于在 Some 分支中继续执行异步跨世界函数。
+        /// </summary>
+        public Task<Option<TResult>> BindAsync<TResult>(Func<T, Task<Option<TResult>>> f)
+            => opt.Match(
+                none: () => Task.FromResult((Option<TResult>)F.None),
+                some: f);
+
+        // ── Match（模式匹配）──────────────────────────────────────────────────
+
+        /// <summary>
+        /// <b>Match</b> 重载：以值而非函数的方式提供 None 分支的结果。
+        /// </summary>
+        /// <typeparam name="R">返回结果类型。</typeparam>
+        /// <param name="none">None 分支返回的直接值。</param>
+        /// <param name="some">Some 分支处理函数。</param>
+        public TResult Match<TResult>(TResult none, Func<T, TResult> some)
+            => opt.Match(
+                none: () => none,
+                some: some);
+
+        /// <summary>
+        /// 异步版本的 <b>Match</b>，便于在 API / AppService / Infrastructure 边界组合异步流程。
+        /// </summary>
+        public Task<TResult> MatchAsync<TResult>(Func<Task<TResult>> none, Func<T, Task<TResult>> some)
+            => opt.Match(
+                none: none,
+                some: some);
+
+        // ── GetOrElse / OrElse ────────────────────────────────────────────────
+
+        /// <summary>
+        /// <b>GetOrElse</b>：获取 Some 中的值；若为 None，则返回 <paramref name="defaultValue"/>。
+        /// </summary>
+        public T GetOrElse(T defaultValue)
+            => opt.Match(
+                none: () => defaultValue,
+                some: t => t);
+
+        /// <summary>
+        /// <b>GetOrElse</b>：获取 Some 中的值；若为 None，则调用 <paramref name="fallback"/> 获取默认值。
+        /// </summary>
+        /// <remarks>延迟计算版本，仅在 Option 为 None 时才执行 <paramref name="fallback"/>，适合昂贵的默认值计算。</remarks>
+        public T GetOrElse(Func<T> fallback)
+            => opt.Match(
+                none: fallback,
+                some: t => t);
+
+        /// <summary>
+        /// <b>OrElse</b>：若当前 Option 为 None，则用备用 <paramref name="fallback"/> Option 替代。
+        /// </summary>
+        public Option<T> OrElse(Option<T> fallback)
+            => opt.Match(
+                none: () => fallback,
+                some: _ => opt);
+
+        /// <summary>
+        /// <b>OrElse</b>：若当前 Option 为 None，则调用 <paramref name="fallback"/> 获取备用 Option。
+        /// </summary>
+        /// <remarks>延迟计算版本，仅在 Option 为 None 时才执行 <paramref name="fallback"/>。</remarks>
+        public Option<T> OrElse(Func<Option<T>> fallback)
+            => opt.Match(
+                none: fallback,
+                some: _ => opt);
+
+        // ── ForEach（副作用）─────────────────────────────────────────────────
+
+        /// <summary>
+        /// <b>ForEach</b>：若 Option 为 Some，则对内部值执行 <paramref name="action"/> 副作用操作。
+        /// </summary>
+        /// <returns>
+        /// 返回 <see cref="Unit"/> 以保持函数式风格（避免出现无返回值的函数）。
+        /// </returns>
+        /// <remarks>
+        /// ForEach 是唯一允许产生副作用（side-effect）的操作，
+        /// 通常用于与外部系统（日志、IO 等）交互的最终步骤（边界处），
+        /// 不应在纯业务逻辑的中间环节使用。
+        /// </remarks>
+        public Unit ForEach(Action<T> action)
+            => opt.Match(
+                none: () => Unit.Default,
+                some: t => { action(t); return Unit.Default; });
+
+        // ── Where（过滤）─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// <b>Where</b>（Filter）：若 Option 为 Some 且内部值满足 <paramref name="predicate"/>，
+        /// 则保留原值；否则返回 None。
+        /// </summary>
+        /// <remarks>
+        /// 来源：《C# 函数式编程》第 3.4 节 — Where/Filter 操作。
+        /// </remarks>
+        public Option<T> Where(Func<T, bool> predicate)
+            => opt.Match(
+                none: () => F.None,
+                some: t => predicate(t) ? opt : (Option<T>)F.None);
+
+        // ── AsEnumerable ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 将 Option 转换为 <see cref="IEnumerable{T}"/>：
+        /// Some(t) 转换为只含一个元素的序列 [t]，None 转换为空序列 []。
+        /// </summary>
+        /// <remarks>
+        /// 此转换在需要将 Option 与 LINQ 序列操作（如 SelectMany）混用时非常有用。
+        /// </remarks>
+        public IEnumerable<T> AsEnumerable()
+            => opt.Match(
+                none: Enumerable.Empty<T>,
+                some: t => Enumerable.Repeat(t, 1));
+
+        // ── LINQ 查询语法支持 ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// 支持 LINQ 查询语法中的 <c>select</c> 子句（等同于 Map 操作）。
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// var result = from age in maybeAge
+        ///              select age + 1;
+        /// </code>
+        /// </example>
+        public Option<TResult> Select<TResult>(Func<T, TResult> f)
+            => opt.Map(f);
+
+        /// <summary>
+        /// 支持 LINQ 查询语法中的多级 <c>from</c> 子句（等同于 Bind + Map 操作）。
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// var result = from age in maybeAge
+        ///              from email in maybeEmail
+        ///              select $"{email} is {age}";
+        /// </code>
+        /// </example>
+        public Option<TResult> SelectMany<TBound, TResult>(Func<T, Option<TBound>> bind, Func<T, TBound, TResult> project)
+            => opt.Match(
+                none: () => F.None,
+                some: t => bind(t).Match(
                     none: () => F.None,
-                    some: t => (Option<R>)F.Some(f(t)));
+                    some: bound => (Option<TResult>)F.Some(project(t, bound))));
+    }
 
-            public Option<Func<T2, R>> Map<T2, R>(Func<T, T2, R> f)
-                => opt.Map(f.Curry());
+    // ── Apply（应用函子 / Applicative Functor）───────────────────────────────
 
-            // ── Bind（单子操作）───────────────────────────────────────────────────
+    extension<T, R>(Option<Func<T, R>> optF)
+    {
+        /// <summary>
+        /// <b>Apply</b>（应用函子）：将包裹在 <see cref="Option{T}"/> 中的函数应用到
+        /// 同样包裹在 <see cref="Option{T}"/> 中的参数上。
+        /// </summary>
+        /// <param name="arg">包含待应用参数的 Option。</param>
+        /// <returns>
+        /// 若函数与参数都为 Some，则返回 Some(f(arg))；
+        /// 任意一方为 None，则返回 None。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// Apply 实现了"应用函子"（Applicative Functor）的核心操作：
+        /// 允许将包裹在容器中的多元函数逐步应用到各自包裹在容器中的参数上，
+        /// 最终仍保持在容器语义中，None 在任意一环即短路整条链。
+        /// </para>
+        /// <para>
+        /// 典型用法（与 Map 协同实现多参数可选值的安全组合）：
+        /// <code>
+        /// Func&lt;int, int, int&gt; add = (x, y) => x + y;
+        /// Option&lt;int&gt; optX = F.Some(3), optY = F.Some(4);
+        ///
+        /// // 先用 Map 提升为 Option&lt;Func&lt;int, int&gt;&gt;，再用 Apply 应用第二个参数
+        /// Option&lt;int&gt; result = optX.Map(add).Apply(optY); // Some(7)
+        /// </code>
+        /// </para>
+        /// <para>
+        /// 来源：《C# 函数式编程》第 5.3 节 — Apply 与应用函子。
+        /// </para>
+        /// </remarks>
+        public Option<R> Apply(Option<T> arg)
+            => optF.Match(
+                none: () => F.None,
+                some: f => arg.Map(f));
+    }
 
-            /// <summary>
-            /// <b>Bind</b>（又称 FlatMap / SelectMany）：
-            /// 将 Option 内部的值传递给一个返回 Option 的函数 <paramref name="f"/>，
-            /// 并将结果"展平"为单层 Option。
-            /// </summary>
-            /// <typeparam name="R">结果 Option 的值类型。</typeparam>
-            /// <param name="f">接收值并返回 Option 的函数（Cross-world 函数）。</param>
-            /// <returns>
-            /// 若当前 Option 为 Some(t)，则返回 f(t)（可能为 Some 或 None）；
-            /// 若为 None，则直接返回 None，<paramref name="f"/> 不会被执行。
-            /// </returns>
-            /// <remarks>
-            /// <para>
-            /// Bind 体现了"单子"（Monad）的核心概念：将多个可能失败（返回 None）的操作
-            /// 串联在一起，只要任意一步返回 None，整条链路即短路为 None。
-            /// </para>
-            /// <para>
-            /// 来源：《C# 函数式编程》第 3.4 节 — Bind（单子操作）。
-            /// </para>
-            /// </remarks>
-            public Option<R> Bind<R>(Func<T, Option<R>> f)
-                => opt.Match(
-                    none: () => F.None,
-                    some: f);
+    extension<T1, T2, R>(Option<Func<T1, T2, R>> optF)
+    {
+        /// <summary>
+        /// <b>Apply</b> 重载：将包裹在 Option 中的二元函数部分应用第一个参数，
+        /// 返回包裹在 Option 中的一元函数。
+        /// </summary>
+        /// <remarks>
+        /// 对应签名：<c>A&lt;T1 -&gt; T2 -&gt; R&gt; -&gt; A&lt;T1&gt; -&gt; A&lt;T2 -&gt; R&gt;</c>。
+        /// 典型用法：先 <c>Map(f)</c> 将二元函数提升，再逐步 Apply 各参数：
+        /// <code>
+        /// optX.Map(multiply).Apply(optY) // Some(result)
+        /// </code>
+        /// 来源：《C# 函数式编程》第 7 章 — 高级界域中的 Apply 重载。
+        /// </remarks>
+        public Option<Func<T2, R>> Apply(Option<T1> arg)
+            => optF.Match(
+                none: () => F.None,
+                some: f => arg.Map(f.Curry()));
+    }
 
-            /// <summary>
-            /// 异步版本的 <b>Bind</b>，用于在 Some 分支中继续执行异步跨世界函数。
-            /// </summary>
-            public Task<Option<R>> BindAsync<R>(Func<T, Task<Option<R>>> f)
-                => opt.Match(
-                    none: () => Task.FromResult((Option<R>)F.None),
-                    some: f);
-
-            // ── Match（模式匹配）──────────────────────────────────────────────────
-
-            /// <summary>
-            /// <b>Match</b> 重载：以值而非函数的方式提供 None 分支的结果。
-            /// </summary>
-            /// <typeparam name="R">返回结果类型。</typeparam>
-            /// <param name="none">None 分支返回的直接值。</param>
-            /// <param name="some">Some 分支处理函数。</param>
-            public R Match<R>(R none, Func<T, R> some)
-                => opt.Match(
-                    none: () => none,
-                    some: some);
-
-            /// <summary>
-            /// 异步版本的 <b>Match</b>，便于在 API / AppService / Infrastructure 边界组合异步流程。
-            /// </summary>
-            public Task<R> MatchAsync<R>(Func<Task<R>> none, Func<T, Task<R>> some)
-                => opt.Match(
-                    none: none,
-                    some: some);
-
-            // ── GetOrElse / OrElse ────────────────────────────────────────────────
-
-            /// <summary>
-            /// <b>GetOrElse</b>：获取 Some 中的值；若为 None，则返回 <paramref name="defaultValue"/>。
-            /// </summary>
-            public T GetOrElse(T defaultValue)
-                => opt.Match(
-                    none: () => defaultValue,
-                    some: t => t);
-
-            /// <summary>
-            /// <b>GetOrElse</b>：获取 Some 中的值；若为 None，则调用 <paramref name="fallback"/> 获取默认值。
-            /// </summary>
-            /// <remarks>延迟计算版本，仅在 Option 为 None 时才执行 <paramref name="fallback"/>，适合昂贵的默认值计算。</remarks>
-            public T GetOrElse(Func<T> fallback)
-                => opt.Match(
-                    none: fallback,
-                    some: t => t);
-
-            /// <summary>
-            /// <b>OrElse</b>：若当前 Option 为 None，则用备用 <paramref name="fallback"/> Option 替代。
-            /// </summary>
-            public Option<T> OrElse(Option<T> fallback)
-                => opt.Match(
-                    none: () => fallback,
-                    some: _ => opt);
-
-            /// <summary>
-            /// <b>OrElse</b>：若当前 Option 为 None，则调用 <paramref name="fallback"/> 获取备用 Option。
-            /// </summary>
-            /// <remarks>延迟计算版本，仅在 Option 为 None 时才执行 <paramref name="fallback"/>。</remarks>
-            public Option<T> OrElse(Func<Option<T>> fallback)
-                => opt.Match(
-                    none: fallback,
-                    some: _ => opt);
-
-            // ── ForEach（副作用）─────────────────────────────────────────────────
-
-            /// <summary>
-            /// <b>ForEach</b>：若 Option 为 Some，则对内部值执行 <paramref name="action"/> 副作用操作。
-            /// </summary>
-            /// <returns>
-            /// 返回 <see cref="Unit"/> 以保持函数式风格（避免出现无返回值的函数）。
-            /// </returns>
-            /// <remarks>
-            /// ForEach 是唯一允许产生副作用（side-effect）的操作，
-            /// 通常用于与外部系统（日志、IO 等）交互的最终步骤（边界处），
-            /// 不应在纯业务逻辑的中间环节使用。
-            /// </remarks>
-            public Unit ForEach(Action<T> action)
-                => opt.Match(
-                    none: () => Unit.Default,
-                    some: t => { action(t); return Unit.Default; });
-
-            // ── Where（过滤）─────────────────────────────────────────────────────
-
-            /// <summary>
-            /// <b>Where</b>（Filter）：若 Option 为 Some 且内部值满足 <paramref name="predicate"/>，
-            /// 则保留原值；否则返回 None。
-            /// </summary>
-            /// <remarks>
-            /// 来源：《C# 函数式编程》第 3.4 节 — Where/Filter 操作。
-            /// </remarks>
-            public Option<T> Where(Func<T, bool> predicate)
-                => opt.Match(
-                    none: () => F.None,
-                    some: t => predicate(t) ? opt : (Option<T>)F.None);
-
-            // ── AsEnumerable ─────────────────────────────────────────────────────
-
-            /// <summary>
-            /// 将 Option 转换为 <see cref="IEnumerable{T}"/>：
-            /// Some(t) 转换为只含一个元素的序列 [t]，None 转换为空序列 []。
-            /// </summary>
-            /// <remarks>
-            /// 此转换在需要将 Option 与 LINQ 序列操作（如 SelectMany）混用时非常有用。
-            /// </remarks>
-            public IEnumerable<T> AsEnumerable()
-                => opt.Match(
-                    none: Enumerable.Empty<T>,
-                    some: t => Enumerable.Repeat(t, 1));
-
-            // ── LINQ 查询语法支持 ─────────────────────────────────────────────────
-
-            /// <summary>
-            /// 支持 LINQ 查询语法中的 <c>select</c> 子句（等同于 Map 操作）。
-            /// </summary>
-            /// <example>
-            /// <code>
-            /// var result = from age in maybeAge
-            ///              select age + 1;
-            /// </code>
-            /// </example>
-            public Option<R> Select<R>(Func<T, R> f)
-                => opt.Map(f);
-
-            /// <summary>
-            /// 支持 LINQ 查询语法中的多级 <c>from</c> 子句（等同于 Bind + Map 操作）。
-            /// </summary>
-            /// <example>
-            /// <code>
-            /// var result = from age in maybeAge
-            ///              from email in maybeEmail
-            ///              select $"{email} is {age}";
-            /// </code>
-            /// </example>
-            public Option<RR> SelectMany<R, RR>(Func<T, Option<R>> bind, Func<T, R, RR> project)
-                => opt.Match(
-                    none: () => F.None,
-                    some: t => bind(t).Match(
-                        none: () => F.None,
-                        some: r => (Option<RR>)F.Some(project(t, r))));
-        }
-
-        // ── Apply（应用函子 / Applicative Functor）───────────────────────────────
-
-        extension<T, R>(Option<Func<T, R>> optF)
-        {
-            /// <summary>
-            /// <b>Apply</b>（应用函子）：将包裹在 <see cref="Option{T}"/> 中的函数应用到
-            /// 同样包裹在 <see cref="Option{T}"/> 中的参数上。
-            /// </summary>
-            /// <param name="arg">包含待应用参数的 Option。</param>
-            /// <returns>
-            /// 若函数与参数都为 Some，则返回 Some(f(arg))；
-            /// 任意一方为 None，则返回 None。
-            /// </returns>
-            /// <remarks>
-            /// <para>
-            /// Apply 实现了"应用函子"（Applicative Functor）的核心操作：
-            /// 允许将包裹在容器中的多元函数逐步应用到各自包裹在容器中的参数上，
-            /// 最终仍保持在容器语义中，None 在任意一环即短路整条链。
-            /// </para>
-            /// <para>
-            /// 典型用法（与 Map 协同实现多参数可选值的安全组合）：
-            /// <code>
-            /// Func&lt;int, int, int&gt; add = (x, y) => x + y;
-            /// Option&lt;int&gt; optX = F.Some(3), optY = F.Some(4);
-            ///
-            /// // 先用 Map 提升为 Option&lt;Func&lt;int, int&gt;&gt;，再用 Apply 应用第二个参数
-            /// Option&lt;int&gt; result = optX.Map(add).Apply(optY); // Some(7)
-            /// </code>
-            /// </para>
-            /// <para>
-            /// 来源：《C# 函数式编程》第 5.3 节 — Apply 与应用函子。
-            /// </para>
-            /// </remarks>
-            public Option<R> Apply(Option<T> arg)
-                => optF.Match(
-                    none: () => F.None,
-                    some: f => arg.Map(f));
-        }
-
-        extension<T1, T2, R>(Option<Func<T1, T2, R>> optF)
-        {
-            /// <summary>
-            /// <b>Apply</b> 重载：将包裹在 Option 中的二元函数部分应用第一个参数，
-            /// 返回包裹在 Option 中的一元函数。
-            /// </summary>
-            /// <remarks>
-            /// 对应签名：<c>A&lt;T1 -&gt; T2 -&gt; R&gt; -&gt; A&lt;T1&gt; -&gt; A&lt;T2 -&gt; R&gt;</c>。
-            /// 典型用法：先 <c>Map(f)</c> 将二元函数提升，再逐步 Apply 各参数：
-            /// <code>
-            /// optX.Map(multiply).Apply(optY) // Some(result)
-            /// </code>
-            /// 来源：《C# 函数式编程》第 7 章 — 高级界域中的 Apply 重载。
-            /// </remarks>
-            public Option<Func<T2, R>> Apply(Option<T1> arg)
-                => optF.Match(
-                    none: () => F.None,
-                    some: f => arg.Map(f.Curry()));
-        }
-
-        extension<T1, T2, T3, R>(Option<Func<T1, T2, T3, R>> optF)
-        {
-            /// <summary>
-            /// <b>Apply</b> 重载：将包裹在 Option 中的三元函数部分应用第一个参数，
-            /// 返回包裹在 Option 中的柯里化二元函数。
-            /// </summary>
-            /// <remarks>
-            /// 对应签名：<c>A&lt;T1 -&gt; T2 -&gt; T3 -&gt; R&gt; -&gt; A&lt;T1&gt; -&gt; A&lt;T2 -&gt; T3 -&gt; R&gt;</c>。
-            /// 书中箭头符号 <c>T2→T3→R</c> 为柯里化形式，对应 <see cref="Func{T2, TResult}"/>
-            /// 其中 TResult 为 <c>Func&lt;T3, R&gt;</c>。
-            /// 来源：《C# 函数式编程》第 7 章 — 高级界域中的 Apply 重载。
-            /// </remarks>
-            public Option<Func<T2, Func<T3, R>>> Apply(Option<T1> arg)
-                => optF.Match(
-                    none: () => (Option<Func<T2, Func<T3, R>>>)F.None,
-                    some: f => arg.Map(f.Curry()));
-            //// 等同于下面
-            //=> Apply(optF.Map(FuncExtensions.Curry), arg);
-        }
+    extension<T1, T2, T3, R>(Option<Func<T1, T2, T3, R>> optF)
+    {
+        /// <summary>
+        /// <b>Apply</b> 重载：将包裹在 Option 中的三元函数部分应用第一个参数，
+        /// 返回包裹在 Option 中的柯里化二元函数。
+        /// </summary>
+        /// <remarks>
+        /// 对应签名：<c>A&lt;T1 -&gt; T2 -&gt; T3 -&gt; R&gt; -&gt; A&lt;T1&gt; -&gt; A&lt;T2 -&gt; T3 -&gt; R&gt;</c>。
+        /// 书中箭头符号 <c>T2→T3→R</c> 为柯里化形式，对应 <see cref="Func{T2, TResult}"/>
+        /// 其中 TResult 为 <c>Func&lt;T3, R&gt;</c>。
+        /// 来源：《C# 函数式编程》第 7 章 — 高级界域中的 Apply 重载。
+        /// </remarks>
+        public Option<Func<T2, Func<T3, R>>> Apply(Option<T1> arg)
+            => optF.Match(
+                none: () => (Option<Func<T2, Func<T3, R>>>)F.None,
+                some: f => arg.Map(f.Curry()));
+        //// 等同于下面
+        //=> Apply(optF.Map(FuncExtensions.Curry), arg);
     }
 }

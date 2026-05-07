@@ -45,6 +45,8 @@ namespace MS.Microservice.Core.Functional
 
         /// <inheritdoc/>
         public override string ToString() => $"Some({Value})";
+
+        public static implicit operator Some<T>(T value) => new(value);
     }
 
     /// <summary>

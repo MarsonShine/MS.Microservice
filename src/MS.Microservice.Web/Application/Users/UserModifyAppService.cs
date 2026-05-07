@@ -39,8 +39,7 @@ namespace MS.Microservice.Web.Application.Users
                 .Where(
                     predicate: updated => updated,
                     leftFactory: _ => Error.Unexpected("用户修改失败", ["UpdateUserAsync returned false."]))
-                .BindAsync(_ => ClearCacheAsync(execution.CacheKeys, cancellationToken)
-                    .Map(_ => true));
+                .BindAsync(async _ => (await ClearCacheAsync(execution.CacheKeys, cancellationToken)).Map(_ => true));
 
         private async Task<Either<Error, Unit>> ClearCacheAsync(IReadOnlyList<string> cacheKeys, CancellationToken cancellationToken)
             => await cacheKeys
