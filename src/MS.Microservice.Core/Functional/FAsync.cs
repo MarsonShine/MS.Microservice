@@ -35,11 +35,11 @@ public static partial class F
         /// <param name="Faulted"></param>
         /// <param name="Completed"></param>
         /// <returns></returns>
-        public Task<TResult> Map<TResult>(Func<Exception, TResult> Faulted, Func<T, TResult> Completed) =>
-            task.ContinueWith(t =>
+        public async Task<TResult> Map<TResult>(Func<Exception, TResult> Faulted, Func<T, TResult> Completed) =>
+            await task.ContinueWith(t =>
                 t.Status == TaskStatus.Faulted
                 ? Faulted(t.Exception!)
-                : Completed(t.Result));
+                : Completed(t.Result)).ConfigureAwait(false);
 
         public Task<TResult> Select<TResult>(Func<T, TResult> map) => task.ContinueWith(t => map(t.Result));
         public async Task<TResult> SelectMany<TResult>(Func<T, Task<TResult>> bind)

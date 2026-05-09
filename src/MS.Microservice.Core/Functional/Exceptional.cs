@@ -41,6 +41,9 @@ namespace MS.Microservice.Core.Functional
 
         private Exceptional(Either<Exception, T> either) => _either = either;
 
+        internal Exceptional(T value) => _either = F.Right(value);
+        internal Exceptional(Exception ex) => _either = F.Left(ex);
+
         public bool IsSuccess => _either.IsRight;
 
         public bool IsException => _either.IsLeft;
@@ -60,6 +63,9 @@ namespace MS.Microservice.Core.Functional
 
         public static implicit operator Either<Exception, T>(Exceptional<T> exceptional)
             => exceptional._either;
+        public static implicit operator Exceptional<T>(Exception ex)
+            => new(ex);
+        public static implicit operator Exceptional<T>(T value) => new(value);
 
         public R Match<R>(Func<Exception, R> exception, Func<T, R> success)
             => _either.Match(exception, success);

@@ -50,6 +50,8 @@ namespace MS.Microservice.Core.Functional
         /// </summary>
         public static Right<R> Right<R>(R value) => new(value);
 
+        public static Exceptional<T> Exceptional<T>(T t) => new(t);
+
         /// <summary>
         /// 创建一个 Exceptional 的异常分支容器。
         /// </summary>
