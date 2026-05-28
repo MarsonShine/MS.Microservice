@@ -1,9 +1,12 @@
-﻿using IdentityModel;
+using IdentityModel;
 using Microsoft.AspNetCore.Http;
 using MS.Microservice.Core;
+using MS.Microservice.Core.Dto;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Services.Interfaces;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MS.Microservice.Web.Infrastructure.Applications.Users
@@ -27,31 +30,47 @@ namespace MS.Microservice.Web.Infrastructure.Applications.Users
             return CurrentUserAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        public async Task<CurrentUser?> CurrentUserAsync()
+        public async Task<CurrentUser?> CurrentUserAsync(CancellationToken cancellationToken = default)
         {
-            var claims = _httpContext.User.Claims;
-            if (!claims.Any(p => p.Type == JwtClaimTypes.Id))
+            var result = await CurrentUserEitherAsync(cancellationToken);
+            return result.Match(
+                left: _ => (CurrentUser?)null,
+                right: user => user);
+        }
+
+        public Task<Either<Error, CurrentUser>> CurrentUserEitherAsync(CancellationToken cancellationToken = default)
+        {
+            return EitherExtensions.TryAsync(async () =>
             {
-                return null;
-            }
-            var id = claims.First(p => p.Type == JwtClaimTypes.Id).Value;
-            var name = claims.First(p => p.Type == JwtClaimTypes.NickName).Value;
-            var email = ""; //claims.First(p => p.Type == ClaimTypes.Email).Value;
-            var phone = claims.First(p => p.Type == JwtClaimTypes.PhoneNumber).Value;
-            int[] roles = new int[] { };
-            //claims.First(p => p.Type == ClaimTypes.Role).Value.Split(';')
-            //    ?.Select(r => int.Parse(r))
-            //    ?.ToArray();
+                var claims = _httpContext.User.Claims;
+                if (!claims.Any(p => p.Type == JwtClaimTypes.Id))
+                {
+                    throw new InvalidOperationException("当前请求缺少用户身份。");
+                }
 
-            var UserId = int.Parse(id);
+                var id = claims.First(p => p.Type == JwtClaimTypes.Id).Value;
+                var name = claims.First(p => p.Type == JwtClaimTypes.NickName).Value;
+                var email = "";
+                var phone = claims.First(p => p.Type == JwtClaimTypes.PhoneNumber).Value;
+                int[] roles = [];
 
-            var user = await _userDomainService.FindFzAccountAsync(phone);
-            if (user != null && user.IsTransient() == false)
-            {
-                UserId = user.Id;
-            }
+                var userId = int.Parse(id);
+                var user = await _userDomainService.FindFzAccountAsync(phone, cancellationToken);
+                if (user != null && user.IsTransient() == false)
+                {
+                    userId = user.Id;
+                }
 
-            return new CurrentUser(UserId, name, email, phone, roles);
+                return new CurrentUser(userId, name, email, phone, roles);
+            }, code: "user.current");
+        }
+
+        public async Task<Result<CurrentUser>> CurrentUserResultAsync(CancellationToken cancellationToken = default)
+        {
+            var either = await CurrentUserEitherAsync(cancellationToken);
+            return either.Match(
+                left: error => Result<CurrentUser>.Fail(new InvalidOperationException(error.ToDisplayMessage())),
+                right: Result<CurrentUser>.Success);
         }
     }
 }

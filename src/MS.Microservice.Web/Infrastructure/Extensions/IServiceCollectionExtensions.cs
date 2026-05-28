@@ -19,6 +19,7 @@ using MS.Microservice.Domain.Identity;
 using MS.Microservice.Infrastructure.DbContext;
 using MS.Microservice.Infrastructure.HealthChecks;
 using MS.Microservice.Infrastructure.SqlSugar;
+using MS.Microservice.Web.Application.Orders;
 using MS.Microservice.Swagger.Swagger;
 using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
@@ -139,7 +140,11 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             {
                 //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
                 //services.AddSqlSugarService(configuration);
-                services.AddEntityFrameworkNpgSql(configuration.GetConnectionString("ActivationConnection")!);
+                var connectionString = configuration.GetConnectionString("ActivationConnection")!;
+                services.AddEntityFrameworkNpgSql(connectionString);
+                services.AddPostgresEventSourcing(connectionString);
+                services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
+                services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();
 
                 return services;
             }
