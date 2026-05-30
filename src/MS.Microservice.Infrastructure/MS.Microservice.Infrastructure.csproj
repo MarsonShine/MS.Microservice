@@ -1,12 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
+    <EnableOfficeDiagnostics Condition="'$(EnableOfficeDiagnostics)' == ''">false</EnableOfficeDiagnostics>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591;NU1903</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591;NU1903</WarningsNotAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EnableOfficeDiagnostics)' == 'true'">
+    <DefineConstants>$(DefineConstants);MS_Microservice_DIAGNOSTICS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Migrations\**" />
