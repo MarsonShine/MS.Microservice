@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Configs;
+﻿using MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Configs;
 using MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LayoutRenderers;
 using NLog;
 using NLog.Web;
@@ -10,25 +9,13 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
     public sealed class MSLoggerBuilder
     {
-        private readonly IServiceCollection _services;
-
-        public MSLoggerBuilder(IServiceCollection services)
-        {
-            _services = services;
-        }
-
         public void WithNLogger(Action<LoggerConfig> config)
         {
             var loggerConfig = new LoggerConfig();
             config?.Invoke(loggerConfig);
 
-            // Expose config to renderers
+            // Expose network address to renderer (used by commented-out Network target in nlog.config)
             NetAddressLayoutRenderer.Value = loggerConfig.NetAddress;
-            LogLevelLayoutRenderer.Value = loggerConfig.LogLevel;
-
-            // 将 DI 中注册的 TimeProvider 传递给 LayoutRenderer（支持测试中替换）
-            var sp = _services.BuildServiceProvider();
-            RequestDurationLayoutRenderer.TimeProvider = sp.GetService<TimeProvider>() ?? TimeProvider.System;
 
             // Register NLog.Web and custom layout renderers (Before loading config)
             LogManager.Setup().SetupExtensions(ext =>
@@ -39,7 +26,6 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
                 ext.RegisterLayoutRenderer<MonthLayoutRenderer>("Month");
                 ext.RegisterLayoutRenderer<HoursLayoutRenderer>("Hours");
                 ext.RegisterLayoutRenderer<NetAddressLayoutRenderer>("NetAddress");
-                ext.RegisterLayoutRenderer<LogLevelLayoutRenderer>("LogLevel");
                 ext.RegisterLayoutRenderer<RequestIdLayoutRenderer>("requestId");
                 ext.RegisterLayoutRenderer<PlatformIdLayoutRenderer>("platformId");
                 ext.RegisterLayoutRenderer<UserFlagLayoutRenderer>("userflag");
@@ -62,6 +48,36 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
                     builder.Configuration.AddRule(minLevel, NLog.LogLevel.Fatal, console);
                 });
             }
+
+            // 将 LoggerConfig.LogLevel 覆盖到所有已加载的 NLog 规则，确保配置生效
+            ApplyLogLevelToRules(loggerConfig.LogLevel);
+        }
+
+        private static void ApplyLogLevelToRules(string? logLevel)
+        {
+            if (string.IsNullOrWhiteSpace(logLevel)) return;
+
+            var minLevel = NLog.LogLevel.FromString(logLevel);
+            if (minLevel == NLog.LogLevel.Off) return;
+
+            // 已是 Trace（最宽松），无需收紧
+            if (minLevel.Ordinal <= 0) return;
+
+            var levelBelow = NLog.LogLevel.FromOrdinal(minLevel.Ordinal - 1);
+
+            var configuration = LogManager.Configuration;
+            if (configuration is null) return;
+
+            foreach (var rule in configuration.LoggingRules)
+            {
+                // 如果规则允许比配置级别更低（更宽松）的日志，则收紧到配置级别
+                if (rule.IsLoggingEnabledForLevel(levelBelow))
+                {
+                    rule.SetLoggingLevels(minLevel, NLog.LogLevel.Fatal);
+                }
+            }
+
+            LogManager.ReconfigExistingLoggers();
         }
     }
 }

@@ -11,10 +11,9 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Performance
     ///   - 一个静态只读的 <c>Action&lt;ILogger, T, Exception?&gt;</c> 字段（由 LoggerMessage.Define 创建）
     ///   - 调用方法体中先执行 IsEnabled 检查再调用该委托
     ///   这与手写 LoggerMessage.Define + IsEnabled 守卫完全等价，但由编译器保证正确性，
-    ///   无需运行时字典缓存（<see cref="HighPerformanceLog"/>），实现真正的零分配。
+    ///   无需运行时模板缓存，实现真正的零分配。
     ///
     /// 限制：消息模板必须是编译期常量（字符串字面量或 const）。
-    /// 对于运行期动态模板，仍可使用 <see cref="HighPerformanceLog"/>。
     /// </summary>
     public static partial class LoggerExtensions
     {

@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using Microsoft.Extensions.Logging;
+using MS.Microservice.Web.Infrastructure.LogUtils.Nlog.Performance;
 
 namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
 {
@@ -7,19 +8,24 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
     /// 使用 <see cref="TimeProvider.GetTimestamp"/> / <see cref="TimeProvider.GetElapsedTime(long)"/>
     /// 进行高精度计时，既避免直接依赖系统时钟，也让单元测试可以注入假时钟控制时间。
     /// </summary>
-    public sealed class MSLoggerMiddleware(RequestDelegate next, TimeProvider timeProvider)
+    public sealed class MSLoggerMiddleware(RequestDelegate next, TimeProvider timeProvider, ILogger<MSLoggerMiddleware> logger)
     {
         private readonly RequestDelegate _next = next;
         private readonly TimeProvider _timeProvider = timeProvider;
-        private static readonly Logger NLogger = LogManager.GetCurrentClassLogger();
+        private readonly ILogger<MSLoggerMiddleware> _logger = logger;
+
+        // HttpContext.Items 键名常量，供 LayoutRenderer 共用，避免魔法字符串分散
+        internal const string ElapsedKey = "MSLog_ElapsedMs";
+        internal const string RequestIdKey = "MSLog_RequestId";
+        internal const string PlatformIdKey = "MSLog_PlatformId";
+        internal const string UserFlagKey = "MSLog_UserFlag";
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // GetTimestamp() 基于高精度计时器（与 Stopwatch 使用同一底层 API）
             var startTimestamp = _timeProvider.GetTimestamp();
 
-            // 存入 HttpContext.Items 供 LayoutRenderer 读取（long 装箱一次，不可避免）
-            context.Items["ElapsedTime"] = startTimestamp;
+            // 一次采集请求上下文，存入 Items 供所有 LayoutRenderer 零查询读取
+            SnapshotRequestContext(context);
 
             try
             {
@@ -27,20 +33,31 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
             }
             finally
             {
-                if (NLogger.IsInfoEnabled)
+                var elapsedMs = (long)_timeProvider.GetElapsedTime(startTimestamp).TotalMilliseconds;
+                // 预计算耗时，LayoutRenderer 直接读这个值，不再解析 TimeProvider
+                context.Items[ElapsedKey] = elapsedMs;
+
+                if (_logger.IsEnabled(LogLevel.Information))
                 {
-                    // GetElapsedTime 同样经过 TimeProvider 抽象，测试中可被控制
-                    var elapsed = _timeProvider.GetElapsedTime(startTimestamp);
-                    var elapsedMs = (long)elapsed.TotalMilliseconds;
                     var status = context.Response?.StatusCode ?? 0;
                     var path = context.Request?.Path.Value ?? string.Empty;
                     var method = context.Request?.Method;
 
-                    NLogger.WithProperty("elapsedTime", elapsedMs)
-                           .Info("HTTP {Method} {Path} -> {StatusCode} in {ElapsedMs}ms",
-                                 method, path, status, elapsedMs);
+                    _logger.LogHttpRequest(method, path, status, elapsedMs);
                 }
             }
+        }
+
+        private static void SnapshotRequestContext(HttpContext context)
+        {
+            var headers = context.Request.Headers;
+
+            if (headers.TryGetValue("requestId", out var rid) && rid.Count > 0)
+                context.Items[RequestIdKey] = rid[0]!;
+            if (headers.TryGetValue("platformId", out var pid) && pid.Count > 0)
+                context.Items[PlatformIdKey] = pid[0]!;
+            if (headers.TryGetValue("userflag", out var uf) && uf.Count > 0)
+                context.Items[UserFlagKey] = uf[0]!;
         }
     }
 
@@ -55,7 +72,7 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
             public IApplicationBuilder UsePlatformLogger()
             {
                 var lifetime = builder.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
-                lifetime.ApplicationStopped.Register(LogManager.Shutdown);
+                lifetime.ApplicationStopped.Register(NLog.LogManager.Shutdown);
                 builder.UseMiddleware<MSLoggerMiddleware>();
                 return builder;
             }

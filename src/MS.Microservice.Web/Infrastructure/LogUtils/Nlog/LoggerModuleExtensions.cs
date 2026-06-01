@@ -19,7 +19,7 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog
                 services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
                 // ASP.NET Core 并不自动将 TimeProvider.System 注入 DI，需显式注册
                 services.TryAddSingleton(TimeProvider.System);
-                return new MSLoggerBuilder(services);
+                return new MSLoggerBuilder();
             }
         }
     }
