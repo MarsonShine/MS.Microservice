@@ -65,8 +65,8 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LayoutRenderers
     }
 
     /// <summary>
-    /// 从 HttpContext 请求头中提取值的渲染器，需要 AspNetLayoutRendererBase。
-    /// 使用 StringValues 的隐式转换避免 ToString() 分配（当 header 值已经是单个字符串时）。
+    /// 从 <see cref="MSLoggerMiddleware"/> 预采集的请求上下文中读取 header 值。
+    /// 中间件在请求入口一次性提取，后续渲染器零查询读取，避免每条日志事件重复查 Headers 字典。
     /// </summary>
     [LayoutRenderer("requestId")]
     public sealed class RequestIdLayoutRenderer : AspNetLayoutRendererBase
@@ -75,10 +75,10 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LayoutRenderers
         {
             var context = HttpContextAccessor?.HttpContext;
             if (context is not null &&
-                context.Request.Headers.TryGetValue("requestId", out var values) &&
-                values.Count > 0)
+                context.Items.TryGetValue(MSLoggerMiddleware.RequestIdKey, out var val) &&
+                val is string value)
             {
-                builder.Append(values[0]);
+                builder.Append(value);
             }
         }
     }
@@ -90,10 +90,10 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LayoutRenderers
         {
             var context = HttpContextAccessor?.HttpContext;
             if (context is not null &&
-                context.Request.Headers.TryGetValue("platformId", out var values) &&
-                values.Count > 0)
+                context.Items.TryGetValue(MSLoggerMiddleware.PlatformIdKey, out var val) &&
+                val is string value)
             {
-                builder.Append(values[0]);
+                builder.Append(value);
             }
         }
     }
@@ -105,10 +105,10 @@ namespace MS.Microservice.Web.Infrastructure.LogUtils.Nlog.LayoutRenderers
         {
             var context = HttpContextAccessor?.HttpContext;
             if (context is not null &&
-                context.Request.Headers.TryGetValue("userflag", out var values) &&
-                values.Count > 0)
+                context.Items.TryGetValue(MSLoggerMiddleware.UserFlagKey, out var val) &&
+                val is string value)
             {
-                builder.Append(values[0]);
+                builder.Append(value);
             }
         }
     }
