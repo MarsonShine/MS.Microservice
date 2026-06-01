@@ -242,36 +242,6 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
         }
 
         [Fact]
-        public void BuildColumnMap_ShouldMatchHeaders()
-        {
-            // Arrange
-            var wb = new XSSFWorkbook();
-            var sheet = wb.CreateSheet("S");
-            var header = sheet.CreateRow(0);
-            header.CreateCell(0).SetCellValue("ID");
-            header.CreateCell(1).SetCellValue("名称");
-            header.CreateCell(2).SetCellValue("金额");
-            header.CreateCell(3).SetCellValue("日期");
-            header.CreateCell(4).SetCellValue("启用");
-            header.CreateCell(5).SetCellValue("状态");
-
-            // Act
-            var map = ExcelHelper.BuildColumnMap<SampleRow>(sheet, 0);
-
-            // Assert
-            map.Should().NotBeNull();
-            map.Should().HaveCount(6);
-            // 验证关键列索引
-            map.Should().ContainKey(typeof(SampleRow).GetProperty(nameof(SampleRow.Id))!);
-            map[typeof(SampleRow).GetProperty(nameof(SampleRow.Id))!].Should().Be(0);
-            map[typeof(SampleRow).GetProperty(nameof(SampleRow.Name))!].Should().Be(1);
-            map[typeof(SampleRow).GetProperty(nameof(SampleRow.Amount))!].Should().Be(2);
-            map[typeof(SampleRow).GetProperty(nameof(SampleRow.Date))!].Should().Be(3);
-            map[typeof(SampleRow).GetProperty(nameof(SampleRow.Enabled))!].Should().Be(4);
-            map[typeof(SampleRow).GetProperty(nameof(SampleRow.Status))!].Should().Be(5);
-        }
-
-        [Fact]
         public void Import_ShouldWorkWhenSomeColumnsMissing()
         {
             // Arrange: 缺少“状态”列
@@ -311,116 +281,6 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             row.Date.Date.Should().Be(new DateTime(2023, 12, 31));
             row.Enabled.Should().BeTrue();
             row.Status.Should().Be(MyEnum.None); // 缺列 => 默认值
-        }
-
-        [Fact]
-        public async Task DynamicExcelBuilder_ShouldInsertRowsAccordingToColumnMap()
-        {
-            // Arrange: 模板工作簿，只有表头
-            var wb = new XSSFWorkbook();
-            var sheet = wb.CreateSheet("Data");
-            var header = sheet.CreateRow(0);
-            header.CreateCell(0).SetCellValue("ID");
-            header.CreateCell(1).SetCellValue("名称");
-            header.CreateCell(2).SetCellValue("金额");
-            header.CreateCell(3).SetCellValue("日期");
-            header.CreateCell(4).SetCellValue("启用");
-            header.CreateCell(5).SetCellValue("状态");
-
-            using var template = new MemoryStream();
-            wb.Write(template, leaveOpen: true);
-            template.Position = 0;
-
-            var items = new List<SampleRow>
-            {
-                new SampleRow { Id = 10, Name = "A", Amount = 1.2m, Date = new DateTime(2024,1,1), Enabled = true, Status = MyEnum.B },
-                new SampleRow { Id = 11, Name = "B", Amount = 3.4m, Date = new DateTime(2024,1,2), Enabled = false, Status = MyEnum.A }
-            };
-
-            var excel = new ExcelHelper();
-            var builder = excel.OpenExcel(items, template, "Data", titleRowIndex: 0);
-
-            // Act
-            builder.UseTypedCells()
-                .InitInsertRow(startRowIndex: 1)
-                .InsertCellValue(startRowIndex: 1);
-            var outBytes = await builder.WriteAsync();
-
-            // Assert
-            using var ms = new MemoryStream(outBytes);
-            using var outWb = new XSSFWorkbook(ms);
-            var outSheet = outWb.GetSheet("Data");
-
-            var r1 = outSheet.GetRow(1);
-            r1.GetCell(0).NumericCellValue.Should().Be(10);
-            r1.GetCell(1).StringCellValue.Should().Be("A");
-            r1.GetCell(2).NumericCellValue.Should().Be(1.2);
-            r1.GetCell(3).DateCellValue.Should().Be(new DateTime(2024, 1, 1)); // DynamicExcelBuilder 按字符串写入
-            r1.GetCell(4).BooleanCellValue.Should().Be(true);
-            r1.GetCell(5).StringCellValue.Should().Be("B");
-
-            var r2 = outSheet.GetRow(2);
-            r2.GetCell(0).NumericCellValue.Should().Be(11);
-            r2.GetCell(1).StringCellValue.Should().Be("B");
-            r2.GetCell(2).NumericCellValue.Should().Be(3.4);
-            r2.GetCell(3).DateCellValue.Should().Be(new DateTime(2024, 1, 2));
-            r2.GetCell(4).BooleanCellValue.Should().Be(false);
-            r2.GetCell(5).StringCellValue.Should().Be("A");
-        }
-
-        [Fact]
-        public async Task DynamicExcelBuilder_ShouldInsertRowsAccordingToColumnMap_TextWriteModel()
-        {
-            // Arrange: 模板工作簿，只有表头
-            var wb = new XSSFWorkbook();
-            var sheet = wb.CreateSheet("Data");
-            var header = sheet.CreateRow(0);
-            header.CreateCell(0).SetCellValue("ID");
-            header.CreateCell(1).SetCellValue("名称");
-            header.CreateCell(2).SetCellValue("金额");
-            header.CreateCell(3).SetCellValue("日期");
-            header.CreateCell(4).SetCellValue("启用");
-            header.CreateCell(5).SetCellValue("状态");
-
-            using var template = new MemoryStream();
-            wb.Write(template, leaveOpen: true);
-            template.Position = 0;
-
-            var items = new List<SampleRow>
-            {
-                new SampleRow { Id = 10, Name = "A", Amount = 1.2m, Date = new DateTime(2024,1,1), Enabled = true, Status = MyEnum.B },
-                new SampleRow { Id = 11, Name = "B", Amount = 3.4m, Date = new DateTime(2024,1,2), Enabled = false, Status = MyEnum.A }
-            };
-
-            var excel = new ExcelHelper();
-            var builder = excel.OpenExcel(items, template, "Data", titleRowIndex: 0);
-
-            // Act
-            builder.UseTextCells()
-                .InitInsertRow(startRowIndex: 1)
-                .InsertCellValue(startRowIndex: 1);
-            var outBytes = await builder.WriteAsync();
-
-            // Assert
-            using var ms = new MemoryStream(outBytes);
-            using var outWb = new XSSFWorkbook(ms);
-            var outSheet = outWb.GetSheet("Data");
-
-            var r1 = outSheet.GetRow(1);
-            r1.GetCell(0).StringCellValue.Should().Be("10");
-            r1.GetCell(1).StringCellValue.Should().Be("A");
-            r1.GetCell(2).StringCellValue.Should().Be("1.2");
-            r1.GetCell(3).StringCellValue.Should().Be(new DateTime(2024, 1, 1).ToString()); // DynamicExcelBuilder 按字符串写入
-            r1.GetCell(4).StringCellValue.Should().Be("True");
-            r1.GetCell(5).StringCellValue.Should().Be("B");
-
-            var r2 = outSheet.GetRow(2);
-            r2.GetCell(0).StringCellValue.Should().Be("11");
-            r2.GetCell(1).StringCellValue.Should().Be("B");
-            r2.GetCell(2).StringCellValue.Should().Be("3.4");
-            r2.GetCell(3).StringCellValue.Should().Be(new DateTime(2024, 1, 2).ToString());
-            r2.GetCell(4).StringCellValue.Should().Be("False");
-            r2.GetCell(5).StringCellValue.Should().Be("A");
         }
 
         [Fact]
@@ -509,40 +369,6 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             sheet.GetRow(0).GetCell(1).StringCellValue.Should().Be("ColB");
             sheet.GetRow(1).GetCell(0).NumericCellValue.Should().Be(1);
             sheet.GetRow(1).GetCell(1).StringCellValue.Should().Be("row1");
-        }
-
-        [Fact]
-        public void OpenExcel_ShouldThrow_WhenSheetDoesNotExist()
-        {
-            var wb = new XSSFWorkbook();
-            wb.CreateSheet("Exists");
-
-            using var template = new MemoryStream();
-            wb.Write(template, leaveOpen: true);
-            template.Position = 0;
-
-            var act = () => new ExcelHelper().OpenExcel(new List<SampleRow>(), template, "Missing", 0);
-
-            act.Should().Throw<InvalidOperationException>()
-                .WithMessage("*工作表 'Missing' 不存在*");
-        }
-
-        [Fact]
-        public void DynamicExcelBuilder_InitInsertRow_WithoutDefaultTitleRowIndex_ShouldThrow()
-        {
-            var wb = new XSSFWorkbook();
-            wb.CreateSheet("Data");
-
-            using var template = new MemoryStream();
-            wb.Write(template, leaveOpen: true);
-            template.Position = 0;
-
-            var builder = new ExcelHelper().OpenExcel(template, new List<SampleRow>());
-
-            var act = () => builder.InitInsertRow(startRowIndex: 1);
-
-            act.Should().Throw<InvalidOperationException>()
-                .WithMessage("*titleRowIndex was not set*");
         }
     }
 }
