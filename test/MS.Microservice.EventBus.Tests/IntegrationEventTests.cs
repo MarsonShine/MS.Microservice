@@ -1,4 +1,5 @@
 using MS.Microservice.EventBus.Events;
+using System.Text.Json;
 
 namespace MS.Microservice.EventBus.Tests
 {
@@ -13,6 +14,7 @@ namespace MS.Microservice.EventBus.Tests
 
             Assert.NotEqual(Guid.Empty, evt.Id);
             Assert.InRange(evt.CreationDate, before, after);
+            Assert.Equal(DateTimeKind.Utc, evt.CreationDate.Kind);
         }
 
         [Fact]
@@ -34,6 +36,22 @@ namespace MS.Microservice.EventBus.Tests
             var evt2 = new IntegrationEvent();
 
             Assert.NotEqual(evt1.Id, evt2.Id);
+        }
+
+        [Fact]
+        public void JsonConstructor_RoundTripsFromSerializedPayload()
+        {
+            var id = Guid.NewGuid();
+            var creationDate = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+            var json = $$"""
+            {"Id":"{{id}}","CreationDate":"{{creationDate:O}}"}
+            """;
+
+            var evt = JsonSerializer.Deserialize<IntegrationEvent>(json);
+
+            Assert.NotNull(evt);
+            Assert.Equal(id, evt.Id);
+            Assert.Equal(creationDate, evt.CreationDate);
         }
     }
 }

@@ -20,6 +20,11 @@ namespace MS.Microservice.EventBus.Tests
         public Task Handle(OrderCreatedEvent @event) => Task.CompletedTask;
     }
 
+    public class OrderCreatedEventHandler3 : IIntegrationEventHandler<OrderCreatedEvent>
+    {
+        public Task Handle(OrderCreatedEvent @event) => Task.CompletedTask;
+    }
+
     public class OrderCancelledEventHandler : IIntegrationEventHandler<OrderCancelledEvent>
     {
         public Task Handle(OrderCancelledEvent @event) => Task.CompletedTask;
@@ -77,6 +82,16 @@ namespace MS.Microservice.EventBus.Tests
         }
 
         [Fact]
+        public void GetEventTypeByName_NullOrWhitespace_ThrowsArgumentException()
+        {
+            var manager = new InMemoryEventBusSubscriptionsManager();
+
+            Assert.ThrowsAny<ArgumentException>(() => manager.GetEventTypeByName(null!));
+            Assert.ThrowsAny<ArgumentException>(() => manager.GetEventTypeByName(string.Empty));
+            Assert.ThrowsAny<ArgumentException>(() => manager.GetEventTypeByName("   "));
+        }
+
+        [Fact]
         public void RemoveSubscription_RemovesHandler()
         {
             var manager = new InMemoryEventBusSubscriptionsManager();
@@ -104,11 +119,34 @@ namespace MS.Microservice.EventBus.Tests
         }
 
         [Fact]
+        public void RemoveSubscription_NonRegisteredHandlerForExistingEvent_KeepsEvent()
+        {
+            var manager = new InMemoryEventBusSubscriptionsManager();
+            manager.AddSubscription<OrderCreatedEvent, OrderCreatedEventHandler>();
+
+            manager.RemoveSubscription<OrderCreatedEvent, OrderCreatedEventHandler3>();
+
+            Assert.Equal(typeof(OrderCreatedEvent), manager.GetEventTypeByName(nameof(OrderCreatedEvent)));
+        }
+
+        [Fact]
         public void RemoveSubscription_NonExistentEvent_DoesNotThrow()
         {
             var manager = new InMemoryEventBusSubscriptionsManager();
             // Should not throw when removing from non-existent event
             manager.RemoveSubscription<OrderCreatedEvent, OrderCreatedEventHandler>();
+        }
+
+        [Fact]
+        public void RemoveSubscription_AfterRemoval_HandlerCanBeRegisteredAgain()
+        {
+            var manager = new InMemoryEventBusSubscriptionsManager();
+            manager.AddSubscription<OrderCreatedEvent, OrderCreatedEventHandler>();
+
+            manager.RemoveSubscription<OrderCreatedEvent, OrderCreatedEventHandler>();
+            manager.AddSubscription<OrderCreatedEvent, OrderCreatedEventHandler>();
+
+            Assert.Equal(typeof(OrderCreatedEvent), manager.GetEventTypeByName(nameof(OrderCreatedEvent)));
         }
 
         [Fact]

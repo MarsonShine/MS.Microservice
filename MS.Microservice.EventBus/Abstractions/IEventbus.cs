@@ -1,31 +1,26 @@
 ﻿using MS.Microservice.EventBus.Events;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace MS.Microservice.EventBus.Abstractions
+namespace MS.Microservice.EventBus.Abstractions;
+
+/// <summary>
+/// Defines the event bus contract for publishing and managing integration event subscriptions.
+/// </summary>
+public interface IEventBus
 {
-    /// <summary>
-    /// 定义事件总线的基本操作行为
-    /// 可以集成不同的中间件,RabbitMQ,Kafka 等
-    /// 这样做到了 OCP,SRP
-    /// </summary>
-    public interface IEventbus
-    {
-        void Publish(IntegrationEvent @event);
+	void Publish(IntegrationEvent @event);
 
-        void Subscribe<T, TH>()
-            where T : IntegrationEvent
-            where TH : IIntegrationEventHandler<T>;
+	void Subscribe<TEvent, THandler>()
+		where TEvent : IntegrationEvent
+		where THandler : IIntegrationEventHandler<TEvent>;
 
-        //void SubscribeDynamic<TH>(string eventName)
-        //    where TH : IDynamicIntegrationEventHandler;
+	void Unsubscribe<TEvent, THandler>()
+		where THandler : IIntegrationEventHandler<TEvent>
+		where TEvent : IntegrationEvent;
+}
 
-        //void UnsubscribeDynamic<TH>(string eventName)
-        //    where TH : IDynamicIntegrationEventHandler;
-
-        void Unsubscribe<T, TH>()
-            where TH : IIntegrationEventHandler<T>
-            where T : IntegrationEvent;
-    }
+/// <summary>
+/// Legacy alias kept for backward compatibility. Prefer <see cref="IEventBus"/>.
+/// </summary>
+public interface IEventbus : IEventBus
+{
 }

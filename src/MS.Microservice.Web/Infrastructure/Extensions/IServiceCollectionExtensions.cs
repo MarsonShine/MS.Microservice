@@ -20,12 +20,12 @@ using MS.Microservice.Infrastructure.DbContext;
 using MS.Microservice.Infrastructure.HealthChecks;
 using MS.Microservice.Infrastructure.SqlSugar;
 using MS.Microservice.Web.Application.Orders;
-using MS.Microservice.Swagger.Swagger;
 using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Web.Infrastructure.Filters;
 using MS.Microservice.Web.Infrastructure.LogUtils.Nlog;
+using MS.Microservice.Swagger;
 
 namespace MS.Microservice.Web.Infrastructure.Extensions
 {
@@ -166,17 +166,10 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
             public IServiceCollection AddCustomSwagger(IConfiguration configuration)
             {
-                var swaggerOption = configuration.GetSection("SwaggerOptions").Get<SwaggerOptions>();
-                if (swaggerOption != null)
-                    services.AddPlatformSwagger(option =>
-                    {
-                        option.EnabledSecurity = swaggerOption.EnabledSecurity;
-                        option.IsEnabled = swaggerOption.IsEnabled;
-                        option.SwaggerXmlFile = swaggerOption.SwaggerXmlFile;
-                        option.IsAuth = swaggerOption.IsAuth;
-                        option.Name = swaggerOption.Name;
-                        option.RoutePrefix = swaggerOption.RoutePrefix;
-                    });
+                services.AddPlatformSwagger(options =>
+                {
+                    configuration.GetSection(SwaggerOptions.SectionName).Bind(options);
+                });
                 return services;
             }
 

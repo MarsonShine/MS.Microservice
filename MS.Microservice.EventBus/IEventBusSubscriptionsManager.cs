@@ -1,27 +1,25 @@
 ﻿using MS.Microservice.EventBus.Abstractions;
 using MS.Microservice.EventBus.Events;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace MS.Microservice.EventBus
+namespace MS.Microservice.EventBus;
+
+/// <summary>
+/// Manages in-memory mappings between integration events and their handlers.
+/// </summary>
+public interface IEventBusSubscriptionsManager
 {
-    /// <summary>
-    /// 管理事件
-    /// </summary>
-    public interface IEventBusSubscriptionsManager
-    {
-        void AddSubscription<T, TH>()
-           where T : IntegrationEvent
-           where TH : IIntegrationEventHandler<T>;
+    void AddSubscription<TEvent, THandler>()
+        where TEvent : IntegrationEvent
+        where THandler : IIntegrationEventHandler<TEvent>;
 
-        void RemoveSubscription<T, TH>()
-             where TH : IIntegrationEventHandler<T>
-             where T : IntegrationEvent;
-        Type GetEventTypeByName(string eventName);
-        void Clear();
-        string GetEventKey<T>();
-    }
+    void RemoveSubscription<TEvent, THandler>()
+        where THandler : IIntegrationEventHandler<TEvent>
+        where TEvent : IntegrationEvent;
+
+    Type? GetEventTypeByName(string eventName);
+
+    void Clear();
+
+    string GetEventKey<TEvent>()
+        where TEvent : IntegrationEvent;
 }

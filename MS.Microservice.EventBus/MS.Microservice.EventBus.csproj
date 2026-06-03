@@ -1,1 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<PackageId>MS.Microservice.EventBus</PackageId>
+		<Title>MS.Microservice EventBus</Title>
+		<Description>Reusable EventBus abstractions and an optimized in-memory subscription manager for MS.Microservice.</Description>
+		<Authors>MS.Microservice</Authors>
+		<PackageTags>eventbus;integration-events;messaging;microservices</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\" />
+		<None Include="samples\basic-usage.md" Pack="true" PackagePath="contentFiles/any/any/samples/" />
+	</ItemGroup>
+</Project>

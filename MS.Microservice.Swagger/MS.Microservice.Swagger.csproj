@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.Swagger</PackageId>
+    <Title>MS.Microservice Swagger</Title>
+    <Description>Reusable Swagger and OpenAPI integration helpers for ASP.NET Core services.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>swagger;openapi;aspnetcore;swashbuckle</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Swagger.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="appsettings.swagger.sample.json" Pack="true" PackagePath="contentFiles/any/any/" />
+    <None Include="samples\basic-usage.md" Pack="true" PackagePath="contentFiles/any/any/samples/" />
+  </ItemGroup>
+</Project>

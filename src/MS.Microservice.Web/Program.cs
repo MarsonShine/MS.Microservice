@@ -10,7 +10,6 @@ using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Infrastructure.Common.Extensions;
 using Microsoft.AspNetCore.ResponseCompression;
 using MS.Microservice.Core.FeatureManager;
-using MS.Microservice.Swagger.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Web.Infrastructure.LogUtils.Nlog;
 using Wolverine;
 using MS.Microservice.Web.Infrastructure.Mediator.Behaviors;
