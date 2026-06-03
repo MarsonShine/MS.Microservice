@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.Logging.AspNetCore</PackageId>
+    <Title>MS.Microservice Logging AspNetCore</Title>
+    <Description>ASP.NET Core request logging middleware and registration helpers for MS.Microservice.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>logging;aspnetcore;middleware;observability</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.Logging.Core\MS.Microservice.Logging.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/test/">
+    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.AspNetCore.Tests/MS.Microservice.Logging.AspNetCore.Tests.csproj" />
+    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Core.Tests/MS.Microservice.Logging.Core.Tests.csproj" />
+    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.NLog.Tests/MS.Microservice.Logging.NLog.Tests.csproj" />
+    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Serilog.Tests/MS.Microservice.Logging.Serilog.Tests.csproj" />
+  </Folder>
+  <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
+  <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj" />
+  <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />
+  <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.Serilog/MS.Microservice.Logging.Serilog.csproj" />
+</Solution>
