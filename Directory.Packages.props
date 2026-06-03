@@ -12,7 +12,6 @@
     <PackageVersion Include="FluentAssertions" Version="8.6.0" />
     <PackageVersion Include="FluentValidation" Version="11.9.0" />
     <PackageVersion Include="IdentityModel" Version="7.0.0" />
-    <PackageVersion Include="MediatR" Version="13.0.0" />
     <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="WolverineFx" Version="5.31.0" />
     <PackageVersion Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
