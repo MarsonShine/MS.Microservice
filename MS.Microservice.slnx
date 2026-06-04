@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/build/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
   <Folder Name="/docs/" />
   <Folder Name="/MS.Microservice.EventBus/" />
   <Folder Name="/MS.Microservice.EventBus/src/">
@@ -26,10 +30,6 @@
   </Folder>
   <Folder Name="/MS.Microservice.Swagger/test/">
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
-  </Folder>
-  <Folder Name="/Solution Items/">
-    <File Path="Directory.Build.props" />
-    <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />

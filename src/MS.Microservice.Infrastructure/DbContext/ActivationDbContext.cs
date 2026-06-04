@@ -114,7 +114,8 @@ namespace MS.Microservice.Infrastructure.DbContext
                 }
             }
             return await base.SaveChangesAsync(cancellationToken);
-        }        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+        }
+        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
         {
             await _messageBus.DispatchDomainEventsAsync(this);
             await SaveChangesAsync(cancellationToken);
@@ -136,7 +137,7 @@ namespace MS.Microservice.Infrastructure.DbContext
 
         public async Task CommitTransactionAsync([NotNull] IDbContextTransaction transaction, CancellationToken cancellationToken = default)
         {
-            if (transaction == null) throw new ArgumentNullException(nameof(transaction));
+            ArgumentNullException.ThrowIfNull(transaction);
             if (transaction != _currentTransaction) throw new InvalidOperationException($"Transaction {transaction.TransactionId} is not current");
 
             try
@@ -161,7 +162,8 @@ namespace MS.Microservice.Infrastructure.DbContext
     }
 
     public class ActivationDbContextDesignFactory : IDesignTimeDbContextFactory<ActivationDbContext>
-    {        public ActivationDbContext CreateDbContext(string[] args)
+    {
+        public ActivationDbContext CreateDbContext(string[] args)
         {
             var configuration = BuildConfiguration();
             var connectionString = configuration.GetConnectionString("ActivationConnection");
@@ -222,7 +224,8 @@ namespace MS.Microservice.Infrastructure.DbContext
             public Task InvokeAsync(object message, DeliveryOptions options, CancellationToken cancellation = default, TimeSpan? timeout = null)
             {
                 return Task.CompletedTask;
-            }            public Task<T> InvokeForTenantAsync<T>(string tenantId, object message, CancellationToken cancellation = default, TimeSpan? timeout = null)
+            }
+            public Task<T> InvokeForTenantAsync<T>(string tenantId, object message, CancellationToken cancellation = default, TimeSpan? timeout = null)
             {
                 return Task.FromResult<T>(default!);
             }
