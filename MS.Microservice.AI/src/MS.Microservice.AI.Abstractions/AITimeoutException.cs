@@ -4,6 +4,7 @@ public sealed class AITimeoutException : AIProviderException
 {
     public AITimeoutException(
         string message,
+        AICapability capability = AICapability.Chat,
         string? provider = null,
         string? model = null,
         string? scenario = null,
@@ -12,6 +13,7 @@ public sealed class AITimeoutException : AIProviderException
         : base(
             message,
             AIErrorCodes.ProviderTimeout,
+            capability,
             provider,
             model,
             scenario,

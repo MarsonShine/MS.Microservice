@@ -14,6 +14,10 @@ public static class OpenAIBuilderExtensions
 
         builder.Services.AddHttpClient(OpenAIProviderDefaults.HttpClientName);
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIChatProvider, OpenAIChatProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAITtsProvider, OpenAITtsProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIAsrProvider, OpenAIAsrProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageGenerationProvider, OpenAIImageGenerationProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageEditProvider, OpenAIImageEditProvider>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, OpenAIOptionsValidator>());
         return builder;
     }

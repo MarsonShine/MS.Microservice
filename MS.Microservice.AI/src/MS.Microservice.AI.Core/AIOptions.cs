@@ -14,6 +14,14 @@ public sealed class AIOptions
 public sealed class AIModelsOptions
 {
     public IDictionary<string, AIChatModelOptions> Chat { get; } = new Dictionary<string, AIChatModelOptions>(StringComparer.OrdinalIgnoreCase);
+
+    public IDictionary<string, AITtsModelOptions> Tts { get; } = new Dictionary<string, AITtsModelOptions>(StringComparer.OrdinalIgnoreCase);
+
+    public IDictionary<string, AIAsrModelOptions> Asr { get; } = new Dictionary<string, AIAsrModelOptions>(StringComparer.OrdinalIgnoreCase);
+
+    public IDictionary<string, AIImageModelOptions> ImageGeneration { get; } = new Dictionary<string, AIImageModelOptions>(StringComparer.OrdinalIgnoreCase);
+
+    public IDictionary<string, AIImageModelOptions> ImageEdit { get; } = new Dictionary<string, AIImageModelOptions>(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class AIProviderRegistrationOptions
@@ -44,6 +52,59 @@ public sealed class AIChatModelOptions
     public double? TopP { get; set; }
 
     public int? MaxOutputTokens { get; set; }
+
+    public int? TimeoutSeconds { get; set; }
+
+    public int? MaxRetryAttempts { get; set; }
+}
+
+public sealed class AITtsModelOptions
+{
+    public string Provider { get; set; } = string.Empty;
+
+    public string Model { get; set; } = string.Empty;
+
+    public string? Voice { get; set; }
+
+    public string? ResponseFormat { get; set; }
+
+    public double? Speed { get; set; }
+
+    public int? TimeoutSeconds { get; set; }
+
+    public int? MaxRetryAttempts { get; set; }
+}
+
+public sealed class AIAsrModelOptions
+{
+    public string Provider { get; set; } = string.Empty;
+
+    public string Model { get; set; } = string.Empty;
+
+    public string? Language { get; set; }
+
+    public string? Prompt { get; set; }
+
+    public string? ResponseFormat { get; set; }
+
+    public int? TimeoutSeconds { get; set; }
+
+    public int? MaxRetryAttempts { get; set; }
+}
+
+public sealed class AIImageModelOptions
+{
+    public string Provider { get; set; } = string.Empty;
+
+    public string Model { get; set; } = string.Empty;
+
+    public int? Count { get; set; }
+
+    public string? Size { get; set; }
+
+    public string? Quality { get; set; }
+
+    public string? ResponseFormat { get; set; }
 
     public int? TimeoutSeconds { get; set; }
 

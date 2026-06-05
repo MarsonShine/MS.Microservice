@@ -87,6 +87,14 @@ public sealed class RoutingAIChatClientTests
         }
 
         public AIResolvedModel ResolveChatModel(AIChatRequest request) => _resolvedModel;
+
+        public AIResolvedModel ResolveTtsModel(AITtsRequest request) => _resolvedModel;
+
+        public AIResolvedModel ResolveAsrModel(AIAsrRequest request) => _resolvedModel;
+
+        public AIResolvedModel ResolveImageGenerationModel(AIImageGenerationRequest request) => _resolvedModel;
+
+        public AIResolvedModel ResolveImageEditModel(AIImageEditRequest request) => _resolvedModel;
     }
 
     private sealed class FakeProviderFactory : IAIProviderFactory
@@ -99,6 +107,14 @@ public sealed class RoutingAIChatClientTests
         }
 
         public IAIChatProvider GetRequiredChatProvider(string providerName) => _provider;
+
+        public IAITtsProvider GetRequiredTtsProvider(string providerName) => throw new NotSupportedException();
+
+        public IAIAsrProvider GetRequiredAsrProvider(string providerName) => throw new NotSupportedException();
+
+        public IAIImageGenerationProvider GetRequiredImageGenerationProvider(string providerName) => throw new NotSupportedException();
+
+        public IAIImageEditProvider GetRequiredImageEditProvider(string providerName) => throw new NotSupportedException();
     }
 
     private sealed class FakeChatProvider : IAIChatProvider

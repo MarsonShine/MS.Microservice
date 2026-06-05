@@ -5,6 +5,7 @@ public class AIProviderException : AIException
     public AIProviderException(
         string message,
         string errorCode,
+        AICapability capability = AICapability.Chat,
         string? provider = null,
         string? model = null,
         string? scenario = null,
@@ -17,7 +18,7 @@ public class AIProviderException : AIException
         : base(
             message,
             errorCode,
-            AICapability.Chat,
+            capability,
             provider,
             model,
             scenario,

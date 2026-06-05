@@ -28,6 +28,10 @@ public static class AIServiceCollectionExtensions
         services.TryAddSingleton<IAIModelResolver, DefaultAIModelResolver>();
         services.TryAddSingleton<IAIProviderFactory, DefaultAIProviderFactory>();
         services.TryAddSingleton<IAIChatClient, RoutingAIChatClient>();
+        services.TryAddSingleton<IAITtsClient, RoutingAITtsClient>();
+        services.TryAddSingleton<IAIAsrClient, RoutingAIAsrClient>();
+        services.TryAddSingleton<IAIImageGenerationClient, RoutingAIImageGenerationClient>();
+        services.TryAddSingleton<IAIImageEditClient, RoutingAIImageEditClient>();
 
         return new AIBuilder(services);
     }

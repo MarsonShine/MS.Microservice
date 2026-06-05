@@ -62,4 +62,150 @@ internal static class AIRequestValidator
             throw new AIConfigurationException("AI chat request scenario cannot be empty.");
         }
     }
+
+    public static void ValidateTtsRequest(AITtsRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Input))
+        {
+            throw new AIConfigurationException("AI TTS request must include non-empty input text.");
+        }
+
+        ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
+
+        if (request.Voice is not null && string.IsNullOrWhiteSpace(request.Voice))
+        {
+            throw new AIConfigurationException("AI TTS request voice cannot be empty.");
+        }
+
+        if (request.ResponseFormat is not null && string.IsNullOrWhiteSpace(request.ResponseFormat))
+        {
+            throw new AIConfigurationException("AI TTS request response format cannot be empty.");
+        }
+
+        if (request.Speed is <= 0)
+        {
+            throw new AIConfigurationException("AI TTS request speed must be greater than 0 when provided.");
+        }
+
+        ValidateTimeout(request.Timeout);
+    }
+
+    public static void ValidateAsrRequest(AIAsrRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateBinaryContent(request.Audio, "AI ASR request audio");
+        ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
+
+        if (request.Language is not null && string.IsNullOrWhiteSpace(request.Language))
+        {
+            throw new AIConfigurationException("AI ASR request language cannot be empty.");
+        }
+
+        if (request.Prompt is not null && string.IsNullOrWhiteSpace(request.Prompt))
+        {
+            throw new AIConfigurationException("AI ASR request prompt cannot be empty.");
+        }
+
+        if (request.ResponseFormat is not null && string.IsNullOrWhiteSpace(request.ResponseFormat))
+        {
+            throw new AIConfigurationException("AI ASR request response format cannot be empty.");
+        }
+
+        ValidateTimeout(request.Timeout);
+    }
+
+    public static void ValidateImageGenerationRequest(AIImageGenerationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+        {
+            throw new AIConfigurationException("AI image generation request must include a prompt.");
+        }
+
+        ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
+        ValidateImageRequestFields(request.Count, request.Size, request.Quality, request.ResponseFormat, request.Timeout);
+    }
+
+    public static void ValidateImageEditRequest(AIImageEditRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+        {
+            throw new AIConfigurationException("AI image edit request must include a prompt.");
+        }
+
+        ValidateBinaryContent(request.Image, "AI image edit request image");
+        if (request.Mask is not null)
+        {
+            ValidateBinaryContent(request.Mask, "AI image edit request mask");
+        }
+
+        ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
+        ValidateImageRequestFields(request.Count, request.Size, request.Quality, request.ResponseFormat, request.Timeout);
+    }
+
+    private static void ValidateImageRequestFields(int? count, string? size, string? quality, string? responseFormat, TimeSpan? timeout)
+    {
+        if (count is <= 0)
+        {
+            throw new AIConfigurationException("AI image request count must be greater than 0.");
+        }
+
+        if (size is not null && string.IsNullOrWhiteSpace(size))
+        {
+            throw new AIConfigurationException("AI image request size cannot be empty.");
+        }
+
+        if (quality is not null && string.IsNullOrWhiteSpace(quality))
+        {
+            throw new AIConfigurationException("AI image request quality cannot be empty.");
+        }
+
+        if (responseFormat is not null && string.IsNullOrWhiteSpace(responseFormat))
+        {
+            throw new AIConfigurationException("AI image request response format cannot be empty.");
+        }
+
+        ValidateTimeout(timeout);
+    }
+
+    private static void ValidateBinaryContent(AIBinaryContent content, string fieldName)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (content.Content.Length == 0)
+        {
+            throw new AIConfigurationException($"{fieldName} must include binary content.");
+        }
+    }
+
+    private static void ValidateCommonRequestFields(string? provider, string? model, string? scenario)
+    {
+        if (provider is not null && string.IsNullOrWhiteSpace(provider))
+        {
+            throw new AIConfigurationException("AI request provider cannot be empty.");
+        }
+
+        if (model is not null && string.IsNullOrWhiteSpace(model))
+        {
+            throw new AIConfigurationException("AI request model cannot be empty.");
+        }
+
+        if (scenario is not null && string.IsNullOrWhiteSpace(scenario))
+        {
+            throw new AIConfigurationException("AI request scenario cannot be empty.");
+        }
+    }
+
+    private static void ValidateTimeout(TimeSpan? timeout)
+    {
+        if (timeout.HasValue && timeout.Value <= TimeSpan.Zero)
+        {
+            throw new AIConfigurationException("AI request timeout must be greater than 0 when provided.");
+        }
+    }
 }

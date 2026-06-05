@@ -14,6 +14,10 @@ public static class QwenBuilderExtensions
 
         builder.Services.AddHttpClient(QwenProviderDefaults.HttpClientName);
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIChatProvider, QwenChatProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAITtsProvider, QwenTtsProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIAsrProvider, QwenAsrProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageGenerationProvider, QwenImageGenerationProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageEditProvider, QwenImageEditProvider>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, QwenOptionsValidator>());
         return builder;
     }

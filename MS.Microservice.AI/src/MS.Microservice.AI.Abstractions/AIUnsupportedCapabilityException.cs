@@ -1,27 +1,23 @@
 namespace MS.Microservice.AI.Abstractions;
 
-public sealed class AIContentSafetyException : AIProviderException
+public sealed class AIUnsupportedCapabilityException : AIProviderException
 {
-    public AIContentSafetyException(
+    public AIUnsupportedCapabilityException(
+        AICapability capability,
         string message,
-        AICapability capability = AICapability.Chat,
         string? provider = null,
         string? model = null,
         string? scenario = null,
         string? requestId = null,
-        string? providerRequestId = null,
-        int? statusCode = null,
         Exception? innerException = null)
         : base(
             message,
-            AIErrorCodes.ContentFiltered,
+            AIErrorCodes.UnsupportedCapability,
             capability,
             provider,
             model,
             scenario,
             requestId,
-            providerRequestId,
-            statusCode,
             innerException: innerException)
     {
     }

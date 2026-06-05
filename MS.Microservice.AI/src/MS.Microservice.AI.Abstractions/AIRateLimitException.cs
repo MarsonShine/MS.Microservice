@@ -4,6 +4,7 @@ public sealed class AIRateLimitException : AIProviderException
 {
     public AIRateLimitException(
         string message,
+        AICapability capability = AICapability.Chat,
         string? provider = null,
         string? model = null,
         string? scenario = null,
@@ -15,6 +16,7 @@ public sealed class AIRateLimitException : AIProviderException
         : base(
             message,
             AIErrorCodes.RateLimited,
+            capability,
             provider,
             model,
             scenario,

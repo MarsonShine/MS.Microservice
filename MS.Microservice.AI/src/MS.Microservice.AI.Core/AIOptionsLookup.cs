@@ -28,10 +28,49 @@ internal static class AIOptionsLookup
         string scenario,
         out KeyValuePair<string, AIChatModelOptions> entry)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        return TryGetNamedEntry(options.Models.Chat, scenario, out entry);
+    }
+
+    public static bool TryGetTtsModel(
+        AIOptions options,
+        string scenario,
+        out KeyValuePair<string, AITtsModelOptions> entry)
+    {
+        return TryGetNamedEntry(options.Models.Tts, scenario, out entry);
+    }
+
+    public static bool TryGetAsrModel(
+        AIOptions options,
+        string scenario,
+        out KeyValuePair<string, AIAsrModelOptions> entry)
+    {
+        return TryGetNamedEntry(options.Models.Asr, scenario, out entry);
+    }
+
+    public static bool TryGetImageGenerationModel(
+        AIOptions options,
+        string scenario,
+        out KeyValuePair<string, AIImageModelOptions> entry)
+    {
+        return TryGetNamedEntry(options.Models.ImageGeneration, scenario, out entry);
+    }
+
+    public static bool TryGetImageEditModel(
+        AIOptions options,
+        string scenario,
+        out KeyValuePair<string, AIImageModelOptions> entry)
+    {
+        return TryGetNamedEntry(options.Models.ImageEdit, scenario, out entry);
+    }
+
+    private static bool TryGetNamedEntry<TEntry>(
+        IDictionary<string, TEntry> entries,
+        string scenario,
+        out KeyValuePair<string, TEntry> entry)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(scenario);
 
-        foreach (var item in options.Models.Chat)
+        foreach (var item in entries)
         {
             if (string.Equals(item.Key, scenario, StringComparison.OrdinalIgnoreCase))
             {

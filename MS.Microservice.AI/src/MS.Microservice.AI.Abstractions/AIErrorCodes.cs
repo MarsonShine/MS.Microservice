@@ -10,4 +10,5 @@ public static class AIErrorCodes
     public const string RateLimited = "rate_limited";
     public const string ContentFiltered = "content_filtered";
     public const string ResponseInvalid = "response_invalid";
+    public const string UnsupportedCapability = "unsupported_capability";
 }

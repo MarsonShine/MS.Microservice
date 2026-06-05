@@ -90,6 +90,97 @@ public sealed class DefaultAIModelResolverTests
             .WithMessage("*no chat scenario or default model is configured*");
     }
 
+    [Fact]
+    public void ResolveTtsModel_ShouldUseScenarioDefaults_AndRequestOverrides()
+    {
+        var options = CreateOptions();
+        options.Models.Tts.Add("Speech", new AITtsModelOptions
+        {
+            Provider = "OpenAI",
+            Model = "gpt-4o-mini-tts",
+            Voice = "alloy",
+            ResponseFormat = "wav",
+            Speed = 1.1,
+            TimeoutSeconds = 15,
+            MaxRetryAttempts = 1,
+        });
+
+        var resolver = new DefaultAIModelResolver(Options.Create(options));
+
+        var resolved = resolver.ResolveTtsModel(new AITtsRequest
+        {
+            Input = "hello",
+            Scenario = "Speech",
+            Speed = 1.3,
+        });
+
+        resolved.Capability.Should().Be(AICapability.Tts);
+        resolved.Provider.Should().Be("OpenAI");
+        resolved.Model.Should().Be("gpt-4o-mini-tts");
+        resolved.Voice.Should().Be("alloy");
+        resolved.ResponseFormat.Should().Be("wav");
+        resolved.Speed.Should().Be(1.3);
+        resolved.Timeout.Should().Be(TimeSpan.FromSeconds(15));
+    }
+
+    [Fact]
+    public void ResolveAsrModel_ShouldPreferExplicitOverrides_WhenProvided()
+    {
+        var resolver = new DefaultAIModelResolver(Options.Create(CreateOptions()));
+
+        var resolved = resolver.ResolveAsrModel(new AIAsrRequest
+        {
+            Audio = new AIBinaryContent { Content = [1, 2, 3], FileName = "audio.wav", ContentType = "audio/wav" },
+            Provider = "OpenAI",
+            Model = "whisper-1",
+            Language = "zh",
+            ResponseFormat = "json",
+            Timeout = TimeSpan.FromSeconds(12),
+        });
+
+        resolved.Capability.Should().Be(AICapability.Asr);
+        resolved.Provider.Should().Be("OpenAI");
+        resolved.Model.Should().Be("whisper-1");
+        resolved.Language.Should().Be("zh");
+        resolved.ResponseFormat.Should().Be("json");
+        resolved.Timeout.Should().Be(TimeSpan.FromSeconds(12));
+    }
+
+    [Fact]
+    public void ResolveImageGenerationModel_ShouldPreferExplicitCount_AndRetainConfiguredDefaults()
+    {
+        var options = CreateOptions();
+        options.Models.ImageGeneration.Add("Default", new AIImageModelOptions
+        {
+            Provider = "Qwen",
+            Model = "qwen-image",
+            Count = 2,
+            Size = "1024x1024",
+            ResponseFormat = "b64_json",
+            TimeoutSeconds = 40,
+            MaxRetryAttempts = 4,
+        });
+
+        var resolver = new DefaultAIModelResolver(Options.Create(options));
+
+        var resolved = resolver.ResolveImageGenerationModel(new AIImageGenerationRequest
+        {
+            Prompt = "draw a cat",
+            Count = 3,
+            Quality = "hd",
+        });
+
+        resolved.Capability.Should().Be(AICapability.ImageGeneration);
+        resolved.Provider.Should().Be("Qwen");
+        resolved.Model.Should().Be("qwen-image");
+        resolved.Count.Should().Be(3);
+        resolved.Size.Should().Be("1024x1024");
+        resolved.Quality.Should().Be("hd");
+        resolved.ResponseFormat.Should().Be("b64_json");
+        resolved.Timeout.Should().Be(TimeSpan.FromSeconds(40));
+        resolved.MaxRetryAttempts.Should().Be(4);
+    }
+
     private static AIOptions CreateOptions()
     {
         var options = new AIOptions

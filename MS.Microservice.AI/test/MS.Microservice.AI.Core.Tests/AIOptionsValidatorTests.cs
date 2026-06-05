@@ -51,4 +51,28 @@ public sealed class AIOptionsValidatorTests
         result.Failed.Should().BeTrue();
         result.Failures.Should().HaveCount(3);
     }
+
+    [Fact]
+    public void Validate_ShouldReturnFailures_WhenImageGenerationCountIsInvalid()
+    {
+        var options = new AIOptions();
+        options.Providers.Add("OpenAI", new AIProviderRegistrationOptions
+        {
+            ApiKey = "key",
+            TimeoutSeconds = 10,
+            MaxRetryAttempts = 0,
+            ConcurrencyLimit = 1,
+        });
+        options.Models.ImageGeneration.Add("Default", new AIImageModelOptions
+        {
+            Provider = "OpenAI",
+            Model = "gpt-image-1",
+            Count = 0,
+        });
+
+        var result = new AIOptionsValidator().Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().Contain(failure => failure.Contains("ImageGeneration:Default:Count", StringComparison.Ordinal));
+    }
 }

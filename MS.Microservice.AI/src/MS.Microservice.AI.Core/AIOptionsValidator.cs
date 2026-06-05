@@ -36,33 +36,74 @@ public sealed class AIOptionsValidator : IValidateOptions<AIOptions>
 
         foreach (var model in options.Models.Chat)
         {
-            if (string.IsNullOrWhiteSpace(model.Value.Provider))
-            {
-                failures.Add($"AI:Models:Chat:{model.Key}:Provider is required.");
-            }
+            ValidateModel(model.Key, model.Value.Provider, model.Value.Model, model.Value.TimeoutSeconds, model.Value.MaxRetryAttempts, options, failures, "Chat");
+        }
 
-            if (string.IsNullOrWhiteSpace(model.Value.Model))
-            {
-                failures.Add($"AI:Models:Chat:{model.Key}:Model is required.");
-            }
+        foreach (var model in options.Models.Tts)
+        {
+            ValidateModel(model.Key, model.Value.Provider, model.Value.Model, model.Value.TimeoutSeconds, model.Value.MaxRetryAttempts, options, failures, "Tts");
+        }
 
-            if (!string.IsNullOrWhiteSpace(model.Value.Provider)
-                && !AIOptionsLookup.TryGetProvider(options, model.Value.Provider, out _))
-            {
-                failures.Add($"AI:Models:Chat:{model.Key}:Provider '{model.Value.Provider}' is not configured under AI:Providers.");
-            }
+        foreach (var model in options.Models.Asr)
+        {
+            ValidateModel(model.Key, model.Value.Provider, model.Value.Model, model.Value.TimeoutSeconds, model.Value.MaxRetryAttempts, options, failures, "Asr");
+        }
 
-            if (model.Value.TimeoutSeconds is <= 0)
+        foreach (var model in options.Models.ImageGeneration)
+        {
+            ValidateModel(model.Key, model.Value.Provider, model.Value.Model, model.Value.TimeoutSeconds, model.Value.MaxRetryAttempts, options, failures, "ImageGeneration");
+            if (model.Value.Count is <= 0)
             {
-                failures.Add($"AI:Models:Chat:{model.Key}:TimeoutSeconds must be greater than 0 when provided.");
+                failures.Add($"AI:Models:ImageGeneration:{model.Key}:Count must be greater than 0 when provided.");
             }
+        }
 
-            if (model.Value.MaxRetryAttempts is < 0)
+        foreach (var model in options.Models.ImageEdit)
+        {
+            ValidateModel(model.Key, model.Value.Provider, model.Value.Model, model.Value.TimeoutSeconds, model.Value.MaxRetryAttempts, options, failures, "ImageEdit");
+            if (model.Value.Count is <= 0)
             {
-                failures.Add($"AI:Models:Chat:{model.Key}:MaxRetryAttempts cannot be negative.");
+                failures.Add($"AI:Models:ImageEdit:{model.Key}:Count must be greater than 0 when provided.");
             }
         }
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
+    }
+
+    private static void ValidateModel(
+        string key,
+        string provider,
+        string model,
+        int? timeoutSeconds,
+        int? maxRetryAttempts,
+        AIOptions options,
+        ICollection<string> failures,
+        string sectionName)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+        {
+            failures.Add($"AI:Models:{sectionName}:{key}:Provider is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            failures.Add($"AI:Models:{sectionName}:{key}:Model is required.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(provider)
+            && !AIOptionsLookup.TryGetProvider(options, provider, out _))
+        {
+            failures.Add($"AI:Models:{sectionName}:{key}:Provider '{provider}' is not configured under AI:Providers.");
+        }
+
+        if (timeoutSeconds is <= 0)
+        {
+            failures.Add($"AI:Models:{sectionName}:{key}:TimeoutSeconds must be greater than 0 when provided.");
+        }
+
+        if (maxRetryAttempts is < 0)
+        {
+            failures.Add($"AI:Models:{sectionName}:{key}:MaxRetryAttempts cannot be negative.");
+        }
     }
 }
