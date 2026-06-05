@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.OpenAI</PackageId>
+    <Title>MS.Microservice AI OpenAI Provider</Title>
+    <Description>OpenAI provider implementation for MS.Microservice AI.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;openai;chat</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.AI.OpenAI.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="..\MS.Microservice.AI.Core\MS.Microservice.AI.Core.csproj" />
+  </ItemGroup>
+</Project>

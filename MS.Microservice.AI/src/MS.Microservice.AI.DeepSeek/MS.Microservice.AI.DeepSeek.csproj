@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.DeepSeek</PackageId>
+    <Title>MS.Microservice AI DeepSeek Provider</Title>
+    <Description>DeepSeek provider implementation for MS.Microservice AI.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;deepseek;chat</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.AI.DeepSeek.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="..\MS.Microservice.AI.Core\MS.Microservice.AI.Core.csproj" />
+  </ItemGroup>
+</Project>

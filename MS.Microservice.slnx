@@ -4,6 +4,20 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/docs/" />
+  <Folder Name="/MS.Microservice.AI/" />
+  <Folder Name="/MS.Microservice.AI/src/">
+    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
+    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.DeepSeek/MS.Microservice.AI.DeepSeek.csproj" />
+    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.OpenAI/MS.Microservice.AI.OpenAI.csproj" />
+    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.AI/test/">
+    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Core.Tests/MS.Microservice.AI.Core.Tests.csproj" />
+    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.DeepSeek.Tests/MS.Microservice.AI.DeepSeek.Tests.csproj" />
+    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.OpenAI.Tests/MS.Microservice.AI.OpenAI.Tests.csproj" />
+    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
+  </Folder>
   <Folder Name="/MS.Microservice.EventBus/" />
   <Folder Name="/MS.Microservice.EventBus/src/">
     <Project Path="MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />

@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <Project Path="src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
+    <Project Path="src/MS.Microservice.AI.DeepSeek/MS.Microservice.AI.DeepSeek.csproj" />
+    <Project Path="src/MS.Microservice.AI.OpenAI/MS.Microservice.AI.OpenAI.csproj" />
+    <Project Path="src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.AI.Core.Tests/MS.Microservice.AI.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.DeepSeek.Tests/MS.Microservice.AI.DeepSeek.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.OpenAI.Tests/MS.Microservice.AI.OpenAI.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
+  </Folder>
+</Solution>

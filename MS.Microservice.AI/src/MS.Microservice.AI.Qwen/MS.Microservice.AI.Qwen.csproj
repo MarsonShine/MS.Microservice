@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.Qwen</PackageId>
+    <Title>MS.Microservice AI Qwen Provider</Title>
+    <Description>Qwen provider implementation for MS.Microservice AI.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;qwen;chat;aliyun</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.AI.Qwen.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="..\MS.Microservice.AI.Core\MS.Microservice.AI.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.Abstractions</PackageId>
+    <Title>MS.Microservice AI Abstractions</Title>
+    <Description>Provider-agnostic AI contracts for chat, model resolution, and error handling.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;abstractions;chat</PackageTags>
+  </PropertyGroup>
+</Project>

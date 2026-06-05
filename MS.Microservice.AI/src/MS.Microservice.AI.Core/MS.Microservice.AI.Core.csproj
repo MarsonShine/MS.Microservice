@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.Core</PackageId>
+    <Title>MS.Microservice AI Core</Title>
+    <Description>Routing, options, dependency injection, and provider orchestration for MS.Microservice AI.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;chat;dependency-injection</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.AI.Core.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.AI.OpenAI" />
+    <InternalsVisibleTo Include="MS.Microservice.AI.DeepSeek" />
+    <InternalsVisibleTo Include="MS.Microservice.AI.Qwen" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+  </ItemGroup>
+</Project>
