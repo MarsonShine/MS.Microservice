@@ -1,7 +1,14 @@
 namespace MS.Microservice.AI.Abstractions;
 
+/// <summary>
+/// Thrown when the provider's content safety filter blocks the request or response.
+/// This is not retryable without changing the content.
+/// </summary>
 public sealed class AIContentSafetyException : AIProviderException
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="AIContentSafetyException"/>.
+    /// </summary>
     public AIContentSafetyException(
         string message,
         AICapability capability = AICapability.Chat,

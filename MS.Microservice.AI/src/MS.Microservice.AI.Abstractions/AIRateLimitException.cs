@@ -1,7 +1,14 @@
 namespace MS.Microservice.AI.Abstractions;
 
+/// <summary>
+/// Thrown when the provider returns HTTP 429 (Too Many Requests).
+/// This is always transient; callers should honor <see cref="AIException.RetryAfter"/> if set.
+/// </summary>
 public sealed class AIRateLimitException : AIProviderException
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="AIRateLimitException"/>.
+    /// </summary>
     public AIRateLimitException(
         string message,
         AICapability capability = AICapability.Chat,
