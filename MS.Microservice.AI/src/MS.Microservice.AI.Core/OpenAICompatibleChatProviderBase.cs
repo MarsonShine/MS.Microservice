@@ -91,11 +91,7 @@ internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
         }
         finally
         {
-            _logger.LogInformation(
-                "AI provider {Provider} chat request completed in {ElapsedMilliseconds}ms for model {Model}.",
-                Name,
-                TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds,
-                model.Model);
+            ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
             _concurrencyGate.Release();
         }
     }
@@ -130,11 +126,7 @@ internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
         {
             activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
             _logger.LogWarning(exception, "AI provider {Provider} chat stream failed for model {Model}.", Name, model.Model);
-            _logger.LogInformation(
-                "AI provider {Provider} chat stream completed in {ElapsedMilliseconds}ms for model {Model}.",
-                Name,
-                TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds,
-                model.Model);
+            ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
             activity?.Dispose();
             _concurrencyGate.Release();
             throw;
@@ -159,15 +151,17 @@ internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
                 activity?.SetStatus(ActivityStatusCode.Error);
             }
 
-            _logger.LogInformation(
-                "AI provider {Provider} chat stream completed in {ElapsedMilliseconds}ms for model {Model}.",
-                Name,
-                TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds,
-                model.Model);
+            ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
             activity?.Dispose();
             _concurrencyGate.Release();
         }
     }
+
+    [LoggerMessage(
+        EventId = 1001,
+        Level = LogLevel.Information,
+        Message = "AI provider {Provider} chat stream completed in {ElapsedMilliseconds}ms for model {Model}.")]
+    private static partial void ChatCompleted(ILogger logger, string provider, double elapsedMilliseconds, string model);
 
     protected virtual void CustomizeRequest(OpenAICompatibleChatCompletionRequest payload, AIChatRequest request, AIResolvedModel model)
     {
@@ -382,10 +376,8 @@ internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
                 break;
             }
 
-            var envelope = JsonSerializer.Deserialize<OpenAICompatibleChatCompletionEnvelope>(payload, SerializerOptions);
-            if (envelope is null)
-            {
-                throw new AIProviderException(
+            var envelope = JsonSerializer.Deserialize<OpenAICompatibleChatCompletionEnvelope>(payload, SerializerOptions)
+                ?? throw new AIProviderException(
                     $"AI provider '{Name}' returned an invalid streaming payload.",
                     AIErrorCodes.ResponseInvalid,
                     provider: Name,
@@ -393,8 +385,6 @@ internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
                     scenario: model.Scenario,
                     requestId: request.RequestId,
                     providerRequestId: providerRequestId);
-            }
-
             providerRequestId ??= envelope.Id;
             resolvedModelName = envelope.Model ?? resolvedModelName;
             usage = envelope.Usage is null ? usage : MapUsage(envelope.Usage);
@@ -502,7 +492,7 @@ internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
             ? DefaultBaseAddress
             : _providerOptions.BaseAddress;
 
-        return baseAddress.EndsWith("/", StringComparison.Ordinal) ? baseAddress : $"{baseAddress}/";
+        return baseAddress.EndsWith('/') ? baseAddress : $"{baseAddress}/";
     }
 
     private static OpenAICompatibleErrorEnvelope? TryDeserializeError(string responseText)
