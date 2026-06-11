@@ -4,10 +4,10 @@
     <EnableOfficeDiagnostics Condition="'$(EnableOfficeDiagnostics)' == ''">false</EnableOfficeDiagnostics>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591;NU1903</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591;NU1903</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591</WarningsNotAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(EnableOfficeDiagnostics)' == 'true'">
     <DefineConstants>$(DefineConstants);MS_Microservice_DIAGNOSTICS</DefineConstants>
@@ -42,7 +42,8 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />    <PackageReference Include="SqlSugarCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />    
+    <PackageReference Include="SqlSugarCore" />
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>

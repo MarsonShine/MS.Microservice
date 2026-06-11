@@ -1,7 +1,7 @@
-using IdentityModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Functional;
+using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;

@@ -1,6 +1,6 @@
-using IdentityModel;
 using Microsoft.AspNetCore.Http;
 using MS.Microservice.Core.Functional;
+using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Web.Application.Commands;

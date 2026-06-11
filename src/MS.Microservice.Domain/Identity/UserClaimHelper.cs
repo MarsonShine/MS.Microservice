@@ -1,7 +1,7 @@
 ﻿using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
-using IdentityModel;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -35,9 +35,9 @@ namespace MS.Microservice.Domain.Identity
             var name = identity.FindFirst(c => c.Type == JwtClaimTypes.NickName);
             var phoneNumber = identity.FindFirst(c => c.Type == JwtClaimTypes.PhoneNumber);
             var id = identity.FindFirst(c => c.Type == JwtClaimTypes.Id);
-            var mail = "mail@kingsunsoft.com";
+            var mail = "mail@example.com";
             var salt = PasswordSaltHelper.Generate();
-            var pwd = CryptologyHelper.HmacSha256("Fz123456" + salt);
+            var pwd = CryptologyHelper.HmacSha256("Example123456" + salt);
             var u = new User(account: phoneNumber!.Value, pwd, salt, false, phoneNumber.Value, 0, 0, mail, name!.Value, phoneNumber!.Value, id!.Value);
 
             return u;

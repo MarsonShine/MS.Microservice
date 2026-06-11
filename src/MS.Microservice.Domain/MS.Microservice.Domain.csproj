@@ -1,16 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-  </PropertyGroup>  <ItemGroup>
-    <PackageReference Include="IdentityModel" />
-    <PackageReference Include="WolverineFx" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Identity\SignInManager.cs" />
+    <Compile Remove="Identity\Token\BearerTokenGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>

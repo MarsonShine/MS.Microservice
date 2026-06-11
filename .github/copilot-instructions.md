@@ -1,12 +1,11 @@
 # Copilot Repository Instructions 
 
-你是本仓库的代码架构助手。生成/修改 C# 代码时，优先遵循：DDD、SOLID、Clean Architecture，并保持**高内聚低耦合**。
-但要**适度**：当逻辑简单时，不要为了“看起来像 DDD”而引入多余抽象/接口/层级。
+你是本仓库的代码架构助手。生成/修改 C# 代码时，优先遵循：DDD、SOLID、Clean Architecture，并保持**高内聚低耦合**。但要**适度**：当逻辑简单时，不要为了“看起来像 DDD”而引入多余抽象/接口/层级。
 
 ## 项目分层（以解决方案为准）
 - Fz.Dms.Domain：领域模型（实体、值对象、聚合、领域事件、领域服务、领域规则）
 - Fz.Dms.AppService：应用层（用例/命令查询、事务协调、调用领域模型，不写基础设施细节）
-- Fz.Dms.Infrastructure：基础设施（数据库/ORM、外部服务、消息、文件、第三方 SDK 实现）
+- Fz.Dms.Infrastructure：基础设施（数据库/ORM、外部服务、消息、文件、第三方 SDK 实现；允许作为非 Core/Domain/Web 的第三方依赖封装承载层，先以文件夹分区，后续复杂度上来再拆分）
 - Fz.Dms.Web：表现层（HTTP API / MVC / Minimal API、DTO、鉴权、输入输出、异常到 HTTP 映射）
 - Fz.Dms.Core：核心抽象与契约（跨层的接口、领域/应用需要的抽象、通用基类/Result 等）
 - Fz.Dms.Common：通用工具（扩展方法、通用帮助类、常量等；避免塞业务逻辑）
@@ -43,24 +42,20 @@
 3) 提供必要的单元测试建议（至少给出测试点/边界条件）
 
 ## 项目指南
-
 - For temporary data import endpoints in this repository, prefer using the built-in `ExcelHelper` to map uploaded files into classes, and perform direct database updates in the controller via `[FromServices]`-injected DbContext instead of adding repository methods.
 
 ## Git 操作指南
 
 ### 基本原则
-
 - 不要在用户未明确要求的情况下主动执行 `git commit`、`git push`、`git reset --hard`、`git clean` 等会改变仓库状态或远端状态的操作。
 - 执行或建议执行 `git commit`、`git push` 前，必须先检查本次改动中是否包含敏感信息。
 - 提交前应尽量保证改动范围清晰、职责单一，避免把无关修改混在同一次提交中。
 - 生成提交信息时，应根据当前 Git 用户决定提交语言。
 
 ### 敏感信息检查
-
 在执行或建议执行 `git commit`、`git push` 前，必须检查暂存区和本次改动中是否包含敏感信息。
 
 重点检查内容包括但不限于：
-
 - 密码、Token、API Key、Secret Key、Access Key
 - 数据库连接字符串、Redis 连接字符串、MQ 连接字符串
 - 私钥、证书、`.pfx`、`.pem`、`.key` 等文件或内容
@@ -70,22 +65,12 @@
 - `.env`、`appsettings.Production.json`、`appsettings.*.json` 中的敏感配置
 - 临时调试日志中打印的业务数据或凭据
 
-建议检查命令：
-
-```bash
-git diff --cached
+建议检查命令：git diff --cached
 git diff
 git status --short
-```
-
 必要时可结合关键词搜索：
-
-```bash
 git diff --cached | grep -Ei "password|passwd|pwd|token|secret|apikey|api_key|accesskey|access_key|connectionstring|authorization|bearer|private key"
-```
-
 规则如下：
-
 - 如果发现明确的敏感信息，必须停止提交或推送，并提醒用户移除、脱敏或改用安全配置方式。
 - 如果发现疑似敏感信息，不能自行判断为安全，必须交给用户手动确认是否一定要提交。
 - 如果用户明确确认要提交疑似敏感信息，应在回复中说明风险，并优先建议改为配置项、环境变量、密钥管理服务或本地未跟踪文件。
@@ -94,53 +79,25 @@ git diff --cached | grep -Ei "password|passwd|pwd|token|secret|apikey|api_key|ac
 - 敏感信息检查通过后，才可以继续生成 commit message、执行 commit 或建议 push。
 
 ### Git 用户与提交语言
-
-提交代码或生成 commit message 时，先判断当前 Git 用户：
-
-```bash
-git config --get user.name
-```
-
+提交代码或生成 commit message 时，先判断当前 Git 用户：git config --get user.name
 规则如下：
-
 - 如果 Git 用户是 `ms27946`，commit message 使用英文。
 - 否则视为公司账户，commit message 使用中文。
 - 如果无法确认 Git 用户，不要猜测；应提醒用户确认或手动提供提交语言。
 
 ### Commit Message 格式
-
-提交信息统一使用以下格式：
-
-```text
-<type>: <summary>
-```
-
-允许在必要时添加 scope：
-
-```text
-<type>(<scope>): <summary>
-```
-
+提交信息统一使用以下格式：<type>: <summary>允许在必要时添加 scope：<type>(<scope>): <summary>
 示例：
-
-```text
 feat: add temporary data import endpoint
 fix: correct order status mapping
 opt: improve Excel import performance
 refactor: simplify domain validation logic
-```
-
 中文示例：
-
-```text
 feat: 新增临时数据导入接口
 fix: 修复订单状态映射错误
 opt: 优化 Excel 导入性能
 refactor: 简化领域校验逻辑
-```
-
 ### 常用提交类型
-
 - `feat`: 新功能
 - `fix`: 缺陷修复
 - `opt`: 优化，包括性能优化、体验优化、代码局部改进
@@ -151,28 +108,17 @@ refactor: 简化领域校验逻辑
 - `chore`: 构建、配置、依赖、脚手架等非业务修改
 
 ### 提交信息要求
-
 - summary 使用简洁的一句话描述本次提交的核心改动。
 - 不要使用含糊描述，例如 `update code`、`fix bug`、`修改问题`。
 - 不要在提交信息中加入无关信息，例如工具署名、聊天记录、临时说明。
 - 如果一次改动包含多个不相关目的，应建议拆分为多个提交。
 
 ### 语言示例
-
-当 Git 用户为 `ms27946`：
-
-```text
-feat: add customer import validation
+当 Git 用户为 `ms27946`：feat: add customer import validation
 fix: resolve duplicate order creation
 opt: reduce database queries during import
 refactor: extract order status conversion logic
-```
-
-当 Git 用户不是 `ms27946`：
-
-```text
-feat: 新增客户导入校验
+当 Git 用户不是 `ms27946`：feat: 新增客户导入校验
 fix: 修复重复创建订单问题
 opt: 减少导入过程中的数据库查询
 refactor: 抽取订单状态转换逻辑
-```

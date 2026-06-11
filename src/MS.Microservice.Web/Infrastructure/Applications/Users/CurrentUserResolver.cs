@@ -1,8 +1,8 @@
-using IdentityModel;
 using Microsoft.AspNetCore.Http;
 using MS.Microservice.Core;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
+using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Services.Interfaces;
 using System;
 using System.Linq;

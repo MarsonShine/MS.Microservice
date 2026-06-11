@@ -1,6 +1,6 @@
 ﻿using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
-using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

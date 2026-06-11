@@ -2,6 +2,7 @@
 {
     public class JwtClaimTypes
     {
+        public const string AuthenticationMethod = "amr";
         public const string Id = "id";
         public const string PlatformId = "platformId";
         public const string NickName = "nickname";
