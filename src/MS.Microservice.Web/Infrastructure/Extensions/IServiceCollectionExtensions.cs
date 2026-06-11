@@ -140,9 +140,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             {
                 //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
                 //services.AddSqlSugarService(configuration);
-                var connectionString = configuration.GetConnectionString("ActivationConnection")!;
-                services.AddEntityFrameworkNpgSql(connectionString);
-                services.AddPostgresEventSourcing(connectionString);
+                services.AddInfrastructure(configuration);
                 services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
                 services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();
 
