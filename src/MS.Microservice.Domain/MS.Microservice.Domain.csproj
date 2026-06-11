@@ -3,10 +3,6 @@
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Identity\SignInManager.cs" />
-    <Compile Remove="Identity\Token\BearerTokenGenerator.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
   </ItemGroup>
 </Project>

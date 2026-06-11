@@ -5,7 +5,6 @@
 	<ItemGroup>
 		<Compile Remove="Entity\**" />
 		<Compile Remove="EventEntity\**" />
-		<Compile Remove="FeatureManager\FeatureToggleAttribute.cs" />
 		<Compile Remove="Repository\**" />
 		<EmbeddedResource Remove="Entity\**" />
 		<EmbeddedResource Remove="EventEntity\**" />

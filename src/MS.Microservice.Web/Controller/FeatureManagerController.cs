@@ -1,42 +1,41 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using MS.Microservice.Core.FeatureManager;
+using MS.Microservice.Web.Application.FeatureManager;
 
-namespace MS.Microservice.Web.Controller
+namespace MS.Microservice.Web.Controller;
+
+[Route("api/[controller]")]
+[ApiController]
+public class FeatureManagerController(FeatureToggleManager featureToggleManager, ILogger<FeatureManagerController> logger) : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class FeatureManagerController(FeatureToggleManager featureToggleManager, ILogger<FeatureManagerController> logger) : ControllerBase
-    {
-        private readonly FeatureToggleManager _featureToggleManager = featureToggleManager;
-        private readonly ILogger<FeatureManagerController> logger = logger;
+    private readonly FeatureToggleManager _featureToggleManager = featureToggleManager;
+    private readonly ILogger<FeatureManagerController> logger = logger;
 
-        /// <summary>
-        /// 测试特性开关
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet("action-method")]
-        public IActionResult ActionMethod()
+    /// <summary>
+    /// 测试特性开关
+    /// </summary>
+    /// <returns></returns>
+    [HttpGet("action-method")]
+    public IActionResult ActionMethod()
+    {
+        logger.LogInformation("Checking feature toggle 'EnableActionMethod'");
+        if (_featureToggleManager.IsEnabled("EnableActionMethod"))
         {
-            logger.LogInformation("Checking feature toggle 'EnableActionMethod'");
-            if (_featureToggleManager.IsEnabled("EnableActionMethod"))
-            {
-                return Ok("ActionMethod is enabled and executed.");
-            }
-            else
-            {
-                return Forbid();
-            }
+            return Ok("ActionMethod is enabled and executed.");
         }
-        /// <summary>
-        /// 测试特性开关
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet("new-feature")]
-        [FeatureToggle("EnableActionMethod")]
-        public IActionResult NewFeature()
+        else
         {
-            return Ok("NewFeature is enabled and executed.");
+            return Forbid();
         }
+    }
+    /// <summary>
+    /// 测试特性开关
+    /// </summary>
+    /// <returns></returns>
+    [HttpGet("new-feature")]
+    [FeatureToggle("EnableActionMethod")]
+    public IActionResult NewFeature()
+    {
+        return Ok("NewFeature is enabled and executed.");
     }
 }

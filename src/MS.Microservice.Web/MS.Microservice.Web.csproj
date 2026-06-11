@@ -18,11 +18,6 @@
     <None Remove="BackgroundWork\**" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\MS.Microservice.Core\FeatureManager\FeatureToggleAttribute.cs" Link="Application\FeatureManager\FeatureToggleAttribute.cs" />
-    <Compile Include="..\MS.Microservice.Domain\Identity\SignInManager.cs" Link="Application\Identity\SignInManager.cs" />
-    <Compile Include="..\MS.Microservice.Domain\Identity\Token\BearerTokenGenerator.cs" Link="Application\Identity\Token\BearerTokenGenerator.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="Dapper.SqlBuilder" />
