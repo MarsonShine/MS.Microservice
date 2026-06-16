@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MS.Microservice.Domain;
 using MS.Microservice.Infrastructure.DbContext;
+using MS.Microservice.Infrastructure.Messaging;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -58,6 +61,8 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 services.AddInfrastructurePersistence(configuration);
                 services.AddInfrastructureEventSourcing(configuration);
+                services.TryAddScoped<IDomainEventDispatcher, WolverineDomainEventDispatcher>();
+                services.TryAddScoped<IIntegrationEventPublisher, WolverineIntegrationEventPublisher>();
                 services.AddInfrastructureTelemetry();
             }
 

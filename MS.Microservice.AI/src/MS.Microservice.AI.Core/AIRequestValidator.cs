@@ -4,7 +4,7 @@ namespace MS.Microservice.AI.Core;
 
 internal static class AIRequestValidator
 {
-    public static void ValidateChatRequest(AIChatRequest request)
+    public static void ValidateChatRequest(AIChatRequest request, AIPayloadLimitOptions? payloadLimits = null, bool isStreaming = false)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -27,9 +27,12 @@ internal static class AIRequestValidator
             }
         }
 
+        var maxCharacters = isStreaming ? payloadLimits?.MaxStreamingChatCharacters : payloadLimits?.MaxChatCharacters;
+        ValidateCharacterLimit(request.Messages.Sum(message => message.Content.Length), maxCharacters, "AI chat request content");
+
         if (request.Temperature is < 0 or >= 2)
         {
-            throw new AIConfigurationException("AI chat request temperature must be within [0, 2)." );
+            throw new AIConfigurationException("AI chat request temperature must be within [0, 2).");
         }
 
         if (request.TopP is <= 0 or > 1)
@@ -63,7 +66,7 @@ internal static class AIRequestValidator
         }
     }
 
-    public static void ValidateTtsRequest(AITtsRequest request)
+    public static void ValidateTtsRequest(AITtsRequest request, AIPayloadLimitOptions? payloadLimits = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -72,6 +75,7 @@ internal static class AIRequestValidator
             throw new AIConfigurationException("AI TTS request must include non-empty input text.");
         }
 
+        ValidateCharacterLimit(request.Input.Length, payloadLimits?.MaxTextCharacters, "AI TTS request input");
         ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
 
         if (request.Voice is not null && string.IsNullOrWhiteSpace(request.Voice))
@@ -92,10 +96,11 @@ internal static class AIRequestValidator
         ValidateTimeout(request.Timeout);
     }
 
-    public static void ValidateAsrRequest(AIAsrRequest request)
+    public static void ValidateAsrRequest(AIAsrRequest request, AIPayloadLimitOptions? payloadLimits = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateBinaryContent(request.Audio, "AI ASR request audio");
+        ValidateByteLimit(request.Audio.Content.LongLength, payloadLimits?.MaxAudioBytes, "AI ASR request audio");
         ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
 
         if (request.Language is not null && string.IsNullOrWhiteSpace(request.Language))
@@ -116,7 +121,7 @@ internal static class AIRequestValidator
         ValidateTimeout(request.Timeout);
     }
 
-    public static void ValidateImageGenerationRequest(AIImageGenerationRequest request)
+    public static void ValidateImageGenerationRequest(AIImageGenerationRequest request, AIPayloadLimitOptions? payloadLimits = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -125,11 +130,12 @@ internal static class AIRequestValidator
             throw new AIConfigurationException("AI image generation request must include a prompt.");
         }
 
+        ValidateCharacterLimit(request.Prompt.Length, payloadLimits?.MaxImagePromptCharacters, "AI image generation request prompt");
         ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
         ValidateImageRequestFields(request.Count, request.Size, request.Quality, request.ResponseFormat, request.Timeout);
     }
 
-    public static void ValidateImageEditRequest(AIImageEditRequest request)
+    public static void ValidateImageEditRequest(AIImageEditRequest request, AIPayloadLimitOptions? payloadLimits = null)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -138,14 +144,34 @@ internal static class AIRequestValidator
             throw new AIConfigurationException("AI image edit request must include a prompt.");
         }
 
+        ValidateCharacterLimit(request.Prompt.Length, payloadLimits?.MaxImagePromptCharacters, "AI image edit request prompt");
         ValidateBinaryContent(request.Image, "AI image edit request image");
+        ValidateByteLimit(request.Image.Content.LongLength, payloadLimits?.MaxImageBytes, "AI image edit request image");
+
         if (request.Mask is not null)
         {
             ValidateBinaryContent(request.Mask, "AI image edit request mask");
+            ValidateByteLimit(request.Mask.Content.LongLength, payloadLimits?.MaxImageMaskBytes, "AI image edit request mask");
         }
 
         ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);
         ValidateImageRequestFields(request.Count, request.Size, request.Quality, request.ResponseFormat, request.Timeout);
+    }
+
+    private static void ValidateCharacterLimit(int length, int? maxLength, string fieldName)
+    {
+        if (maxLength is not null && length > maxLength.Value)
+        {
+            throw new AIConfigurationException($"{fieldName} exceeds the configured limit of {maxLength.Value} characters.");
+        }
+    }
+
+    private static void ValidateByteLimit(long length, long? maxLength, string fieldName)
+    {
+        if (maxLength is not null && length > maxLength.Value)
+        {
+            throw new AIConfigurationException($"{fieldName} exceeds the configured limit of {maxLength.Value} bytes.");
+        }
     }
 
     private static void ValidateImageRequestFields(int? count, string? size, string? quality, string? responseFormat, TimeSpan? timeout)

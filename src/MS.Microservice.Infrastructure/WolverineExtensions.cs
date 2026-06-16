@@ -11,18 +11,20 @@ namespace MS.Microservice.Infrastructure
             public async Task DispatchDomainEventsAsync(ActivationDbContext ctx)
             {
                 var domainEntities = ctx.ChangeTracker
-                    .Entries<Entity>()
-                    .Where(x => x.Entity.DomainEvents.Count != 0);
-
-                var domainEvents = domainEntities
-                    .SelectMany(x => x.Entity.DomainEvents)
+                    .Entries()
+                    .Select(entry => entry.Entity)
+                    .OfType<IHasDomainEvents>()
+                    .Where(entity => entity.DomainEvents.Count != 0)
                     .ToList();
 
-                domainEntities.ToList()
-                    .ForEach(entity => entity.Entity.ClearDomainEvents());
+                var domainEvents = domainEntities
+                    .SelectMany(entity => entity.DomainEvents)
+                    .ToList();
 
                 foreach (var domainEvent in domainEvents)
                     await messageBus.PublishAsync(domainEvent);
+
+                domainEntities.ForEach(entity => entity.ClearDomainEvents());
             }
         }
     }

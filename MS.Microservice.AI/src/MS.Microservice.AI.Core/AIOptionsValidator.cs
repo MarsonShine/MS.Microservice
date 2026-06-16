@@ -32,6 +32,11 @@ public sealed class AIOptionsValidator : IValidateOptions<AIOptions>
             {
                 failures.Add($"AI:Providers:{provider.Key}:ConcurrencyLimit must be greater than 0.");
             }
+
+            if (provider.Value.ApiKeySecretName is not null && string.IsNullOrWhiteSpace(provider.Value.ApiKeySecretName))
+            {
+                failures.Add($"AI:Providers:{provider.Key}:ApiKeySecretName cannot be empty when provided.");
+            }
         }
 
         foreach (var model in options.Models.Chat)

@@ -7,12 +7,12 @@ using System.Text.Json.Serialization;
 namespace MS.Microservice.Domain
 {
     /// <summary>
-    /// Marker interface for domain events (used with Wolverine)
+    /// Marker interface for domain events.
     /// </summary>
     public interface IDomainEvent { }
 
     [Serializable]
-    public abstract class Entity : IEntity
+    public abstract class Entity : IEntity, IHasDomainEvents
     {
         public abstract object[] GetKeys();
         public bool EntityEquals(IEntity other)

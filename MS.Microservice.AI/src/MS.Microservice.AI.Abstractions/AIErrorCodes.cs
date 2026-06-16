@@ -25,6 +25,9 @@ public static class AIErrorCodes
     /// <summary>The provider throttled the request (HTTP 429).</summary>
     public const string RateLimited = "rate_limited";
 
+    /// <summary>The local circuit breaker rejected the request before provider invocation.</summary>
+    public const string CircuitOpen = "circuit_open";
+
     /// <summary>The request or response was filtered by the provider's content safety policy.</summary>
     public const string ContentFiltered = "content_filtered";
 
