@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using MS.Microservice.Infrastructure.DbContext;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -19,7 +20,12 @@ namespace Microsoft.Extensions.DependencyInjection
             // -----------------------------------------------------------------------
             public void AddInfrastructurePersistence(IConfiguration configuration)
             {
-                var connectionString = configuration.GetConnectionString("ActivationConnection")!;
+                services.AddOptions<MsPlatformDbContextSettings>()
+                    .Bind(configuration.GetSection(MsPlatformDbContextSettings.SectionName))
+                    .Validate(options => options.AutoTimeTracker is "Enabled" or "Disabled", "FzPlatformDbContextSettings:AutoTimeTracker must be Enabled or Disabled.")
+                    .ValidateOnStart();
+
+                var connectionString = GetRequiredConnectionString(configuration, "ActivationConnection");
                 services.AddEntityFrameworkNpgSql(connectionString);
             }
 
@@ -30,7 +36,7 @@ namespace Microsoft.Extensions.DependencyInjection
             // -----------------------------------------------------------------------
             public void AddInfrastructureEventSourcing(IConfiguration configuration)
             {
-                var connectionString = configuration.GetConnectionString("ActivationConnection")!;
+                var connectionString = GetRequiredConnectionString(configuration, "ActivationConnection");
                 services.AddPostgresEventSourcing(connectionString);
             }
 
@@ -53,6 +59,17 @@ namespace Microsoft.Extensions.DependencyInjection
                 services.AddInfrastructurePersistence(configuration);
                 services.AddInfrastructureEventSourcing(configuration);
                 services.AddInfrastructureTelemetry();
+            }
+
+            private static string GetRequiredConnectionString(IConfiguration configuration, string name)
+            {
+                var connectionString = configuration.GetConnectionString(name);
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new InvalidOperationException($"ConnectionStrings:{name} is required.");
+                }
+
+                return connectionString;
             }
         }
     }

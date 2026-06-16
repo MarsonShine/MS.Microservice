@@ -23,7 +23,7 @@ namespace MS.Microservice.Web.Infrastructure.Mvc.ModelBinder
             if (loggerFactory == null) throw new ArgumentNullException(nameof(loggerFactory));
             _logger = loggerFactory.CreateLogger<ApiDecryptModelBinder>();
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            _rsaPrivateKey = configuration["ApiEncryptOptions:PrivateKey"]!;
+            _rsaPrivateKey = configuration["ApiEncryptOptions:PrivateKey"] ?? string.Empty;
         }
 
         public async Task BindModelAsync(ModelBindingContext bindingContext)
@@ -51,6 +51,10 @@ namespace MS.Microservice.Web.Infrastructure.Mvc.ModelBinder
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 });
                 if (model == null) throw new ArgumentNullException(nameof(model)); ;
+                if (string.IsNullOrWhiteSpace(_rsaPrivateKey))
+                {
+                    throw new InvalidOperationException("ApiEncryptOptions:PrivateKey is required when API decrypt model binding is enabled.");
+                }
 
                 //解密
                 var desKey = CryptologyHelper.RsaCrypt.Decrypt(model.Key!, privateKey: _rsaPrivateKey, Encoding.ASCII);

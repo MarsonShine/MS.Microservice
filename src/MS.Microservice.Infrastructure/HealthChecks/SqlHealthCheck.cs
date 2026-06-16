@@ -13,10 +13,17 @@ namespace MS.Microservice.Infrastructure.HealthChecks
         private readonly string _connectionString;
         public SqlHealthCheck(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("Default")!;
+            _connectionString = configuration.GetConnectionString("Default")
+                ?? configuration.GetConnectionString("ActivationConnection")
+                ?? string.Empty;
         }
         public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
         {
+            if (string.IsNullOrWhiteSpace(_connectionString))
+            {
+                return HealthCheckResult.Unhealthy("ConnectionStrings:Default or ConnectionStrings:ActivationConnection is required.");
+            }
+
             try
             {
                 using var sqlConnection = new MySqlConnection(_connectionString);

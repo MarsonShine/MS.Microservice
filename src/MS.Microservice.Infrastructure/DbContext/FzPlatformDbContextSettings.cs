@@ -2,6 +2,8 @@
 {
     public class MsPlatformDbContextSettings
     {
+        public const string SectionName = "FzPlatformDbContextSettings";
+
         /// <summary>
         /// 自动开启时间追踪，实体更新时，自动更新时间字段，详见<see cref="ICreatedAt"/>以及<seealso cref="IUpdatedAt"/>
         /// </summary>

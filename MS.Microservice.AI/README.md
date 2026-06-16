@@ -174,5 +174,7 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
 ### Current Scope
 
 - Implemented: chat/completion, streaming SSE parsing, TTS, ASR, image generation, image edit, timeout, retry, provider-neutral errors, model routing, provider validation, DI, and offline unit tests.
+- Production readiness already covered: `HttpClientFactory`, provider/model timeout, exponential retry with `Retry-After`, provider concurrency limit, streaming cancellation, token usage mapping, provider-neutral error classification, Activity tracing, and provider capability validation.
+- Production readiness still planned: quota-aware rate limiting, circuit breaker policy hooks, prompt/response log redaction, Secret Provider integration, audio/image payload limits, and cost accounting hooks.
 - Current constraint: DeepSeek remains chat-only and is explicitly blocked for TTS, ASR, image generation, and image edit configuration.
-- Planned next: richer observability, provider-specific advanced parameters, and optional Agent Framework integration on top of this provider gateway layer.
+- Planned next: richer observability, provider-specific advanced parameters, and optional Agent Framework integration on top of this provider gateway layer. See `../docs/framework-optimization-roadmap.md`.

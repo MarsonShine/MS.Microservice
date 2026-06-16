@@ -7,6 +7,8 @@ using NLog.Config;
 using NLog.Targets;
 using Xunit;
 
+using System.IO;
+
 namespace MS.Microservice.Logging.NLog.Tests;
 
 public sealed class MsNLogProviderTests : IDisposable
@@ -25,6 +27,26 @@ public sealed class MsNLogProviderTests : IDisposable
 
         global::NLog.LogManager.Configuration.Should().NotBeNull();
         global::NLog.LogManager.Configuration!.AllTargets.Should().ContainSingle(target => target.Name == "console");
+    }
+
+    [Fact]
+    public void ConfigureMsNLog_ShouldLoadSampleConfig_WithAspNetRequestRenderers()
+    {
+        var sampleConfigPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "src", "MS.Microservice.Logging.NLog", "nlog.sample.config"));
+
+        var builder = Host.CreateApplicationBuilder();
+
+        var act = () => builder.ConfigureMsNLog(options =>
+        {
+            options.ConfigurationFilePath = sampleConfigPath;
+            options.UseFallbackConfigurationWhenFileMissing = false;
+        });
+
+        act.Should().NotThrow();
+        global::NLog.LogManager.Configuration.Should().NotBeNull();
     }
 
     [Fact]

@@ -1,0 +1,39 @@
+name: dotnet-ci
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal
+
+      - name: Publish Web
+        run: dotnet publish src/MS.Microservice.Web/MS.Microservice.Web.csproj --no-build -c Release -o artifacts/publish/web
+
+      - name: Vulnerable Packages
+        run: dotnet list package --vulnerable --include-transitive

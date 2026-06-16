@@ -4,6 +4,8 @@ namespace MS.Microservice.Web.Infrastructure.Cors
 {
     public class CorsOptions
     {
+        public const string SectionName = "CorsOptions";
+
         public bool IsEnabled { get; set; }
         public string PolicyName { get; set; } = "MS.Microservice.Web";
 		public string[] Origins { get; set; } = [];

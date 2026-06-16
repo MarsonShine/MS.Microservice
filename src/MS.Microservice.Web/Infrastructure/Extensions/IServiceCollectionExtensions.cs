@@ -11,6 +11,7 @@ using Microsoft.Extension.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.Core.Ceching;
 using MS.Microservice.Core.Identity;
@@ -24,7 +25,6 @@ using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Web.Infrastructure.Filters;
-using MS.Microservice.Web.Infrastructure.LogUtils.Nlog;
 using MS.Microservice.Swagger;
 
 namespace MS.Microservice.Web.Infrastructure.Extensions
@@ -35,12 +35,6 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
         {
             public IServiceCollection AddCoreServices([NotNull] IConfiguration configuration)
             {
-                services.AddMSLoggerService().WithNLogger(cfg =>
-                {
-                    // 可从配置读取最小级别等，也可以保持默认
-                    cfg.LogLevel = configuration["Logging:LogLevel:Default"] ?? cfg.LogLevel;
-                }); // NLog日志
-
                 services
                     .AddCustomMvc(configuration)
                     .AddHealthChecks(configuration)
@@ -67,14 +61,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     // options.JsonSerializerOptions.Converters.Add(new MyCustomJsonConverter());
                 });
 
-                services.AddCorsService(option =>
-                {
-                    var cors = configuration.GetSection("CorsOptions").Get<CorsOptions>() ?? throw new ArgumentException(nameof(CorsOptions));
-                    option.IsEnabled = cors.IsEnabled;
-                    option.PolicyName = cors.PolicyName;
-                    option.Origins = cors.Origins;
-                    option.IsAllCors = cors.IsAllCors;
-                });
+                services.AddCorsService(configuration);
 
 #if NET9_0_OR_GREATER
                 services.AddHybridCache();
@@ -101,13 +88,18 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 return services;
             }
 
-            public void AddCorsService(Action<CorsOptions> config)
+            public void AddCorsService(IConfiguration configuration)
             {
-                ArgumentNullException.ThrowIfNull(config);
-                services.Configure(config);
+                ArgumentNullException.ThrowIfNull(configuration);
 
-                var option = new CorsOptions();
-                config.Invoke(option);
+                var section = configuration.GetSection(CorsOptions.SectionName);
+                services.AddOptions<CorsOptions>()
+                    .Bind(section)
+                    .Validate(option => !option.IsEnabled || !string.IsNullOrWhiteSpace(option.PolicyName), "CorsOptions:PolicyName is required when CORS is enabled.")
+                    .Validate(option => !option.IsEnabled || option.IsAllCors || option.Origins.Length > 0, "CorsOptions:Origins must be configured when CORS is enabled and IsAllCors is false.")
+                    .ValidateOnStart();
+
+                var option = section.Get<CorsOptions>() ?? new CorsOptions();
                 if (option.IsEnabled)
                 {
                     string policyName = option.PolicyName;
@@ -115,14 +107,20 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     {
                         options.AddPolicy(policyName, builder =>
                         {
-                            builder.AllowAnyOrigin()
-                                .WithOrigins(option.Origins)
+                            if (option.IsAllCors)
+                            {
+                                builder.AllowAnyOrigin();
+                            }
+                            else
+                            {
+                                builder.WithOrigins(option.Origins);
+                            }
+
+                            builder
                                 .AllowAnyMethod()
                                 //.AllowCredentials()
                                 .AllowAnyHeader()
                                 .SetPreflightMaxAge(TimeSpan.FromSeconds(1728000));
-                            //通过配置设置是否允许全部来源跨域  CORE 2.1之后不允许AllowAnyOrigin和AllowCredentials同时使用必须指定 origin 来源                        
-                            builder.SetIsOriginAllowed(origin => option.IsAllCors);
                         });
                     });
                 }
@@ -151,14 +149,14 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             {
                 services.AddOptions();
 
-                services.Configure<MsPlatformDbContextSettings>(option =>
-                {
-                    var setting = configuration.Get<MsPlatformDbContextSettings>() ?? throw new ArgumentException(nameof(MsPlatformDbContextSettings));
-                    option.AutoTimeTracker = setting.AutoTimeTracker;
-                    option.EnabledSoftDeleted = setting.EnabledSoftDeleted;
-                });
-                // ...这里添加Option配置
-                services.Configure<IdentityOptions>(configuration.GetSection(IdentityOptions.Name));
+                services.AddOptions<IdentityOptions>()
+                    .Bind(configuration.GetSection(IdentityOptions.Name))
+                    .Validate(options => options.JwtBearerOption is not null, "IdentityOptions:JwtBearerOption is required.")
+                    .Validate(options => options.JwtBearerOption?.Audiences?.Length > 0, "IdentityOptions:JwtBearerOption:Audiences is required.")
+                    .Validate(options => options.JwtBearerOption?.Issuers?.Length > 0, "IdentityOptions:JwtBearerOption:Issuers is required.")
+                    .Validate(options => options.JwtBearerOption?.SecurityKeys?.Length > 0, "IdentityOptions:JwtBearerOption:SecurityKeys is required.")
+                    .ValidateOnStart();
+
                 return services;
             }
 
@@ -173,10 +171,14 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
             public IServiceCollection AddCustomAuthentication(IConfiguration configuration)
             {
+                var jwtBearerOption = GetRequiredJwtBearerOption(configuration);
+                var audiences = GetRequiredValues(jwtBearerOption.Audiences, "IdentityOptions:JwtBearerOption:Audiences");
+                var issuers = GetRequiredValues(jwtBearerOption.Issuers, "IdentityOptions:JwtBearerOption:Issuers");
+                var securityKeys = GetRequiredValues(jwtBearerOption.SecurityKeys, "IdentityOptions:JwtBearerOption:SecurityKeys");
+
                 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
-                        var jwtBearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
                         options.SaveToken = true;
                         options.RequireHttpsMetadata = false;
 
@@ -185,32 +187,57 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                         {
                             ValidateIssuerSigningKey = true,
                             ValidateAudience = true,
-                            ValidAudiences = jwtBearerOption.Audiences,
+                            ValidAudiences = audiences,
                             ValidateLifetime = true,
                             ValidateIssuer = true,
-                            ValidIssuers = jwtBearerOption.Issuers,
+                            ValidIssuers = issuers,
                             ClockSkew = System.TimeSpan.Zero,
                             RequireExpirationTime = true,
                             NameClaimType = JwtClaimTypes.NickName,
                             RoleClaimType = JwtClaimTypes.Role,
                         };
-                        if (jwtBearerOption.SecurityKeys?.Length > 0)
-                        {
-                            var securityKeys = jwtBearerOption.SecurityKeys
-                                .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
-                            options.TokenValidationParameters.IssuerSigningKeys = securityKeys;
-                        }
+                        options.TokenValidationParameters.IssuerSigningKeys = securityKeys
+                            .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
                     });
                 services.AddAuthorization(option =>
                 {
-                    var bearerOption = configuration.GetSection("IdentityOptions:JwtBearerOption").Get<ActivationJwtBearerOption>() ?? throw new ArgumentException(nameof(ActivationJwtBearerOption));
                     // TODO
-                    option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(bearerOption.Issuers!, ClaimTypes.Role, "")));
+                    option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(issuers, ClaimTypes.Role, "")));
                 });
 
                 services.AddSingleton<IAuthorizationHandler, RbacAuthorizationHandler>();
 
                 return services;
+            }
+
+            private static ActivationJwtBearerOption GetRequiredJwtBearerOption(IConfiguration configuration)
+            {
+                var option = configuration
+                    .GetSection($"{IdentityOptions.Name}:JwtBearerOption")
+                    .Get<ActivationJwtBearerOption>();
+
+                if (option is null)
+                {
+                    throw new OptionsValidationException(
+                        nameof(ActivationJwtBearerOption),
+                        typeof(ActivationJwtBearerOption),
+                        ["IdentityOptions:JwtBearerOption is required."]);
+                }
+
+                return option;
+            }
+
+            private static string[] GetRequiredValues(string[]? values, string configurationPath)
+            {
+                if (values is null || values.Length == 0)
+                {
+                    throw new OptionsValidationException(
+                        configurationPath,
+                        typeof(string[]),
+                        [$"{configurationPath} is required."]);
+                }
+
+                return values;
             }
         }
     }

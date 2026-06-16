@@ -12,7 +12,7 @@ namespace MS.Microservice.Infrastructure
             {
                 var domainEntities = ctx.ChangeTracker
                     .Entries<Entity>()
-                    .Where(x => x.Entity.DomainEvents != null && x.Entity.DomainEvents.Count != 0);
+                    .Where(x => x.Entity.DomainEvents.Count != 0);
 
                 var domainEvents = domainEntities
                     .SelectMany(x => x.Entity.DomainEvents)

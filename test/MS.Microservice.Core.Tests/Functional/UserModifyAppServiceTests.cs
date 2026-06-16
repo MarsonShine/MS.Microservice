@@ -22,6 +22,26 @@ namespace MS.Microservice.Core.Tests.Functional
 {
     public class UserModifyAppServiceTests
     {
+        private sealed class PersistedUser : User
+        {
+            public PersistedUser(int id)
+                : base(
+                    account: "demo-account",
+                    password: "old-password",
+                    salt: "salt-value",
+                    isDisabled: false,
+                    telephone: "13800138000",
+                    creatorId: 1,
+                    updatorId: 1,
+                    email: "demo@example.com",
+                    name: "原用户",
+                    fzAccount: string.Empty,
+                    fzId: string.Empty)
+            {
+                Id = id;
+            }
+        }
+
         [Fact]
         public async Task ModifyAsync_WhenPipelineIsValid_ReturnsSuccess()
         {
@@ -33,21 +53,7 @@ namespace MS.Microservice.Core.Tests.Functional
             userDomainService.GetAllRolesAsync(Arg.Any<CancellationToken>())
                 .Returns([new Role(1, "Admin", "管理员")]);
 
-            var existingUser = new User(
-                account: "demo-account",
-                password: "old-password",
-                salt: "salt-value",
-                isDisabled: false,
-                telephone: "13800138000",
-                creatorId: 1,
-                updatorId: 1,
-                email: "demo@example.com",
-                name: "原用户",
-                fzAccount: string.Empty,
-                fzId: string.Empty)
-            {
-                Id = 11
-            };
+            var existingUser = new PersistedUser(11);
 
             userDomainService.FindAsync("demo-account", Arg.Any<CancellationToken>())
                 .Returns(existingUser);

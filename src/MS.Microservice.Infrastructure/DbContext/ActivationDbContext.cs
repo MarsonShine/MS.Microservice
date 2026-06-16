@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -38,12 +39,12 @@ namespace MS.Microservice.Infrastructure.DbContext
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
 
         public ActivationDbContext(
-            DbContextOptions<ActivationDbContext> options,
-            IConfiguration configuration,
-            IMessageBus messageBus) : base(options)
+            DbContextOptions<ActivationDbContext> dbContextOptions,
+            IOptions<MsPlatformDbContextSettings> settingsOptions,
+            IMessageBus messageBus) : base(dbContextOptions)
         {
             _messageBus = messageBus ?? throw new ArgumentNullException(nameof(messageBus));
-            _platformDbContextOption = configuration.GetSection("FzPlatformDbContextSettings").Get<MsPlatformDbContextSettings>()!;
+            _platformDbContextOption = settingsOptions?.Value ?? throw new ArgumentNullException(nameof(settingsOptions));
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -166,12 +167,17 @@ namespace MS.Microservice.Infrastructure.DbContext
         public ActivationDbContext CreateDbContext(string[] args)
         {
             var configuration = BuildConfiguration();
-            var connectionString = configuration.GetConnectionString("ActivationConnection");
+            var connectionString = configuration.GetConnectionString("ActivationConnection")
+                ?? throw new InvalidOperationException("ConnectionStrings:ActivationConnection is required.");
             var builder = new DbContextOptionsBuilder<ActivationDbContext>()
                 //.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
                 .UseNpgsql(connectionString);
 
-            return new ActivationDbContext(builder.Options, configuration, new NoMessageBus());
+            var settings = configuration
+                .GetSection(MsPlatformDbContextSettings.SectionName)
+                .Get<MsPlatformDbContextSettings>() ?? new MsPlatformDbContextSettings();
+
+            return new ActivationDbContext(builder.Options, Options.Create(settings), new NoMessageBus());
         }
 
         private static IConfigurationRoot BuildConfiguration()

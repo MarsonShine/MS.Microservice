@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="NLog" />
     <PackageReference Include="NLog.Extensions.Logging" />
+    <PackageReference Include="NLog.Web.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Logging.Core\MS.Microservice.Logging.Core.csproj" />

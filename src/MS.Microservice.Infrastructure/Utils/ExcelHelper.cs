@@ -121,8 +121,9 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         var currentWorkbook = new XSSFWorkbook();
         var currentSheet = currentWorkbook.CreateSheet(sheetName);
         var meta = GetOrCreateTypeMeta(typeof(T));
+        var dateStyle = CreateDateCellStyle(currentWorkbook);
         SetExcelTitle(currentSheet, meta);
-        SetExcelBody(currentSheet, source, meta);
+        SetExcelBody(currentSheet, source, meta, dateStyle);
         return currentWorkbook;
     }
 
@@ -130,6 +131,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
     {
         var currentWorkbook = new XSSFWorkbook();
         var currentSheet = currentWorkbook.CreateSheet(sheetName);
+        var dateStyle = CreateDateCellStyle(currentWorkbook);
         IRow title = currentSheet.CreateRow(0);
         for (int i = 0; i < dt.Columns.Count; i++)
         {
@@ -149,7 +151,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     continue;
                 }
 
-                SetCellValue(row.CreateCell(j), value);
+                SetCellValue(row.CreateCell(j), value, dateStyle);
             }
         }
 
@@ -166,7 +168,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    private static void SetExcelBody<T>(ISheet sheet, IReadOnlyList<T> source, ExcelTypeMeta meta)
+    private static void SetExcelBody<T>(ISheet sheet, IReadOnlyList<T> source, ExcelTypeMeta meta, ICellStyle dateStyle)
     {
         if (source.Count == 0)
         {
@@ -186,7 +188,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     continue;
                 }
 
-                SetCellValue(row.CreateCell(j), val);
+                SetCellValue(row.CreateCell(j), val, dateStyle);
             }
         }
     }
@@ -526,12 +528,13 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     Property = property,
                     Attribute = property.GetCustomAttribute<ExcelColumnAttribute>(inherit: false)
                 })
-                .Where(item => item.Attribute != null)
-                .OrderBy(item => item.Attribute!.Order)
+                .Where(item => item.Attribute?.Ignore != true)
+                .OrderBy(item => item.Attribute?.Order ?? int.MaxValue)
+                .ThenBy(item => item.Property.MetadataToken)
                 .Select(item =>
                 {
                     var targetType = Nullable.GetUnderlyingType(item.Property.PropertyType) ?? item.Property.PropertyType;
-                    var columnName = item.Attribute!.Name?.Trim() ?? item.Property.Name;
+                    var columnName = item.Attribute?.Name?.Trim() ?? item.Property.Name;
                     var getter = ReflectionDelegateFactory.CreateGetter(item.Property);
                     var setter = ReflectionDelegateFactory.CreateSetter(item.Property);
                     var typeCode = Type.GetTypeCode(targetType);
@@ -627,6 +630,13 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                         value = cell.DateCellValue;
                         return true;
                     }
+
+                    if (DateUtil.IsValidExcelDate(numericValue))
+                    {
+                        value = DateUtil.GetJavaDate(numericValue);
+                        return true;
+                    }
+
                     return false; // let formatter handle it
                 }
 
@@ -862,7 +872,15 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    private static void SetCellValue(ICell cell, object value)
+    private static ICellStyle CreateDateCellStyle(IWorkbook workbook)
+    {
+        var style = workbook.CreateCellStyle();
+        var format = workbook.CreateDataFormat();
+        style.DataFormat = format.GetFormat("yyyy-mm-dd");
+        return style;
+    }
+
+    private static void SetCellValue(ICell cell, object value, ICellStyle? dateStyle = null)
     {
         switch (value)
         {
@@ -871,6 +889,10 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                 break;
             case DateTime dateTimeValue:
                 cell.SetCellValue(dateTimeValue);
+                if (dateStyle is not null)
+                {
+                    cell.CellStyle = dateStyle;
+                }
                 break;
             case bool boolValue:
                 cell.SetCellValue(boolValue);
