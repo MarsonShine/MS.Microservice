@@ -265,6 +265,9 @@ internal sealed class AIOptionsSecretPostConfigure(IAISecretProvider secretProvi
 
     /// <summary>
     /// Microsoft.Extensions.Options 会在 AIOptions 创建后调用该方法。
+    /// AIOptions 先从 appsettings.json / 环境变量 / Configure(...) 绑定。
+    /// 如果 Provider 已经有 ApiKey，就尊重已有配置。
+    /// 如果 Provider 没有 ApiKey，再通过 IAISecretProvider 补齐。
     /// </summary>
     /// <param name="name"></param>
     /// <param name="options"></param>
