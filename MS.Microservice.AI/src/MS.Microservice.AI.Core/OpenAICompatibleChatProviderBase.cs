@@ -11,7 +11,7 @@ using MS.Microservice.AI.Abstractions;
 
 namespace MS.Microservice.AI.Core;
 
-internal abstract class OpenAICompatibleChatProviderBase : IAIChatProvider
+internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvider
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
