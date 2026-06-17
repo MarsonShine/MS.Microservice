@@ -23,4 +23,7 @@
 <ProjectReference Include="..\..\src\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />
 <ProjectReference Include="..\..\src\MS.Microservice.Web\MS.Microservice.Web.csproj" />
 </ItemGroup>
+<ItemGroup>
+  <Folder Include="Web\Infrastructure\" />
+</ItemGroup>
 </Project>
