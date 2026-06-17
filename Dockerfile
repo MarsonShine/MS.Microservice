@@ -1,32 +1,31 @@
-#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-buster-slim AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
-
-FROM mcr.microsoft.com/dotnet/sdk:5.0-buster-slim AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["Directory.Build.props","src/"]
-COPY ["global.json","src/"]
-COPY ["MS.Microservice.sln","src/"]
-COPY ["nuget.config","src/"]
-COPY ["src/MS.Microservice.Web/MS.Microservice.Web.csproj", "src/MS.Microservice.Web/"]
-COPY ["src/MS.Microservice.IntegrateEvent/MS.Microservice.IntegrateEvent.csproj", "src/MS.Microservice.IntegrateEvent/"]
-COPY ["src/MS.Microservice.Database/MS.Microservice.Database.csproj", "src/MS.Microservice.Database/"]
-COPY ["src/MS.Microservice.Repostitory/MS.Microservice.Repostitory.csproj", "src/MS.Microservice.Repostitory/"]
-COPY ["src/MS.Microservice.Domain/MS.Microservice.Domain.csproj", "src/MS.Microservice.Domain/"]
-COPY ["src/MS.Microservice.Core/MS.Microservice.Core.csproj", "src/MS.Microservice.Core/"]
-RUN dotnet restore "src/MS.Microservice.Web/MS.Microservice.Web.csproj"
+
+COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
+COPY MS.Microservice.slnx ./
+
+COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Core/
+COPY src/MS.Microservice.Domain/MS.Microservice.Domain.csproj src/MS.Microservice.Domain/
+COPY src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj src/MS.Microservice.Infrastructure/
+COPY src/MS.Microservice.Web/MS.Microservice.Web.csproj src/MS.Microservice.Web/
+COPY MS.Microservice.Swagger/MS.Microservice.Swagger.csproj MS.Microservice.Swagger/
+COPY MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.Core/
+COPY MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/
+COPY MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/
+
+RUN dotnet restore src/MS.Microservice.Web/MS.Microservice.Web.csproj
+
 COPY . .
 
-WORKDIR "/src/src/MS.Microservice.Web"
-RUN dotnet build "MS.Microservice.Web.csproj" -c Release -o /app/build
+RUN dotnet publish src/MS.Microservice.Web/MS.Microservice.Web.csproj \
+    -c Release \
+    --no-restore \
+    -o /app/publish \
+    /p:UseAppHost=false
 
-FROM build AS publish
-RUN dotnet publish "MS.Microservice.Web.csproj" -c Release -o /app/publish
-
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "MS.Microservice.Web.dll"]

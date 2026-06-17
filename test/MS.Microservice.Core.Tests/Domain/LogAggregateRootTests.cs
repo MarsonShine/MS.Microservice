@@ -5,6 +5,15 @@ namespace MS.Microservice.Core.Tests.Domain
 {
     public class LogAggregateRootTests
     {
+        private sealed class PersistedLogAggregateRoot : LogAggregateRoot
+        {
+            public PersistedLogAggregateRoot(long id)
+                : base("evt", "method", LogEventTypeEnum.Create, "desc", "content", 1, "127.0.0.1", "phone")
+            {
+                Id = id;
+            }
+        }
+
         [Fact]
         public void Constructor_SetsAllProperties()
         {
@@ -57,8 +66,7 @@ namespace MS.Microservice.Core.Tests.Domain
         [Fact]
         public void IsTransient_WhenIdSet_ReturnsFalse()
         {
-            var log = new LogAggregateRoot("evt", "method", LogEventTypeEnum.Create, "desc", "content", 1, "127.0.0.1", "phone");
-            log.Id = 100L;
+            var log = new PersistedLogAggregateRoot(100L);
             Assert.False(log.IsTransient());
         }
     }

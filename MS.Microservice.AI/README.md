@@ -83,6 +83,7 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
     "Providers": {
       "OpenAI": {
         "ApiKey": "",
+        "ApiKeySecretName": "AI_OPENAI_API_KEY",
         "BaseAddress": "https://api.openai.com/v1/",
         "TimeoutSeconds": 100,
         "MaxRetryAttempts": 2,
@@ -158,6 +159,25 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
           "TimeoutSeconds": 90
         }
       }
+    },
+    "RateLimiting": {
+      "Enabled": false,
+      "RequestsPerWindow": 600,
+      "WindowSeconds": 60
+    },
+    "CircuitBreaker": {
+      "Enabled": false,
+      "FailureThreshold": 5,
+      "BreakDurationSeconds": 30
+    },
+    "PayloadLimits": {
+      "MaxChatCharacters": 200000,
+      "MaxStreamingChatCharacters": 200000,
+      "MaxTextCharacters": 100000,
+      "MaxAudioBytes": 26214400,
+      "MaxImagePromptCharacters": 20000,
+      "MaxImageBytes": 20971520,
+      "MaxImageMaskBytes": 20971520
     }
   }
 }
@@ -174,5 +194,7 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
 ### Current Scope
 
 - Implemented: chat/completion, streaming SSE parsing, TTS, ASR, image generation, image edit, timeout, retry, provider-neutral errors, model routing, provider validation, DI, and offline unit tests.
+- Production readiness already covered: `HttpClientFactory`, provider/model timeout, exponential retry with `Retry-After`, provider concurrency limit, streaming cancellation, token usage mapping, provider-neutral error classification, Activity tracing, provider capability validation, rate limiter abstraction, circuit breaker abstraction, log sanitizer, provider-neutral secret lookup, payload limits, and cost accounting hooks.
+- Production extension points: `IAIRateLimiter`, `IAICircuitBreaker`, `IAILogSanitizer`, `IAISecretProvider`, and `IAICostReporter` can be replaced by application hosts without changing provider code.
 - Current constraint: DeepSeek remains chat-only and is explicitly blocked for TTS, ASR, image generation, and image edit configuration.
-- Planned next: richer observability, provider-specific advanced parameters, and optional Agent Framework integration on top of this provider gateway layer.
+- Planned next: distributed quota/circuit state, real cost sinks, richer observability, provider-specific advanced parameters, and optional Agent Framework integration on top of this provider gateway layer. See `../docs/framework-optimization-roadmap.md`.

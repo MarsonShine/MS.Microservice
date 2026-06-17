@@ -1,16 +1,15 @@
 ﻿using MS.Microservice.Core.Reflection;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MS.Microservice.Domain
 {
     public abstract class EntityBase<TId> : Entity<TId>
     {
-        int? _requestedHashCode;
-
         public virtual bool IsTransient()
         {
-            return TypeHelper.IsDefaultValue(this.Id);
+            return Id is null || TypeHelper.IsDefaultValue(Id);
         }
 
         public override bool Equals([AllowNull] object obj)
@@ -36,13 +35,13 @@ namespace MS.Microservice.Domain
         {
             if (!IsTransient())
             {
-                if (!_requestedHashCode.HasValue)
-                    _requestedHashCode = this.Id.GetHashCode() ^ 31; // XOR for random distribution (http://blogs.msdn.com/b/ericlippert/archive/2011/02/28/guidelines-and-rules-for-gethashcode.aspx)
-
-                return _requestedHashCode.Value;
+                var id = Id;
+                return HashCode.Combine(GetType(), id is null ? 0 : EqualityComparer<TId>.Default.GetHashCode(id));
             }
             else
+            {
                 return base.GetHashCode();
+            }
 
         }
 

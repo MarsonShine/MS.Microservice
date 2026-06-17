@@ -52,6 +52,9 @@ public sealed class AIProviderRegistrationOptions
     /// <summary>API key or bearer token for authentication.</summary>
     public string? ApiKey { get; set; }
 
+    /// <summary>Provider-neutral secret name used to resolve the API key when <see cref="ApiKey" /> is empty.</summary>
+    public string? ApiKeySecretName { get; set; }
+
     /// <summary>Base URL for the provider's API. Falls back to the provider's well-known default when empty.</summary>
     public string? BaseAddress { get; set; }
 

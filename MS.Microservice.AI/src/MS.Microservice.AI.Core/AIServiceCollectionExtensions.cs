@@ -20,6 +20,7 @@ public static class AIServiceCollectionExtensions
     public static AIBuilder AddMicroserviceAI(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        services.TryAddSingleton(configuration);
         return services.AddMicroserviceAI(configuration.GetSection(AIOptions.SectionName));
     }
 
@@ -29,29 +30,19 @@ public static class AIServiceCollectionExtensions
     /// <param name="services">The application service collection.</param>
     /// <param name="section">The configuration section bound to <see cref="AIOptions"/>.</param>
     /// <returns>An <see cref="AIBuilder"/> for chaining provider registrations.</returns>
-    /// <remarks>
-    /// This method registers:
-    /// <list type="bullet">
-    ///   <item><see cref="AIOptions"/> with <c>ValidateOnStart()</c></item>
-    ///   <item><see cref="IAIModelResolver"/> → <see cref="DefaultAIModelResolver"/></item>
-    ///   <item><see cref="IAIProviderFactory"/> → <see cref="DefaultAIProviderFactory"/></item>
-    ///   <item>All five routing clients: <see cref="IAIChatClient"/>, <see cref="IAITtsClient"/>, <see cref="IAIAsrClient"/>, <see cref="IAIImageGenerationClient"/>, <see cref="IAIImageEditClient"/></item>
-    ///   <item><see cref="TimeProvider.System"/> as a singleton</item>
-    /// </list>
-    /// Provider-specific registrations must be added by calling extension methods
-    /// on the returned <see cref="AIBuilder"/> (e.g. <c>.AddOpenAI()</c>).
-    /// </remarks>
     public static AIBuilder AddMicroserviceAI(this IServiceCollection services, IConfigurationSection section)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(section);
 
+        services.TryAddSingleton<IConfiguration>(section);
         services.AddOptions<AIOptions>()
             .Bind(section)
             .ValidateOnStart();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, AIOptionsValidator>());
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+        services.TryAddSingleton<AIProductionPipeline>();
         services.TryAddSingleton<IAIModelResolver, DefaultAIModelResolver>();
         services.TryAddSingleton<IAIProviderFactory, DefaultAIProviderFactory>();
         services.TryAddSingleton<IAIChatClient, RoutingAIChatClient>();
@@ -60,6 +51,83 @@ public static class AIServiceCollectionExtensions
         services.TryAddSingleton<IAIImageGenerationClient, RoutingAIImageGenerationClient>();
         services.TryAddSingleton<IAIImageEditClient, RoutingAIImageEditClient>();
 
+        services.AddAIRateLimiter(section.GetSection(AIRateLimitingOptions.SectionName));
+        services.AddAICircuitBreaker(section.GetSection(AICircuitBreakerOptions.SectionName));
+        services.AddAILogSanitizer(section.GetSection(AILogSanitizerOptions.SectionName));
+        services.AddAISecretProvider(section.GetSection(AISecretProviderOptions.SectionName));
+        services.AddAIPayloadLimits(section.GetSection(AIPayloadLimitOptions.SectionName));
+        services.AddAICostAccounting(section.GetSection(AICostAccountingOptions.SectionName));
+
         return new AIBuilder(services);
+    }
+
+    /// <summary>Registers the AI rate limiter abstraction and built-in fixed-window implementation.</summary>
+    public static IServiceCollection AddAIRateLimiter(this IServiceCollection services, IConfigurationSection? section = null)
+    {
+        ConfigureValidatedOptions<AIRateLimitingOptions, AIRateLimitingOptionsValidator>(services, section);
+        services.TryAddSingleton<IAIRateLimiter, DefaultAIRateLimiter>();
+        return services;
+    }
+
+    /// <summary>Registers the AI circuit breaker abstraction and built-in in-memory implementation.</summary>
+    public static IServiceCollection AddAICircuitBreaker(this IServiceCollection services, IConfigurationSection? section = null)
+    {
+        ConfigureValidatedOptions<AICircuitBreakerOptions, AICircuitBreakerOptionsValidator>(services, section);
+        services.TryAddSingleton<IAICircuitBreaker, DefaultAICircuitBreaker>();
+        return services;
+    }
+
+    /// <summary>Registers the AI log sanitizer abstraction and default sensitive-field redactor.</summary>
+    public static IServiceCollection AddAILogSanitizer(this IServiceCollection services, IConfigurationSection? section = null)
+    {
+        ConfigureValidatedOptions<AILogSanitizerOptions, AILogSanitizerOptionsValidator>(services, section);
+        services.TryAddSingleton<IAILogSanitizer, DefaultAILogSanitizer>();
+        return services;
+    }
+
+    /// <summary>Registers provider-neutral AI secret providers and post-configures provider API keys.</summary>
+    public static IServiceCollection AddAISecretProvider(this IServiceCollection services, IConfigurationSection? section = null)
+    {
+        ConfigureValidatedOptions<AISecretProviderOptions, AISecretProviderOptionsValidator>(services, section);
+        services.TryAddSingleton<EnvironmentAISecretProvider>();
+        services.TryAddSingleton<ConfigurationAISecretProvider>();
+        services.TryAddSingleton<IAISecretProvider, CompositeAISecretProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<AIOptions>, AIOptionsSecretPostConfigure>());
+        return services;
+    }
+
+    /// <summary>Registers AI payload limit options used by routing clients.</summary>
+    public static IServiceCollection AddAIPayloadLimits(this IServiceCollection services, IConfigurationSection? section = null)
+    {
+        ConfigureValidatedOptions<AIPayloadLimitOptions, AIPayloadLimitOptionsValidator>(services, section);
+        return services;
+    }
+
+    /// <summary>Registers AI cost accounting options and a no-op default reporter.</summary>
+    public static IServiceCollection AddAICostAccounting(this IServiceCollection services, IConfigurationSection? section = null)
+    {
+        ConfigureValidatedOptions<AICostAccountingOptions, NoopValidator<AICostAccountingOptions>>(services, section);
+        services.TryAddSingleton<IAICostReporter, NullAICostReporter>();
+        return services;
+    }
+
+    private static void ConfigureValidatedOptions<TOptions, TValidator>(IServiceCollection services, IConfigurationSection? section)
+        where TOptions : class
+        where TValidator : class, IValidateOptions<TOptions>
+    {
+        var builder = services.AddOptions<TOptions>();
+        if (section is not null)
+        {
+            builder.Bind(section);
+        }
+
+        builder.ValidateOnStart();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<TOptions>, TValidator>());
+    }
+
+    private sealed class NoopValidator<TOptions> : IValidateOptions<TOptions>
+        where TOptions : class
+    {
+        public ValidateOptionsResult Validate(string? name, TOptions options) => ValidateOptionsResult.Success;
     }
 }

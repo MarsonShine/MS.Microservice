@@ -17,6 +17,17 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel;
 [CollectionDefinition("Performance", DisableParallelization = true)]
 public sealed class PerformanceCollectionDefinition;
 
+public sealed class PerformanceFactAttribute : FactAttribute
+{
+    public PerformanceFactAttribute()
+    {
+        if (!string.Equals(Environment.GetEnvironmentVariable("MS_MICROSERVICE_RUN_PERF_TESTS"), "1", StringComparison.Ordinal))
+        {
+            Skip = "Performance baseline is opt-in. Set MS_MICROSERVICE_RUN_PERF_TESTS=1 to run.";
+        }
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Fixture: accumulates reports across all tests and writes HTML once at the end.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -150,42 +161,42 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
     // Export – Object – Narrow (5 cols)
     // ═══════════════════════════════════════════════════════════════════
 
-    [Fact] public void Export_Obj_Narrow_Small()  => RunSync("Export_Obj_Narrow_Small",  () => ExportCore<ExportDto5>(SmallRows));
-    [Fact] public void Export_Obj_Narrow_Medium() => RunSync("Export_Obj_Narrow_Medium", () => ExportCore<ExportDto5>(MediumRows));
-    [Fact] public void Export_Obj_Narrow_Large()  => RunSync("Export_Obj_Narrow_Large",  () => ExportCore<ExportDto5>(LargeRows));
+    [PerformanceFact] public void Export_Obj_Narrow_Small()  => RunSync("Export_Obj_Narrow_Small",  () => ExportCore<ExportDto5>(SmallRows));
+    [PerformanceFact] public void Export_Obj_Narrow_Medium() => RunSync("Export_Obj_Narrow_Medium", () => ExportCore<ExportDto5>(MediumRows));
+    [PerformanceFact] public void Export_Obj_Narrow_Large()  => RunSync("Export_Obj_Narrow_Large",  () => ExportCore<ExportDto5>(LargeRows));
 
     // Export – Object – Wide (30 cols)
-    [Fact] public void Export_Obj_Wide_Small()  => RunSync("Export_Obj_Wide_Small",  () => ExportCore<ExportDto30>(SmallRows));
-    [Fact] public void Export_Obj_Wide_Medium() => RunSync("Export_Obj_Wide_Medium", () => ExportCore<ExportDto30>(MediumRows));
-    [Fact] public void Export_Obj_Wide_Large()  => RunSync("Export_Obj_Wide_Large",  () => ExportCore<ExportDto30>(LargeRows));
+    [PerformanceFact] public void Export_Obj_Wide_Small()  => RunSync("Export_Obj_Wide_Small",  () => ExportCore<ExportDto30>(SmallRows));
+    [PerformanceFact] public void Export_Obj_Wide_Medium() => RunSync("Export_Obj_Wide_Medium", () => ExportCore<ExportDto30>(MediumRows));
+    [PerformanceFact] public void Export_Obj_Wide_Large()  => RunSync("Export_Obj_Wide_Large",  () => ExportCore<ExportDto30>(LargeRows));
 
     // Export – DataTable
-    [Fact] public void Export_DT_Small()  => RunSync("Export_DT_Small",  () => ExportDTCore(SmallRows));
-    [Fact] public void Export_DT_Medium() => RunSync("Export_DT_Medium", () => ExportDTCore(MediumRows));
-    [Fact] public void Export_DT_Large()  => RunSync("Export_DT_Large",  () => ExportDTCore(LargeRows));
+    [PerformanceFact] public void Export_DT_Small()  => RunSync("Export_DT_Small",  () => ExportDTCore(SmallRows));
+    [PerformanceFact] public void Export_DT_Medium() => RunSync("Export_DT_Medium", () => ExportDTCore(MediumRows));
+    [PerformanceFact] public void Export_DT_Large()  => RunSync("Export_DT_Large",  () => ExportDTCore(LargeRows));
 
     // ═══════════════════════════════════════════════════════════════════
     // Import – Object – Narrow (5 cols)
     // ═══════════════════════════════════════════════════════════════════
 
-    [Fact] public void Import_Obj_Narrow_Small()  => RunSync("Import_Obj_Narrow_Small",  () => ImportCore<ImportDto5>(SmallRows));
-    [Fact] public void Import_Obj_Narrow_Medium() => RunSync("Import_Obj_Narrow_Medium", () => ImportCore<ImportDto5>(MediumRows));
-    [Fact] public void Import_Obj_Narrow_Large()  => RunSync("Import_Obj_Narrow_Large",  () => ImportCore<ImportDto5>(LargeRows));
+    [PerformanceFact] public void Import_Obj_Narrow_Small()  => RunSync("Import_Obj_Narrow_Small",  () => ImportCore<ImportDto5>(SmallRows));
+    [PerformanceFact] public void Import_Obj_Narrow_Medium() => RunSync("Import_Obj_Narrow_Medium", () => ImportCore<ImportDto5>(MediumRows));
+    [PerformanceFact] public void Import_Obj_Narrow_Large()  => RunSync("Import_Obj_Narrow_Large",  () => ImportCore<ImportDto5>(LargeRows));
 
     // Import – Object – Wide (30 cols)
-    [Fact] public void Import_Obj_Wide_Small()  => RunSync("Import_Obj_Wide_Small",  () => ImportCore<ImportDto30>(SmallRows));
-    [Fact] public void Import_Obj_Wide_Medium() => RunSync("Import_Obj_Wide_Medium", () => ImportCore<ImportDto30>(MediumRows));
-    [Fact] public void Import_Obj_Wide_Large()  => RunSync("Import_Obj_Wide_Large",  () => ImportCore<ImportDto30>(LargeRows));
+    [PerformanceFact] public void Import_Obj_Wide_Small()  => RunSync("Import_Obj_Wide_Small",  () => ImportCore<ImportDto30>(SmallRows));
+    [PerformanceFact] public void Import_Obj_Wide_Medium() => RunSync("Import_Obj_Wide_Medium", () => ImportCore<ImportDto30>(MediumRows));
+    [PerformanceFact] public void Import_Obj_Wide_Large()  => RunSync("Import_Obj_Wide_Large",  () => ImportCore<ImportDto30>(LargeRows));
 
     // ═══════════════════════════════════════════════════════════════════
     // Import – PipeReader / Non-seekable (async, true async measurement)
     // ═══════════════════════════════════════════════════════════════════
 
-    [Fact] public Task Import_PipeReader_Medium() => RunAsync("Import_PipeReader_Medium", () => ImportPipeReaderCore(MediumRows));
-    [Fact] public Task Import_PipeReader_Large()  => RunAsync("Import_PipeReader_Large",  () => ImportPipeReaderCore(LargeRows));
+    [PerformanceFact] public Task Import_PipeReader_Medium() => RunAsync("Import_PipeReader_Medium", () => ImportPipeReaderCore(MediumRows));
+    [PerformanceFact] public Task Import_PipeReader_Large()  => RunAsync("Import_PipeReader_Large",  () => ImportPipeReaderCore(LargeRows));
 
-    [Fact] public void Import_NonSeekable_Medium() => RunSync("Import_NonSeekable_Medium", () => ImportNonSeekableCore(MediumRows));
-    [Fact] public void Import_NonSeekable_Large()  => RunSync("Import_NonSeekable_Large",  () => ImportNonSeekableCore(LargeRows));
+    [PerformanceFact] public void Import_NonSeekable_Medium() => RunSync("Import_NonSeekable_Medium", () => ImportNonSeekableCore(MediumRows));
+    [PerformanceFact] public void Import_NonSeekable_Large()  => RunSync("Import_NonSeekable_Large",  () => ImportNonSeekableCore(LargeRows));
 
     // ═══════════════════════════════════════════════════════════════════
     // Sync measurement runner

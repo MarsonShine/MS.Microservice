@@ -17,15 +17,21 @@ namespace MS.Microservice.Infrastructure.Tests
     /// </summary>
     public class UserDomainServiceTests
     {
+        private sealed class PersistedUser : User
+        {
+            public PersistedUser(int id, string account)
+                : base(account, "Password123", "salt", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "")
+            {
+                Id = id;
+            }
+        }
+
         [Fact]
         public async Task CreateUserEitherAsync_WhenUserAlreadyExists_ReturnsLeft()
         {
             var repository = Substitute.For<IUserRepository>();
             var service = new UserDomainService(repository);
-            var existingUser = new User("demo", "Password123", "salt", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "")
-            {
-                Id = 1
-            };
+            var existingUser = new PersistedUser(1, "demo");
 
             repository.FindOptionAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>())
                 .Returns((Option<User>)existingUser);

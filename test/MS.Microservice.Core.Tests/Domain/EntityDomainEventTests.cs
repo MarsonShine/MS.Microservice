@@ -66,14 +66,12 @@ namespace MS.Microservice.Core.Tests.Domain
         }
 
         [Fact]
-        public void DomainEvents_NullByDefault_BeforeFirstAdd()
+        public void DomainEvents_EmptyByDefault_BeforeFirstAdd()
         {
             var entity = new ConcreteEntity(1);
-            // DomainEvents returns null if no events have been added
-            // The property returns _domainEvents?.AsReadOnly()!
-            // Before first AddDomainEvent, _domainEvents is null
             var events = entity.DomainEvents;
-            Assert.Null(events);
+            Assert.NotNull(events);
+            Assert.Empty(events);
         }
 
         [Fact]
