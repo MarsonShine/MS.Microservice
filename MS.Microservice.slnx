@@ -49,6 +49,8 @@
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <Project Path="src/MS.Microservice.Domain/MS.Microservice.Domain.csproj" />
     <Project Path="src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj" />
+    <Project Path="src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
     <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
   </Folder>
   <Folder Name="/test/">

@@ -1,9 +1,9 @@
-﻿using Autofac;
+using Autofac;
 using MS.Microservice.Domain.Aggregates.IdentityModel.Repository;
 using MS.Microservice.Domain.Aggregates.LogAggregate.Repository;
 using MS.Microservice.Domain.Services;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Infrastructure.Repository;
+using MS.Microservice.Persistence.EFCore.Repository;
 
 namespace MS.Microservice.Web.AutofacModules;
 

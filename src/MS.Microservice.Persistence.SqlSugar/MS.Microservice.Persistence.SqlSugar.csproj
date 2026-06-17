@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SqlSugarCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
+  </ItemGroup>
+</Project>

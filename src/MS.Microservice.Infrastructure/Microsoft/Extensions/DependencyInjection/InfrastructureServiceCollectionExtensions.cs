@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MS.Microservice.Domain;
-using MS.Microservice.Infrastructure.DbContext;
 using MS.Microservice.Infrastructure.Messaging;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 
@@ -17,19 +16,13 @@ namespace Microsoft.Extensions.DependencyInjection
         extension(IServiceCollection services)
         {
             // -----------------------------------------------------------------------
-            // 持久化 — EF Core (Npgsql)
-            // 文件: DbContext/DbContextServiceCollectionExtensions.cs
-            // 提供 ActivationDbContext 的 Npgsql 配置
+            // 持久化门面 — EF Core + SqlSugar
+            // 实现已迁移到 Persistence 项目，Infrastructure 仅保留兼容转发。
             // -----------------------------------------------------------------------
             public void AddInfrastructurePersistence(IConfiguration configuration)
             {
-                services.AddOptions<MsPlatformDbContextSettings>()
-                    .Bind(configuration.GetSection(MsPlatformDbContextSettings.SectionName))
-                    .Validate(options => options.AutoTimeTracker is "Enabled" or "Disabled", "FzPlatformDbContextSettings:AutoTimeTracker must be Enabled or Disabled.")
-                    .ValidateOnStart();
-
-                var connectionString = GetRequiredConnectionString(configuration, "ActivationConnection");
-                services.AddEntityFrameworkNpgSql(connectionString);
+                services.AddMicroserviceEfCorePersistence(configuration);
+                services.AddMicroserviceSqlSugarPersistence(configuration);
             }
 
             // -----------------------------------------------------------------------
@@ -55,14 +48,14 @@ namespace Microsoft.Extensions.DependencyInjection
 
             // -----------------------------------------------------------------------
             // 一次注册所有 Infrastructure 模块
-            // 调用顺序建议：持久化 → 事件溯源 → 可观测性
+            // 调用顺序建议：消息派发实现 → 持久化 → 事件溯源 → 可观测性
             // -----------------------------------------------------------------------
             public void AddInfrastructure(IConfiguration configuration)
             {
-                services.AddInfrastructurePersistence(configuration);
-                services.AddInfrastructureEventSourcing(configuration);
                 services.TryAddScoped<IDomainEventDispatcher, WolverineDomainEventDispatcher>();
                 services.TryAddScoped<IIntegrationEventPublisher, WolverineIntegrationEventPublisher>();
+                services.AddInfrastructurePersistence(configuration);
+                services.AddInfrastructureEventSourcing(configuration);
                 services.AddInfrastructureTelemetry();
             }
 

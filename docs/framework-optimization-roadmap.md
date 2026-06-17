@@ -6,19 +6,29 @@ This document tracks the review items that are intentionally staged instead of c
 
 Current state:
 
-- `src/MS.Microservice.Infrastructure` still contains EF Core, SqlSugar, event sourcing, telemetry, Excel, audio, cache, health checks, and Wolverine helpers.
-- The Web Host consumes the module through `services.AddInfrastructure(configuration)`.
+- `src/MS.Microservice.Persistence.EFCore` now owns Activation EF Core persistence: `ActivationDbContext`, EF Core entity configurations, EF Core repositories, EF Core query/soft-delete helpers, DbContext settings, and EF Core persistence registration.
+- `src/MS.Microservice.Persistence.SqlSugar` now owns SqlSugar persistence: SqlSugar clients/scopes, generic SqlSugar repository bases, `UserDemoRepository`, options, converters, sharding helpers, query extensions, and SqlSugar persistence registration.
+- `src/MS.Microservice.Infrastructure` no longer owns the main Activation EF Core or SqlSugar implementations. It still owns event sourcing, telemetry, Excel, audio, cache, health checks, and Wolverine helpers.
+- The Web Host still consumes the stable facade through `services.AddInfrastructure(configuration)`.
+- Infrastructure temporarily references the new Persistence projects so the existing Web startup facade remains stable during the staged split.
 
 This change set:
 
-- Keeps `AddInfrastructure(configuration)` as the stable facade.
-- Adds startup validation for `ConnectionStrings:ActivationConnection` and `FzPlatformDbContextSettings`.
-- Documents the intended split order.
+- [x] Created `MS.Microservice.Persistence.EFCore` and moved Activation EF Core DbContext, mappings, repositories, options, query helpers, transaction helpers, and EF Core registration into it.
+- [x] Created `MS.Microservice.Persistence.SqlSugar` and moved SqlSugar clients/scopes, repositories, options, converters, sharding helpers, query helpers, and SqlSugar registration into it.
+- [x] Added `services.AddMicroserviceEfCorePersistence(configuration)`.
+- [x] Added `services.AddMicroserviceSqlSugarPersistence(configuration)`.
+- [x] Kept `services.AddInfrastructure(configuration)` as the stable facade and changed it to call both new persistence registration methods.
+- [x] Moved `SqlSugarCore`, EF Core design/tools/relational package ownership to the new Persistence projects where applicable.
+- [x] Kept EF Core and Npgsql packages in Infrastructure only because the unchanged Event Sourcing module still uses `EventStoreDbContext` and `UseNpgsql`.
+- [x] Updated Web Host references for `ActivationDbContext` and EF Core repositories to the new EFCore persistence project.
+- [x] Added registration tests for EF Core persistence, SqlSugar persistence, and the Infrastructure facade.
+- [x] Updated architecture tests for the new Persistence projects and Domain dependency rules.
 
 Target split order:
 
-1. `MS.Microservice.Persistence.EFCore`
-2. `MS.Microservice.Persistence.SqlSugar`
+1. `MS.Microservice.Persistence.EFCore` - completed in this change set.
+2. `MS.Microservice.Persistence.SqlSugar` - completed in this change set.
 3. `MS.Microservice.Observability`
 4. `MS.Microservice.Excel`
 5. `MS.Microservice.Audio`
@@ -37,8 +47,28 @@ services.AddMicroserviceWolverineMessaging(configuration);
 
 Reason not completed in this change:
 
-- The current Infrastructure project owns runtime registrations and tests across multiple concerns. Splitting it now would require moving project references, namespaces, test projects, and package boundaries at once.
-- The safer staged approach is to first protect boundaries with architecture tests, then split one submodule per change.
+- EF Core and SqlSugar persistence have been split in this change set.
+- Observability, Excel, Audio, Cache, Health Checks, Wolverine Messaging, Event Sourcing, Logging, AI, Swagger, and EventBus remain out of scope for this change to avoid mixing persistence boundaries with unrelated runtime behavior.
+- Infrastructure still references the new Persistence projects as a transition facade so existing Web startup code can keep calling `AddInfrastructure(configuration)`.
+- Event Sourcing still lives in Infrastructure and still uses EF Core/Npgsql. Those package references cannot be removed from Infrastructure until Event Sourcing is split or redesigned.
+
+Remaining TODO:
+
+- [ ] Decide whether Web hosts should continue to call `AddInfrastructure(configuration)` long term or switch to direct module registrations once more Infrastructure slices are split.
+- [ ] Split Event Sourcing separately before removing the remaining EF Core/Npgsql package references from Infrastructure.
+- [ ] Revisit the legacy Wolverine `DispatchDomainEventsAsync(ActivationDbContext ctx)` helper; it now depends on the EFCore persistence project only for compatibility.
+- [ ] Reassess SqlSugar client lifetime: `AddSqlSugarClient<TSqlSugarClient>` still builds one client instance during registration and returns it from a scoped registration, matching the previous behavior but worth reviewing.
+- [ ] Add EF Core mappings/migrations for `OutboxMessage` and `InboxMessage` in `MS.Microservice.Persistence.EFCore`.
+- [ ] Add SqlSugar table mapping/index compatibility for `OutboxMessage` and `InboxMessage` in `MS.Microservice.Persistence.SqlSugar`.
+- [ ] Implement Outbox writes and Inbox receipts inside the same ORM transaction boundary for both EF Core and SqlSugar.
+- [ ] Continue the next split candidates only in separate changes: Observability, Excel, Audio, Wolverine Messaging, and any later Cache/Health Checks decisions.
+
+New findings:
+
+- `ActivationDbContext` previously exposed a Wolverine `IMessageBus` constructor and directly created `WolverineDomainEventDispatcher`. The EFCore persistence project now depends only on the Domain `IDomainEventDispatcher`; Infrastructure registers the Wolverine-backed dispatcher before calling the persistence facade.
+- Infrastructure still contains EF Core usage through Event Sourcing (`EventStoreDbContext`, event store repositories, projection stores, and migration host helpers), so EF Core/Npgsql cannot be fully removed from Infrastructure yet.
+- SqlSugar options are now bound from the `SqlSugarOptions` and `ShardingOptions` sections in the SqlSugar persistence registration. The previous registration configured options from the root configuration while separately reading the sections for immediate setup.
+- The SqlSugar sharding factory depends on `IOptions<ShardingOptions>.Value.Count`; empty or missing sharding connection strings still need a product decision before runtime hardening.
 
 ## P4: Domain Events, Outbox, and Inbox
 
@@ -104,7 +134,7 @@ Remaining gap:
 - Reason: the current repository still hosts EF Core and SqlSugar in the same Infrastructure module. A durable Outbox needs concrete table mappings, migration strategy, unique Inbox indexes, and one chosen unit-of-work transaction boundary per ORM.
 - Current mitigation: `SaveEntitiesAsync` no longer dispatches before `SaveChangesAsync`, so failed persistence no longer publishes events. This is safer than the previous flow, but it is not atomic; if dispatch fails after save, retry still depends on the caller or future Outbox worker.
 - Next TODO: add EF Core mapping and migration for `OutboxMessage` / `InboxMessage`, add SqlSugar mapping compatibility, write Outbox records inside the same transaction, add a background publisher with retry/dead-letter handling, and add Inbox unique-key enforcement.
-- P3 dependency: not strictly required for the next thin vertical slice, but the full EF Core / SqlSugar split would reduce risk before productionizing both ORMs.
+- P3 dependency: the EF Core / SqlSugar persistence split is now complete, so the next Outbox / Inbox slice can add ORM-specific mappings and transaction boundaries in `MS.Microservice.Persistence.EFCore` and `MS.Microservice.Persistence.SqlSugar`.
 
 New findings:
 

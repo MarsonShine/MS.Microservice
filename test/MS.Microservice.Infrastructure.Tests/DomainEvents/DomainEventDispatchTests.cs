@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Domain;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
-using MS.Microservice.Infrastructure.DbContext;
+using MS.Microservice.Persistence.EFCore.DbContext;
 using MS.Microservice.Infrastructure.Messaging;
 using NSubstitute;
 using Wolverine;

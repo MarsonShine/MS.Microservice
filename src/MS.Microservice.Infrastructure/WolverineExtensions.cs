@@ -1,5 +1,5 @@
-﻿using MS.Microservice.Domain;
-using MS.Microservice.Infrastructure.DbContext;
+using MS.Microservice.Domain;
+using MS.Microservice.Persistence.EFCore.DbContext;
 using Wolverine;
 
 namespace MS.Microservice.Infrastructure

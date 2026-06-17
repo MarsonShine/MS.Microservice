@@ -19,15 +19,6 @@
     <None Remove="Migrations\**" />
   </ItemGroup>  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
@@ -44,11 +35,12 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />    
-    <PackageReference Include="SqlSugarCore" />
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
     <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Persistence.EFCore\MS.Microservice.Persistence.EFCore.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Persistence.SqlSugar\MS.Microservice.Persistence.SqlSugar.csproj" />
   </ItemGroup>
 </Project>
