@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
+  </Folder>
+</Solution>

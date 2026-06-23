@@ -33,7 +33,7 @@
     <ProjectReference Include="..\..\MS.Microservice.Logging\src\MS.Microservice.Logging.AspNetCore\MS.Microservice.Logging.AspNetCore.csproj" />
     <ProjectReference Include="..\..\MS.Microservice.Logging\src\MS.Microservice.Logging.NLog\MS.Microservice.Logging.NLog.csproj" />
     <ProjectReference Include="..\MS.Microservice.Infrastructure\MS.Microservice.Infrastructure.csproj" />
-    <ProjectReference Include="..\MS.Microservice.Persistence.EFCore\MS.Microservice.Persistence.EFCore.csproj" />
+    <ProjectReference Include="..\..\MS.Microservice.Persistence\MS.Microservice.Persistence.EFCore\src\MS.Microservice.Persistence.EFCore\MS.Microservice.Persistence.EFCore.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="nlog.config">

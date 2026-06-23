@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -9,7 +10,7 @@
     <PackageReference Include="SqlSugarCore" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
-    <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
+    <ProjectReference Include="..\..\..\..\src\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\src\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
   </ItemGroup>
 </Project>
