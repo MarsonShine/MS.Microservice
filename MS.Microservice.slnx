@@ -3,7 +3,6 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Folder Name="/docs/" />
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">
     <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
@@ -37,6 +36,21 @@
     <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Core.Tests/MS.Microservice.Logging.Core.Tests.csproj" />
     <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.NLog.Tests/MS.Microservice.Logging.NLog.Tests.csproj" />
     <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Serilog.Tests/MS.Microservice.Logging.Serilog.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Persistence/" />
+  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/" />
+  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/src/">
+    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/test/">
+    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/test/MS.Microservice.Persistence.EFCore.Tests/MS.Microservice.Persistence.EFCore.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/" />
+  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/">
+    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/test/">
+    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.Swagger/" />
   <Folder Name="/MS.Microservice.Swagger/src/">

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Domain;
-using MS.Microservice.Infrastructure.DbContext;
+using MS.Microservice.Persistence.EFCore.DbContext;
 using MS.Microservice.Logging.AspNetCore;
 using MS.Microservice.Logging.NLog;
 using MS.Microservice.Web.Infrastructure.Extensions;

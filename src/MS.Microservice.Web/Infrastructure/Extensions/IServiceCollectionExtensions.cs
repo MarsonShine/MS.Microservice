@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Claims;
@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extension.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -17,9 +16,7 @@ using MS.Microservice.Core.Ceching;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
-using MS.Microservice.Infrastructure.DbContext;
 using MS.Microservice.Infrastructure.HealthChecks;
-using MS.Microservice.Infrastructure.SqlSugar;
 using MS.Microservice.Web.Application.Orders;
 using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
@@ -137,7 +134,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             public IServiceCollection AddMySql(IConfiguration configuration)
             {
                 //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
-                //services.AddSqlSugarService(configuration);
+                //services.AddMicroserviceSqlSugarPersistence(configuration);
                 services.AddInfrastructure(configuration);
                 services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
                 services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();

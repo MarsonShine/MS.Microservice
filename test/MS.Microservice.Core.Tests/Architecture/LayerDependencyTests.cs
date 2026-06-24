@@ -10,6 +10,8 @@ public sealed class LayerDependencyTests
 {
     [Theory]
     [InlineData("MS.Microservice.Infrastructure")]
+    [InlineData("MS.Microservice.Persistence.EFCore")]
+    [InlineData("MS.Microservice.Persistence.SqlSugar")]
     [InlineData("MS.Microservice.Web")]
     [InlineData("Microsoft.EntityFrameworkCore")]
     [InlineData("SqlSugar")]

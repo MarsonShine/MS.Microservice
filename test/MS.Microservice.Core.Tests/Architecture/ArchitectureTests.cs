@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -10,10 +11,6 @@ namespace MS.Microservice.Core.Tests.Architecture;
 /// </summary>
 public class ArchitectureTests
 {
-    // =========================================================================
-    // 依赖方向约束
-    // =========================================================================
-
     [Fact]
     public void Domain_ShouldNot_DependOn_Infrastructure()
     {
@@ -85,7 +82,7 @@ public class ArchitectureTests
     [Fact]
     public void Infrastructure_ShouldNot_DependOn_Web()
     {
-        var infraAssembly = typeof(MS.Microservice.Infrastructure.DbContext.ActivationDbContext).Assembly;
+        var infraAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;
 
         var result = Types
             .InAssembly(infraAssembly)
@@ -99,16 +96,35 @@ public class ArchitectureTests
             $"Infrastructure should not depend on Web. Violations: {string.Join(", ", result.FailingTypeNames ?? [])}");
     }
 
-    // =========================================================================
-    // 命名空间归属约束
-    // =========================================================================
+    [Fact]
+    public void Infrastructure_ShouldNot_Define_ActivationEfCoreOrSqlSugarImplementationTypes()
+    {
+        var infraAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;
+        var forbiddenNamespacePrefixes = new[]
+        {
+            "MS.Microservice.Infrastructure.DbContext",
+            "MS.Microservice.Infrastructure.EntityConfigurations",
+            "MS.Microservice.Infrastructure.Repository",
+            "MS.Microservice.Infrastructure.SqlSugar",
+        };
+
+        var violatingTypes = infraAssembly
+            .GetTypes()
+            .Where(type => type.Namespace is not null
+                && forbiddenNamespacePrefixes.Any(prefix =>
+                    type.Namespace.Equals(prefix, StringComparison.Ordinal)
+                    || type.Namespace.StartsWith(prefix + ".", StringComparison.Ordinal)))
+            .Select(type => type.FullName)
+            .ToArray();
+
+        Assert.Empty(violatingTypes);
+    }
 
     [Fact]
     public void WebApplicationTypes_ShouldResideIn_WebApplicationNamespace()
     {
         var webAssembly = typeof(MS.Microservice.Web.Controller.FeatureManagerController).Assembly;
 
-        // Web/Application 下的类型不应再使用 Core 或 Domain 的命名空间
         var violatingTypes = Types
             .InAssembly(webAssembly)
             .That()
@@ -119,10 +135,6 @@ public class ArchitectureTests
 
         Assert.Empty(violatingTypes);
     }
-
-    // =========================================================================
-    // 领域层约束
-    // =========================================================================
 
     [Fact]
     public void Domain_ShouldNot_Reference_OrmPackages()

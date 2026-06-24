@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Persistence.EFCore.Tests/MS.Microservice.Persistence.EFCore.Tests.csproj" />
+  </Folder>
+</Solution>
