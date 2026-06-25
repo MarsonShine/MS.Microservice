@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "en-US" }}">
+  <head>
+    <meta charset="UTF-8">
+
+{% seo %}
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preload" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" as="style" type="text/css" crossorigin>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#157878">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+    <style>
+      .docs-nav {
+        margin: 1.5rem 0;
+        padding: 1rem 1.25rem;
+        border: 1px solid #dce6f0;
+        border-radius: 0.75rem;
+        background: #f7fbff;
+      }
+
+      .docs-nav__row,
+      .docs-nav__links,
+      .docs-nav__pager {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1rem;
+        align-items: center;
+      }
+
+      .docs-nav__row + .docs-nav__row,
+      .docs-nav__pager {
+        margin-top: 0.9rem;
+      }
+
+      .docs-nav__label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #606c71;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .docs-nav__current {
+        font-weight: 700;
+        color: #1e6bb8;
+      }
+
+      .docs-nav__pager {
+        justify-content: space-between;
+        padding-top: 1rem;
+        border-top: 1px solid #dce6f0;
+      }
+
+      .docs-nav__pager-item {
+        flex: 1 1 16rem;
+      }
+
+      .docs-nav__pager-item--next {
+        text-align: right;
+      }
+
+      @media screen and (max-width: 42em) {
+        .docs-nav__pager-item,
+        .docs-nav__pager-item--next {
+          text-align: left;
+        }
+      }
+    </style>
+    {% include head-custom.html %}
+  </head>
+  <body>
+    <a id="skip-to-content" href="#content">Skip to the content.</a>
+
+    <header class="page-header" role="banner">
+      <h1 class="project-name">{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
+      <h2 class="project-tagline">{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
+      {% if site.github.is_project_page %}
+        <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
+      {% endif %}
+      {% if site.show_downloads %}
+        <a href="{{ site.github.zip_url }}" class="btn">Download .zip</a>
+        <a href="{{ site.github.tar_url }}" class="btn">Download .tar.gz</a>
+      {% endif %}
+    </header>
+
+    <main id="content" class="main-content" role="main">
+      {% if page.path contains 'docs/' and page.path != 'docs/README.md' %}
+        {% assign sibling_pages = site.pages | where_exp: "item", "item.path contains 'docs/' and item.path contains '.md' and item.dir == page.dir" | sort: "url" %}
+        {% assign section_home = sibling_pages | where_exp: "item", "item.name == 'README.md'" | first %}
+        {% assign prev_page = nil %}
+        {% assign next_page = nil %}
+        {% assign seen_current = false %}
+        <!-- ponytail: path-sorted sibling nav keeps docs alive; add curated order data only if alphabetical flow stops being useful. -->
+        {% for item in sibling_pages %}
+          {% if item.url == page.url %}
+            {% assign seen_current = true %}
+          {% elsif seen_current and next_page == nil %}
+            {% assign next_page = item %}
+          {% elsif seen_current == false %}
+            {% assign prev_page = item %}
+          {% endif %}
+        {% endfor %}
+        <nav class="docs-nav" aria-label="文档导航">
+          <div class="docs-nav__links">
+            <span class="docs-nav__label">文档导航</span>
+            <a href="{{ '/docs/' | relative_url }}">文档中心</a>
+            {% if section_home and section_home.url != page.url and section_home.url != '/docs/' %}
+              <a href="{{ section_home.url | relative_url }}">本主题目录</a>
+            {% endif %}
+            <a href="{{ '/' | relative_url }}">项目首页</a>
+          </div>
+          {% if sibling_pages.size > 1 %}
+            <div class="docs-nav__row">
+              <span class="docs-nav__label">继续阅读</span>
+              {% for item in sibling_pages %}
+                {% assign item_title = item.title | default: item.name | replace: '.md', '' %}
+                {% if item.url == page.url %}
+                  <span class="docs-nav__current">{{ item_title }}</span>
+                {% else %}
+                  <a href="{{ item.url | relative_url }}">{{ item_title }}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
+        </nav>
+      {% endif %}
+
+      {{ content }}
+
+      {% if page.path contains 'docs/' and page.path != 'docs/README.md' and sibling_pages.size > 1 %}
+        <nav class="docs-nav docs-nav__pager" aria-label="上一篇和下一篇">
+          <div class="docs-nav__pager-item">
+            {% if prev_page %}
+              <span class="docs-nav__label">上一篇</span><br>
+              <a href="{{ prev_page.url | relative_url }}">{{ prev_page.title | default: prev_page.name | replace: '.md', '' }}</a>
+            {% endif %}
+          </div>
+          <div class="docs-nav__pager-item docs-nav__pager-item--next">
+            {% if next_page %}
+              <span class="docs-nav__label">下一篇</span><br>
+              <a href="{{ next_page.url | relative_url }}">{{ next_page.title | default: next_page.name | replace: '.md', '' }}</a>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
+
+      <footer class="site-footer">
+        {% if site.github.is_project_page %}
+          <span class="site-footer-owner"><a href="{{ site.github.repository_url }}">{{ site.github.repository_name }}</a> is maintained by <a href="{{ site.github.owner_url }}">{{ site.github.owner_name }}</a>.</span>
+        {% endif %}
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.</span>
+      </footer>
+    </main>
+  </body>
+</html>
