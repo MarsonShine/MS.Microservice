@@ -140,6 +140,7 @@ dotnet list package --vulnerable --include-transitive
 
 ## 文档入口
 
+- [文档中心总览](docs/)
 - [上下文边界](docs/Context-Bounded.md)
 - [领域命令模式处理程序](docs/Domain-Command-Patterns-Handlers.md)
 - [领域命令验证](docs/Domain-Command-Validation.md)
