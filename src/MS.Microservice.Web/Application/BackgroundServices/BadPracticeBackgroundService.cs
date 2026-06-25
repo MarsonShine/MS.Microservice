@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -30,13 +30,13 @@ namespace MS.Microservice.Web.Application.BackgroundServices
         public override Task StartAsync(CancellationToken cancellationToken)
         {
             // TODO：后台作业待配置化
-            _timer = new Timer(DoWork!, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+            _timer = new Timer(DoWork, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
             _queue = new Queue<Func<CancellationToken, ValueTask>>(queueSize);
 
             return base.StartAsync(cancellationToken);
         }
 
-        private void DoWork(object state)
+        private void DoWork(object? state)
         {
             ExecuteAsync(CancellationToken.None).ContinueWith(_ => { });
         }
@@ -52,11 +52,13 @@ namespace MS.Microservice.Web.Application.BackgroundServices
                 throw;
             }
         }, stoppingToken);
+
         private static bool False(Action action)
         {
             action();
             return false;
         }
+
         private async ValueTask DoWorkAsync(CancellationToken cancellationToken = default)
         {
             if (TryAccquired())

@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -36,15 +36,17 @@ namespace MS.Microservice.Web.Application.BackgroundServices
             };
             _queue = Channel.CreateBounded<Func<CancellationToken, ValueTask>>(options);
 #if DEBUG
-            _timer = new Timer(DoWork!, null, TimeSpan.Zero, TimeSpan.FromSeconds(60 * 5));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(60 * 5));
 #else
-_timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 #endif
         }
-        private void DoWork(object state)
+
+        private void DoWork(object? state)
         {
             DoWorkAsync(_cancellationToken).ContinueWith(_ => { });
         }
+
         private async Task DoWorkAsync(CancellationToken stoppingToken)
         {
             if (_queue.Reader.TryRead(out var worker))
@@ -54,6 +56,7 @@ _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
             }
             await _queue.Writer.WriteAsync(DoWorkFromQueueAsync, stoppingToken);
         }
+
         private async ValueTask DoWorkFromQueueAsync(CancellationToken cancellationToken)
         {
             using var scope = _serviceProvider.CreateScope();
@@ -68,6 +71,7 @@ _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
                 _logger.LogError("作业系统调用失败：{Message}", ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+
         // 为何要用Task.Run，是为了防止再程序启动一个长时间阻塞的作业，导致整个应用程序启动阻塞。
         // 详见：https://blog.stephencleary.com/2020/05/backgroundservice-gotcha-startup.html
         // 官方团队可能会优化这点，具体详见：https://github.com/dotnet/runtime/issues/36063

@@ -85,40 +85,51 @@
     </header>
 
     <main id="content" class="main-content" role="main">
+      {% assign sibling_count = 0 %}
+      {% assign section_home = nil %}
+      {% assign prev_page = nil %}
+      {% assign next_page = nil %}
       {% if page.path contains 'docs/' and page.path != 'docs/README.md' %}
-        {% assign sibling_pages = site.pages | where_exp: "item", "item.path contains 'docs/' and item.path contains '.md' and item.dir == page.dir" | sort: "url" %}
-        {% assign section_home = sibling_pages | where_exp: "item", "item.name == 'README.md'" | first %}
-        {% assign prev_page = nil %}
-        {% assign next_page = nil %}
+        {% assign section_pages = site.pages | where: "dir", page.dir | sort: "url" %}
         {% assign seen_current = false %}
         <!-- ponytail: path-sorted sibling nav keeps docs alive; add curated order data only if alphabetical flow stops being useful. -->
-        {% for item in sibling_pages %}
-          {% if item.url == page.url %}
-            {% assign seen_current = true %}
-          {% elsif seen_current and next_page == nil %}
-            {% assign next_page = item %}
-          {% elsif seen_current == false %}
-            {% assign prev_page = item %}
+        {% for item in section_pages %}
+          {% if item.path contains 'docs/' and item.path contains '.md' %}
+            {% assign sibling_count = sibling_count | plus: 1 %}
+            {% if item.name == 'README.md' %}
+              {% assign section_home = item %}
+            {% endif %}
+            {% if item.url == page.url %}
+              {% assign seen_current = true %}
+            {% elsif seen_current == false %}
+              {% assign prev_page = item %}
+            {% elsif next_page == nil %}
+              {% assign next_page = item %}
+            {% endif %}
           {% endif %}
         {% endfor %}
         <nav class="docs-nav" aria-label="文档导航">
           <div class="docs-nav__links">
             <span class="docs-nav__label">文档导航</span>
             <a href="{{ '/docs/' | relative_url }}">文档中心</a>
-            {% if section_home and section_home.url != page.url and section_home.url != '/docs/' %}
-              <a href="{{ section_home.url | relative_url }}">本主题目录</a>
+            {% if section_home %}
+              {% if section_home.url != page.url and section_home.url != '/docs/' %}
+                <a href="{{ section_home.url | relative_url }}">本主题目录</a>
+              {% endif %}
             {% endif %}
             <a href="{{ '/' | relative_url }}">项目首页</a>
           </div>
-          {% if sibling_pages.size > 1 %}
+          {% if sibling_count > 1 %}
             <div class="docs-nav__row">
               <span class="docs-nav__label">继续阅读</span>
-              {% for item in sibling_pages %}
-                {% assign item_title = item.title | default: item.name | replace: '.md', '' %}
-                {% if item.url == page.url %}
-                  <span class="docs-nav__current">{{ item_title }}</span>
-                {% else %}
-                  <a href="{{ item.url | relative_url }}">{{ item_title }}</a>
+              {% for item in section_pages %}
+                {% if item.path contains 'docs/' and item.path contains '.md' %}
+                  {% assign item_title = item.title | default: item.name | replace: '.md', '' %}
+                  {% if item.url == page.url %}
+                    <span class="docs-nav__current">{{ item_title }}</span>
+                  {% else %}
+                    <a href="{{ item.url | relative_url }}">{{ item_title }}</a>
+                  {% endif %}
                 {% endif %}
               {% endfor %}
             </div>
@@ -128,21 +139,23 @@
 
       {{ content }}
 
-      {% if page.path contains 'docs/' and page.path != 'docs/README.md' and sibling_pages.size > 1 %}
-        <nav class="docs-nav docs-nav__pager" aria-label="上一篇和下一篇">
-          <div class="docs-nav__pager-item">
-            {% if prev_page %}
-              <span class="docs-nav__label">上一篇</span><br>
-              <a href="{{ prev_page.url | relative_url }}">{{ prev_page.title | default: prev_page.name | replace: '.md', '' }}</a>
-            {% endif %}
-          </div>
-          <div class="docs-nav__pager-item docs-nav__pager-item--next">
-            {% if next_page %}
-              <span class="docs-nav__label">下一篇</span><br>
-              <a href="{{ next_page.url | relative_url }}">{{ next_page.title | default: next_page.name | replace: '.md', '' }}</a>
-            {% endif %}
-          </div>
-        </nav>
+      {% if page.path contains 'docs/' and page.path != 'docs/README.md' %}
+        {% if sibling_count > 1 %}
+          <nav class="docs-nav docs-nav__pager" aria-label="上一篇和下一篇">
+            <div class="docs-nav__pager-item">
+              {% if prev_page %}
+                <span class="docs-nav__label">上一篇</span><br>
+                <a href="{{ prev_page.url | relative_url }}">{{ prev_page.title | default: prev_page.name | replace: '.md', '' }}</a>
+              {% endif %}
+            </div>
+            <div class="docs-nav__pager-item docs-nav__pager-item--next">
+              {% if next_page %}
+                <span class="docs-nav__label">下一篇</span><br>
+                <a href="{{ next_page.url | relative_url }}">{{ next_page.title | default: next_page.name | replace: '.md', '' }}</a>
+              {% endif %}
+            </div>
+          </nav>
+        {% endif %}
       {% endif %}
 
       <footer class="site-footer">
