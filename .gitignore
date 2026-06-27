@@ -9,4 +9,5 @@
 [Oo]bj/
 logs/
 logs
-/TestResults
+/.tools
+TestResults/

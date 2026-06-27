@@ -1,54 +1,103 @@
-﻿using MS.Microservice.Core.Security.Cryptology;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using MS.Microservice.Core.Security.Cryptology;
+using Xunit;
 
 namespace MS.Microservice.Core.Tests.Cryptology
 {
     public class EncryptTest
-    {        [Fact]
-        public void TestEncrypt()
+    {
+        [Fact]
+        public void DesCrypt_ShouldRoundTrip()
         {
-            string plainText = "hello world";
-            // TripleDES requires a 24-byte key
-            string key = "123456789012345678901234";
-            string encrypted = CryptologyHelper.DesCrypt.Encrypt(plainText, key);
+            const string plainText = "hello world";
+            const string key = "123456789012345678901234";
 
+            string encrypted = CryptologyHelper.DesCrypt.Encrypt(plainText, key);
             string decrypted = CryptologyHelper.DesCrypt.Decrypt(encrypted, key);
+
             Assert.Equal(plainText, decrypted);
         }
-        /*
-         TransformFinalBlock 方法和 FlushFinalBlock 方法可以实现相同的加密效果，但在某些情况下，它们可能会产生不同的结果。
 
-        TransformFinalBlock 方法是用于将最后的数据块进行加密转换。它将输入数据块进行加密并返回加密后的结果。这个方法会处理最后不完整的数据块，并将其加密。在使用 TransformFinalBlock 方法时，可以确保所有数据都已被加密处理。
-        
-        FlushFinalBlock 方法用于确保所有数据都被加密，并且将加密后的数据写入到底层流中。这个方法不返回加密结果，而是将加密后的数据直接写入到流中。它适用于流式处理数据的场景。
-
-        这两种方法的实现细节和使用方式略有不同，因此在一些特定的情况下，它们可能会产生不同的加密结果。一种常见的情况是当使用了填充模式（如 PKCS7）时，TransformFinalBlock 方法会将最后的数据块进行填充后再进行加密，而 FlushFinalBlock 方法则不会填充数据块，直接进行加密。这可能会导致最后一个数据块的加密结果不同。
-         */        [Fact]
-        public void TestEncrypt2()
+        [Fact]
+        public void DesCrypt_ShouldMatchManualTripleDesResult()
         {
-            string cipherText = "hello world";
-            // TripleDES requires a 24-byte key
-            string key = "123456789012345678901234";
-            string encrypt = CryptologyHelper.DesCrypt.Encrypt(cipherText, key);
+            const string plainText = "hello world";
+            const string key = "123456789012345678901234";
 
-            string encrypt2 = Encrypt(cipherText, key, "12345678");
-            Assert.Equal(encrypt, encrypt2);
+            string encrypted = CryptologyHelper.DesCrypt.Encrypt(plainText, key);
+            string manual = EncryptWithTripleDes(plainText, key, "12345678");
+
+            Assert.Equal(encrypted, manual);
         }
 
-        public static string Encrypt(string cipherText, string key, string iv)
+        [Fact]
+        public void AesCrypt_ShouldRoundTrip_WithAutoHandledShortKey()
         {
-            var tripleDES = TripleDES.Create();
-            tripleDES.Key = Encoding.UTF8.GetBytes(key);
-            tripleDES.IV = Encoding.UTF8.GetBytes(iv);
-            tripleDES.Mode = CipherMode.CBC;
-            tripleDES.Padding = PaddingMode.PKCS7;
-            using var encrypt = tripleDES.CreateEncryptor();
-            byte[] inputBuffer = Encoding.UTF8.GetBytes(cipherText);
-            var encryptBuffer = encrypt.TransformFinalBlock(inputBuffer, 0, inputBuffer.Length);
-            return Convert.ToBase64String(encryptBuffer);
+            const string key = "short-key";
+            const string content = "payload";
+
+            string encrypted = CryptologyHelper.AesCrypt.Encrypt(key, content);
+            string decrypted = CryptologyHelper.AesCrypt.Decrypt(key, encrypted);
+
+            Assert.Equal(content, decrypted);
+        }
+
+        [Fact]
+        public void AesCrypt_ShouldRoundTrip_WithExactLengthKey()
+        {
+            const string key = "1234567890ABCDEF";
+            const string content = "payload";
+
+            string encrypted = CryptologyHelper.AesCrypt.Encrypt(key, content, autoHandle: false);
+            string decrypted = CryptologyHelper.AesCrypt.Decrypt(key, encrypted, autoHandle: false);
+
+            Assert.Equal(content, decrypted);
+        }
+
+        [Fact]
+        public void RsaCrypt_ShouldRoundTrip_WithPkcs8Keys()
+        {
+            using var rsa = RSA.Create(1024);
+            string publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
+            string privateKey = Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
+            const string content = "hello world";
+
+            string encrypted = CryptologyHelper.RsaCrypt.Encrypt(content, publicKey, Encoding.UTF8);
+            string decrypted = CryptologyHelper.RsaCrypt.Decrypt(encrypted, privateKey, Encoding.UTF8);
+
+            Assert.Equal(content, decrypted);
+        }
+
+        [Fact]
+        public void RsaCrypt_ShouldThrow_WhenPublicKeyIsNotBase64()
+        {
+            Assert.Throws<FormatException>(() =>
+                CryptologyHelper.RsaCrypt.Encrypt("hello", "not-base64", Encoding.UTF8));
+        }
+
+        [Fact]
+        public void RsaCrypt_ShouldThrow_WhenDecodedPublicKeyIsInvalid()
+        {
+            string invalidKey = Convert.ToBase64String([1, 2, 3, 4]);
+
+            Assert.Throws<ArgumentNullException>(() =>
+                CryptologyHelper.RsaCrypt.Encrypt("hello", invalidKey, Encoding.UTF8));
+        }
+
+        private static string EncryptWithTripleDes(string plainText, string key, string iv)
+        {
+            using var tripleDes = TripleDES.Create();
+            tripleDes.Key = Encoding.UTF8.GetBytes(key);
+            tripleDes.IV = Encoding.UTF8.GetBytes(iv);
+            tripleDes.Mode = CipherMode.CBC;
+            tripleDes.Padding = PaddingMode.PKCS7;
+
+            using var encryptor = tripleDes.CreateEncryptor();
+            byte[] inputBuffer = Encoding.UTF8.GetBytes(plainText);
+            byte[] encryptedBuffer = encryptor.TransformFinalBlock(inputBuffer, 0, inputBuffer.Length);
+            return Convert.ToBase64String(encryptedBuffer);
         }
     }
 }
