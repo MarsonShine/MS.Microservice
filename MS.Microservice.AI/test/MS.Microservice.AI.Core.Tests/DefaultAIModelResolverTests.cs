@@ -181,6 +181,144 @@ public sealed class DefaultAIModelResolverTests
         resolved.MaxRetryAttempts.Should().Be(4);
     }
 
+    [Fact]
+    public void ResolveTtsModel_WhenOnlyExplicitModelIsProvided_ShouldFallbackToDefaultProviderSettings()
+    {
+        var resolver = new DefaultAIModelResolver(Options.Create(CreateOptions()));
+
+        var resolved = resolver.ResolveTtsModel(new AITtsRequest
+        {
+            Input = "hello",
+            Model = "gpt-4o-mini-tts",
+        });
+
+        resolved.Provider.Should().Be("OpenAI");
+        resolved.Model.Should().Be("gpt-4o-mini-tts");
+        resolved.Scenario.Should().Be("Default");
+        resolved.Timeout.Should().Be(TimeSpan.FromSeconds(100));
+        resolved.MaxRetryAttempts.Should().Be(2);
+    }
+
+    [Fact]
+    public void ResolveTtsModel_WhenProviderOverrideHasNoModel_ShouldThrowConfigurationException()
+    {
+        var resolver = new DefaultAIModelResolver(Options.Create(CreateOptions()));
+
+        Action action = () => resolver.ResolveTtsModel(new AITtsRequest
+        {
+            Input = "hello",
+            Provider = "OpenAI",
+        });
+
+        action.Should().Throw<AIConfigurationException>()
+            .WithMessage("*must specify a model when provider override is used*");
+    }
+
+    [Fact]
+    public void ResolveAsrModel_WhenNoScenarioAndNoDefaultConfigured_ShouldThrowConfigurationException()
+    {
+        var options = CreateOptions();
+        options.Models.Asr.Clear();
+        var resolver = new DefaultAIModelResolver(Options.Create(options));
+
+        Action action = () => resolver.ResolveAsrModel(new AIAsrRequest
+        {
+            Audio = new AIBinaryContent
+            {
+                Content = [1, 2, 3],
+                FileName = "sample.wav",
+                ContentType = "audio/wav",
+            },
+        });
+
+        action.Should().Throw<AIConfigurationException>()
+            .WithMessage("*no scenario-specific or default model is configured*");
+    }
+
+    [Fact]
+    public void ResolveImageEditModel_WhenScenarioMatchesCaseInsensitive_ShouldUseScenarioConfiguration()
+    {
+        var options = CreateOptions();
+        options.Models.ImageEdit.Add("Marketing", new AIImageModelOptions
+        {
+            Provider = "Qwen",
+            Model = "qwen-image-edit",
+            Count = 2,
+            Size = "512x512",
+            Quality = "hd",
+            ResponseFormat = "url",
+            TimeoutSeconds = 55,
+            MaxRetryAttempts = 4,
+        });
+
+        var resolver = new DefaultAIModelResolver(Options.Create(options));
+
+        var resolved = resolver.ResolveImageEditModel(new AIImageEditRequest
+        {
+            Scenario = "marketing",
+            Prompt = "clean up background",
+            Image = new AIBinaryContent
+            {
+                Content = [1, 2, 3],
+                FileName = "image.png",
+                ContentType = "image/png",
+            },
+        });
+
+        resolved.Provider.Should().Be("Qwen");
+        resolved.Model.Should().Be("qwen-image-edit");
+        resolved.Scenario.Should().Be("Marketing");
+        resolved.Count.Should().Be(2);
+        resolved.Size.Should().Be("512x512");
+        resolved.Quality.Should().Be("hd");
+        resolved.ResponseFormat.Should().Be("url");
+        resolved.Timeout.Should().Be(TimeSpan.FromSeconds(55));
+        resolved.MaxRetryAttempts.Should().Be(4);
+    }
+
+    [Fact]
+    public void ResolveImageGenerationModel_WhenProviderCannotBeDetermined_ShouldThrowConfigurationException()
+    {
+        var options = CreateOptions();
+        options.DefaultProvider = null;
+        options.Models.ImageGeneration.Add("Default", new AIImageModelOptions
+        {
+            Provider = null!,
+            Model = "gpt-image-1",
+        });
+
+        var resolver = new DefaultAIModelResolver(Options.Create(options));
+
+        Action action = () => resolver.ResolveImageGenerationModel(new AIImageGenerationRequest
+        {
+            Prompt = "draw a cat",
+        });
+
+        action.Should().Throw<AIConfigurationException>()
+            .WithMessage("*no provider could be determined*");
+    }
+
+    [Fact]
+    public void ResolveImageGenerationModel_WhenResolvedProviderIsNotConfigured_ShouldThrowConfigurationException()
+    {
+        var options = CreateOptions();
+        options.Models.ImageGeneration.Add("Default", new AIImageModelOptions
+        {
+            Provider = "Missing",
+            Model = "gpt-image-1",
+        });
+
+        var resolver = new DefaultAIModelResolver(Options.Create(options));
+
+        Action action = () => resolver.ResolveImageGenerationModel(new AIImageGenerationRequest
+        {
+            Prompt = "draw a cat",
+        });
+
+        action.Should().Throw<AIConfigurationException>()
+            .WithMessage("*provider 'Missing' is not configured*");
+    }
+
     private static AIOptions CreateOptions()
     {
         var options = new AIOptions

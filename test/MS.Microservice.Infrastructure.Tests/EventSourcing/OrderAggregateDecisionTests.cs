@@ -81,6 +81,33 @@ public sealed class OrderAggregateDecisionTests
     }
 
     [Fact]
+    public void Decide_WhenCreateOrderAlreadyExists_ShouldReturnConflict()
+    {
+        var orderId = Guid.NewGuid();
+        var state = OrderAggregate.Fold([new OrderCreated(orderId, "cust-001", "CNY")]);
+
+        var decision = OrderAggregate.Decide(state, new CreateOrder(orderId, "cust-002", "USD"));
+
+        decision.IsLeft.Should().BeTrue();
+        decision.Left.Code.Should().Be("conflict");
+    }
+
+    [Fact]
+    public void Decide_WhenRemoveQuantityIsNonPositive_ShouldReturnValidation()
+    {
+        var orderId = Guid.NewGuid();
+        var state = OrderAggregate.Fold([
+            new OrderCreated(orderId, "cust-001", "CNY"),
+            new OrderItemAdded(orderId, "sku-1", 10m, 1)
+        ]);
+
+        var decision = OrderAggregate.Decide(state, new RemoveOrderItem(orderId, "sku-1", 0));
+
+        decision.IsLeft.Should().BeTrue();
+        decision.Left.Code.Should().Be("validation");
+    }
+
+    [Fact]
     public void Decide_WhenOrderAlreadyConfirmed_ShouldReturnConflict()
     {
         var orderId = Guid.NewGuid();
@@ -88,6 +115,21 @@ public sealed class OrderAggregateDecisionTests
             new OrderCreated(orderId, "cust-001", "CNY"),
             new OrderItemAdded(orderId, "sku-1", 10m, 1),
             new OrderConfirmed(orderId)
+        ]);
+
+        var decision = OrderAggregate.Decide(state, new AddOrderItem(orderId, "sku-2", 20m, 1));
+
+        decision.IsLeft.Should().BeTrue();
+        decision.Left.Code.Should().Be("conflict");
+    }
+
+    [Fact]
+    public void Decide_WhenOrderAlreadyCancelled_ShouldReturnConflict()
+    {
+        var orderId = Guid.NewGuid();
+        var state = OrderAggregate.Fold([
+            new OrderCreated(orderId, "cust-001", "CNY"),
+            new OrderCancelled(orderId, "customer requested")
         ]);
 
         var decision = OrderAggregate.Decide(state, new AddOrderItem(orderId, "sku-2", 20m, 1));

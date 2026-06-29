@@ -180,6 +180,150 @@ public sealed class OpenAIMediaProviderTests
         body.Should().Contain("name=prompt");
     }
 
+    [Theory]
+    [InlineData("mp3", "audio/mpeg")]
+    [InlineData("wav", "audio/wav")]
+    [InlineData("flac", "audio/flac")]
+    [InlineData("aac", "audio/aac")]
+    [InlineData("opus", "audio/opus")]
+    [InlineData("pcm", "audio/L16")]
+    [InlineData("unknown", "application/octet-stream")]
+    public async Task SynthesizeAsync_WhenResponseContentTypeIsMissing_ShouldMapAudioContentType(string responseFormat, string expectedContentType)
+    {
+        var handler = new SequenceHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(Encoding.UTF8.GetBytes("audio-bytes")),
+        });
+
+        var provider = CreateTtsProvider(handler);
+
+        var response = await provider.SynthesizeAsync(
+            CreateTtsModel() with { ResponseFormat = responseFormat },
+            new AITtsRequest { Input = "hello speech" });
+
+        response.Audio.ContentType.Should().Be(expectedContentType);
+        response.Audio.FileName.Should().Be($"speech.{responseFormat}");
+    }
+
+    [Fact]
+    public async Task SynthesizeAsync_WhenProviderReturnsContentFilterError_ShouldThrowContentSafetyException()
+    {
+        var handler = new SequenceHttpMessageHandler(
+            _ => CreateJsonResponse(
+                HttpStatusCode.BadRequest,
+                """
+                {
+                  "error": {
+                    "message": "Content policy triggered",
+                    "code": "content_filter"
+                  }
+                }
+                """,
+                requestId: "media-filter-id"));
+
+        var provider = CreateTtsProvider(handler);
+
+        Func<Task> action = async () => await provider.SynthesizeAsync(CreateTtsModel(), new AITtsRequest
+        {
+            Input = "blocked content",
+            RequestId = "req-openai-filter",
+        });
+
+        var exception = await action.Should().ThrowAsync<AIContentSafetyException>();
+        exception.Which.Provider.Should().Be(OpenAIProviderDefaults.ProviderName);
+        exception.Which.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        exception.Which.ProviderRequestId.Should().Be("media-filter-id");
+    }
+
+    [Fact]
+    public async Task SynthesizeAsync_WhenRateLimitedWithRetryAfterDate_ShouldExposeRetryAfter()
+    {
+        var retryAt = DateTimeOffset.UtcNow.AddSeconds(2);
+        var handler = new SequenceHttpMessageHandler(
+            _ => CreateJsonResponse(
+                HttpStatusCode.TooManyRequests,
+                """
+                {
+                  "error": {
+                    "message": "Too many requests",
+                    "code": "rate_limit_reached"
+                  }
+                }
+                """,
+                retryAfter: new System.Net.Http.Headers.RetryConditionHeaderValue(retryAt)));
+
+        var provider = CreateTtsProvider(handler);
+
+        Func<Task> action = async () => await provider.SynthesizeAsync(
+            CreateTtsModel() with { MaxRetryAttempts = 0 },
+            new AITtsRequest { Input = "hello speech" });
+
+        var exception = await action.Should().ThrowAsync<AIRateLimitException>();
+        exception.Which.RetryAfter.Should().NotBeNull();
+        exception.Which.RetryAfter.Should().BeGreaterThan(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task RecognizeAsync_WhenTransientProviderErrorOccursBeforeSuccess_ShouldRetryAndReturnParsedResponse()
+    {
+        var handler = new SequenceHttpMessageHandler(
+            _ => CreateJsonResponse(
+                HttpStatusCode.ServiceUnavailable,
+                """
+                {
+                  "error": {
+                    "message": "Provider overloaded",
+                    "code": "server_overloaded"
+                  }
+                }
+                """),
+            _ => CreateJsonResponse(
+                HttpStatusCode.OK,
+                """
+                {
+                  "model": "whisper-1",
+                  "text": "retry success",
+                  "language": "en"
+                }
+                """));
+
+        var provider = CreateAsrProvider(handler);
+
+        var response = await provider.RecognizeAsync(
+            CreateAsrModel() with { MaxRetryAttempts = 1 },
+            new AIAsrRequest
+            {
+                Audio = new AIBinaryContent
+                {
+                    Content = Encoding.UTF8.GetBytes("wave"),
+                    ContentType = "audio/wav",
+                    FileName = "sample.wav",
+                },
+            });
+
+        response.Text.Should().Be("retry success");
+        handler.Requests.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SynthesizeAsync_WhenTimeoutPersists_ShouldThrowTimeoutException()
+    {
+        var handler = new SequenceHttpMessageHandler(
+            _ => throw new TaskCanceledException("timeout-1"),
+            _ => throw new TaskCanceledException("timeout-2"));
+
+        var provider = CreateTtsProvider(handler);
+
+        Func<Task> action = async () => await provider.SynthesizeAsync(
+            CreateTtsModel() with { MaxRetryAttempts = 1, Timeout = TimeSpan.FromMilliseconds(1) },
+            new AITtsRequest { Input = "hello speech", RequestId = "req-openai-timeout" });
+
+        var exception = await action.Should().ThrowAsync<AITimeoutException>();
+        exception.Which.Provider.Should().Be(OpenAIProviderDefaults.ProviderName);
+        exception.Which.RequestId.Should().Be("req-openai-timeout");
+        handler.Requests.Should().HaveCount(2);
+    }
+
     private static IAITtsProvider CreateTtsProvider(SequenceHttpMessageHandler handler)
     {
         return new OpenAITtsProvider(
@@ -276,13 +420,22 @@ public sealed class OpenAIMediaProviderTests
         };
     }
 
-    private static HttpResponseMessage CreateJsonResponse(HttpStatusCode statusCode, string body)
+    private static HttpResponseMessage CreateJsonResponse(
+        HttpStatusCode statusCode,
+        string body,
+        string requestId = "openai-media-id",
+        System.Net.Http.Headers.RetryConditionHeaderValue? retryAfter = null)
     {
         var response = new HttpResponseMessage(statusCode)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
-        response.Headers.TryAddWithoutValidation("x-request-id", "openai-media-id");
+        if (retryAfter is not null)
+        {
+            response.Headers.RetryAfter = retryAfter;
+        }
+
+        response.Headers.TryAddWithoutValidation("x-request-id", requestId);
         return response;
     }
 
