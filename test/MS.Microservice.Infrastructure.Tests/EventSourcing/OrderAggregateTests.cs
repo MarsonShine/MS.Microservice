@@ -33,6 +33,33 @@ namespace MS.Microservice.Infrastructure.Tests.EventSourcing
         }
 
         [Fact]
+        public void Decide_WhenConfirmHasItems_ShouldProduceOrderConfirmedEvent()
+        {
+            var orderId = Guid.NewGuid();
+            var state = OrderAggregate.Fold([
+                new OrderCreated(orderId, "cust-001", "CNY"),
+                new OrderItemAdded(orderId, "sku-1", 10m, 1)
+            ]);
+
+            var decision = OrderAggregate.Decide(state, new ConfirmOrder(orderId));
+
+            decision.IsRight.Should().BeTrue();
+            decision.Right.Should().ContainSingle().Which.Should().BeOfType<OrderConfirmed>();
+        }
+
+        [Fact]
+        public void Decide_WhenCancelHasReason_ShouldProduceOrderCancelledEvent()
+        {
+            var orderId = Guid.NewGuid();
+            var state = OrderAggregate.Fold([new OrderCreated(orderId, "cust-001", "CNY")]);
+
+            var decision = OrderAggregate.Decide(state, new CancelOrder(orderId, "customer requested"));
+
+            decision.IsRight.Should().BeTrue();
+            decision.Right.Should().ContainSingle().Which.Should().BeOfType<OrderCancelled>();
+        }
+
+        [Fact]
         public void Fold_WhenReplayLifecycle_ShouldBuildCurrentState()
         {
             var orderId = Guid.NewGuid();
@@ -49,6 +76,38 @@ namespace MS.Microservice.Infrastructure.Tests.EventSourcing
             state.TotalAmount.Should().Be(40m);
             state.Lines["sku-1"].Quantity.Should().Be(1);
             state.Version.Should().Be(5);
+        }
+
+        [Fact]
+        public void Fold_WhenSameItemIsAddedTwice_ShouldAccumulateQuantityAndUseLatestUnitPrice()
+        {
+            var orderId = Guid.NewGuid();
+            var state = OrderAggregate.Fold([
+                new OrderCreated(orderId, "cust-001", "CNY"),
+                new OrderItemAdded(orderId, "sku-1", 10m, 1),
+                new OrderItemAdded(orderId, "sku-1", 12m, 2)
+            ]);
+
+            state.Lines["sku-1"].Quantity.Should().Be(3);
+            state.Lines["sku-1"].UnitPrice.Should().Be(12m);
+            state.TotalAmount.Should().Be(36m);
+            state.Version.Should().Be(3);
+        }
+
+        [Fact]
+        public void Evolve_WhenRemovingUnknownItem_ShouldLeaveLinesUntouchedAndAdvanceVersion()
+        {
+            var orderId = Guid.NewGuid();
+            var state = OrderAggregate.Fold([
+                new OrderCreated(orderId, "cust-001", "CNY"),
+                new OrderItemAdded(orderId, "sku-1", 10m, 1)
+            ]);
+
+            var next = OrderAggregate.Evolve(state, new OrderItemRemoved(orderId, "sku-2", 10m, 1));
+
+            next.Lines.Should().BeEquivalentTo(state.Lines);
+            next.TotalAmount.Should().Be(state.TotalAmount);
+            next.Version.Should().Be(state.Version + 1);
         }
     }
 }

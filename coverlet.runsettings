@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[MS.Microservice*]*</Include>
+          <Exclude>[*.Tests*]*</Exclude>
+          <ExcludeByAttribute>CompilerGeneratedAttribute,GeneratedCodeAttribute,DebuggerNonUserCodeAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+          <ExcludeByFile>**/bin/**/*.cs,**/obj/**/*.cs,**/Migrations/**/*.cs,**/Generated/**/*.cs,**/*.g.cs,**/*.g.i.cs,**/*.designer.cs,**/src/MS.Microservice.Core/Dto/**/*.cs,**/src/MS.Microservice.Web/Application/Models/**/*Request.cs,**/src/MS.Microservice.Web/Application/Models/**/*Response.cs,**/MS.Microservice.AI/src/MS.Microservice.AI.Abstractions/**/*Request.cs,**/MS.Microservice.AI/src/MS.Microservice.AI.Abstractions/**/*Response.cs,**/MS.Microservice.Swagger/SwaggerOptions.cs,**/MS.Microservice.Logging/src/MS.Microservice.Logging.Serilog/MsSerilogOptions.cs,**/MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MsNLogOptions.cs,**/MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/AspNetCoreRequestLoggingOptions.cs,**/MS.Microservice.AI/src/MS.Microservice.AI.Core/AIProductionOptions.cs,**/MS.Microservice.AI/src/MS.Microservice.AI.Core/AIOptions.cs,**/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/SqlSugarOptions.cs,**/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/SqlSugarClientBuilderOptions.cs,**/src/MS.Microservice.Web/Infrastructure/Cors/CorsOptions.cs,**/src/MS.Microservice.Domain/Identity/IdentityOptions.cs,**/src/MS.Microservice.Infrastructure/Caching/CacheOperationLogOptions.cs,**/src/MS.Microservice.Infrastructure/Caching/Buffer/BufferQueueOptions.cs,**/src/MS.Microservice.Infrastructure/Common/NAudio/AudioOptions.cs</ExcludeByFile>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SkipAutoProps>true</SkipAutoProps>
+          <DeterministicReport>true</DeterministicReport>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

@@ -1,14 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Threading.Tasks;
 using FluentAssertions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using Xunit;
 using MS.Microservice.Infrastructure.Utils;
 using MS.Microservice.Infrastructure.Utils.Excel;
-using System.Threading.Tasks;
+using Xunit;
 
 namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
 {
@@ -105,7 +105,7 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             var helper = new ExcelHelper();
             var data = new List<MixedRow>
             {
-                new MixedRow { Skip = "S", Keep = 2, Display = "D", Tail = new DateTime(2024,3,3) }
+                new MixedRow { Skip = "S", Keep = 2, Display = "D", Tail = new DateTime(2024, 3, 3) }
             };
             var bytes = helper.Export(data, "S");
 
@@ -114,7 +114,6 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             var sheet = wb.GetSheet("S");
             var header = sheet.GetRow(0);
 
-            // 不应包含 Skip（Ignore=true）
             var headers = new[]
             {
                 header.GetCell(0).StringCellValue,
@@ -124,7 +123,7 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
 
             headers.Should().Contain("Keep");
             headers.Should().Contain("显示名");
-            headers.Should().Contain("Tail"); // 未标注 => 属性名
+            headers.Should().Contain("Tail");
         }
 
         private class MixedRow
@@ -137,30 +136,28 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             [ExcelColumn(Name = "显示名", Order = 1)]
             public string Display { get; set; } = string.Empty;
 
-            // 未标注 => 使用属性名，Order = int.MaxValue
             public DateTime Tail { get; set; }
         }
 
         [Fact]
         public void Export_ShouldWriteHeadersAndValues_Correctly()
         {
-            // Arrange
             var data = new List<SampleRow>
             {
                 new SampleRow
                 {
-                    Id = 1, Name = "张三", Amount = 12.34m,
+                    Id = 1,
+                    Name = "张三",
+                    Amount = 12.34m,
                     Date = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Unspecified),
-                    Enabled = true, Status = MyEnum.B
+                    Enabled = true,
+                    Status = MyEnum.B
                 }
             };
 
             var helper = new ExcelHelper();
-
-            // Act
             var bytes = helper.Export(data, "Sheet1");
 
-            // Assert
             using var ms = new MemoryStream(bytes);
             using var wb = new XSSFWorkbook(ms);
             var sheet = wb.GetSheet("Sheet1");
@@ -176,15 +173,13 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
 
             var row1 = sheet.GetRow(1);
             row1.Should().NotBeNull();
-
             row1.GetCell(0).NumericCellValue.Should().Be(1);
             row1.GetCell(1).StringCellValue.Should().Be("张三");
             row1.GetCell(2).NumericCellValue.Should().BeApproximately((double)12.34m, 1e-8);
-            // 日期：NPOI 写入为日期单元格，读取时应能识别
+
             var cellDate = row1.GetCell(3);
             DateUtil.IsCellDateFormatted(cellDate).Should().BeTrue();
             cellDate.DateCellValue!.Value.Date.Should().Be(new DateTime(2024, 1, 2));
-
             row1.GetCell(4).BooleanCellValue.Should().BeTrue();
             row1.GetCell(5).StringCellValue.Should().Be("B");
         }
@@ -192,11 +187,8 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
         [Fact]
         public void Import_ShouldParseValues_Correctly()
         {
-            // Arrange: 构造一个内存工作簿
             var wb = new XSSFWorkbook();
             var sheet = wb.CreateSheet("SheetA");
-
-            // 标题
             var header = sheet.CreateRow(0);
             header.CreateCell(0).SetCellValue("ID");
             header.CreateCell(1).SetCellValue("名称");
@@ -205,19 +197,18 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             header.CreateCell(4).SetCellValue("启用");
             header.CreateCell(5).SetCellValue("状态");
 
-            // 内容
             var r1 = sheet.CreateRow(1);
-            r1.CreateCell(0).SetCellValue(2);                 // int
-            r1.CreateCell(1).SetCellValue("李四");             // string
-            r1.CreateCell(2).SetCellValue((double)99.99m);     // decimal->double
+            r1.CreateCell(0).SetCellValue(2);
+            r1.CreateCell(1).SetCellValue("李四");
+            r1.CreateCell(2).SetCellValue((double)99.99m);
             var cDate = r1.CreateCell(3);
             cDate.SetCellValue(new DateTime(2024, 5, 6));
             var dateStyle = wb.CreateCellStyle();
             var format = wb.CreateDataFormat();
             dateStyle.DataFormat = format.GetFormat("yyyy-mm-dd");
-            cDate.CellStyle = dateStyle;                       // 明确日期样式
-            r1.CreateCell(4).SetCellValue(false);              // bool
-            r1.CreateCell(5).SetCellValue("A");                // enum as string
+            cDate.CellStyle = dateStyle;
+            r1.CreateCell(4).SetCellValue(false);
+            r1.CreateCell(5).SetCellValue("A");
 
             using var ms = new MemoryStream();
             wb.Write(ms, leaveOpen: true);
@@ -227,10 +218,8 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
                 .InitSheetName("SheetA")
                 .InitStartReadRowIndex(0, 1);
 
-            // Act
             var rows = helper.Import<SampleRow>("test.xlsx", ms);
 
-            // Assert
             rows.Should().HaveCount(1);
             var row = rows[0];
             row.Id.Should().Be(2);
@@ -244,7 +233,6 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
         [Fact]
         public void Import_ShouldWorkWhenSomeColumnsMissing()
         {
-            // Arrange: 缺少“状态”列
             var wb = new XSSFWorkbook();
             var sheet = wb.CreateSheet("S");
             var header = sheet.CreateRow(0);
@@ -269,10 +257,8 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
                 .InitSheetIndex(0)
                 .InitStartReadRowIndex(0, 1);
 
-            // Act
             var rows = helper.Import<SampleRow>("missing.xlsx", ms);
 
-            // Assert: 正常导入，未映射的属性为默认值
             rows.Should().HaveCount(1);
             var row = rows[0];
             row.Id.Should().Be(3);
@@ -280,7 +266,7 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             row.Amount.Should().Be(10.5m);
             row.Date.Date.Should().Be(new DateTime(2023, 12, 31));
             row.Enabled.Should().BeTrue();
-            row.Status.Should().Be(MyEnum.None); // 缺列 => 默认值
+            row.Status.Should().Be(MyEnum.None);
         }
 
         [Fact]
@@ -369,6 +355,131 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             sheet.GetRow(0).GetCell(1).StringCellValue.Should().Be("ColB");
             sheet.GetRow(1).GetCell(0).NumericCellValue.Should().Be(1);
             sheet.GetRow(1).GetCell(1).StringCellValue.Should().Be("row1");
+        }
+
+        [Fact]
+        public async Task ExportAsync_ToPipeWriter_ShouldWriteWorkbook()
+        {
+            var helper = new ExcelHelper();
+            var pipe = new System.IO.Pipelines.Pipe();
+            var data = new List<SampleRow>
+            {
+                new()
+                {
+                    Id = 9,
+                    Name = "Pipe",
+                    Amount = 66.5m,
+                    Date = new DateTime(2024, 8, 9),
+                    Enabled = true,
+                    Status = MyEnum.B
+                }
+            };
+
+            await helper.ExportAsync(data, "PipeSheet", pipe.Writer);
+            await pipe.Writer.CompleteAsync();
+
+            await using var ms = new MemoryStream();
+            using (Stream readerStream = pipe.Reader.AsStream())
+            {
+                await readerStream.CopyToAsync(ms);
+            }
+
+            ms.Position = 0;
+            using var workbook = new XSSFWorkbook(ms);
+            workbook.GetSheet("PipeSheet").GetRow(1).GetCell(0).NumericCellValue.Should().Be(9);
+            workbook.GetSheet("PipeSheet").GetRow(1).GetCell(1).StringCellValue.Should().Be("Pipe");
+        }
+
+        [Fact]
+        public async Task ImportAsync_FromPipeReader_ShouldMapBySheetIndex()
+        {
+            var workbook = new XSSFWorkbook();
+            var sheet = workbook.CreateSheet("PipeImport");
+            var header = sheet.CreateRow(0);
+            header.CreateCell(0).SetCellValue("ID");
+            header.CreateCell(1).SetCellValue("名称");
+            header.CreateCell(2).SetCellValue("金额");
+            header.CreateCell(3).SetCellValue("日期");
+            header.CreateCell(4).SetCellValue("启用");
+            header.CreateCell(5).SetCellValue("状态");
+
+            var row = sheet.CreateRow(1);
+            row.CreateCell(0).SetCellValue(11);
+            row.CreateCell(1).SetCellValue("Reader");
+            row.CreateCell(2).SetCellValue(11.5);
+            row.CreateCell(3).SetCellValue(new DateTime(2024, 9, 10));
+            row.CreateCell(4).SetCellValue(false);
+            row.CreateCell(5).SetCellValue("A");
+
+            await using var source = new MemoryStream();
+            workbook.Write(source, leaveOpen: true);
+            var pipe = new System.IO.Pipelines.Pipe();
+            await pipe.Writer.WriteAsync(source.ToArray());
+            await pipe.Writer.CompleteAsync();
+
+            var rows = await new ExcelHelper()
+                .InitSheetIndex(0)
+                .InitStartReadRowIndex(0, 1)
+                .ImportAsync<SampleRow>("pipe.xlsx", pipe.Reader);
+
+            rows.Should().HaveCount(1);
+            rows[0].Id.Should().Be(11);
+            rows[0].Name.Should().Be("Reader");
+            rows[0].Status.Should().Be(MyEnum.A);
+        }
+
+        [Fact]
+        public void Import_FromNonSeekableStream_ShouldWork()
+        {
+            var workbook = new XSSFWorkbook();
+            var sheet = workbook.CreateSheet("NonSeekable");
+            var header = sheet.CreateRow(0);
+            header.CreateCell(0).SetCellValue("ID");
+            header.CreateCell(1).SetCellValue("名称");
+            header.CreateCell(2).SetCellValue("金额");
+            header.CreateCell(3).SetCellValue("日期");
+            header.CreateCell(4).SetCellValue("启用");
+            header.CreateCell(5).SetCellValue("状态");
+
+            var row = sheet.CreateRow(1);
+            row.CreateCell(0).SetCellValue(12);
+            row.CreateCell(1).SetCellValue("Stream");
+            row.CreateCell(2).SetCellValue(12.5);
+            row.CreateCell(3).SetCellValue(new DateTime(2024, 10, 11));
+            row.CreateCell(4).SetCellValue(true);
+            row.CreateCell(5).SetCellValue("B");
+
+            using var source = new MemoryStream();
+            workbook.Write(source, leaveOpen: true);
+            using var nonSeekable = new NonSeekableStream(new MemoryStream(source.ToArray()));
+
+            var rows = new ExcelHelper()
+                .InitSheetName("NonSeekable")
+                .InitStartReadRowIndex(0, 1)
+                .Import<SampleRow>("non-seekable.xlsx", nonSeekable);
+
+            rows.Should().HaveCount(1);
+            rows[0].Id.Should().Be(12);
+            rows[0].Name.Should().Be("Stream");
+            rows[0].Status.Should().Be(MyEnum.B);
+        }
+
+        [Fact]
+        public void Import_WithMissingSheetName_ShouldThrow()
+        {
+            var workbook = new XSSFWorkbook();
+            workbook.CreateSheet("Exists");
+            using var stream = new MemoryStream();
+            workbook.Write(stream, leaveOpen: true);
+            stream.Position = 0;
+
+            var action = () => new ExcelHelper()
+                .InitSheetName("Missing")
+                .InitStartReadRowIndex(0, 1)
+                .Import<SampleRow>("missing.xlsx", stream);
+
+            action.Should().Throw<InvalidOperationException>()
+                .WithMessage("*未找到名称为 Missing 的工作表*");
         }
     }
 }
