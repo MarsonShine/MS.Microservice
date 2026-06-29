@@ -160,6 +160,76 @@ public sealed class AIProductionReadinessTests
         record.Succeeded.Should().BeTrue();
     }
 
+    [Fact]
+    public void ProductionOptionValidators_WhenOptionsAreInvalid_ShouldReturnExpectedFailures()
+    {
+        var invalidLogSanitizer = new AILogSanitizerOptions
+        {
+            RedactionText = string.Empty,
+        };
+        invalidLogSanitizer.SensitiveFields.Clear();
+        invalidLogSanitizer.SensitiveFields.Add(string.Empty);
+
+        var rateResult = new AIRateLimitingOptionsValidator().Validate(null, new AIRateLimitingOptions
+        {
+            RequestsPerWindow = 0,
+            WindowSeconds = 0,
+        });
+        var circuitResult = new AICircuitBreakerOptionsValidator().Validate(null, new AICircuitBreakerOptions
+        {
+            FailureThreshold = 0,
+            BreakDurationSeconds = 0,
+        });
+        var logResult = new AILogSanitizerOptionsValidator().Validate(null, invalidLogSanitizer);
+        var secretResult = new AISecretProviderOptionsValidator().Validate(null, new AISecretProviderOptions
+        {
+            EnvironmentVariablePrefix = string.Empty,
+        });
+        var payloadResult = new AIPayloadLimitOptionsValidator().Validate(null, new AIPayloadLimitOptions
+        {
+            MaxChatCharacters = 0,
+            MaxStreamingChatCharacters = 0,
+            MaxTextCharacters = 0,
+            MaxAudioBytes = 0,
+            MaxImagePromptCharacters = 0,
+            MaxImageBytes = 0,
+            MaxImageMaskBytes = 0,
+        });
+
+        rateResult.Failures.Should().HaveCount(2);
+        circuitResult.Failures.Should().HaveCount(2);
+        logResult.Failures.Should().HaveCount(2);
+        secretResult.Failures.Should().ContainSingle("AI:SecretProvider:EnvironmentVariablePrefix is required.");
+        payloadResult.Failures.Should().HaveCount(7);
+    }
+
+    [Fact]
+    public void ProductionOptionValidators_WhenOptionsAreValid_ShouldSucceed()
+    {
+        var rateResult = new AIRateLimitingOptionsValidator().Validate(null, new AIRateLimitingOptions
+        {
+            RequestsPerWindow = 1,
+            WindowSeconds = 30,
+        });
+        var circuitResult = new AICircuitBreakerOptionsValidator().Validate(null, new AICircuitBreakerOptions
+        {
+            FailureThreshold = 1,
+            BreakDurationSeconds = 30,
+        });
+        var logResult = new AILogSanitizerOptionsValidator().Validate(null, new AILogSanitizerOptions());
+        var secretResult = new AISecretProviderOptionsValidator().Validate(null, new AISecretProviderOptions
+        {
+            EnvironmentVariablePrefix = "AI__PROVIDERS__",
+        });
+        var payloadResult = new AIPayloadLimitOptionsValidator().Validate(null, new AIPayloadLimitOptions());
+
+        rateResult.Succeeded.Should().BeTrue();
+        circuitResult.Succeeded.Should().BeTrue();
+        logResult.Succeeded.Should().BeTrue();
+        secretResult.Succeeded.Should().BeTrue();
+        payloadResult.Succeeded.Should().BeTrue();
+    }
+
     private static IConfigurationRoot CreateConfiguration(IDictionary<string, string?>? overrides = null)
     {
         var values = new Dictionary<string, string?>

@@ -109,6 +109,32 @@ public sealed class MsSerilogProviderTests
         sink.Events.Should().BeEmpty();
     }
 
+    [Fact]
+    public void ConfigureMsSerilog_HostBuilderOverload_ShouldWriteWithConfiguredSink()
+    {
+        var sink = new CollectingSink();
+
+        using var host = Host.CreateDefaultBuilder()
+            .ConfigureMsSerilog(options =>
+            {
+                options.ReadFromConfiguration = false;
+                options.UseConsoleSink = false;
+                options.ConfigureLogger = (_, loggerConfiguration) =>
+                {
+                    loggerConfiguration.WriteTo.Sink(sink);
+                };
+            })
+            .Build();
+
+        var logger = host.Services.GetRequiredService<ILogger<MsSerilogProviderTests>>();
+
+        logger.LogWarning("hello from host builder");
+
+        sink.Events.Should().ContainSingle();
+        sink.Events[0].Level.Should().Be(LogEventLevel.Warning);
+        sink.Events[0].RenderMessage().Should().Be("hello from host builder");
+    }
+
     private sealed class CollectingSink : ILogEventSink
     {
         public List<LogEvent> Events { get; } = [];

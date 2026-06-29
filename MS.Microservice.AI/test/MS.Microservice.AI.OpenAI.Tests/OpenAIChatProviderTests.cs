@@ -148,6 +148,56 @@ public sealed class OpenAIChatProviderTests
         handler.Requests[0].Headers.Accept.Should().Contain(header => header.MediaType == "text/event-stream");
     }
 
+    [Fact]
+    public void Validate_WhenOpenAIIsNotReferenced_ShouldSucceed()
+    {
+        var result = new OpenAIOptionsValidator().Validate(null, new AIOptions
+        {
+            DefaultProvider = "Qwen",
+        });
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_WhenOpenAIUsesFallbackBaseAddress_ShouldSucceed()
+    {
+        var options = new AIOptions
+        {
+            DefaultProvider = OpenAIProviderDefaults.ProviderName,
+        };
+        options.Providers.Add(OpenAIProviderDefaults.ProviderName, new AIProviderRegistrationOptions
+        {
+            ApiKey = "openai-key",
+        });
+
+        var result = new OpenAIOptionsValidator().Validate(null, options);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_WhenOpenAIIsReferencedButInvalid_ShouldReturnFailures()
+    {
+        var options = new AIOptions
+        {
+            DefaultProvider = OpenAIProviderDefaults.ProviderName,
+        };
+        options.Providers.Add(OpenAIProviderDefaults.ProviderName, new AIProviderRegistrationOptions
+        {
+            Enabled = false,
+            ApiKey = string.Empty,
+            BaseAddress = "not-a-uri",
+        });
+
+        var result = new OpenAIOptionsValidator().Validate(null, options);
+
+        result.Failed.Should().BeTrue();
+        result.Failures.Should().Contain($"AI:Providers:{OpenAIProviderDefaults.ProviderName}:Enabled must be true when the provider is in use.");
+        result.Failures.Should().Contain($"AI:Providers:{OpenAIProviderDefaults.ProviderName}:ApiKey is required.");
+        result.Failures.Should().Contain($"AI:Providers:{OpenAIProviderDefaults.ProviderName}:BaseAddress must be a valid absolute URI.");
+    }
+
     private static IAIChatProvider CreateProvider(SequenceHttpMessageHandler handler)
     {
         var options = new AIOptions();

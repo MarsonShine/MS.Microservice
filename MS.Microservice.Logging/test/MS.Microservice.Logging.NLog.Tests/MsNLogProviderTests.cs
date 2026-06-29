@@ -38,15 +38,18 @@ public sealed class MsNLogProviderTests : IDisposable
             "src", "MS.Microservice.Logging.NLog", "nlog.sample.config"));
 
         var builder = Host.CreateApplicationBuilder();
-
-        var act = () => builder.ConfigureMsNLog(options =>
+        builder.ConfigureMsNLog(options =>
         {
             options.ConfigurationFilePath = sampleConfigPath;
             options.UseFallbackConfigurationWhenFileMissing = false;
         });
 
-        act.Should().NotThrow();
+        using var host = builder.Build();
+
         global::NLog.LogManager.Configuration.Should().NotBeNull();
+        global::NLog.LogManager.Configuration!.AllTargets.Select(target => target.Name)
+            .Should().Contain(["console", "file"]);
+        global::NLog.LogManager.Configuration.LoggingRules.Count.Should().BeGreaterThanOrEqualTo(2);
     }
 
     [Fact]
@@ -107,6 +110,46 @@ public sealed class MsNLogProviderTests : IDisposable
         rule.IsLoggingEnabledForLevel(global::NLog.LogLevel.Info).Should().BeFalse();
         rule.IsLoggingEnabledForLevel(global::NLog.LogLevel.Error).Should().BeFalse();
         rule.IsLoggingEnabledForLevel(global::NLog.LogLevel.Fatal).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ConfigureMsNLog_HostBuilderOverload_ShouldLogWithAmbientRequestContext()
+    {
+        using var host = Host.CreateDefaultBuilder()
+            .ConfigureMsNLog(options =>
+            {
+                options.ConfigurationFilePath = "missing.nlog.config";
+                options.UseFallbackConfigurationWhenFileMissing = true;
+                options.MinimumLevel = Microsoft.Extensions.Logging.LogLevel.Information;
+            })
+            .Build();
+
+        host.Services.GetServices<IHostedService>()
+            .Should().Contain(service => service.GetType().Name == "NLogHostedService");
+
+        var logger = host.Services.GetRequiredService<ILogger<MsNLogProviderTests>>();
+        var memoryTarget = new MemoryTarget("memory")
+        {
+            Layout = "rid=${requestId}|msg=${message}",
+        };
+
+        var configuration = new LoggingConfiguration();
+        configuration.AddTarget(memoryTarget);
+        configuration.LoggingRules.Add(new LoggingRule("*", global::NLog.LogLevel.Info, memoryTarget));
+        global::NLog.LogManager.Configuration = configuration;
+        global::NLog.LogManager.ReconfigExistingLoggers();
+
+        using (RequestLogScope.Push(new RequestLogContext
+        {
+            RequestId = "req-host",
+        }))
+        {
+            logger.LogInformation("hello host builder");
+        }
+
+        global::NLog.LogManager.Flush();
+
+        memoryTarget.Logs.Should().ContainSingle("rid=req-host|msg=hello host builder");
     }
 
     public void Dispose()
