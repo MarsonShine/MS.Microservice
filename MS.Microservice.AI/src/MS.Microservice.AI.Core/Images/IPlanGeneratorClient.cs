@@ -13,7 +13,11 @@ public interface IPlanGeneratorClient
     /// <summary>
     /// Sends a system + user message pair and deserializes the response as JSON of type <typeparamref name="T"/>.
     /// </summary>
-    Task<T?> SendAsJsonAsync<T>(string systemPrompt, string userMessage, string model, CancellationToken ct = default) where T : class;
+    /// <param name="model">
+    /// Optional explicit model name. When <c>null</c>, the implementation resolves the model
+    /// via the configured scenario (e.g. <c>AI:Models:Chat:ImagePromptPlanning</c>).
+    /// </param>
+    Task<T?> SendAsJsonAsync<T>(string systemPrompt, string userMessage, string? model, CancellationToken ct = default) where T : class;
 
     /// <summary>
     /// Generates an alphabet-card visual plan.

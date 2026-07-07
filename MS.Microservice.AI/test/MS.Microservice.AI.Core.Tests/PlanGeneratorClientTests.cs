@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.AI.Core.Images;
 using MS.Microservice.AI.Core.Images.Models;
@@ -249,11 +250,10 @@ public sealed class PlanGeneratorClientTests
     [Fact]
     public async Task GenerateVisualPlanAsync_ShouldUseMeaningHint_WhenProvided()
     {
-        WordImageInput? capturedPayload = null;
+        string? capturedUserMessage = null;
         var chatClient = new FakeChatClient((req, _) =>
         {
-            // Capture the user message payload for inspection
-            capturedPayload = WordImagePromptPipeline.Parse(req.Messages[1].Content);
+            capturedUserMessage = req.Messages[1].Content;
             return new AIChatResponse
             {
                 Provider = "test", Model = "test",
@@ -266,55 +266,101 @@ public sealed class PlanGeneratorClientTests
             "apple (fruit)", "apple", "fruit", WordImageCardType.Word);
         await client.GenerateVisualPlanAsync(input);
 
-        // The payload should use MeaningHint ("fruit") as the "Meaning"
-        capturedPayload.Should().NotBeNull();
-        capturedPayload!.MeaningHint.Should().Be("fruit");
+        // The JSON payload should contain "fruit" as the Meaning field (camelCase from System.Text.Json)
+        capturedUserMessage.Should().NotBeNull();
+        capturedUserMessage.Should().Contain("\"meaning\":\"fruit\"");
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ResolveModel
+    // ResolveModel / Scenario
     // ═══════════════════════════════════════════════════════════════
 
     [Fact]
-    public void Constructor_ShouldDefaultModel_ToGpt54Mini()
+    public void ResolveModel_ShouldReturnNull_ByDefault()
     {
         var client = new TestablePlanGeneratorClient(
             new FakeChatClient("<Output>{}</Output>"),
             NullLogger<PlanGeneratorClient>.Instance);
 
-        client.ResolveModelPublic().Should().Be("gpt-5.4-mini");
+        client.ResolveModelPublic().Should().BeNull();
     }
 
     [Fact]
-    public void Constructor_ShouldUseProvidedModel()
+    public void Constructor_ShouldDefaultScenario_ToImagePromptPlanning()
+    {
+        var client = new TestablePlanGeneratorClient(
+            new FakeChatClient("<Output>{}</Output>"),
+            NullLogger<PlanGeneratorClient>.Instance);
+
+        client.GetScenario().Should().Be(PlanGeneratorClient.DefaultScenario);
+    }
+
+    [Fact]
+    public void Constructor_ShouldUseProvidedScenario()
     {
         var client = new TestablePlanGeneratorClient(
             new FakeChatClient("<Output>{}</Output>"),
             NullLogger<PlanGeneratorClient>.Instance,
-            "custom-gpt-model");
+            "MyCustomScenario");
 
-        client.ResolveModelPublic().Should().Be("custom-gpt-model");
+        client.GetScenario().Should().Be("MyCustomScenario");
+    }
+
+    [Fact]
+    public async Task SendAsJsonAsync_ShouldSetScenario_WhenModelIsNull()
+    {
+        var chatClient = new FakeChatClient("<Output>{}</Output>");
+        var client = CreateClient(chatClient, scenario: "TestScenario");
+
+        await client.SendAsJsonAsync<WordImageVisualPlan>(
+            "sys", "usr", model: null);
+
+        chatClient.LastRequest!.Scenario.Should().Be("TestScenario");
+        chatClient.LastRequest!.Model.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SendAsJsonAsync_ShouldSetModel_WhenModelIsProvided()
+    {
+        var chatClient = new FakeChatClient("<Output>{}</Output>");
+        var client = CreateClient(chatClient);
+
+        await client.SendAsJsonAsync<WordImageVisualPlan>(
+            "sys", "usr", "direct-model-override");
+
+        chatClient.LastRequest!.Model.Should().Be("direct-model-override");
     }
 
     // ═══════════════════════════════════════════════════════════════
     // Test doubles
     // ═══════════════════════════════════════════════════════════════
 
-    private static PlanGeneratorClient CreateClient(IAIChatClient chatClient, string model = "test-model")
+    private static PlanGeneratorClient CreateClient(IAIChatClient chatClient, string scenario = "test-scenario")
     {
-        return new PlanGeneratorClient(chatClient, NullLogger<PlanGeneratorClient>.Instance, model);
+        return new PlanGeneratorClient(chatClient, NullLogger<PlanGeneratorClient>.Instance, scenario);
     }
 
     /// <summary>
-    /// Exposes protected <see cref="PlanGeneratorClient.ResolveModel"/> for testing.
+    /// Exposes protected members of <see cref="PlanGeneratorClient"/> for testing.
     /// </summary>
     private sealed class TestablePlanGeneratorClient : PlanGeneratorClient
     {
         public TestablePlanGeneratorClient(
-            IAIChatClient chatClient, ILogger<PlanGeneratorClient> logger, string model = "gpt-5.4-mini")
-            : base(chatClient, logger, model) { }
+            IAIChatClient chatClient, ILogger<PlanGeneratorClient> logger, string scenario = PlanGeneratorClient.DefaultScenario)
+            : base(chatClient, logger, scenario) { }
 
-        public string ResolveModelPublic() => ResolveModel();
+        public string? ResolveModelPublic() => ResolveModel();
+
+        /// <summary>Exposes the scenario stored in the base class.</summary>
+        public string GetScenario()
+        {
+            // Access the private 'scenario' field via reflection or a workaround.
+            // Since we control the test, we verify through behavior (SendAsJsonAsync).
+            // This is a convenience for constructor-scenario tests.
+            return typeof(PlanGeneratorClient)
+                .GetField("scenario", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .GetValue(this) as string ?? string.Empty;
+        }
     }
 
     private sealed class FakeChatClient : IAIChatClient
@@ -354,7 +400,7 @@ public sealed class PlanGeneratorClientTests
             return ValueTask.FromResult(new AIChatResponse
             {
                 Provider = "fake",
-                Model = request.Model ?? "unknown",
+                Model = request.Model ?? request.Scenario ?? "unknown",
                 Text = _staticResponse ?? string.Empty
             });
         }

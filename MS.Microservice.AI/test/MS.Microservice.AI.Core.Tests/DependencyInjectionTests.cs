@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.AI.Core;
@@ -108,14 +109,14 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
-    public async Task AddImagePromptPipeline_ShouldUseCustomModel_WhenProvided()
+    public async Task AddImagePromptPipeline_ShouldUseCustomScenario_WhenProvided()
     {
         var fakeChat = new FakeChatClient();
         var services = new ServiceCollection();
         RegisterLoggerStub(services);
         services.AddSingleton<IAIChatClient>(fakeChat);
 
-        services.AddImagePromptPipeline("custom-image-model");
+        services.AddImagePromptPipeline("MyPromptScenario");
 
         using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredService<IPlanGeneratorClient>();
@@ -123,18 +124,19 @@ public sealed class DependencyInjectionTests
         var input = new WordImageInput("A", "A", "letter A", WordImageCardType.Alphabet);
         await client.GenerateAlphabetPlanAsync(input);
 
-        fakeChat.LastModel.Should().Be("custom-image-model");
+        fakeChat.LastScenario.Should().Be("MyPromptScenario");
+        fakeChat.LastModel.Should().BeNull();
     }
 
     [Fact]
-    public async Task AddImagePromptPipeline_ShouldUseDefaultModel_WhenNullProvided()
+    public async Task AddImagePromptPipeline_ShouldUseDefaultScenario_WhenNullProvided()
     {
         var fakeChat = new FakeChatClient();
         var services = new ServiceCollection();
         RegisterLoggerStub(services);
         services.AddSingleton<IAIChatClient>(fakeChat);
 
-        services.AddImagePromptPipeline(model: null!);
+        services.AddImagePromptPipeline(scenario: null!);
 
         using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredService<IPlanGeneratorClient>();
@@ -142,27 +144,28 @@ public sealed class DependencyInjectionTests
         var input = new WordImageInput("A", "A", "letter A", WordImageCardType.Alphabet);
         await client.GenerateAlphabetPlanAsync(input);
 
-        fakeChat.LastModel.Should().Be("gpt-5.4-mini");
+        fakeChat.LastScenario.Should().Be(PlanGeneratorClient.DefaultScenario);
     }
 
     // ── Test doubles ──
 
     private static void RegisterLoggerStub(IServiceCollection services)
     {
-        // Register specific ILogger<T> instances as singletons so DI resolution
-        // succeeds without pulling in the full Microsoft.Extensions.Logging package.
         services.AddSingleton<ILogger<PlanGeneratorClient>>(NullLogger<PlanGeneratorClient>.Instance);
         services.AddSingleton<ILogger<WordImagePromptPipeline>>(NullLogger<WordImagePromptPipeline>.Instance);
+        services.AddSingleton<ILogger<ImageGenerationOrchestrator>>(NullLogger<ImageGenerationOrchestrator>.Instance);
     }
 
     private sealed class FakeChatClient : IAIChatClient
     {
         public string? LastModel { get; private set; }
+        public string? LastScenario { get; private set; }
 
         public ValueTask<AIChatResponse> GetResponseAsync(
             AIChatRequest request, CancellationToken cancellationToken = default)
         {
             LastModel = request.Model;
+            LastScenario = request.Scenario;
             return ValueTask.FromResult(new AIChatResponse
             {
                 Provider = "fake",

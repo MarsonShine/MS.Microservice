@@ -1,93 +1,157 @@
-# Fz.ChatGPT.ImageGeneration
+# MS.Microservice.AI — Image Generation Pipeline
 
 英语教学卡片图片 Prompt 生成类库。将原始文本输入（单词、短语、句子）转换为高质量的生图 prompt，支持两路输出：
 
 - **Rich prompt** — 含完整约束、否定词、语义分析，存入数据库用于追溯
-- **Safe prompt** — 纯正向、零敏感词，直接发送给 Qwen/DashScope 文生图 API
+- **Safe prompt** — 纯正向、零敏感词，直接发送给文生图 API
+
+该模块已集成到 `MS.Microservice.AI.Core` 框架中，与现有的 `IAIImageGenerationClient` / `IAIImageGenerationProvider` 体系无缝协作。
 
 ---
 
-## 架构
+## 与框架的集成架构
 
 ```
-                          ┌─────────────────────────┐
-                          │   Fz.ChatGPT.Web        │
-                          │  (ResourceGeneration    │
-                          │   Service, Controllers) │
-                          └───────────┬─────────────┘
-                                      │ 依赖注入
-                          ┌───────────▼─────────────┐
-                          │   PlanGeneratorClient   │ ← 实现 IPlanGeneratorClient
-                          │   (封装 AzureChatService) │
-                          └───────────┬─────────────┘
-                                      │
-┌─────────────────────────────────────┼─────────────────────────────┐
-│  Fz.ChatGPT.ImageGeneration         │                             │
-│                                     ▼                             │
-│  ┌──────────────────────────────────────────┐                    │
-│  │        WordImagePromptPipeline            │ ← 主编排器        │
-│  │  GeneratePromptsAsync(wordText) → (rich,  │                    │
-│  │                              safe)         │                    │
-│  └──────────────┬───────────────────────────┘                    │
-│                 │                                                │
-│    ┌────────────┼────────────┐                                   │
-│    ▼            ▼            ▼                                   │
-│  Parse      PlanGen      Build                                    │
-│  ─────      ───────      ─────                                    │
-│  Raw text   IPlanGen-    EducationalFlashcardPromptBuilder        │
-│  → Input    eratorClient  QwenSafePromptBuilder                   │
-│             .Generate-                                            │
-│             VisualPlan-                                           │
-│             Async()                                               │
-│                 │                                                 │
-│    ┌────────────┼────────────┐                                   │
-│    ▼            ▼            ▼                                   │
-│  Enrich      Validate     Repair                                  │
-│  ───────     ────────     ──────                                  │
-│  确定性规则   语义校验     自动修复                                 │
-│  补强 LLM     (禁止句/     (补注入缺                                 │
-│  输出        安全句/      失的 required                             │
-│              教室/跑步)   action /                                 │
-│                          warning cue                               │
-│                          / safety cue                              │
-│                          / classroom)                              │
-└──────────────────────────────────────────────────────────────────┘
+                             ┌──────────────────────────────┐
+                             │        appsettings.json      │
+                             │  AI:Models:Chat:             │
+                             │    ImagePromptPlanning       │
+                             │  AI:Models:ImageGeneration:  │
+                             │    Default                   │
+                             └──────────────┬───────────────┘
+                                            │
+              ┌─────────────────────────────┼─────────────────────────┐
+              │                             ▼                         │
+              │  ┌──────────────────────────────────────────────┐    │
+              │  │         ImageGenerationOrchestrator           │    │
+              │  │  GenerateFromTextAsync(wordText) → result     │    │
+              │  └────────┬──────────────────┬──────────────────┘    │
+              │           │                  │                       │
+              │           ▼                  ▼                       │
+              │  ┌────────────────┐  ┌──────────────────────┐       │
+              │  │ WordImagePrompt │  │ IAIImageGeneration   │       │
+              │  │    Pipeline     │  │      Client           │       │
+              │  │  (prompt 生成)  │  │  (Routing Client)     │       │
+              │  └───────┬────────┘  └──────────┬───────────┘       │
+              │          │                       │                   │
+              │          ▼                       ▼                   │
+              │  ┌────────────────┐  ┌──────────────────────┐       │
+              │  │ PlanGenerator   │  │ IAIModelResolver     │       │
+              │  │    Client       │  │ (scenario → model)   │       │
+              │  │ (IAIChatClient) │  └──────────┬───────────┘       │
+              │  └───────┬────────┘             │                   │
+              │          │                      ▼                   │
+              │          │         ┌──────────────────────┐         │
+              │          │         │ IAIProviderFactory    │         │
+              │          │         │ .GetRequiredImage-    │         │
+              │          │         │  GenerationProvider() │         │
+              │          │         └──────────┬───────────┘         │
+              │          │                    │                     │
+              │          ▼                    ▼                     │
+              │  ┌────────────────┐  ┌──────────────────────┐       │
+              │  │ RoutingAIChat  │  │ OpenAICompatible-     │       │
+              │  │    Client      │  │ ImageGeneration-      │       │
+              │  │ (scenario:     │  │ ProviderBase          │       │
+              │  │  ImagePrompt   │  │ (images/generations)  │       │
+              │  │  Planning)     │  └──────────────────────┘       │
+              │  └────────────────┘                                 │
+              │                                                     │
+              │  MS.Microservice.AI.Core                            │
+              └─────────────────────────────────────────────────────┘
 ```
+
+**关键集成点：**
+
+| 层级 | 组件 | 作用 |
+|---|---|---|
+| **编排层** | `ImageGenerationOrchestrator` | 一站式：文本 → prompt → 图片 |
+| **Prompt 层** | `WordImagePromptPipeline` | LLM 视觉规划 + prompt 构建 |
+| **Chat 路由** | `IAIChatClient` → `RoutingAIChatClient` | 通过 scenario `ImagePromptPlanning` 解析 LLM 模型 |
+| **Image 路由** | `IAIImageGenerationClient` → `RoutingAIImageGenerationClient` | 通过 scenario `Default` 解析生图模型 |
+| **Provider 层** | `OpenAICompatibleImageGenerationProviderBase` | 调用 `/v1/images/generations` API |
+
+---
+
+## 配置
+
+在 `appsettings.json` 中配置 prompt 规划模型（Chat capability）和图片生成模型（ImageGeneration capability）：
+
+```json
+{
+  "AI": {
+    "DefaultProvider": "OpenAI",
+    "Providers": {
+      "OpenAI": {
+        "ApiKey": "<from-user-secrets>",
+        "BaseAddress": "https://api.openai.com/v1/",
+        "TimeoutSeconds": 120
+      },
+      "Qwen": {
+        "ApiKey": "<from-user-secrets>",
+        "BaseAddress": "https://dashscope.aliyuncs.com/compatible-mode/v1/",
+        "TimeoutSeconds": 120
+      }
+    },
+    "Models": {
+      "Chat": {
+        "ImagePromptPlanning": {
+          "Provider": "OpenAI",
+          "Model": "gpt-4.1-mini",
+          "TimeoutSeconds": 60
+        }
+      },
+      "ImageGeneration": {
+        "Default": {
+          "Provider": "OpenAI",
+          "Model": "gpt-image-1",
+          "Size": "1024x1024",
+          "Quality": "standard"
+        }
+      }
+    }
+  }
+}
+```
+
+### Scenario 说明
+
+| Scenario | Capability | 用途 |
+|---|---|---|
+| `ImagePromptPlanning` | Chat | LLM 视觉规划（可自定义，传入 `AddImagePromptPipeline("MyScenario")`) |
+| `Default` | ImageGeneration | 实际图片生成（可通过 `AIImageGenerationRequest.Scenario` 覆盖） |
+
+---
 
 ## 项目结构
 
 ```
-Fz.ChatGPT.ImageGeneration/
-├── Models/                              # 纯数据模型，零外部依赖
-│   ├── WordImageCardType.cs             # 卡片类型常量 (alphabet/word/phrase/sentence/abstract)
+Images/
+├── Models/                              # 纯数据模型
+│   ├── WordImageCardType.cs             # 卡片类型常量
 │   ├── WordImageInput.cs                # 解析后的输入
-│   ├── WordImagePromptPlan.cs           # 最终合并计划 (LLM + 规则补强 + 校验修复)
+│   ├── WordImagePromptPlan.cs           # 最终合并计划
 │   └── WordImageVisualPlan.cs           # LLM 原始输出的结构化视觉计划
 │
-├── IPlanGeneratorClient.cs              # LLM 调用抽象接口
-│
-├── WordImagePromptPipeline.cs           # 主编排器
-│   ├── GeneratePromptsAsync()           # 主入口 → (richPrompt, safePrompt)
-│   ├── GenerateSafePromptAsync()        # 仅返回 safe prompt
-│   ├── GenerateRichPromptAsync()        # 仅返回 rich prompt
-│   ├── Parse()                          # 文本解析 → WordImageInput
-│   └── InferCardType()                  # 卡片类型推断
+├── IPlanGeneratorClient.cs              # LLM 视觉规划抽象接口
+├── PlanGeneratorClient.cs               # 默认实现（使用 IAIChatClient + scenario）
+├── WordImagePromptPipeline.cs           # 主编排器：Parse → Plan → Enrich → Build
+├── ImageGenerationOrchestrator.cs       # 一站式编排器：文本 → prompt → 图片
 │
 ├── Pipeline/                            # 计划处理管线
-│   ├── VisualPlanEnricher.cs            # 确定性规则补强 (禁止句/安全句/教室/跑步)
+│   ├── VisualPlanEnricher.cs            # 确定性规则补强
 │   ├── VisualPlanValidator.cs           # 语义完整性校验
 │   └── VisualPlanRepairer.cs            # 校验失败自动修复
 │
 ├── Building/                            # Prompt 组装
-│   ├── EducationalFlashcardPromptBuilder.cs  # Rich prompt 构建
-│   ├── QwenSafePromptBuilder.cs              # Safe prompt 构建 (纯正向)
-│   └── SentenceSemanticRulesProvider.cs      # 句子级语义规则注入
+│   ├── EducationalFlashcardPromptBuilder.cs  # Rich prompt
+│   ├── QwenSafePromptBuilder.cs              # Safe prompt
+│   └── SentenceSemanticRulesProvider.cs      # 句子级语义规则
 │
 ├── Analysis/                            # 语义分析
-│   └── SentenceSemanticAnalyzer.cs      # 正则分析 (禁止句/安全句/教室/跑步)
+│   └── SentenceSemanticAnalyzer.cs      # 正则分析
 │
 └── Helpers/                             # 工具类
-    ├── PromptSanitizer.cs               # 负向词 & 敏感词清洗 (防 Qwen 内容审核拦截)
+    ├── PromptSanitizer.cs               # 负向词 & 敏感词清洗
     └── PromptNormalizer.cs              # 值/场景/文本规范化
 ```
 
@@ -153,32 +217,104 @@ MergeVisualPlan() → WordImagePromptPlan  ← 合并 LLM 输出 + 规则补强 
 ### Safe Prompt 片段
 > A simple 4:3 horizontal illustration in bright cheerful children's storybook style... A child walks beside a grassy lawn while a nearby adult gently signals to stay on the path... The scene takes place in a park path next to a lawn. Recognizable details include paved walkway, green grass area...
 
+---
+
 ## 宿主项目集成
+
+### 方式一：一站式编排器（推荐）
+
+使用 `ImageGenerationOrchestrator` 一步完成"文本 → prompt → 图片"的完整流程：
 
 ```csharp
 // Program.cs — DI 注册
-builder.Services.AddTransient<WordImagePromptPipeline>();
-builder.Services.AddTransient<IPlanGeneratorClient, PlanGeneratorClient>();
+builder.Services.AddMicroserviceAI(builder.Configuration)
+    .AddOpenAI()        // 或其他 Provider
+    .Services
+    .AddImagePromptPipeline();  // 注册 prompt pipeline + orchestrator
 
-// ResourceGenerationService.cs — 使用
-public class ResourceGenerationService(..., WordImagePromptPipeline pipeline)
+// YourService.cs — 使用
+public class FlashcardService
 {
+    private readonly ImageGenerationOrchestrator orchestrator;
+
+    public FlashcardService(ImageGenerationOrchestrator orchestrator)
+    {
+        this.orchestrator = orchestrator;
+    }
+
+    public async Task<ImageGenerationResult> GenerateCardImageAsync(string wordText)
+    {
+        // 一步到位：文本 → prompt 规划 → 图片生成
+        var result = await orchestrator.GenerateFromTextAsync(wordText);
+
+        // result.RichPrompt  → 存入数据库用于追溯
+        // result.SafePrompt  → 实际发送给图片 API 的 prompt
+        // result.ImageResponse.Images → 生成的图片列表
+        return result;
+    }
+
+    // 仅生成 prompt（不调用图片 API）
+    public async Task<(string?, string?)> PreviewPromptAsync(string wordText)
+    {
+        return await orchestrator.GeneratePromptsOnlyAsync(wordText);
+    }
+}
+```
+
+### 方式二：分步调用
+
+直接使用 `WordImagePromptPipeline`，自行控制图片生成：
+
+```csharp
+public class ResourceGenerationService
+{
+    private readonly WordImagePromptPipeline pipeline;
+    private readonly IAIImageGenerationClient imageClient;
+
+    public ResourceGenerationService(
+        WordImagePromptPipeline pipeline,
+        IAIImageGenerationClient imageClient)
+    {
+        this.pipeline = pipeline;
+        this.imageClient = imageClient;
+    }
+
     public async ValueTask<string?> GenerateSafeImagePromptAsync(string content)
         => await pipeline.GenerateSafePromptAsync(content);
 
-    public async ValueTask<(string, string)> GenerateImageCoreAsync(string content, string path)
+    public async ValueTask<(string?, string?)> GenerateImageCoreAsync(string content)
     {
         var (rich, safe) = await pipeline.GeneratePromptsAsync(content);
-        var imageUrl = await dashScopeService.TextToImageAsync(safe!);
+        var imageResponse = await imageClient.GenerateAsync(new AIImageGenerationRequest
+        {
+            Prompt = safe!,
+            Size = "1024x1024",
+        });
         // ... upload, resize ...
-        return (imageCdnUrl, rich!);
+        return (imageResponse.Images.FirstOrDefault()?.Url, rich);
     }
 }
 ```
 
 ## 关键设计决策
 
-### 1. 为什么 Safe Prompt 不能简单去掉否定词
+### 1. 为什么使用 Scenario 而非硬编码 Model
+
+`PlanGeneratorClient` 通过 `AIChatRequest.Scenario` 触发框架的 `IAIModelResolver` 模型解析，而非硬编码模型名。这意味着：
+
+- 与框架其他 capability（Chat, TTS, ImageGeneration）使用**同一配置模式**
+- 模型切换只需修改 `appsettings.json`，无需重新编译
+- 支持 per-environment 配置（开发/测试用 cheap model，生产用 full model）
+
+```csharp
+// 默认 scenario = "ImagePromptPlanning"
+services.AddImagePromptPipeline();
+
+// 或使用自定义 scenario
+services.AddImagePromptPipeline("MyCustomImagePlanner");
+```
+
+### 2. 为什么 Safe Prompt 不能简单去掉否定词
 
 Qwen/DashScope 的内容审核是基于 prompt **文本本身**做关键词扫描的，不看语义意图。以下 prompt 仍然会被拦截：
 
@@ -190,22 +326,33 @@ Do not show any violence, blood, or weapons.
 
 `QwenSafePromptBuilder` 使用 `PromptSanitizer` 完全剔除所有敏感词，并用 `CleanNegativeLanguage` 将否定约束转换为正向描述。
 
-### 2. 为什么 LLM Planner + 确定性规则
+### 3. 为什么 LLM Planner + 确定性规则
 
 LLM 规划的视觉计划可能遗漏关键语义元素（例如忘记画禁止动作、忘记画制止线索）。`VisualPlanEnricher` 用正则表达式检测句子类型，强制注入缺失的 `mustShow`/`mustNotShow` 约束。`VisualPlanValidator` 在 prompt 组装前做最终检查，`VisualPlanRepairer` 自动修复问题。
 
-### 3. 为什么需要 IPlanGeneratorClient 抽象
+### 4. 为什么需要 IPlanGeneratorClient 抽象
 
 将 LLM 调用抽象为接口的好处：
 - 类库不依赖 `Azure.AI.OpenAI` / `OpenAI.Chat` 等重型包
 - 可替换 LLM 提供商（Azure OpenAI → 其他）
 - 单元测试可用 mock 实现
 
+### 5. 为什么引入 ImageGenerationOrchestrator
+
+`ImageGenerationOrchestrator` 将"prompt 规划"和"图片生成"两个步骤编排为一个原子操作：
+
+| 无编排器 | 有编排器 |
+|---|---|
+| 手动调用 `WordImagePromptPipeline` → 得到 prompt | `orchestrator.GenerateFromTextAsync(text)` → 得到图片 |
+| 手动构建 `AIImageGenerationRequest` → 调用 `IAIImageGenerationClient` | 一站式调用，统一的错误处理和 fallback |
+| 需自行管理 rich prompt 存储 | `ImageGenerationResult` 同时返回 rich prompt + 图片 |
+
 ## 依赖
 
 | 包 | 用途 |
 |---|---|
 | `Microsoft.Extensions.Logging.Abstractions` | 日志 |
-| `Newtonsoft.Json` | JSON 序列化 |
+| `MS.Microservice.AI.Abstractions` | `IAIChatClient`, `IAIImageGenerationClient`, `AIImageGenerationRequest`, etc. |
+| `MS.Microservice.AI.Core` | `RoutingAIChatClient`, `RoutingAIImageGenerationClient`, `IAIModelResolver` |
 
-宿主项目 (`Fz.ChatGPT.Web`) 额外需要提供 `IPlanGeneratorClient` 的实现。
+`IPlanGeneratorClient` 的默认实现 `PlanGeneratorClient` 已内置在 Core 项目中。宿主项目无需额外提供实现。

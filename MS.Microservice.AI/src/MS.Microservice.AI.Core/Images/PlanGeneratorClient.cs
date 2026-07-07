@@ -11,11 +11,26 @@ namespace MS.Microservice.AI.Core.Images;
 /// <see cref="IAIChatClient"/> to call an LLM for visual plan generation.
 /// The prompts are designed for educational flashcard illustrations.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Model resolution follows the framework's scenario-based pattern:
+/// set <c>AI:Models:Chat:ImagePromptPlanning</c> in configuration
+/// to control which provider/model is used for prompt planning.
+/// </para>
+/// <para>
+/// The scenario can be customized via the constructor. When
+/// <see cref="ResolveModel"/> returns a non-null value, it is used as a
+/// direct model override; otherwise, the configured scenario is used.
+/// </para>
+/// </remarks>
 public partial class PlanGeneratorClient : IPlanGeneratorClient
 {
+    /// <summary>The default scenario key for image prompt planning model resolution.</summary>
+    public const string DefaultScenario = "ImagePromptPlanning";
+
     private readonly IAIChatClient chatClient;
     private readonly ILogger<PlanGeneratorClient> logger;
-    private readonly string model;
+    private readonly string scenario;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -30,21 +45,26 @@ public partial class PlanGeneratorClient : IPlanGeneratorClient
     /// </summary>
     /// <param name="chatClient">The chat client for LLM calls.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="model">
-    /// The model identifier to send to the provider (e.g. "gpt-4.1-mini").
-    /// Defaults to "gpt-4.1-mini".
+    /// <param name="scenario">
+    /// The chat scenario key used to resolve the model via
+    /// <c>AI:Models:Chat:{scenario}</c> in application configuration.
+    /// Defaults to <see cref="DefaultScenario"/>.
     /// </param>
-    public PlanGeneratorClient(IAIChatClient chatClient, ILogger<PlanGeneratorClient> logger, string model = "gpt-5.4-mini")
+    public PlanGeneratorClient(IAIChatClient chatClient, ILogger<PlanGeneratorClient> logger, string scenario = DefaultScenario)
     {
         this.chatClient = chatClient;
         this.logger = logger;
-        this.model = model;
+        this.scenario = scenario;
     }
 
     /// <inheritdoc />
-    public async Task<T?> SendAsJsonAsync<T>(string systemPrompt, string userMessage, string model, CancellationToken ct = default)
+    public async Task<T?> SendAsJsonAsync<T>(string systemPrompt, string userMessage, string? model, CancellationToken ct = default)
         where T : class
     {
+        // When a specific model override is provided, use it directly.
+        // Otherwise, rely on scenario-based resolution via IAIModelResolver.
+        var hasModelOverride = !string.IsNullOrWhiteSpace(model);
+
         var request = new AIChatRequest
         {
             Messages =
@@ -52,8 +72,11 @@ public partial class PlanGeneratorClient : IPlanGeneratorClient
                 new AIChatMessage("system", systemPrompt),
                 new AIChatMessage("user", userMessage)
             ],
-            Model = model
+            Model = hasModelOverride ? model : null,
+            Scenario = hasModelOverride ? null : scenario
         };
+
+        var label = hasModelOverride ? model! : $"scenario:{scenario}";
 
         AIChatResponse response;
         try
@@ -62,14 +85,14 @@ public partial class PlanGeneratorClient : IPlanGeneratorClient
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "LLM call failed for model {Model}", model);
+            logger.LogError(ex, "LLM call failed for {ModelOrScenario}", label);
             return null;
         }
 
         var text = response.Text;
         if (string.IsNullOrWhiteSpace(text))
         {
-            logger.LogWarning("LLM returned empty response for model {Model}", model);
+            logger.LogWarning("LLM returned empty response for {ModelOrScenario}", label);
             return null;
         }
 
@@ -245,10 +268,11 @@ public partial class PlanGeneratorClient : IPlanGeneratorClient
 
     /// <summary>
     /// Resolves the model identifier to use for visual plan generation.
-    /// Returns the model name provided at construction time.
-    /// Override in derived classes for dynamic model selection.
+    /// Returns <c>null</c> by default, which triggers scenario-based resolution
+    /// via <c>AI:Models:Chat:{scenario}</c> in application configuration.
+    /// Override in derived classes to return a specific model name for direct override.
     /// </summary>
-    protected virtual string ResolveModel() => model;
+    protected virtual string? ResolveModel() => null;
 
     [GeneratedRegex(@"<Output>\s*([\s\S]*?)\s*</Output>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex OutputTagRegex();
