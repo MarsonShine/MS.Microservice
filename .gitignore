@@ -11,3 +11,4 @@ logs/
 logs
 /.tools
 TestResults/
+/copilot-worktrees

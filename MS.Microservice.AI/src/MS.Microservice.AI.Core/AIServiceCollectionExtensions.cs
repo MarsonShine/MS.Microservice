@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.AI.Core;
+using MS.Microservice.AI.Core.Images;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -108,6 +110,56 @@ public static class AIServiceCollectionExtensions
     {
         ConfigureValidatedOptions<AICostAccountingOptions, NoopValidator<AICostAccountingOptions>>(services, section);
         services.TryAddSingleton<IAICostReporter, NullAICostReporter>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the word-image prompt generation pipeline and the end-to-end
+    /// <see cref="ImageGenerationOrchestrator"/>.
+    /// Requires <c>AddMicroserviceAI</c> to have been called first (provides
+    /// <see cref="IAIChatClient"/> and <see cref="IAIImageGenerationClient"/>).
+    /// </summary>
+    /// <param name="services">The application service collection.</param>
+    /// <param name="scenario">
+    /// The chat scenario key for resolving the prompt-planning model from configuration.
+    /// Uses <c>AI:Models:Chat:{scenario}</c> in <c>appsettings.json</c>.
+    /// When <c>null</c>, defaults to <c>"ImagePromptPlanning"</c>.
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    /// <remarks>
+    /// <para>
+    /// Configure the prompt-planning model and image generation model in <c>appsettings.json</c>:
+    /// </para>
+    /// <code>
+    /// "AI": {
+    ///   "Models": {
+    ///     "Chat": {
+    ///       "ImagePromptPlanning": {
+    ///         "Provider": "OpenAI",
+    ///         "Model": "gpt-4.1-mini"
+    ///       }
+    ///     },
+    ///     "ImageGeneration": {
+    ///       "Default": {
+    ///         "Provider": "OpenAI",
+    ///         "Model": "gpt-image-1",
+    ///         "Size": "1024x1024"
+    ///       }
+    ///     }
+    ///   }
+    /// }
+    /// </code>
+    /// </remarks>
+    public static IServiceCollection AddImagePromptPipeline(this IServiceCollection services, string? scenario = null)
+    {
+        services.TryAddSingleton<IPlanGeneratorClient>(sp =>
+            new PlanGeneratorClient(
+                sp.GetRequiredService<IAIChatClient>(),
+                sp.GetRequiredService<ILogger<PlanGeneratorClient>>(),
+                scenario ?? PlanGeneratorClient.DefaultScenario));
+
+        services.TryAddTransient<WordImagePromptPipeline>();
+        services.TryAddTransient<ImageGenerationOrchestrator>();
         return services;
     }
 
