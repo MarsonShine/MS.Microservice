@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.AI.Core;
+using MS.Microservice.AI.Core.Images;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -108,6 +110,30 @@ public static class AIServiceCollectionExtensions
     {
         ConfigureValidatedOptions<AICostAccountingOptions, NoopValidator<AICostAccountingOptions>>(services, section);
         services.TryAddSingleton<IAICostReporter, NullAICostReporter>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the word-image prompt generation pipeline.
+    /// Requires <c>AddMicroserviceAI</c> to have been called first (provides <see cref="IAIChatClient"/>).
+    /// </summary>
+    /// <param name="services">The application service collection.</param>
+    /// <param name="model">
+    /// The model identifier used for visual plan generation (e.g. "gpt-4.1-mini").
+    /// When <c>null</c>, defaults to "gpt-4.1-mini".
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddImagePromptPipeline(this IServiceCollection services, string? model = null)
+    {
+        var resolvedModel = model ?? "gpt-5.4-mini";
+
+        services.TryAddSingleton<IPlanGeneratorClient>(sp =>
+            new PlanGeneratorClient(
+                sp.GetRequiredService<IAIChatClient>(),
+                sp.GetRequiredService<ILogger<PlanGeneratorClient>>(),
+                resolvedModel));
+
+        services.TryAddTransient<WordImagePromptPipeline>();
         return services;
     }
 
