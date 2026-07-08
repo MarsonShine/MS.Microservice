@@ -1,16 +1,40 @@
 ## MS.Microservice.AI
 
-Independent AI module family for MS.Microservice. It now provides provider-neutral Chat, TTS, ASR, image generation, and image edit entry points with concrete providers for OpenAI, DeepSeek, and Qwen.
+Independent AI module family for MS.Microservice. It now provides provider-neutral Chat, TTS, ASR, image generation, image edit, and **educational image prompt planning with scene grouping** entry points with concrete providers for OpenAI, DeepSeek, and Qwen.
 
 ### Packages
 
 | Package | Purpose |
 |---|---|
 | `MS.Microservice.AI.Abstractions` | Stable business-facing contracts such as `IAIChatClient`, `IAITtsClient`, `IAIAsrClient`, `IAIImageGenerationClient`, `IAIImageEditClient`, request/response DTOs, and unified exceptions. |
-| `MS.Microservice.AI.Core` | Options binding, model resolution, routing clients, DI entry point, shared resilience, and OpenAI-compatible HTTP/SSE implementations for chat, audio, and image capabilities. |
+| `MS.Microservice.AI.Core` | Options binding, model resolution, routing clients, DI entry point, shared resilience, OpenAI-compatible HTTP/SSE implementations for chat, audio, and image capabilities. Also includes **`Images/`** — educational flashcard image prompt planning, scene grouping, and batch generation pipeline. |
 | `MS.Microservice.AI.OpenAI` | OpenAI chat, TTS, ASR, image generation, and image edit provider registration and validation. |
 | `MS.Microservice.AI.DeepSeek` | DeepSeek chat provider registration and validation. DeepSeek is currently enforced as chat-only. |
 | `MS.Microservice.AI.Qwen` | Qwen chat, TTS, ASR, image generation, and image edit provider registration and validation through compatible-mode endpoints. |
+
+### Quick Start — Image Prompt Pipeline
+
+```csharp
+// Program.cs
+builder.Services.AddMicroserviceAI(builder.Configuration)
+    .AddOpenAI()
+    .Services
+    .AddImagePromptPipeline(); // Registers IPlanGeneratorClient, ISceneGroupingAgent, orchestrator
+
+// Usage: one-step text → image
+var orchestrator = provider.GetRequiredService<ImageGenerationOrchestrator>();
+var result = await orchestrator.GenerateFromTextAsync("Be careful! Don't run in the classroom.");
+// result.RichPrompt  → store in DB for traceability
+// result.SafePrompt  → actual prompt sent to image API
+// result.ImageResponse.Images → generated images
+
+// Usage: batch scene grouping
+var agent = provider.GetRequiredService<ISceneGroupingAgent>();
+var grouping = await agent.GroupAsync(excelRows);
+// grouping.Groups → visual context groups with shared characters & settings
+```
+
+> See `src/MS.Microservice.AI.Core/Images/README.md` for full documentation on the image prompt pipeline, scene grouping, anti-clutter design, and dual-prompt architecture.
 
 ### Capability Matrix
 

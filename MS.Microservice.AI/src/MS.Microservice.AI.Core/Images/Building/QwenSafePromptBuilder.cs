@@ -17,6 +17,9 @@ public static class QwenSafePromptBuilder
 
         // Fixed style header
         parts.Add("A simple 4:3 horizontal illustration in bright cheerful children's storybook style with clean smooth lines and flat soft colors.");
+        parts.Add("Completely text-free image with no Chinese characters, English letters, numbers, punctuation, or readable markings anywhere.");
+        parts.Add("Characters have natural expressive eyes with clear irises, visible eye whites, and small highlights instead of tiny dot eyes or bean-like eyes.");
+
 
         if (input.ContentType == WordImageCardType.Alphabet)
         {
@@ -125,9 +128,10 @@ public static class QwenSafePromptBuilder
                 var cues = plan.SettingCues
                     .Select(c => PromptSanitizer.Clean(c))
                     .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Take(2) // Limit to at most 2 cues in the safe prompt to prevent visual clutter
                     .ToList();
                 if (cues.Count > 0)
-                    parts.Add($"Recognizable details include {string.Join(", ", cues)}.");
+                    parts.Add($"Key background details include {string.Join(", ", cues)}.");
             }
         }
 

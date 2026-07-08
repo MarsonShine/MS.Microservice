@@ -114,8 +114,8 @@ public static class AIServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the word-image prompt generation pipeline and the end-to-end
-    /// <see cref="ImageGenerationOrchestrator"/>.
+    /// Registers the word-image prompt generation pipeline, the end-to-end
+    /// <see cref="ImageGenerationOrchestrator"/>, and the scene grouping agent.
     /// Requires <c>AddMicroserviceAI</c> to have been called first (provides
     /// <see cref="IAIChatClient"/> and <see cref="IAIImageGenerationClient"/>).
     /// </summary>
@@ -158,6 +158,7 @@ public static class AIServiceCollectionExtensions
                 sp.GetRequiredService<ILogger<PlanGeneratorClient>>(),
                 scenario ?? PlanGeneratorClient.DefaultScenario));
 
+        services.TryAddSingleton<ISceneGroupingAgent, SceneGroupingAgent>();
         services.TryAddTransient<WordImagePromptPipeline>();
         services.TryAddTransient<ImageGenerationOrchestrator>();
         return services;

@@ -55,14 +55,11 @@ public static class VisualPlanEnricher
         {
             plan.SceneSetting = string.IsNullOrWhiteSpace(plan.SceneSetting) ? "a bright classroom" : plan.SceneSetting;
             PromptNormalizer.AddDistinct(plan.SettingCues, "desks");
-            PromptNormalizer.AddDistinct(plan.SettingCues, "chairs");
-            PromptNormalizer.AddDistinct(plan.SettingCues, "windows");
-            PromptNormalizer.AddDistinct(plan.SettingCues, "blank board");
             PromptNormalizer.AddDistinct(plan.MustShow, "a recognizable classroom environment");
         }
 
         PromptNormalizer.NormalizeList(plan.MustShow, 8);
         PromptNormalizer.NormalizeList(plan.MustNotShow, 8);
-        PromptNormalizer.NormalizeList(plan.SettingCues, 4);
+        PromptNormalizer.NormalizeList(plan.SettingCues, 1);
     }
 }

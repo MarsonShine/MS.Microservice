@@ -4,7 +4,6 @@ using MS.Microservice.AI.Core.Images.Models;
 using MS.Microservice.AI.Core.Images.Pipeline;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
-using MS.Microservice.AI.Core.Images;
 
 namespace MS.Microservice.AI.Core.Images;
 
@@ -95,7 +94,10 @@ public class WordImagePromptPipeline
             VisualPlanRepairer.Repair(input, visualPlan, issues);
         }
 
-        // Step 3: Merge into final plan
+        // Step 3: Keep sentence scenes focused; avoid decorative cue accumulation.
+        VisualPlanSceneSimplifier.Simplify(input, visualPlan);
+
+        // Step 4: Merge into final plan
         return MergeVisualPlan(input, visualPlan);
     }
 

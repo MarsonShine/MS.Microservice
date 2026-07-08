@@ -27,6 +27,8 @@ public static class EducationalFlashcardPromptBuilder
             "Bright cheerful children's storybook illustration style, semi-detailed friendly faces, clean smooth lines, flat soft colors with slightly higher brightness, gentle daylight, clean educational scene.",
             "Use a light, fresh, sunny color palette with clear but soft colors, minimal shadows, no dark or muddy tones.",
             "The image must contain zero visible text: no letters, no words, no numbers, no punctuation, no captions, no titles, no labels, no signs, no speech bubbles, and no readable markings.",
+            "Do not render Chinese characters anywhere. Do not add display surfaces unless the sentence explicitly needs one.",
+            "Use natural expressive eyes with visible irises, eye whites, and highlights. Do not use tiny dot eyes, bean-like eyes, or overly simplified facial features.",
             "All people must wear age-appropriate everyday clothing and appropriate footwear. Use sneakers or closed-toe shoes in school/public scenes, socks or slippers in home scenes. Strictly no bare feet.",
             "Use a balanced medium-wide composition. Keep all important people and objects fully inside the frame with clear safe margins. No cropped heads, cut-off hands, cut-off feet, missing limbs, or body parts touching the image edges."
         };
@@ -42,10 +44,10 @@ public static class EducationalFlashcardPromptBuilder
             sections.Add("Do not render any visible words, captions, labels, punctuation, example sentences, or decorative typography inside the image.");
 
         if (input.ContentType != WordImageCardType.Alphabet)
-            sections.Add("Objects that could contain text, such as whiteboards, blackboards, books, notebooks, worksheets, posters, signs, menus, screens, or labels, may appear only when useful for the scene, and they must be completely blank with no visible letters, words, numbers, punctuation, symbols, or readable markings.");
+            sections.Add("Objects that could contain text may appear only when essential to the sentence, and they must be visually blank.");
 
         sections.Add("Do not create a poster, wallpaper, portrait, fashion illustration, lifestyle scene, or decorative character artwork.");
-        sections.Add("No flowers, plants, toys, floor clutter, stars, sparkles, stickers, complex furniture, dramatic lighting, cinematic angles, ornate clothing, or beauty-shot styling.");
+        sections.Add("No decorative filler, extra toys, floor clutter, stars, sparkles, stickers, complex furniture, dramatic lighting, cinematic angles, ornate clothing, or beauty-shot styling.");
         sections.Add("No flags, flag symbols, national emblems, political symbols, military elements, maps with borders, violent, sexual, hateful, disturbing, or adult content.");
         sections.Add("All people must wear appropriate footwear (shoes, sneakers, or socks) matching the scene — strictly no bare feet.");
         sections.Add("Keep visible body parts complete and all action-related hands and feet clearly visible. Use a medium-wide composition with safe margins. Never crop at joints, leave important limbs outside the frame, or touch body parts to image edges.");
@@ -109,8 +111,8 @@ public static class EducationalFlashcardPromptBuilder
         List<string> sections, WordImageInput input, WordImagePromptPlan? plan,
         string mainSubject, string supportingVisual, string actionOrGesture, string sceneSetting)
     {
-        sections.Add("Create a text-free teaching illustration that communicates the complete sentence meaning through a clear everyday event.");
-        sections.Add("The image must show all key semantic parts of the sentence, not just a generic gesture, emotion, or portrait.");
+        sections.Add("Create a text-free teaching illustration that communicates the sentence through one clear everyday event.");
+        sections.Add("Keep one primary action and one primary environmental anchor. Avoid adding optional props, extra facilities, or secondary activities.");
 
         if (!string.IsNullOrWhiteSpace(input.MeaningHint))
             sections.Add($"The image should clearly communicate the meaning \"{input.MeaningHint}\".");
@@ -138,9 +140,9 @@ public static class EducationalFlashcardPromptBuilder
         {
             sections.Add($"Scene setting: {sceneSetting}.");
             if (plan?.SettingCues?.Count > 0)
-                sections.Add($"Include these simple text-free environmental cues to make the setting immediately recognizable: {string.Join(", ", plan.SettingCues)}.");
+                sections.Add($"Use this single environmental anchor: {string.Join(", ", plan.SettingCues.Take(1))}.");
             else
-                sections.Add("Include 2 to 4 simple environmental cues that make the location immediately recognizable.");
+                sections.Add("Use one simple environmental anchor that makes the location recognizable.");
         }
         else
         {
@@ -152,8 +154,8 @@ public static class EducationalFlashcardPromptBuilder
 
         SentenceSemanticRulesProvider.AddRules(sections, input);
 
-        sections.Add("Use a balanced event composition, not a single static portrait. The scene should clearly show what is happening, where it happens, and why it matters.");
-        sections.Add("Use only necessary props and background objects that help explain the sentence meaning. Keep the scene clean and uncluttered.");
+        sections.Add("Use a balanced event composition, not a single static portrait. The scene should clearly show what is happening without becoming busy.");
+        sections.Add("Use only necessary props and background objects that help explain the sentence meaning. Keep the scene clean, sparse, and uncluttered.");
     }
 
     private static void BuildPhraseSections(

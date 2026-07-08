@@ -147,6 +147,41 @@ public sealed class DependencyInjectionTests
         fakeChat.LastScenario.Should().Be(PlanGeneratorClient.DefaultScenario);
     }
 
+    [Fact]
+    public void AddImagePromptPipeline_ShouldRegisterSceneGroupingAgent_AsSingleton()
+    {
+        var services = new ServiceCollection();
+        RegisterLoggerStub(services);
+        services.AddSingleton<IAIChatClient>(new FakeChatClient());
+
+        services.AddImagePromptPipeline();
+
+        using var provider = services.BuildServiceProvider();
+        var agent1 = provider.GetRequiredService<ISceneGroupingAgent>();
+        var agent2 = provider.GetRequiredService<ISceneGroupingAgent>();
+
+        agent1.Should().BeOfType<SceneGroupingAgent>();
+        agent1.Should().BeSameAs(agent2); // Singleton
+    }
+
+    [Fact]
+    public void AddImagePromptPipeline_ShouldRegisterImageGenerationOrchestrator_AsTransient()
+    {
+        var services = new ServiceCollection();
+        RegisterLoggerStub(services);
+        services.AddSingleton<IAIChatClient>(new FakeChatClient());
+        services.AddSingleton<IAIImageGenerationClient>(new FakeImageGenerationClient());
+
+        services.AddImagePromptPipeline();
+
+        using var provider = services.BuildServiceProvider();
+        var orch1 = provider.GetRequiredService<ImageGenerationOrchestrator>();
+        var orch2 = provider.GetRequiredService<ImageGenerationOrchestrator>();
+
+        orch1.Should().NotBeNull();
+        orch1.Should().NotBeSameAs(orch2); // Transient
+    }
+
     // ── Test doubles ──
 
     private static void RegisterLoggerStub(IServiceCollection services)
@@ -154,6 +189,7 @@ public sealed class DependencyInjectionTests
         services.AddSingleton<ILogger<PlanGeneratorClient>>(NullLogger<PlanGeneratorClient>.Instance);
         services.AddSingleton<ILogger<WordImagePromptPipeline>>(NullLogger<WordImagePromptPipeline>.Instance);
         services.AddSingleton<ILogger<ImageGenerationOrchestrator>>(NullLogger<ImageGenerationOrchestrator>.Instance);
+        services.AddSingleton<ILogger<SceneGroupingAgent>>(NullLogger<SceneGroupingAgent>.Instance);
     }
 
     private sealed class FakeChatClient : IAIChatClient
@@ -176,6 +212,24 @@ public sealed class DependencyInjectionTests
 
         public IAsyncEnumerable<AIChatStreamChunk> StreamAsync(
             AIChatRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class FakeImageGenerationClient : IAIImageGenerationClient
+    {
+        public ValueTask<AIImageResponse> GenerateAsync(
+            AIImageGenerationRequest request, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new AIImageResponse
+            {
+                Provider = "fake",
+                Model = "fake",
+                Images = [new AIImageData { Url = "https://fake.url/image.png" }]
+            });
+        }
+
+        public ValueTask<AIImageResponse> EditAsync(
+            AIImageEditRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 }
