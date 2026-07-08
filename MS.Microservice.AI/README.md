@@ -19,7 +19,7 @@ Independent AI module family for MS.Microservice. It now provides provider-neutr
 builder.Services.AddMicroserviceAI(builder.Configuration)
     .AddOpenAI()
     .Services
-    .AddImagePromptPipeline(); // Registers IPlanGeneratorClient, ISceneGroupingAgent, orchestrator
+    .AddImagePromptPipeline(); // Registers IPlanGeneratorClient, SceneGroupingAgent, orchestrator
 
 // Usage: one-step text → image
 var orchestrator = provider.GetRequiredService<ImageGenerationOrchestrator>();
@@ -29,7 +29,7 @@ var result = await orchestrator.GenerateFromTextAsync("Be careful! Don't run in 
 // result.ImageResponse.Images → generated images
 
 // Usage: batch scene grouping
-var agent = provider.GetRequiredService<ISceneGroupingAgent>();
+var agent = provider.GetRequiredService<SceneGroupingAgent>();
 var grouping = await agent.GroupAsync(excelRows);
 // grouping.Groups → visual context groups with shared characters & settings
 ```

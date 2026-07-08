@@ -1,6 +1,7 @@
 using MS.Microservice.AI.Core.Images.Analysis;
 using MS.Microservice.AI.Core.Images.Helpers;
 using MS.Microservice.AI.Core.Images.Models;
+using System.Text.RegularExpressions;
 
 namespace MS.Microservice.AI.Core.Images.Building;
 
@@ -33,6 +34,8 @@ public static class QwenSafePromptBuilder
                 BuildWordCard(parts, input, plan);
             else
                 BuildEventCard(parts, input, plan);
+
+            AppendSentenceImageControlContext(parts, input);
         }
 
         // Positive composition guidance
@@ -46,6 +49,96 @@ public static class QwenSafePromptBuilder
         parts.Add("Cheerful warm atmosphere with gentle daylight and soft fresh colors.");
 
         return string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
+    }
+
+    private static void AppendSentenceImageControlContext(List<string> parts, WordImageInput input)
+    {
+        if (string.IsNullOrWhiteSpace(input.MeaningHint) || !ContainsSentenceControlMarker(input.MeaningHint))
+            return;
+
+        var clauses = Regex.Split(input.MeaningHint, @"(?<=\.)\s+|;\s+")
+            .Select(NormalizeControlClause)
+            .Where(clause => !string.IsNullOrWhiteSpace(clause))
+            .Where(IsUsefulControlClause)
+            .Where(clause => !ContainsNegativeControlLanguage(clause))
+            .Where(clause => !clause.Contains("board", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(18)
+            .ToList();
+
+        if (clauses.Count == 0)
+            return;
+
+        var context = string.Join(". ", clauses);
+        if (context.Length > 1400)
+            context = context[..1400].TrimEnd(' ', '.', ',', ';') + ".";
+
+        parts.Add($"Sentence image control context: {context}.");
+    }
+
+    private static bool ContainsSentenceControlMarker(string hint)
+    {
+        return hint.Contains("IMAGE EDIT DELTA", StringComparison.OrdinalIgnoreCase)
+            || hint.Contains("Current sentence image only", StringComparison.OrdinalIgnoreCase)
+            || hint.Contains("Prompt branch", StringComparison.OrdinalIgnoreCase)
+            || hint.Contains("Shared context type", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeControlClause(string clause)
+    {
+        var normalized = Regex.Replace(clause, @"\s+", " ").Trim();
+        normalized = normalized.Trim('(', ')', '.', ' ');
+        return normalized;
+    }
+
+    private static bool IsUsefulControlClause(string clause)
+    {
+        var usefulMarkers = new[]
+        {
+            "Current sentence image only",
+            "Shared context type",
+            "Stable scene",
+            "Stable characters",
+            "Current speaker",
+            "Current sentence visual focus",
+            "Current sentence visual action",
+            "Sentence-specific variable elements",
+            "Row illustration hint",
+            "IMAGE EDIT DELTA",
+            "Preserve the exact same",
+            "Preserve the same people",
+            "Reference scene to preserve",
+            "Reference image currently illustrates",
+            "Reference row visual focus",
+            "Reference row visual action",
+            "Reference row variable elements",
+            "Current target sentence",
+            "Current target visual focus",
+            "Current target visual action",
+            "Current row variable elements",
+            "Replace or revise only",
+            "Only add or update",
+            "Only adjust the visible state",
+            "Remove or soften reference-row details",
+            "Prompt branch target-object-focus",
+            "Depict ",
+            "red arrow pointer",
+            "Prompt branch sparse-scene",
+            "Sparse-scene composition",
+            "Use one primary action",
+            "Use only props",
+            "For playground scenes"
+        };
+
+        return usefulMarkers.Any(marker => clause.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsNegativeControlLanguage(string clause)
+    {
+        return Regex.IsMatch(
+            clause,
+            @"\b(do not|don't|no|never|without|avoid|must not|should not|forbidden|prohibited|absent unless)\b",
+            RegexOptions.IgnoreCase);
     }
 
     private static void BuildAlphabetCard(List<string> parts, WordImageInput input, WordImagePromptPlan? plan)
