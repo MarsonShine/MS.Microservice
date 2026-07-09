@@ -54,6 +54,11 @@ internal abstract class OpenAICompatibleMediaProviderBase
 
     protected TimeProvider TimeProvider { get; }
 
+    /// <summary>
+    /// The resolved provider registration options, including <see cref="AIProviderRegistrationOptions.Endpoints"/>.
+    /// </summary>
+    protected AIProviderRegistrationOptions ProviderOptions => _providerOptions;
+
     protected Task<TResult> ExecuteAsync<TResult>(
         AICapability capability,
         string operationName,
@@ -69,6 +74,29 @@ internal abstract class OpenAICompatibleMediaProviderBase
     protected HttpRequestMessage CreateJsonRequest(string relativePath, object payload, string? accept = null)
     {
         var request = CreateRequest(relativePath, accept);
+        request.Content = JsonContent.Create(payload, options: SerializerOptions);
+        return request;
+    }
+
+    /// <summary>
+    /// Creates a JSON POST request to an absolute endpoint URI (bypassing <see cref="BaseAddress"/>).
+    /// Used for provider-specific endpoints such as Qwen multimodal generation.
+    /// </summary>
+    protected HttpRequestMessage CreateJsonRequest(Uri endpoint, object payload, string? accept = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _providerOptions.ApiKey);
+
+        if (!string.IsNullOrWhiteSpace(accept))
+        {
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
+        }
+
+        foreach (var header in _providerOptions.Headers)
+        {
+            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
         request.Content = JsonContent.Create(payload, options: SerializerOptions);
         return request;
     }
@@ -99,12 +127,26 @@ internal abstract class OpenAICompatibleMediaProviderBase
         CancellationToken cancellationToken)
     {
         var responseText = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        var envelope = TryDeserializeError(responseText);
         var providerRequestId = GetProviderRequestId(httpResponse);
         var retryAfter = GetRetryAfter(httpResponse.Headers.RetryAfter);
+        var statusCode = (int)httpResponse.StatusCode;
+
+        // Try OpenAI-compatible error envelope first: { error: { message, type, code } }
+        var envelope = TryDeserializeError(responseText);
         var message = envelope?.Error?.Message?.Trim();
         var providerCode = envelope?.Error?.Code?.Trim() ?? envelope?.Error?.Type?.Trim();
-        var statusCode = (int)httpResponse.StatusCode;
+
+        // Fall back to Qwen multimodal top-level error: { code, message, request_id }
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            var topLevel = TryDeserializeTopLevelError(responseText);
+            if (topLevel is not null)
+            {
+                message = topLevel.Message?.Trim();
+                providerCode = topLevel.Code?.Trim();
+                providerRequestId ??= topLevel.RequestId?.Trim();
+            }
+        }
 
         if (IsContentSafetyError(providerCode, message))
         {
@@ -390,6 +432,23 @@ internal abstract class OpenAICompatibleMediaProviderBase
         }
     }
 
+    private static QwenTopLevelError? TryDeserializeTopLevelError(string responseText)
+    {
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<QwenTopLevelError>(responseText, SerializerOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static bool IsContentSafetyError(string? providerCode, string? message)
     {
         var value = $"{providerCode} {message}";
@@ -461,5 +520,21 @@ internal abstract class OpenAICompatibleMediaProviderBase
 
         [JsonPropertyName("code")]
         public string? Code { get; init; }
+    }
+
+    /// <summary>
+    /// Top-level error format used by Qwen multimodal generation API:
+    /// { "code": "...", "message": "...", "request_id": "..." }
+    /// </summary>
+    private sealed class QwenTopLevelError
+    {
+        [JsonPropertyName("code")]
+        public string? Code { get; init; }
+
+        [JsonPropertyName("message")]
+        public string? Message { get; init; }
+
+        [JsonPropertyName("request_id")]
+        public string? RequestId { get; init; }
     }
 }

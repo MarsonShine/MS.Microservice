@@ -2,16 +2,27 @@ namespace MS.Microservice.AI.Abstractions;
 
 /// <summary>
 /// Represents an image edit (inpainting / background removal) request.
+/// Either <see cref="Image"/> or <see cref="ReferenceImageUrl"/> must be provided, but not both.
 /// </summary>
 public sealed record AIImageEditRequest
 {
     /// <summary>The text description of the desired edit. Must be non-empty.</summary>
     public required string Prompt { get; init; }
 
-    /// <summary>The source image to edit. Must be non-empty.</summary>
-    public required AIBinaryContent Image { get; init; }
+    /// <summary>The source image bytes to edit. Mutually exclusive with <see cref="ReferenceImageUrl"/>.</summary>
+    public AIBinaryContent? Image { get; init; }
 
-    /// <summary>Optional mask image indicating which areas to edit. Transparent areas are edited.</summary>
+    /// <summary>
+    /// A publicly accessible URL of the source image to edit (used for reference-based editing).
+    /// Mutually exclusive with <see cref="Image"/>. Supports <c>http</c>, <c>https</c>, and <c>oss</c> schemes.
+    /// </summary>
+    public string? ReferenceImageUrl { get; init; }
+
+    /// <summary>Optional negative prompt for providers that support it (e.g. Qwen multimodal edit).</summary>
+    public string? NegativePrompt { get; init; }
+
+    /// <summary>Optional mask image indicating which areas to edit. Transparent areas are edited.
+    /// Can only be used together with <see cref="Image"/>, not with <see cref="ReferenceImageUrl"/>.</summary>
     public AIBinaryContent? Mask { get; init; }
 
     /// <summary>Optional provider override. Must be accompanied by <see cref="Model"/>.</summary>

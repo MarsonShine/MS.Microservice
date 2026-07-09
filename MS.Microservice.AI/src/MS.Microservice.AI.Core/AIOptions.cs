@@ -58,6 +58,13 @@ public sealed class AIProviderRegistrationOptions
     /// <summary>Base URL for the provider's API. Falls back to the provider's well-known default when empty.</summary>
     public string? BaseAddress { get; set; }
 
+    /// <summary>
+    /// Per-endpoint overrides (e.g. <c>MultimodalGeneration</c> for Qwen reference-image editing).
+    /// When a key is present, the provider uses the mapped absolute URL instead of the default
+    /// relative path derived from <see cref="BaseAddress"/>.
+    /// </summary>
+    public IDictionary<string, string> Endpoints { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Additional HTTP headers sent with every request to this provider.</summary>
     public IDictionary<string, string> Headers { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

@@ -15,7 +15,7 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
     {
     }
 
-    public ValueTask<AIImageResponse> EditAsync(AIResolvedModel model, AIImageEditRequest request, CancellationToken cancellationToken = default)
+    public virtual ValueTask<AIImageResponse> EditAsync(AIResolvedModel model, AIImageEditRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(request);
@@ -35,7 +35,7 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
     private MultipartFormDataContent CreateMultipartContent(AIResolvedModel model, AIImageEditRequest request)
     {
         var content = new MultipartFormDataContent();
-        content.Add(CreateBinaryContent(request.Image), "image", request.Image.FileName ?? "image.png");
+        content.Add(CreateBinaryContent(request.Image!), "image", request.Image!.FileName ?? "image.png");
         content.Add(new StringContent(model.Model), "model");
         content.Add(new StringContent(request.Prompt), "prompt");
         content.Add(new StringContent((model.Count ?? 1).ToString(System.Globalization.CultureInfo.InvariantCulture)), "n");
@@ -57,5 +57,25 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
         }
 
         return content;
+    }
+
+    /// <summary>
+    /// Idempotent helper that wraps an edit prompt with SOURCE IMAGE protection
+    /// words. If the prompt already begins with the protection prefix it is
+    /// returned unchanged; otherwise the prefix is prepended.
+    /// </summary>
+    protected static string WrapEditPromptWithSourceProtection(string prompt)
+    {
+        const string prefix = "Use the SOURCE IMAGE as the base canvas.";
+        if (prompt.StartsWith(prefix, StringComparison.Ordinal))
+            return prompt;
+
+        return string.Join(" ",
+        [
+            prefix,
+            "The attached edit instruction is the complete change list.",
+            "All elements outside the named target area remain pixel-faithful to the SOURCE IMAGE.",
+            prompt
+        ]);
     }
 }

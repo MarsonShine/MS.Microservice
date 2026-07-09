@@ -171,6 +171,7 @@ public sealed class DependencyInjectionTests
         RegisterLoggerStub(services);
         services.AddSingleton<IAIChatClient>(new FakeChatClient());
         services.AddSingleton<IAIImageGenerationClient>(new FakeImageGenerationClient());
+        services.AddSingleton<IAIImageEditClient>(new FakeImageEditClient());
 
         services.AddImagePromptPipeline();
 
@@ -231,5 +232,19 @@ public sealed class DependencyInjectionTests
         public ValueTask<AIImageResponse> EditAsync(
             AIImageEditRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+    }
+
+    private sealed class FakeImageEditClient : IAIImageEditClient
+    {
+        public ValueTask<AIImageResponse> EditAsync(
+            AIImageEditRequest request, CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(new AIImageResponse
+            {
+                Provider = "fake",
+                Model = "fake",
+                Images = [new AIImageData { Url = request.ReferenceImageUrl ?? "https://fake.url/edited.png" }]
+            });
+        }
     }
 }

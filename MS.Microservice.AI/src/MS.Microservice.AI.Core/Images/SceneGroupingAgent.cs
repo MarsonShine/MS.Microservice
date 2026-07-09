@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+using MS.Microservice.AI.Core.Images.Helpers;
 using MS.Microservice.AI.Core.Images.Models;
+using System.Text.RegularExpressions;
 
 namespace MS.Microservice.AI.Core.Images;
 
-public class SceneGroupingAgent : ISceneGroupingAgent
+public partial class SceneGroupingAgent : ISceneGroupingAgent
 {
     private readonly IPlanGeneratorClient planClient;
     private readonly ILogger<SceneGroupingAgent> logger;
@@ -155,8 +157,42 @@ public class SceneGroupingAgent : ISceneGroupingAgent
         Output only <Output>{json}</Output>.
         """;
 
-        var userMessage = BuildRowListing(rows);
-        var result = await planClient.SendAsJsonAsync<SceneGroupingLlmResponse>(systemPrompt, userMessage, "gpt-5.4-mini", ct);
+        // ── Try LLM grouping with original text first ──
+        SceneGroupingLlmResponse? result = null;
+        try
+        {
+            var userMessage = BuildRowListing(rows);
+            result = await planClient.SendAsJsonAsync<SceneGroupingLlmResponse>(systemPrompt, userMessage, "gpt-5.4-mini", ct);
+        }
+        catch (Exception ex) when (IsContentFilterException(ex))
+        {
+            logger.LogWarning(ex, "LLM grouping blocked by content filter; retrying with sanitized input.");
+
+            // Retry with sanitized text to bypass content filters.
+            // Only strip negation prefixes and sensitive words — keep enough signal for grouping.
+            var sanitizedRows = rows.Select(r => new WordImageRow
+            {
+                RowId = r.RowId,
+                English = SanitizeForGrouping(r.English),
+                Chinese = SanitizeForGrouping(r.Chinese),
+                Speaker = r.Speaker,
+                Addressee = r.Addressee,
+                SceneHint = r.SceneHint,
+                OrderIndex = r.OrderIndex,
+                SceneGroupId = r.SceneGroupId,
+                CatalogueId = r.CatalogueId
+            }).ToList();
+
+            try
+            {
+                var retryMessage = BuildRowListing(sanitizedRows);
+                result = await planClient.SendAsJsonAsync<SceneGroupingLlmResponse>(systemPrompt, retryMessage, "gpt-5.4-mini", ct);
+            }
+            catch (Exception retryEx)
+            {
+                logger.LogWarning(retryEx, "LLM grouping retry with sanitized input also failed.");
+            }
+        }
         if (result?.Groups == null || result.Groups.Count == 0)
         {
             logger.LogWarning("LLM grouping returned no groups; falling back to standalone groups.");
@@ -322,6 +358,45 @@ public class SceneGroupingAgent : ISceneGroupingAgent
 
         return string.IsNullOrWhiteSpace(fallback) ? null : fallback.Trim();
     }
+
+    /// <summary>
+    /// Light sanitization for grouping input: strips negation prefixes and sensitive words
+    /// so the LLM grouping call passes content filters. Falls back to original text when
+    /// sanitization destroys too much signal.
+    /// </summary>
+    private static string SanitizeForGrouping(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+
+        // 1) Strip negation prefix words only (keep the rest for semantic grouping)
+        var cleaned = NegationPrefixRegex().Replace(text.Trim(), "");
+        cleaned = Regex.Replace(cleaned, @"\s{2,}", " ").Trim();
+
+        // 2) Also remove the full PromptSanitizer sensitive-word list
+        var deepCleaned = PromptSanitizer.Clean(cleaned);
+        if (!string.IsNullOrWhiteSpace(deepCleaned))
+            cleaned = deepCleaned;
+
+        // 3) If sanitization destroyed everything, keep the original (accept filter risk)
+        return string.IsNullOrWhiteSpace(cleaned) ? text : cleaned;
+    }
+
+    /// <summary>
+    /// Detects Azure OpenAI / AI content-filter exceptions by inspecting the exception
+    /// type name and message for known content-filter markers.
+    /// </summary>
+    private static bool IsContentFilterException(Exception ex)
+    {
+        var message = ex.ToString();
+        return message.Contains("content_filter", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("content filter", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("ResponsibleAIPolicyViolation", StringComparison.OrdinalIgnoreCase)
+            || ex.GetType().Name.Contains("ContentFilter", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [GeneratedRegex(@"\b(?:don't|do not|no|never|not)\s+", RegexOptions.IgnoreCase)]
+    private static partial Regex NegationPrefixRegex();
 
     private static string BuildRowListing(List<WordImageRow> rows)
     {

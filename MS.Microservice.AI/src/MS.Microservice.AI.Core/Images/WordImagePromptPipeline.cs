@@ -27,7 +27,7 @@ public class WordImagePromptPipeline
     /// Runs the full pipeline and returns both the rich prompt (for DB storage)
     /// and the Qwen-safe prompt (for image generation).
     /// </summary>
-    public async Task<(string? RichPrompt, string? SafePrompt)> GeneratePromptsAsync(string wordText, CancellationToken ct = default)
+    public virtual async Task<(string? RichPrompt, string? SafePrompt)> GeneratePromptsAsync(string wordText, CancellationToken ct = default)
     {
         var input = Parse(wordText);
         WordImagePromptPlan? promptPlan = null;
@@ -48,6 +48,52 @@ public class WordImagePromptPipeline
         logger.LogInformation("Qwen-safe prompt for {WordText}: {SafePrompt}", wordText, safePrompt);
 
         return (richPrompt, safePrompt);
+    }
+
+    /// <summary>
+    /// Builds a prompt for reference-image editing. This keeps the edit request narrow and
+    /// avoids the global text-to-image style restatement that can cause brightness/style drift.
+    /// </summary>
+    public virtual async Task<(string? RichPrompt, string? SafePrompt)> GenerateReferenceEditPromptsAsync(string wordText, CancellationToken ct = default)
+    {
+        var input = Parse(wordText);
+        WordImagePromptPlan? promptPlan = null;
+
+        try
+        {
+            promptPlan = await GeneratePlanAsync(input, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to build reference-edit image prompt plan for {WordText}, fallback prompt will be used.", wordText);
+        }
+
+        var richPrompt = EducationalFlashcardPromptBuilder.Build(input, promptPlan);
+        var safePrompt = QwenSafePromptBuilder.BuildReferenceEditPrompt(input, promptPlan);
+
+        // Diagnostic logging for edit route
+        if (string.IsNullOrWhiteSpace(safePrompt))
+        {
+            logger.LogInformation(
+                "Reference-edit SKIPPED for {WordText}: no concrete visual delta identified. Source image will be reused as-is.",
+                wordText);
+        }
+        else
+        {
+            logger.LogInformation(
+                "Reference-edit prompt for {WordText}: {SafePrompt}",
+                wordText, safePrompt);
+        }
+
+        logger.LogInformation("Reference-edit image prompt plan for {WordText}: {@PromptPlan}", wordText, promptPlan);
+
+        return (richPrompt, safePrompt);
+    }
+
+    public virtual string GenerateReferenceEditNegativePrompt(string wordText)
+    {
+        var input = Parse(wordText);
+        return QwenSafePromptBuilder.BuildReferenceEditNegativePrompt(input);
     }
 
     /// <summary>

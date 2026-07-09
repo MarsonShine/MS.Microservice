@@ -33,14 +33,17 @@ public sealed record ImageGenerationResult(
 /// </remarks>
 /// <param name="promptPipeline">The prompt planning pipeline.</param>
 /// <param name="imageClient">The image generation client.</param>
+/// <param name="imageEditClient">The image edit client (for reference-based editing).</param>
 /// <param name="logger">The logger instance.</param>
 public class ImageGenerationOrchestrator(
     WordImagePromptPipeline promptPipeline,
     IAIImageGenerationClient imageClient,
+    IAIImageEditClient imageEditClient,
     ILogger<ImageGenerationOrchestrator> logger)
 {
     private readonly WordImagePromptPipeline promptPipeline = promptPipeline;
     private readonly IAIImageGenerationClient imageClient = imageClient;
+    private readonly IAIImageEditClient imageEditClient = imageEditClient;
     private readonly ILogger<ImageGenerationOrchestrator> logger = logger;
 
     /// <summary>
@@ -114,6 +117,102 @@ public class ImageGenerationOrchestrator(
             imageResponse.Model);
 
         return new ImageGenerationResult(richPrompt, safePrompt, imageResponse);
+    }
+
+    /// <summary>
+    /// Generates (or reference-edits) an educational image from raw text input using a
+    /// reference source image. When the pipeline produces a concrete edit delta, an edit
+    /// call is issued; otherwise the source image is reused as-is to avoid unnecessary
+    /// re-encoding drift.
+    /// </summary>
+    /// <param name="wordText">The raw educational text with optional meaning hint in parentheses.</param>
+    /// <param name="referenceImageUrl">The publicly accessible URL of the source image to edit from.</param>
+    /// <param name="overrides">Optional overrides for the edit generation request.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>
+    /// A <see cref="ReferenceImageEditResult"/> containing the prompts, response, and reuse flag.
+    /// </returns>
+    public async Task<ReferenceImageEditResult> GenerateFromTextWithReferenceAsync(
+        string wordText,
+        string referenceImageUrl,
+        ImageEditGenerationOverrides? overrides = null,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(wordText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(referenceImageUrl);
+
+        // Step 1: Build the reference-edit prompts
+        string? richPrompt = null;
+        string? safePrompt = null;
+
+        try
+        {
+            (richPrompt, safePrompt) = await promptPipeline
+                .GenerateReferenceEditPromptsAsync(wordText, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Reference edit prompt planning failed for '{WordText}'.", wordText);
+        }
+
+        // Step 2: If no safe prompt (no concrete visual delta), reuse source image
+        if (string.IsNullOrWhiteSpace(safePrompt))
+        {
+            logger.LogInformation(
+                "Reference edit SKIPPED for '{WordText}': no concrete visual delta. Reusing source image.",
+                wordText);
+
+            return new ReferenceImageEditResult(
+                RichPrompt: richPrompt,
+                SafePrompt: null,
+                ImageResponse: new AIImageResponse
+                {
+                    Provider = "Qwen",
+                    Model = "(reused)",
+                    Images = [new AIImageData { Url = referenceImageUrl }],
+                },
+                ReusedSourceImage: true,
+                ReferenceImageUrl: referenceImageUrl);
+        }
+
+        // Step 3: Build the edit request
+        var negativePrompt = promptPipeline.GenerateReferenceEditNegativePrompt(wordText);
+
+        var editRequest = new AIImageEditRequest
+        {
+            Prompt = safePrompt,
+            ReferenceImageUrl = referenceImageUrl,
+            NegativePrompt = negativePrompt,
+            Provider = overrides?.Provider,
+            Model = overrides?.Model,
+            Scenario = overrides?.Scenario,
+            RequestId = overrides?.RequestId,
+            Count = overrides?.Count,
+            Size = overrides?.Size,
+            Quality = overrides?.Quality,
+            ResponseFormat = overrides?.ResponseFormat,
+            Timeout = overrides?.Timeout,
+        };
+
+        // Step 4: Call the edit API
+        var imageResponse = await imageEditClient
+            .EditAsync(editRequest, ct)
+            .ConfigureAwait(false);
+
+        logger.LogInformation(
+            "Reference edit completed for '{WordText}': {ImageCount} image(s) via {Provider}/{Model}",
+            wordText,
+            imageResponse.Images.Count,
+            imageResponse.Provider,
+            imageResponse.Model);
+
+        return new ReferenceImageEditResult(
+            RichPrompt: richPrompt,
+            SafePrompt: safePrompt,
+            ImageResponse: imageResponse,
+            ReusedSourceImage: false,
+            ReferenceImageUrl: referenceImageUrl);
     }
 
     /// <summary>
