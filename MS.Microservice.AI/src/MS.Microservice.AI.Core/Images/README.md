@@ -64,10 +64,11 @@
 
 | 层级 | 组件 | 作用 |
 |---|---|---|
-| **编排层** | `ImageGenerationOrchestrator` | 一站式：文本 → prompt → 图片 |
+| **编排层** | `ImageGenerationOrchestrator` | 一站式：文本 → prompt → 图片（教育图片应用层） |
 | **Prompt 层** | `WordImagePromptPipeline` | LLM 视觉规划 + prompt 构建 |
 | **Chat 路由** | `IAIChatClient` → `RoutingAIChatClient` | 通过 scenario `ImagePromptPlanning` 解析 LLM 模型 |
 | **Image 路由** | `IAIImageGenerationClient` → `RoutingAIImageGenerationClient` | 通过 scenario `Default` 解析生图模型 |
+| **参考图编辑** | `IReferenceImageEditClient` → provider adapter | 参考图编辑需 provider adapter（当前由 Qwen 提供） |
 | **Provider 层** | `OpenAICompatibleImageGenerationProviderBase` | 调用 `/v1/images/generations` API |
 
 ---
@@ -112,6 +113,39 @@
   }
 }
 ```
+
+### Qwen 参考图编辑配置
+
+参考图编辑是 Qwen-specific 能力，通过 `IReferenceImageEditClient` adapter 提供（需 `AddQwen()`）：
+
+```json
+{
+  "AI": {
+    "Providers": {
+      "Qwen": {
+        "ApiKey": "<secret>",
+        "BaseAddress": "https://dashscope.aliyuncs.com/compatible-mode/v1/",
+        "Endpoints": {
+          "MultimodalGeneration": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+        }
+      }
+    },
+    "Models": {
+      "ImageEdit": {
+        "QwenReferenceEdit": {
+          "Provider": "Qwen",
+          "Model": "qwen-image-edit-plus",
+          "Size": "1024*1024",
+          "Count": 1
+        }
+      }
+    }
+  }
+}
+```
+
+> **注意**：`AIImageEditRequest` 是通用二进制图片编辑（inpainting / background removal），不承载参考图 URL。
+> Qwen 参考图编辑使用独立的 `IQwenImageReferenceEditClient` / `IReferenceImageEditClient`。
 
 ### Scenario 说明
 

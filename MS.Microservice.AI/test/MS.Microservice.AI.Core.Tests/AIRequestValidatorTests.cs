@@ -186,89 +186,6 @@ public sealed class AIRequestValidatorTests
     }
 
     [Fact]
-    public void ValidateImageEditRequest_ShouldPass_WhenReferenceImageUrlIsProvided()
-    {
-        var request = new AIImageEditRequest
-        {
-            Prompt = "edit",
-            ReferenceImageUrl = "https://cdn.example.com/image.png",
-        };
-
-        Action action = () => AIRequestValidator.ValidateImageEditRequest(request);
-        action.Should().NotThrow();
-    }
-
-    [Fact]
-    public void ValidateImageEditRequest_ShouldThrow_WhenNeitherImageNorUrlIsProvided()
-    {
-        var request = new AIImageEditRequest
-        {
-            Prompt = "edit",
-        };
-
-        Action action = () => AIRequestValidator.ValidateImageEditRequest(request);
-        action.Should().Throw<AIConfigurationException>()
-            .WithMessage("*Image*ReferenceImageUrl*");
-    }
-
-    [Fact]
-    public void ValidateImageEditRequest_ShouldThrow_WhenBothImageAndUrlAreProvided()
-    {
-        var request = new AIImageEditRequest
-        {
-            Prompt = "edit",
-            Image = new AIBinaryContent { Content = [1], ContentType = "image/png" },
-            ReferenceImageUrl = "https://cdn.example.com/image.png",
-        };
-
-        Action action = () => AIRequestValidator.ValidateImageEditRequest(request);
-        action.Should().Throw<AIConfigurationException>()
-            .WithMessage("*both*");
-    }
-
-    [Fact]
-    public void ValidateImageEditRequest_ShouldThrow_WhenMaskUsedWithReferenceImageUrl()
-    {
-        var request = new AIImageEditRequest
-        {
-            Prompt = "edit",
-            ReferenceImageUrl = "https://cdn.example.com/image.png",
-            Mask = new AIBinaryContent { Content = [1], ContentType = "image/png" },
-        };
-
-        Action action = () => AIRequestValidator.ValidateImageEditRequest(request);
-        action.Should().Throw<AIConfigurationException>()
-            .WithMessage("*Mask*ReferenceImageUrl*");
-    }
-
-    [Fact]
-    public void ValidateImageEditRequest_ShouldThrow_WhenReferenceImageUrlSchemeIsInvalid()
-    {
-        var request = new AIImageEditRequest
-        {
-            Prompt = "edit",
-            ReferenceImageUrl = "ftp://cdn.example.com/image.png",
-        };
-
-        Action action = () => AIRequestValidator.ValidateImageEditRequest(request);
-        action.Should().Throw<AIConfigurationException>()
-            .WithMessage("*http*https*oss*");
-    }
-
-    [Fact]
-    public void ValidateImageEditRequest_ShouldPass_WhenReferenceImageUrlIsOss()
-    {
-        var request = new AIImageEditRequest
-        {
-            Prompt = "edit",
-            ReferenceImageUrl = "oss://bucket-name/object-key",
-        };
-
-        Action action = () => AIRequestValidator.ValidateImageEditRequest(request);
-        action.Should().NotThrow();
-    }
-
-    [Fact]
     public void ValidateImageEditRequest_ShouldThrow_WhenBinaryImageIsEmpty()
     {
         var request = new AIImageEditRequest
@@ -293,5 +210,19 @@ public sealed class AIRequestValidatorTests
 
         Action imageLimit = () => AIRequestValidator.ValidateImageEditRequest(request, limits);
         imageLimit.Should().Throw<AIConfigurationException>().WithMessage("*configured limit*");
+    }
+
+    [Fact]
+    public void ValidateImageEditRequest_ShouldThrow_WhenMaskIsEmpty()
+    {
+        var request = new AIImageEditRequest
+        {
+            Prompt = "edit",
+            Image = new AIBinaryContent { Content = [1], ContentType = "image/png" },
+            Mask = new AIBinaryContent { Content = [], ContentType = "image/png" },
+        };
+
+        Action mask = () => AIRequestValidator.ValidateImageEditRequest(request);
+        mask.Should().Throw<AIConfigurationException>().WithMessage("*mask*binary content*");
     }
 }

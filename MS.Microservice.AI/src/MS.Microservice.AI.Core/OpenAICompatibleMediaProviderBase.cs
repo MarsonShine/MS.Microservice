@@ -80,7 +80,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
 
     /// <summary>
     /// Creates a JSON POST request to an absolute endpoint URI (bypassing <see cref="BaseAddress"/>).
-    /// Used for provider-specific endpoints such as Qwen multimodal generation.
+    /// Used for provider-specific endpoints that require a different base URL.
     /// </summary>
     protected HttpRequestMessage CreateJsonRequest(Uri endpoint, object payload, string? accept = null)
     {
@@ -136,7 +136,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
         var message = envelope?.Error?.Message?.Trim();
         var providerCode = envelope?.Error?.Code?.Trim() ?? envelope?.Error?.Type?.Trim();
 
-        // Fall back to Qwen multimodal top-level error: { code, message, request_id }
+        // Fall back to provider top-level error: { code, message, request_id }
         if (string.IsNullOrWhiteSpace(message))
         {
             var topLevel = TryDeserializeTopLevelError(responseText);
@@ -432,7 +432,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
         }
     }
 
-    private static QwenTopLevelError? TryDeserializeTopLevelError(string responseText)
+    private static TopLevelProviderError? TryDeserializeTopLevelError(string responseText)
     {
         if (string.IsNullOrWhiteSpace(responseText))
         {
@@ -441,7 +441,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
 
         try
         {
-            return JsonSerializer.Deserialize<QwenTopLevelError>(responseText, SerializerOptions);
+            return JsonSerializer.Deserialize<TopLevelProviderError>(responseText, SerializerOptions);
         }
         catch (JsonException)
         {
@@ -523,10 +523,10 @@ internal abstract class OpenAICompatibleMediaProviderBase
     }
 
     /// <summary>
-    /// Top-level error format used by Qwen multimodal generation API:
-    /// { "code": "...", "message": "...", "request_id": "..." }
+    /// Provider top-level error format: { "code": "...", "message": "...", "request_id": "..." }.
+    /// Used as a fallback when the OpenAI-compatible error envelope is absent.
     /// </summary>
-    private sealed class QwenTopLevelError
+    private sealed class TopLevelProviderError
     {
         [JsonPropertyName("code")]
         public string? Code { get; init; }

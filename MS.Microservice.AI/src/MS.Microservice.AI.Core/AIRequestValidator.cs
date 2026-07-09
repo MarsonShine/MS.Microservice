@@ -145,47 +145,13 @@ internal static class AIRequestValidator
         }
 
         ValidateCharacterLimit(request.Prompt.Length, payloadLimits?.MaxImagePromptCharacters, "AI image edit request prompt");
+        ValidateBinaryContent(request.Image, "AI image edit request image");
+        ValidateByteLimit(request.Image.Content.LongLength, payloadLimits?.MaxImageBytes, "AI image edit request image");
 
-        // Image and ReferenceImageUrl are mutually exclusive and at least one must be provided.
-        var hasBinaryImage = request.Image is not null;
-        var hasReferenceUrl = !string.IsNullOrWhiteSpace(request.ReferenceImageUrl);
-
-        if (!hasBinaryImage && !hasReferenceUrl)
+        if (request.Mask is not null)
         {
-            throw new AIConfigurationException("AI image edit request must provide either Image or ReferenceImageUrl.");
-        }
-
-        if (hasBinaryImage && hasReferenceUrl)
-        {
-            throw new AIConfigurationException("AI image edit request cannot provide both Image and ReferenceImageUrl.");
-        }
-
-        if (hasBinaryImage)
-        {
-            ValidateBinaryContent(request.Image!, "AI image edit request image");
-            ValidateByteLimit(request.Image!.Content.LongLength, payloadLimits?.MaxImageBytes, "AI image edit request image");
-
-            if (request.Mask is not null)
-            {
-                ValidateBinaryContent(request.Mask, "AI image edit request mask");
-                ValidateByteLimit(request.Mask.Content.LongLength, payloadLimits?.MaxImageMaskBytes, "AI image edit request mask");
-            }
-        }
-
-        if (hasReferenceUrl)
-        {
-            var url = request.ReferenceImageUrl!;
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                || (uri.Scheme != "http" && uri.Scheme != "https" && uri.Scheme != "oss"))
-            {
-                throw new AIConfigurationException("AI image edit request ReferenceImageUrl must be an absolute http, https, or oss URI.");
-            }
-
-            // Mask is not allowed with ReferenceImageUrl
-            if (request.Mask is not null)
-            {
-                throw new AIConfigurationException("AI image edit request Mask can only be used with Image, not with ReferenceImageUrl.");
-            }
+            ValidateBinaryContent(request.Mask, "AI image edit request mask");
+            ValidateByteLimit(request.Mask.Content.LongLength, payloadLimits?.MaxImageMaskBytes, "AI image edit request mask");
         }
 
         ValidateCommonRequestFields(request.Provider, request.Model, request.Scenario);

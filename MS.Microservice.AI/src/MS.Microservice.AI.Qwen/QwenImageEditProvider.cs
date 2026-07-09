@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,30 +18,26 @@ internal sealed class QwenImageEditProvider(
 
     protected override string DefaultBaseAddress => QwenProviderDefaults.DefaultBaseAddress;
 
-    private const string MultimodalGenerationEndpointKey = "MultimodalGeneration";
+    // ── Binary image edit (OpenAI-compatible multipart /images/edits) ──
+    // Inherited from OpenAICompatibleImageEditProviderBase.EditAsync — no override needed.
 
-    private const string DefaultMultimodalGenerationPath = "api/v1/services/aigc/multimodal-generation/generation";
+    // ── Qwen multimodal reference-image edit ──
 
-    public override async ValueTask<AIImageResponse> EditAsync(
+    /// <summary>
+    /// Qwen-specific reference-image edit via the multimodal generation API.
+    /// </summary>
+    public async ValueTask<AIImageResponse> EditReferenceAsync(
         AIResolvedModel model,
-        AIImageEditRequest request,
+        QwenImageReferenceEditRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(request);
 
-        // If no reference URL, fall back to the OpenAI-compatible multipart /images/edits behavior.
-        if (string.IsNullOrWhiteSpace(request.ReferenceImageUrl))
-        {
-            return await base.EditAsync(model, request, cancellationToken).ConfigureAwait(false);
-        }
-
-        // ── Qwen multimodal reference-image edit path ──
-
         var endpoint = ResolveMultimodalEndpoint();
-        var size = NormalizeSize(model.Size ?? "1024x1024");
+        var size = QwenImageEditHelper.NormalizeSize(request.Size ?? model.Size ?? "1024*1024");
         var negativePrompt = string.IsNullOrWhiteSpace(request.NegativePrompt) ? " " : request.NegativePrompt;
-        var prompt = WrapEditPromptWithSourceProtection(request.Prompt);
+        var prompt = QwenImageEditHelper.WrapEditPromptWithSourceProtection(request.Prompt);
 
         var payload = new
         {
@@ -64,7 +59,7 @@ internal sealed class QwenImageEditProvider(
             },
             parameters = new
             {
-                n = model.Count ?? 1,
+                n = request.Count ?? model.Count ?? 1,
                 negative_prompt = negativePrompt,
                 prompt_extend = false,
                 watermark = false,
@@ -85,32 +80,18 @@ internal sealed class QwenImageEditProvider(
 
     private Uri ResolveMultimodalEndpoint()
     {
-        if (ProviderOptions.Endpoints.TryGetValue(MultimodalGenerationEndpointKey, out var configuredEndpoint)
-            && !string.IsNullOrWhiteSpace(configuredEndpoint)
-            && Uri.TryCreate(configuredEndpoint, UriKind.Absolute, out var absoluteUri))
+        if (ProviderOptions.Endpoints.TryGetValue(QwenProviderDefaults.MultimodalGenerationEndpointKey, out var configuredEndpoint)
+            && !string.IsNullOrWhiteSpace(configuredEndpoint))
         {
+            if (!Uri.TryCreate(configuredEndpoint, UriKind.Absolute, out var absoluteUri))
+            {
+                throw new AIConfigurationException(
+                    $"AI:Providers:Qwen:Endpoints:{QwenProviderDefaults.MultimodalGenerationEndpointKey} must be an absolute URI. Got: '{configuredEndpoint}'.");
+            }
             return absoluteUri;
         }
 
-        // Fall back to default path under the configured base address.
-        return new Uri(new Uri(GetBaseAddress()), DefaultMultimodalGenerationPath);
-    }
-
-    private string GetBaseAddress()
-    {
-        var baseAddress = string.IsNullOrWhiteSpace(ProviderOptions.BaseAddress)
-            ? DefaultBaseAddress
-            : ProviderOptions.BaseAddress;
-
-        return baseAddress.EndsWith("/", StringComparison.Ordinal) ? baseAddress : $"{baseAddress}/";
-    }
-
-    /// <summary>
-    /// Normalizes <c>1024x1024</c> to Qwen's required <c>1024*1024</c> format.
-    /// </summary>
-    private static string NormalizeSize(string size)
-    {
-        return size.Replace('x', '*').Replace('X', '*');
+        return new Uri(QwenProviderDefaults.DefaultMultimodalGenerationEndpoint);
     }
 
     private async Task<AIImageResponse> ParseMultimodalResponseAsync(

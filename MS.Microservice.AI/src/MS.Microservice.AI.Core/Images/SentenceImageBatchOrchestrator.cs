@@ -31,11 +31,6 @@ public class SentenceImageBatchOrchestrator
     /// Generates images for a batch of rows, respecting scene grouping and
     /// applying reference-image editing for eligible groups.
     /// </summary>
-    /// <param name="rows">The ordered list of input rows.</param>
-    /// <param name="generationOverrides">Optional overrides for fresh generation calls.</param>
-    /// <param name="editOverrides">Optional overrides for reference-edit calls.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A list of per-row generation results in the same order as input.</returns>
     public async Task<IReadOnlyList<SentenceImageBatchGenerationResult>> GenerateBatchAsync(
         IReadOnlyList<WordImageRow> rows,
         AIImageGenerationRequest? generationOverrides = null,
@@ -49,8 +44,13 @@ public class SentenceImageBatchOrchestrator
         var groupingResult = await sceneGroupingAgent.GroupAsync(rows, ct).ConfigureAwait(false);
         var groups = groupingResult.Groups;
 
-        // Build lookup from row to group for confidence info
+        // Build lookup from row to group for confidence info, and order index for final sort
         var rowConfidence = new Dictionary<long, double>();
+        var rowOrder = new Dictionary<long, int>();
+        foreach (var row in rows)
+        {
+            rowOrder[row.RowId] = row.OrderIndex;
+        }
         foreach (var group in groups)
         {
             foreach (var rowId in group.RowIds)
@@ -61,7 +61,7 @@ public class SentenceImageBatchOrchestrator
 
         var results = new List<SentenceImageBatchGenerationResult>();
 
-        // Step 2: Process each group sequentially (within group, rows are ordered by OrderIndex)
+        // Step 2: Process each group sequentially
         foreach (var group in groups)
         {
             var orderedRows = group.RowIds
@@ -80,8 +80,6 @@ public class SentenceImageBatchOrchestrator
                 {
                     var member = group.FindMember(row!.RowId);
                     var sceneContext = SentenceImageContinuityPromptBuilder.BuildSceneContext(group, member);
-
-                    // Append scene context as bracket hint so the pipeline can parse it as MeaningHint
                     var inputText = $"{row!.English} {sceneContext}";
 
                     var genResult = await generationOrchestrator
@@ -123,9 +121,15 @@ public class SentenceImageBatchOrchestrator
                             .GenerateFromTextAsync(inputText, generationOverrides, ct)
                             .ConfigureAwait(false);
 
-                        // Get the generated image URL to use as reference for subsequent rows
-                        lastActualImageUrl = genResult.ImageResponse.Images.FirstOrDefault()?.Url
-                            ?? genResult.ImageResponse.Images.FirstOrDefault()?.Content?.FileName;
+                        // Get the generated image URL to use as reference
+                        lastActualImageUrl = GetImageUrl(genResult.ImageResponse);
+
+                        if (string.IsNullOrWhiteSpace(lastActualImageUrl))
+                        {
+                            logger.LogWarning(
+                                "First generated image for group {GroupId} has no URL; later rows will fall back to independent generation.",
+                                group.GroupId);
+                        }
 
                         referenceContext = new SentenceImageReferenceContext(
                             ImageUrl: lastActualImageUrl ?? string.Empty,
@@ -149,10 +153,9 @@ public class SentenceImageBatchOrchestrator
                     }
                     else
                     {
-                        // Subsequent row: reference-image edit from last actual image
+                        // Subsequent row: reference-image edit
                         if (string.IsNullOrWhiteSpace(lastActualImageUrl))
                         {
-                            // Fallback: no valid reference URL, generate independently
                             logger.LogWarning(
                                 "No reference image URL available for row {RowId} in group {GroupId}; falling back to independent generation.",
                                 row.RowId, group.GroupId);
@@ -178,7 +181,6 @@ public class SentenceImageBatchOrchestrator
                             continue;
                         }
 
-                        // Build the edit context as bracket hint for MeaningHint parsing
                         var editContext = SentenceImageContinuityPromptBuilder.BuildImageEditContext(
                             group, referenceContext!, row.English, member);
 
@@ -188,11 +190,10 @@ public class SentenceImageBatchOrchestrator
                             .GenerateFromTextWithReferenceAsync(inputText, lastActualImageUrl, editOverrides, ct)
                             .ConfigureAwait(false);
 
-                        // Update reference context only if an actual edit occurred (not reused)
+                        // Update reference context only if an actual edit occurred
                         if (!editResult.ReusedSourceImage)
                         {
-                            var newImageUrl = editResult.ImageResponse.Images.FirstOrDefault()?.Url
-                                ?? editResult.ImageResponse.Images.FirstOrDefault()?.Content?.FileName;
+                            var newImageUrl = GetImageUrl(editResult.ImageResponse);
 
                             if (!string.IsNullOrWhiteSpace(newImageUrl))
                             {
@@ -223,9 +224,14 @@ public class SentenceImageBatchOrchestrator
             }
         }
 
-        // Step 3: Return results in original row order
+        // Step 3: Return results in original row order using pre-built lookup
         return results
-            .OrderBy(r => rows.FirstOrDefault(row => row.RowId == r.RowId)?.OrderIndex ?? int.MaxValue)
+            .OrderBy(r => rowOrder.GetValueOrDefault(r.RowId, int.MaxValue))
             .ToList();
+    }
+
+    private static string? GetImageUrl(AIImageResponse response)
+    {
+        return response.Images.FirstOrDefault(image => !string.IsNullOrWhiteSpace(image.Url))?.Url;
     }
 }

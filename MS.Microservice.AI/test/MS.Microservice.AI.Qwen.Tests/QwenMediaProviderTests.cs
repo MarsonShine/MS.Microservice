@@ -125,7 +125,7 @@ public sealed class QwenMediaProviderTests
     // ── Reference-image edit (multimodal) tests ──
 
     [Fact]
-    public async Task EditAsync_WithReferenceImageUrl_ShouldUseMultimodalGenerationEndpoint()
+    public async Task EditReferenceAsync_ShouldUseMultimodalGenerationEndpoint()
     {
         var handler = new TestHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -148,9 +148,9 @@ public sealed class QwenMediaProviderTests
                 Encoding.UTF8,
                 "application/json"),
         });
-        var provider = CreateImageEditProvider(handler);
+        var provider = CreateImageEditProviderInstance(handler);
 
-        var response = await provider.EditAsync(CreateImageModel(AICapability.ImageEdit), new AIImageEditRequest
+        var response = await provider.EditReferenceAsync(CreateImageModel(AICapability.ImageEdit), new QwenImageReferenceEditRequest
         {
             Prompt = "make it sunny",
             ReferenceImageUrl = "https://cdn.example.com/source.png",
@@ -160,13 +160,12 @@ public sealed class QwenMediaProviderTests
         response.Images.Should().ContainSingle();
         response.Images[0].Url.Should().Be("https://dashscope.example.com/edited-ref.png");
 
-        // Verify the request went to the multimodal generation endpoint
         var requestUri = handler.Requests[0].RequestUri!.ToString();
         requestUri.Should().Contain("api/v1/services/aigc/multimodal-generation/generation");
     }
 
     [Fact]
-    public async Task EditAsync_WithReferenceImageUrl_ShouldSendJsonWithRequiredFields()
+    public async Task EditReferenceAsync_ShouldSendJsonWithRequiredFields()
     {
         string? capturedBody = null;
         var handler = new TestHandler(request =>
@@ -175,28 +174,13 @@ public sealed class QwenMediaProviderTests
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    """
-                    {
-                      "output": {
-                        "choices": [
-                          {
-                            "message": {
-                              "content": [
-                                { "image": "https://dashscope.example.com/edited-ref.png" }
-                              ]
-                            }
-                          }
-                        ]
-                      }
-                    }
-                    """,
-                    Encoding.UTF8,
-                    "application/json"),
+                    """{"output":{"choices":[{"message":{"content":[{"image":"https://example.com/img.png"}]}}]}}""",
+                    Encoding.UTF8, "application/json"),
             };
         });
-        var provider = CreateImageEditProvider(handler);
+        var provider = CreateImageEditProviderInstance(handler);
 
-        await provider.EditAsync(CreateImageModel(AICapability.ImageEdit), new AIImageEditRequest
+        await provider.EditReferenceAsync(CreateImageModel(AICapability.ImageEdit), new QwenImageReferenceEditRequest
         {
             Prompt = "change the weather",
             ReferenceImageUrl = "https://cdn.example.com/source.png",
@@ -208,22 +192,13 @@ public sealed class QwenMediaProviderTests
         using var doc = JsonDocument.Parse(capturedBody!);
         var root = doc.RootElement;
 
-        // model
         root.GetProperty("model").GetString().Should().Be("qwen-image");
-
-        // input.messages[0].role = user
-        var messages = root.GetProperty("input").GetProperty("messages");
-        messages[0].GetProperty("role").GetString().Should().Be("user");
-
-        // content = [{image}, {text}]
-        var content = messages[0].GetProperty("content");
+        var content = root.GetProperty("input").GetProperty("messages")[0].GetProperty("content");
         content[0].GetProperty("image").GetString().Should().Be("https://cdn.example.com/source.png");
-
         var text = content[1].GetProperty("text").GetString();
         text.Should().Contain("Use the SOURCE IMAGE as the base canvas");
         text.Should().Contain("change the weather");
 
-        // parameters
         var parameters = root.GetProperty("parameters");
         parameters.GetProperty("negative_prompt").GetString().Should().Be("dark, gloomy");
         parameters.GetProperty("prompt_extend").GetBoolean().Should().BeFalse();
@@ -232,7 +207,7 @@ public sealed class QwenMediaProviderTests
     }
 
     [Fact]
-    public async Task EditAsync_WithReferenceImageUrl_ShouldSendSpaceForEmptyNegativePrompt()
+    public async Task EditReferenceAsync_ShouldSendSpaceForEmptyNegativePrompt()
     {
         string? capturedBody = null;
         var handler = new TestHandler(request =>
@@ -241,37 +216,20 @@ public sealed class QwenMediaProviderTests
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    """
-                    {
-                      "output": {
-                        "choices": [
-                          {
-                            "message": {
-                              "content": [
-                                { "image": "https://example.com/img.png" }
-                              ]
-                            }
-                          }
-                        ]
-                      }
-                    }
-                    """,
-                    Encoding.UTF8,
-                    "application/json"),
+                    """{"output":{"choices":[{"message":{"content":[{"image":"https://example.com/img.png"}]}}]}}""",
+                    Encoding.UTF8, "application/json"),
             };
         });
-        var provider = CreateImageEditProvider(handler);
+        var provider = CreateImageEditProviderInstance(handler);
 
-        await provider.EditAsync(CreateImageModel(AICapability.ImageEdit), new AIImageEditRequest
+        await provider.EditReferenceAsync(CreateImageModel(AICapability.ImageEdit), new QwenImageReferenceEditRequest
         {
             Prompt = "edit",
             ReferenceImageUrl = "https://example.com/src.png",
-            // No NegativePrompt — should send single space
         });
 
         using var doc = JsonDocument.Parse(capturedBody!);
-        var parameters = doc.RootElement.GetProperty("parameters");
-        parameters.GetProperty("negative_prompt").GetString().Should().Be(" ");
+        doc.RootElement.GetProperty("parameters").GetProperty("negative_prompt").GetString().Should().Be(" ");
     }
 
     [Fact]
@@ -279,18 +237,8 @@ public sealed class QwenMediaProviderTests
     {
         var handler = new TestHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(
-                """
-                {
-                  "data": [
-                    {
-                      "url": "https://dashscope.example.com/binary-edit.png"
-                    }
-                  ]
-                }
-                """,
-                Encoding.UTF8,
-                "application/json"),
+            Content = new StringContent("""{"data":[{"url":"https://dashscope.example.com/binary-edit.png"}]}""",
+                Encoding.UTF8, "application/json"),
         });
         var provider = CreateImageEditProvider(handler);
 
@@ -302,45 +250,23 @@ public sealed class QwenMediaProviderTests
 
         response.Images.Should().ContainSingle();
         response.Images[0].Url.Should().Be("https://dashscope.example.com/binary-edit.png");
-
-        // Should go to the old /images/edits multipart endpoint
         handler.Requests[0].RequestUri!.ToString().Should().Be("https://dashscope.aliyuncs.com/compatible-mode/v1/images/edits");
     }
 
     [Fact]
-    public async Task EditAsync_WithReferenceImageUrl_ShouldParseResponseFromOutputChoices()
+    public async Task EditReferenceAsync_ShouldParseResponseFromOutputChoices()
     {
         var handler = new TestHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(
-                """
-                {
-                  "output": {
-                    "choices": [
-                      {
-                        "message": {
-                          "content": [
-                            { "image": "https://example.com/img1.png" },
-                            { "image": "https://example.com/img2.png" }
-                          ]
-                        }
-                      }
-                    ]
-                  }
-                }
-                """,
-                Encoding.UTF8,
-                "application/json"),
+                """{"output":{"choices":[{"message":{"content":[{"image":"https://example.com/img1.png"},{"image":"https://example.com/img2.png"}]}}]}}""",
+                Encoding.UTF8, "application/json"),
         });
-        var provider = CreateImageEditProvider(handler);
+        var provider = CreateImageEditProviderInstance(handler);
 
-        var response = await provider.EditAsync(
+        var response = await provider.EditReferenceAsync(
             CreateImageModel(AICapability.ImageEdit) with { Count = 2 },
-            new AIImageEditRequest
-            {
-                Prompt = "edit",
-                ReferenceImageUrl = "https://example.com/src.png",
-            });
+            new QwenImageReferenceEditRequest { Prompt = "edit", ReferenceImageUrl = "https://example.com/src.png", Count = 2 });
 
         response.Images.Should().HaveCount(2);
         response.Images[0].Url.Should().Be("https://example.com/img1.png");
@@ -348,31 +274,21 @@ public sealed class QwenMediaProviderTests
     }
 
     [Fact]
-    public async Task EditAsync_WithReferenceImageUrl_ShouldMapTopLevelErrorBody()
+    public async Task EditReferenceAsync_ShouldMapTopLevelErrorBody()
     {
         var handler = new TestHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent(
-                """
-                {
-                  "code": "InvalidParameter",
-                  "message": "The parameter 'size' is invalid.",
-                  "request_id": "req-abc-123"
-                }
-                """,
-                Encoding.UTF8,
-                "application/json"),
+                """{"code":"InvalidParameter","message":"The parameter 'size' is invalid.","request_id":"req-abc-123"}""",
+                Encoding.UTF8, "application/json"),
         });
-        var provider = CreateImageEditProvider(handler);
+        var provider = CreateImageEditProviderInstance(handler);
 
-        var act = async () => await provider.EditAsync(CreateImageModel(AICapability.ImageEdit), new AIImageEditRequest
-        {
-            Prompt = "edit",
-            ReferenceImageUrl = "https://example.com/src.png",
-        });
+        var act = async () => await provider.EditReferenceAsync(CreateImageModel(AICapability.ImageEdit),
+            new QwenImageReferenceEditRequest { Prompt = "edit", ReferenceImageUrl = "https://example.com/src.png" });
 
         var ex = await act.Should().ThrowAsync<AIProviderException>();
-        ex.And.Message.Should().Contain("size"); // the message field from Qwen error body
+        ex.And.Message.Should().Contain("size");
         ex.And.ProviderRequestId.Should().Be("req-abc-123");
         ex.And.InnerException.Should().NotBeNull();
         ex.And.InnerException!.Message.Should().Contain("InvalidParameter");
@@ -394,6 +310,11 @@ public sealed class QwenMediaProviderTests
     }
 
     private static IAIImageEditProvider CreateImageEditProvider(TestHandler handler)
+    {
+        return new QwenImageEditProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenImageEditProvider>.Instance);
+    }
+
+    private static QwenImageEditProvider CreateImageEditProviderInstance(TestHandler handler)
     {
         return new QwenImageEditProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenImageEditProvider>.Instance);
     }
