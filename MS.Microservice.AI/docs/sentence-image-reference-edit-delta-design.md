@@ -57,7 +57,84 @@ flowchart TD
     K --> L["ReferenceImageEdit TextToImageWithReferenceAsync"]
     L --> M["Image edit model receives reference image + delta prompt"]
 ```
+## `ShouldUseReferenceEdit` 分组决策详解
 
+不是所有句子组都适合用参考图编辑。`SentenceImageReferenceEditPolicy.ShouldUseReferenceEdit` 承担了"这个组该走参考编辑还是独立生图"的决策。
+
+### 决策树
+
+```
+ShouldUseReferenceEdit(group)
+    │
+    ├─ group == null 或 RowIds.Count <= 1
+    │   → false   (单行不需要参考编辑)
+    │
+    ├─ groupType 在黑名单中？
+    │   → false   (立刻否决，不走后续检查)
+    │
+    ├─ groupType 在白名单中？
+    │   → true    (立刻通过，不走后续检查)
+    │
+    ├─ group.Confidence < 0.8？
+    │   → false   (LLM 分组质量不够高，宁可不编辑)
+    │
+    └─ 三项条件同时满足？
+        ├─ Characters.Count > 0   (组内有稳定角色)
+        ├─ SceneSetting 非空       (有稳定场景)
+        └─ ContinuityPolicy 含连续性关键词
+            ("same character"|"same person"|"same setting"|"same scene"|"consistent clothing")
+        → true / false
+```
+
+### 白名单（EligibleGroupTypes）— 为什么这些适合参考编辑
+
+| GroupType | 典型句子 | 为什么适合参考编辑 |
+|-----------|----------|-------------------|
+| `object_drill` | "This is a box." / "This is an apple." | 场景完全不变（同一张桌子），只有物品替换。编辑只需把 box 换成 apple，冻结背景 |
+| `dialogue` | "Hello." / "Hi. I'm Tom." | 同一场景的连续对话，人物位置和背景不变，只改变口型、手势或表情 |
+| `greeting` | "Good morning." / "Good morning, teacher." | 同场景快速问候，人物站位一致，只有轻微表情/手势差异 |
+| `self_introduction` | "I am Tom." / "My name is Amy." | 同场景自我介绍的连续切换，角色逐个出场但场景固定 |
+| `location_tour` | "It's our classroom." / "It's the library." | 连续地点参观，虽换场景但每个地点内部场景稳定；参考编辑能保持画风和人物一致 |
+| `pre_assigned` | (Excel 中手动指定的组) | 人工确认过的组，信任度高，允许使用参考编辑 |
+
+### 黑名单（IneligibleGroupTypes）— 为什么这些不能用参考编辑
+
+| GroupType | 典型句子 | 为什么不适合参考编辑 |
+|-----------|----------|-------------------|
+| `safety_rules` / `safety_rule` / `safety_sequence` | "Be careful." / "Don't skate on the road." | 安全规则彼此独立，每条需要**不同的危险场景**和**不同的安全行为**。参考编辑会把"马路滑冰"场景带到"小心热水"中 |
+| `instructional_sequence` / `instruction_sequence` | "Warm up." / "Do some running." / "Take a rest." | 运动指令序列每一步是**完全不同的动作和身体姿态**，参考图的上一个动作姿势会成为当前动作的视觉干扰 |
+| `action_sequence` / `activity_sequence` / `exercise_sequence` | 同上 | 连续动作各自独立，不应共享同一帧画面 |
+| `sports_safety` / `play_safety` | "Don't push." / "Wait your turn." | 每条安全提示对应不同场景和行为，强行编辑会导致场景语义错乱 |
+| `single_sentence` | 任意单独的句子 | 没有"上一张图"可以参考 |
+| `uncertain` | LLM 不确定的分组结果 | 分组本身不可靠，冒险编辑会放大错误 |
+
+### 带置信度的模糊地带
+
+当 `groupType` 既不在白名单也不在黑名单时（LLM 可能返回新的类型），进入"灰名单"判定：
+
+```csharp
+if (group.Confidence < 0.8)
+    return false;
+
+return group.Characters.Count > 0 &&
+    !string.IsNullOrWhiteSpace(group.SceneSetting) &&
+    HasStrongContinuityPolicy(group.ContinuityPolicy);
+```
+
+三项缺一不可：
+- **有角色**：参考编辑需要知道"画面上有哪些人"，否则无法冻结人物外观
+- **有场景**：需要知道"画面上是什么环境"，否则编辑模型会自由发挥背景
+- **有连续性策略**：LLM 必须在返回的 `continuityPolicy` 中明确写了 "same character" / "same setting" / "same scene" / "consistent clothing" 等关键词，表明它认为这组确实应该保持一致
+
+### 反例：为什么 "Warm up → Do some running → Take a rest" 不能用参考编辑
+
+假设用参考编辑处理这三句：
+
+1. 第一句 "Warm up" 生成了一个拉伸动作的图
+2. 第二句 "Do some running" 以拉伸图为参考编辑 — 编辑模型会在拉伸动作的基础上"改"成跑步，结果是一个**扭曲的半拉伸半跑步的姿态**
+3. 第三句 "Take a rest" 以跑步图为参考编辑 — 模型会把跑步姿势改成休息姿势，结果是一个**不自然的坐姿**
+
+正确的做法是每句独立生成，各自拥有正确的身体姿态和场景。
 ## 关键代码说明
 
 ### 1. `SentenceImageReferenceContext`
@@ -142,6 +219,113 @@ current visual focus
 current visual action
 current variable elements
 ```
+
+### 2.5 `BuildSceneContext` 与场景上下文构造机制
+
+这是理解"场景上下文如何流入生图管线"的关键。`BuildSceneContext` 和 `BuildImageEditContext` 的输出都是**括号包装的文本块**，它们作为 `MeaningHint` 被管线解析利用。
+
+#### 上下文如何注入
+
+`GenerateSentenceImagesWithSceneContextAsync`（应用层编排方法）的核心逻辑：
+
+```csharp
+// 对组内每一行，构造输入文本：
+var member = group.FindMember(row.RowId);
+var sceneContext = SentenceImageContinuityPromptBuilder.BuildSceneContext(group, member);
+
+// 关键：场景上下文以括号形式拼接到句末
+var inputText = $"{row.English} {sceneContext}";
+// 结果例如：
+// "This is a box. (Current sentence image only; do not combine objects or actions
+//  from other sentences in the same group. Shared context type: object drill.
+//  Stable scene: classroom table. Current sentence visual focus: a box.
+//  Current sentence visual action: Illustrate this row only.
+//  Sentence-specific variable elements: a box. Keep the stable scene and
+//  characters consistent; only the current sentence focus may change.)"
+```
+
+#### 括号提示的管线解析路径
+
+这个 `inputText` 随后进入 `WordImagePromptPipeline.GeneratePromptsAsync()`：
+
+```
+inputText = "This is a box. (Current sentence image only. Shared context type: object drill. Stable scene: classroom table. ...)"
+                │
+                ▼
+        WordImagePromptPipeline.Parse(inputText)
+                │
+        ┌───────┴───────┐
+        │ LastIndexOf('(') = 17
+        │ normalized.EndsWith(')') = true
+        │
+        ▼
+        targetText  = "This is a box."           ← 作为生图的主体句子
+        meaningHint = "Current sentence image     ← 作为语义提示，流入 LLM 计划生成
+                       only. Shared context type:
+                       object drill. Stable scene:
+                       classroom table. ..."
+                │
+                ▼
+        WordImageInput(RawInput, TargetText, MeaningHint, ContentType)
+                │
+                ▼
+        PlanGeneratorClient.GenerateVisualPlanAsync()
+            → LLM 同时看到 TargetText 和 MeaningHint
+            → 输出的 VisualPlan 会受场景上下文约束
+                │
+                ▼
+        QwenSafePromptBuilder.Build()
+            → AppendSentenceImageControlContext()
+            → 识别 MeaningHint 中的控制标记
+            → 将关键控制句透传到最终 Safe Prompt
+```
+
+#### `BuildSceneContext` 输出的结构
+
+`BuildSceneContext` 返回的括号文本包含以下层次：
+
+```
+(                                                                   ← 括号包装
+  Current sentence image only;                                       ← 层级 0: 隔离指令
+  do not combine objects or actions from other sentences             ← 防止跨句污染
+  
+  Shared context type: object drill                                  ← 层级 1: 组类型标识
+                                                                       (被 QwenSafePromptBuilder 识别为控制标记)
+  
+  Stable scene: classroom table                                      ← 层级 2: 稳定场景锚点
+  
+  Stable characters: Tom: Chinese schoolboy, short black hair...     ← 层级 3: 角色描述
+                                                                       (可选，仅当组内有角色时)
+  
+  Current speaker: Tom                                               ← 层级 4: 当前行特定信息
+  Current sentence visual focus: a box
+  Current sentence visual action: Illustrate this row only
+  Sentence-specific variable elements: a box
+  Row illustration hint: (来自 Excel 的 SceneHint)
+  
+  Keep the stable scene and characters consistent;                   ← 层级 5: 收尾约束
+  only the current sentence focus may change
+.)
+```
+
+#### 为什么用括号而不是 API 参数
+
+括号机制利用了管线已有的 `Parse` 逻辑——`Parse` 本来就是为 `"apple (fruit)"` 这种用户输入设计的。场景上下文复用同一条解析路径，不需要修改管线接口：
+
+- ✅ 不需要新增参数或 DTO 字段
+- ✅ LLM 天然理解括号中的补充说明
+- ✅ `QwenSafePromptBuilder` 通过标记词识别控制子句，自动决定哪些透传、哪些过滤
+- ✅ 对独立生图流程（非批量），`MeaningHint` 为空时管线行为完全不变
+
+#### `BuildSceneContext` vs `BuildImageEditContext`
+
+| | BuildSceneContext | BuildImageEditContext |
+|---|---|---|
+| **使用场景** | 独立生图（组内第一行，或不适用参考编辑的组） | 参考编辑（组内第二行起） |
+| **核心指令** | "Current sentence image only" | "IMAGE EDIT DELTA" |
+| **是否描述参考图** | 否 | 是（描述 reference 的 sentence/focus/action/elements） |
+| **替换关系** | 无 | 有（"Replace previous X into current Y"） |
+| **流向** | 括号→Parse→MeaningHint→LLM Plan→Safe Prompt | 括号→Parse→MeaningHint→BuildReferenceEditPrompt→ChangeWhitelist |
 
 ### 3. `BuildImageEditContext` 输出 delta，不再只 freeze
 
