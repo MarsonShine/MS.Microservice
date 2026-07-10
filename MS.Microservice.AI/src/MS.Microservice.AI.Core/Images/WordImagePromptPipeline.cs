@@ -1,8 +1,8 @@
+using Microsoft.Extensions.Logging;
 using MS.Microservice.AI.Core.Images.Building;
 using MS.Microservice.AI.Core.Images.Helpers;
 using MS.Microservice.AI.Core.Images.Models;
 using MS.Microservice.AI.Core.Images.Pipeline;
-using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
 namespace MS.Microservice.AI.Core.Images;
@@ -48,52 +48,6 @@ public class WordImagePromptPipeline
         logger.LogInformation("Qwen-safe prompt for {WordText}: {SafePrompt}", wordText, safePrompt);
 
         return (richPrompt, safePrompt);
-    }
-
-    /// <summary>
-    /// Builds a prompt for reference-image editing. This keeps the edit request narrow and
-    /// avoids the global text-to-image style restatement that can cause brightness/style drift.
-    /// </summary>
-    public virtual async Task<(string? RichPrompt, string? SafePrompt)> GenerateReferenceEditPromptsAsync(string wordText, CancellationToken ct = default)
-    {
-        var input = Parse(wordText);
-        WordImagePromptPlan? promptPlan = null;
-
-        try
-        {
-            promptPlan = await GeneratePlanAsync(input, ct);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to build reference-edit image prompt plan for {WordText}, fallback prompt will be used.", wordText);
-        }
-
-        var richPrompt = EducationalFlashcardPromptBuilder.Build(input, promptPlan);
-        var safePrompt = QwenSafePromptBuilder.BuildReferenceEditPrompt(input, promptPlan);
-
-        // Diagnostic logging for edit route
-        if (string.IsNullOrWhiteSpace(safePrompt))
-        {
-            logger.LogInformation(
-                "Reference-edit SKIPPED for {WordText}: no concrete visual delta identified. Source image will be reused as-is.",
-                wordText);
-        }
-        else
-        {
-            logger.LogInformation(
-                "Reference-edit prompt for {WordText}: {SafePrompt}",
-                wordText, safePrompt);
-        }
-
-        logger.LogInformation("Reference-edit image prompt plan for {WordText}: {@PromptPlan}", wordText, promptPlan);
-
-        return (richPrompt, safePrompt);
-    }
-
-    public virtual string GenerateReferenceEditNegativePrompt(string wordText)
-    {
-        var input = Parse(wordText);
-        return QwenSafePromptBuilder.BuildReferenceEditNegativePrompt(input);
     }
 
     /// <summary>
@@ -199,7 +153,7 @@ public class WordImagePromptPipeline
         var targetText = normalized;
         string? meaningHint = null;
 
-        var bracketIndex = normalized.LastIndexOf('(');
+        var bracketIndex = FindOuterHintStart(normalized);
         if (bracketIndex > 0 && normalized.EndsWith(')'))
         {
             targetText = normalized[..bracketIndex].Trim();
@@ -207,6 +161,45 @@ public class WordImagePromptPipeline
         }
 
         return new WordImageInput(normalized, targetText, meaningHint, InferCardType(targetText));
+    }
+
+    private static int FindOuterHintStart(string normalized)
+    {
+        if (string.IsNullOrWhiteSpace(normalized) || !normalized.EndsWith(')'))
+            return -1;
+
+        for (var i = 0; i < normalized.Length; i++)
+        {
+            if (normalized[i] != '(')
+                continue;
+
+            var depth = 0;
+            for (var j = i; j < normalized.Length; j++)
+            {
+                if (normalized[j] == '(')
+                {
+                    depth++;
+                    continue;
+                }
+
+                if (normalized[j] != ')')
+                    continue;
+
+                depth--;
+                if (depth < 0)
+                    break;
+
+                if (depth == 0)
+                {
+                    if (j == normalized.Length - 1)
+                        return i;
+
+                    break;
+                }
+            }
+        }
+
+        return -1;
     }
 
     internal static string InferCardType(string targetText)

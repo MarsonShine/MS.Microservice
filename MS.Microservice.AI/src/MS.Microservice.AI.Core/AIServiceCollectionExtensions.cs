@@ -160,6 +160,7 @@ public static class AIServiceCollectionExtensions
 
         services.TryAddSingleton<ISceneGroupingAgent, SceneGroupingAgent>();
         services.TryAddTransient<WordImagePromptPipeline>();
+        services.TryAddTransient<SentenceEditDeltaAgent>();
         services.TryAddTransient<ImageGenerationOrchestrator>();
         services.TryAddTransient<SentenceImageBatchOrchestrator>();
         return services;

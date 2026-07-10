@@ -115,6 +115,14 @@ app.UsePlatformSwagger();
 - Provider-neutral 错误分类
 - Activity tracing
 - Provider capability validation
+- **图像 Prompt 规划管线**：文本 → LLM 视觉规划 → Safe/Rich Prompt → 图片生成
+- **场景分组与批量生图**：句子语义分组 → 结构化 EditDelta → 参考图编辑保持组内视觉连续性
+- **Qwen 参考图编辑**：通过 `IQwenImageReferenceEditClient` / `IReferenceImageEditClient` + `QwenReferenceImageEditAdapter`，不是 `AIImageEditRequest`
+
+> **架构说明**：
+> - `OpenAICompatible*ProviderBase` 是 provider HTTP 复用层（chat/completions, images/generations 等），不是参考图编辑通道。
+> - 参考图编辑有独立的 `IReferenceImageEditClient` 接口和 provider adapter（当前仅 Qwen 支持）。
+> - `MS.Microservice.Core` 是允许依赖的核心层，`AI.Core` 已引用它（`DefaultSerializeSetting` 等）。
 
 仍计划补齐：更细粒度限流策略、熔断策略、prompt/response 脱敏日志、Secret Provider、payload 限制和成本统计。路线见 `docs/framework-optimization-roadmap.md`。
 

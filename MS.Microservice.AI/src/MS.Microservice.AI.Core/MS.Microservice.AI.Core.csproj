@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\MS.Microservice.Core\MS.Microservice.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />

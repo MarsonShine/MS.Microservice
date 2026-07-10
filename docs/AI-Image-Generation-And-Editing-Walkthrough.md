@@ -46,20 +46,33 @@ MS.Microservice.AI.DeepSeek         ← DeepSeek 具体实现
                     │   AIImageEditRequest     │
                     │   ┌───────────────────┐  │
                     │   │ Prompt (required)  │  │
+                    │   │ Image (required)   │  │
+                    │   │ Mask  (optional)   │  │
                     │   └───────────────────┘  │
-                    │          ↓               │
-                    │    ┌─────┴─────┐         │
-                    │    ↓           ↓         │
-                    │  Image     ReferenceImageUrl
-                    │ (binary)      (URL)      │
-                    │    ↓           ↓         │
-                    │ Multipart    JSON JSON   │
-                    │ /images/edits 多模态端点  │
+                    │                          │
+                    │   Binary Image 编辑      │
+                    │   (inpainting / bg       │
+                    │    removal)              │
                     └─────────────────────────┘
+
+                    ┌──────────────────────────────┐
+                    │   ReferenceImageEditRequest   │
+                    │   ┌────────────────────────┐  │
+                    │   │ Prompt (required)       │  │
+                    │   │ ReferenceImageUrl (req) │  │
+                    │   │ NegativePrompt (opt)    │  │
+                    │   └────────────────────────┘  │
+                    │                               │
+                    │   参考图 URL 编辑              │
+                    │   (通过 IReferenceImageEdit-   │
+                    │    Client 独立接口)            │
+                    └──────────────────────────────┘
 ```
 
-- **Binary Image 模式**（OpenAI 兼容）：发送 `multipart/form-data` 到 `/images/edits`，传二进制图片 + Mask + Prompt
-- **ReferenceImageUrl 模式**（Qwen 多模态）：发送 JSON 到多模态生成端点，传参考图 URL + Prompt + NegativePrompt
+- **Binary Image 模式**（OpenAI 兼容）：发送 `multipart/form-data` 到 `/images/edits`，传二进制图片 + Mask + Prompt。`AIImageEditRequest` 保持纯二进制编辑语义，**不含** `ReferenceImageUrl`。
+- **Reference Image 模式**（Qwen 多模态）：通过独立的 `IReferenceImageEditClient` 接口 + `ReferenceImageEditRequest`（Core.Images 层），经 `QwenReferenceImageEditAdapter` 适配到 `IQwenImageReferenceEditClient`，发送 JSON 到多模态生成端点。
+
+> **架构要点**：`IReferenceImageEditClient` 和 `IAIImageEditClient` 是**两个独立接口**，分别服务于参考图 URL 编辑和二进制图片编辑。OpenAI-compatible 的 `*ProviderBase` 是 HTTP 复用层，不承载参考图编辑。
 
 ---
 
@@ -174,51 +187,79 @@ MS.Microservice.AI.DeepSeek         ← DeepSeek 具体实现
 
 ## 3. 参考图编辑管线 (Reference Image Edit)
 
-### 3.1 总体流程
+### 3.1 总体流程（结构化 EditDelta 方案）
+
+参考图编辑管线已从旧的"文本解析式 IMAGE EDIT DELTA"迁移到**结构化 `SentenceImageEditDelta` 方案**。核心组件：
 
 ```
-原始文本 + 参考图 URL
+SceneGroupingAgent.GroupAsync(rows)
     │
     ▼
-┌──────────────────────────────────────────────────────┐
-│  ImageGenerationOrchestrator                          │
-│  .GenerateFromTextWithReferenceAsync()                │
-└──────────────────────────────────────────────────────┘
+VisualContextGroup（含 anchor row + members）
     │
-    ├─ ① pipeline.GenerateReferenceEditPromptsAsync()
-    │     • 走与文生图相同的 LLM 计划管线
-    │     • 但只用 QwenSafePromptBuilder.BuildReferenceEditPrompt()
+    ▼
+SentenceEditDeltaAgent.EnrichAsync(group, rows)
+    │   LLM 基于 group 上下文 + anchor row 产出 JSON deltas
+    │   归一化后写入 member.EditDelta
     │
-    ├─ ② SafePrompt == "" ?
-    │     YES → 返回 ReusedSourceImage=true，不调用 API
-    │     NO  → 继续
+    ▼
+SentenceImageEditPromptBuilder.CanUseReferenceEdit(member.EditDelta)
+    │   confidence >= 0.6 && 恰好 1 个 concrete operation
     │
-    ├─ ③ pipeline.GenerateReferenceEditNegativePrompt()
-    │     → 生成 Negative Prompt
+    ├── false → 复用源图 URL（不调用编辑 API）
     │
-    └─ ④ imageEditClient.EditAsync(request with ReferenceImageUrl, NegativePrompt)
-          → QwenImageEditProvider → Qwen 多模态端点
+    └── true
+        │
+        ▼
+SentenceImageEditPromptBuilder.BuildPrompt(delta)
+    │   例如: "Only edit: box -> apple."
+    │
+    ▼
+ImageGenerationOrchestrator.GenerateFromReferenceEditDeltaAsync(delta, referenceUrl)
+    │
+    ├─ ① SentenceImageEditPromptBuilder.CanUseReferenceEdit(delta) → false?
+    │     → 返回 ReusedSourceImage=true，复用源图 URL
+    │
+    ├─ ② IReferenceImageEditClient 未注册？
+    │     → throw InvalidOperationException
+    │
+    ├─ ③ 构建 ReferenceImageEditRequest
+    │     • Prompt = SentenceImageEditPromptBuilder.BuildPrompt(delta)
+    │     • NegativePrompt = 固定 helper 返回（style transfer, full redraw, ...）
+    │
+    └─ ④ referenceEditClient.EditReferenceAsync(request)
+          → QwenReferenceImageEditAdapter → IQwenImageReferenceEditClient
+          → 编辑失败 → 复用源图（不回退独立生图）
 ```
 
-### 3.2 "空 Delta → 复用源图" 模式
+### 3.2 旧管线 vs 新管线
 
-> **核心设计原则**：如果编辑 Prompt 为空（没有具体视觉变化），**绝不**调用图片模型。
+| 维度 | 旧管线（已移除） | 新管线 |
+|---|---|---|
+| 入口 | `GenerateFromTextWithReferenceAsync(wordText, url)` | `GenerateFromReferenceEditDeltaAsync(delta, url)` |
+| Prompt 来源 | `promptPipeline.GenerateReferenceEditPromptsAsync()` → LLM 文本解析 | `SentenceImageEditPromptBuilder.BuildPrompt(delta)` → 结构化 JSON → 确定性 prompt |
+| Negative Prompt | `promptPipeline.GenerateReferenceEditNegativePrompt()` | 固定 helper：`"style transfer, full redraw, new composition, ..."` |
+| 上下文注入 | `BuildImageEditContext()` → 括号文本 → `MeaningHint` → LLM 再解析 | `SentenceEditDeltaAgent` → JSON delta → `member.EditDelta` 直接读取 |
+| 编辑决策 | `SafePrompt == ""` → 复用源图 | `CanUseReferenceEdit(delta)` → confidence + 单操作检查 |
+| 降级策略 | 无明确降级 | 编辑失败 → 复用源图；no-edit delta → 复用源图 |
+
+### 3.3 "空 Delta → 复用源图" 模式
+
+> **核心设计原则**：如果 delta 不可编辑（confidence < 0.6 或非单操作），**绝不**调用图片模型。
 > 即使 "keep unchanged" 这类 Prompt 也会导致模型重新编码图片，造成亮度、纹理、对比度漂移。
 
 ```csharp
-// QwenSafePromptBuilder.BuildReferenceEditPrompt()
-// 返回 string.Empty 当且仅当 ChangeWhitelist 为空时：
-var changeWhitelist = BuildChangeWhitelist(input);
-if (string.IsNullOrWhiteSpace(changeWhitelist))
-    return string.Empty;  // ← 上游检测到此值，跳过 API 调用
+// SentenceImageEditPromptBuilder.CanUseReferenceEdit
+public static bool CanUseReferenceEdit(SentenceImageEditDelta? delta)
+{
+    return delta is { Confidence: >= 0.6 }
+        && GetConcreteOperations(delta.Operations).Count == 1;
+}
 ```
 
-`BuildChangeWhitelist` 从控制子句中提取**具体的编辑指令**：
-- 只保留含 `Replace/Revise/Update/Add/Remove` 等显式编辑动词的子句
-- 过滤掉 `HasConcreteVisualTarget` 为 false 的子句（必须有 "replace X with Y" 或 "add X to Y" 等具体模式）
-- 最多取 4 条，总长限制 600 字符
+不可编辑时，`GenerateFromReferenceEditDeltaAsync` 直接返回 `ReusedSourceImage=true`，`ImageResponse` 中装入源图 URL。
 
-### 3.3 Qwen 多模态 API 实现
+### 3.4 Qwen 多模态 API 实现
 
 #### 请求格式
 
@@ -236,7 +277,7 @@ if (string.IsNullOrWhiteSpace(changeWhitelist))
   },
   "parameters": {
     "n": 1,
-    "negative_prompt": "style transfer, full redraw, ...",
+    "negative_prompt": "style transfer, full redraw, new composition, changed background, changed character identity, darker image, over-saturated colors, extra objects, unrequested changes",
     "prompt_extend": false,
     "watermark": false,
     "size": "1024*1024"
@@ -282,7 +323,7 @@ AI:Providers:Qwen:Endpoints:MultimodalGeneration
 | `prompt_extend` | 固定 `false`（防止模型自行扩展 Prompt 引入意外变化） |
 | `watermark` | 固定 `false` |
 
-### 3.4 编辑 Prompt 包装（SOURCE IMAGE Protection）
+### 3.5 编辑 Prompt 包装（SOURCE IMAGE Protection）
 
 ```csharp
 // OpenAICompatibleImageEditProviderBase.WrapEditPromptWithSourceProtection()
@@ -324,26 +365,30 @@ IReadOnlyList<WordImageRow> (来自 Excel/DB)
     │      • Excel 预分组 (SceneGroupId) → 直接使用
     │      • 未分组 → LLM 语义分组
     │
-    ├─ ② 对每个 Group:
+    ├─ ② SentenceEditDeltaAgent.EnrichAsync(group, rows)
+    │      • 对每个 grouped rows 调用
+    │      • LLM 产出 JSON deltas → 归一化 → member.EditDelta
+    │      • 宿主项目应在此步之后保存 group/member/editDelta 到 DB
+    │
+    ├─ ③ 对每个 Group:
     │      ├─ ShouldUseReferenceEdit == false
     │      │    → 每行独立 GenerateFromTextAsync
     │      │    → Prompt 追加 BuildSceneContext(group, member) 作为括号提示
     │      │
     │      └─ ShouldUseReferenceEdit == true
     │           ├─ 第一行: GenerateFromTextAsync (含场景上下文)
-    │           ├─ 保存第一行生成的图片 URL 作为 ReferenceImageUrl
-    │           ├─ 第二行起:
-    │           │   ├─ BuildImageEditContext(group, reference, sentence, member)
-    │           │   │   → 拼接为括号提示附加到句末
-    │           │   ├─ GenerateFromTextWithReferenceAsync(inputText, referenceUrl)
-    │           │   ├─ 如果 ReusedSourceImage == true
-    │           │   │   → 不推进 reference context（仍用上张实际有变化的图）
-    │           │   └─ 如果 ReusedSourceImage == false
-    │           │       → 推进 reference context 到新图
+    │           ├─ 保存第一行生成的图片 URL 作为 reference URL
+    │           ├─ 第二行起: 读取 member.EditDelta
+    │           │   ├─ SentenceImageEditPromptBuilder.CanUseReferenceEdit(editDelta) == false
+    │           │   │   → 降级独立生图（不回退到旧 prompt 管线）
+    │           │   └─ CanUseReferenceEdit == true
+    │           │       ├─ GenerateFromReferenceEditDeltaAsync(delta, referenceUrl)
+    │           │       ├─ 成功 → 推进 reference URL
+    │           │       └─ 失败 → 复用源图（不推进 reference URL）
     │           │
     │           └─ 返回每行 SentenceImageBatchGenerationResult
     │
-    └─ ③ 按原始 OrderIndex 排序返回
+    └─ ④ 按原始 OrderIndex 排序返回
 ```
 
 ### 4.2 场景分组 (`SceneGroupingAgent`)
@@ -415,45 +460,48 @@ public static bool ShouldUseReferenceEdit(VisualContextGroup? group)
 - `"Current sentence visual focus: a box"`
 - `"Keep the stable scene and characters consistent"`
 
-#### `BuildImageEditContext` — 用于参考编辑的增量描述
+#### 结构化 EditDelta — 用于参考编辑（替代旧 `BuildImageEditContext`）
 
-为参考编辑生成详细的 **IMAGE EDIT DELTA** 上下文：
+**旧方案**（已移除）：`BuildImageEditContext` 生成文本式的 `IMAGE EDIT DELTA` 括号提示，依赖 LLM 文本解析。
 
-```
-"This is an apple. (IMAGE EDIT DELTA: edit the provided reference image.
- Preserve the exact same camera angle, framing, spatial layout, background anchors, lighting,
- color palette, and storybook art style.
- Reference image currently illustrates: "This is a box".
- Reference row visual focus: a box.
- Current target sentence: "This is an apple".
- Current target visual focus: an apple.
- Replace or revise only the previous row-specific elements (a box)
- into the current row-specific elements (an apple).
- Remove or soften reference-row details that conflict with the current sentence.
- Do not redesign the stable scene.)"
+**新方案**：使用结构化 `SentenceImageEditDelta` JSON：
+```json
+{
+  "rowId": 2,
+  "referenceRowId": 1,
+  "confidence": 0.95,
+  "operations": [
+    { "operation": "replace", "from": "box", "to": "apple" }
+  ]
+}
 ```
 
-这个复杂的括号提示会被 `QwenSafePromptBuilder.BuildChangeWhitelist` 解析，提取出具体的编辑指令。
+`SentenceImageEditPromptBuilder.BuildPrompt(delta)` 将其转换为最小编辑 prompt：
+```
+"Only edit: box -> apple."
+```
 
-### 4.5 参考上下文追踪
+这比"保持场景不变，只改当前目标"更精确、更可审计。
 
-> **关键规则**：如果某行的编辑操作结果是 **ReusedSourceImage=true**（没有实际视觉变化），参考上下文**不更新**。下一行仍然以最后一张实际发生过视觉变化的图片作为 reference。
+### 4.5 参考 URL 推进规则
+
+> **关键规则**：如果某行的编辑操作结果是 **ReusedSourceImage=true**（没有实际视觉变化），参考 URL **不更新**。下一行仍然以最后一张实际发生过视觉变化的图片作为 reference。
 
 ```csharp
 // SentenceImageBatchOrchestrator 核心逻辑：
 if (!editResult.ReusedSourceImage)
 {
-    lastActualImageUrl = newImageUrl;                    // 更新 reference URL
-    referenceContext = new SentenceImageReferenceContext( // 更新 reference context
-        ImageUrl: newImageUrl,
-        SentenceText: row.English,
-        VisualFocus: member?.VisualFocus,
-        VisualAction: member?.VisualAction,
-        VariableElements: member?.VariableElements ?? []);
+    var newImageUrl = GetImageUrl(editResult.ImageResponse);
+    if (!string.IsNullOrWhiteSpace(newImageUrl))
+    {
+        lastReferenceUrl = newImageUrl;  // 更新 reference URL
+    }
 }
 ```
 
-这样避免了因为某行没有实际编辑而导致后续行的语义上下文与真实画面错位。
+这样避免了因为某行没有实际编辑而导致后续行的参考图与实际画面错位。
+
+> **注意**：只使用 `AIImageResponse.Images[].Url` 作为 reference URL，不使用 `Content.FileName`。
 
 ---
 

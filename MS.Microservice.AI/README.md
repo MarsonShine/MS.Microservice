@@ -7,10 +7,10 @@ Independent AI module family for MS.Microservice. It now provides provider-neutr
 | Package | Purpose |
 |---|---|
 | `MS.Microservice.AI.Abstractions` | Stable business-facing contracts such as `IAIChatClient`, `IAITtsClient`, `IAIAsrClient`, `IAIImageGenerationClient`, `IAIImageEditClient`, request/response DTOs, and unified exceptions. |
-| `MS.Microservice.AI.Core` | Options binding, model resolution, routing clients, DI entry point, shared resilience, OpenAI-compatible HTTP/SSE implementations for chat, audio, and image capabilities. Also includes **`Images/`** — educational flashcard image prompt planning, scene grouping, and batch generation pipeline. |
+| `MS.Microservice.AI.Core` | Options binding, model resolution, routing clients, DI entry point, shared resilience, OpenAI-compatible HTTP/SSE implementations for chat, audio, and image capabilities. Also includes **`Images/`** — educational flashcard image prompt planning, scene grouping, structured edit delta, and batch generation pipeline. |
 | `MS.Microservice.AI.OpenAI` | OpenAI chat, TTS, ASR, image generation, and image edit provider registration and validation. |
 | `MS.Microservice.AI.DeepSeek` | DeepSeek chat provider registration and validation. DeepSeek is currently enforced as chat-only. |
-| `MS.Microservice.AI.Qwen` | Qwen chat, TTS, ASR, image generation, and image edit provider registration and validation through compatible-mode endpoints. |
+| `MS.Microservice.AI.Qwen` | Qwen chat, TTS, ASR, image generation, image edit, and **reference-image edit** (via `IQwenImageReferenceEditClient` + `QwenReferenceImageEditAdapter`) provider registration and validation through compatible-mode endpoints. |
 
 ### Quick Start — Image Prompt Pipeline
 
@@ -18,31 +18,44 @@ Independent AI module family for MS.Microservice. It now provides provider-neutr
 // Program.cs
 builder.Services.AddMicroserviceAI(builder.Configuration)
     .AddOpenAI()
+    .AddQwen()   // for reference-image editing
     .Services
-    .AddImagePromptPipeline(); // Registers IPlanGeneratorClient, SceneGroupingAgent, orchestrator
+    .AddImagePromptPipeline(); // Registers IPlanGeneratorClient, SceneGroupingAgent, orchestrator, SentenceEditDeltaAgent
 
 // Usage: one-step text → image
 var orchestrator = provider.GetRequiredService<ImageGenerationOrchestrator>();
 var result = await orchestrator.GenerateFromTextAsync("Be careful! Don't run in the classroom.");
-// result.RichPrompt  → store in DB for traceability
-// result.SafePrompt  → actual prompt sent to image API
-// result.ImageResponse.Images → generated images
 
-// Usage: batch scene grouping
-var agent = provider.GetRequiredService<SceneGroupingAgent>();
+// Usage: structured reference-image edit
+var delta = member.EditDelta; // from SentenceEditDeltaAgent
+var editResult = await orchestrator.GenerateFromReferenceEditDeltaAsync(delta, referenceImageUrl);
+
+// Usage: batch sentence images (full flow)
+var agent = provider.GetRequiredService<ISceneGroupingAgent>();
 var grouping = await agent.GroupAsync(excelRows);
-// grouping.Groups → visual context groups with shared characters & settings
+
+var deltaAgent = provider.GetRequiredService<SentenceEditDeltaAgent>();
+foreach (var group in grouping.Groups) { await deltaAgent.EnrichAsync(group, excelRows); }
+
+var batchOrchestrator = provider.GetRequiredService<SentenceImageBatchOrchestrator>();
+var results = await batchOrchestrator.GenerateBatchAsync(excelRows);
 ```
 
-> See `src/MS.Microservice.AI.Core/Images/README.md` for full documentation on the image prompt pipeline, scene grouping, anti-clutter design, and dual-prompt architecture.
+> See `src/MS.Microservice.AI.Core/Images/README.md` for full documentation on the image prompt pipeline, scene grouping, structured edit delta, anti-clutter design, and dual-prompt architecture.
 
 ### Capability Matrix
 
-| Provider | Chat | TTS | ASR | Image Generation | Image Edit |
-|---|---|---|---|---|---|
-| OpenAI | Yes | Yes | Yes | Yes | Yes |
-| DeepSeek | Yes | No | No | No | No |
-| Qwen | Yes | Yes | Yes | Yes | Yes |
+| Provider | Chat | TTS | ASR | Image Generation | Image Edit | Reference Image Edit |
+|---|---|---|---|---|---|---|
+| OpenAI | Yes | Yes | Yes | Yes | Yes | No |
+| DeepSeek | Yes | No | No | No | No | No |
+| Qwen | Yes | Yes | Yes | Yes | Yes | Yes |
+
+> **架构说明**：
+> - `OpenAICompatible*ProviderBase` 是 provider HTTP 复用层（chat/completions, images/generations 等），不是参考图编辑通道。
+> - 参考图编辑使用独立的 `IReferenceImageEditClient` (Core.Images) → `IQwenImageReferenceEditClient` (Qwen) → `QwenReferenceImageEditAdapter`。
+> - `AIImageEditRequest` 保持二进制编辑语义（inpainting / background removal），没有 `ReferenceImageUrl`。
+> - `MS.Microservice.Core` 是允许依赖的核心层。
 
 ### Quick Start
 

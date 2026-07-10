@@ -182,12 +182,30 @@ public sealed class DependencyInjectionTests
         orch1.Should().NotBeSameAs(orch2); // Transient
     }
 
+    [Fact]
+    public void AddImagePromptPipeline_ShouldRegisterSentenceEditDeltaAgent_AsTransient()
+    {
+        var services = new ServiceCollection();
+        RegisterLoggerStub(services);
+        services.AddSingleton<IAIChatClient>(new FakeChatClient());
+
+        services.AddImagePromptPipeline();
+
+        using var provider = services.BuildServiceProvider();
+        var agent1 = provider.GetRequiredService<SentenceEditDeltaAgent>();
+        var agent2 = provider.GetRequiredService<SentenceEditDeltaAgent>();
+
+        agent1.Should().NotBeNull();
+        agent1.Should().NotBeSameAs(agent2); // Transient
+    }
+
     // ── Test doubles ──
 
     private static void RegisterLoggerStub(IServiceCollection services)
     {
         services.AddSingleton<ILogger<PlanGeneratorClient>>(NullLogger<PlanGeneratorClient>.Instance);
         services.AddSingleton<ILogger<WordImagePromptPipeline>>(NullLogger<WordImagePromptPipeline>.Instance);
+        services.AddSingleton<ILogger<SentenceEditDeltaAgent>>(NullLogger<SentenceEditDeltaAgent>.Instance);
         services.AddSingleton<ILogger<ImageGenerationOrchestrator>>(NullLogger<ImageGenerationOrchestrator>.Instance);
         services.AddSingleton<ILogger<SceneGroupingAgent>>(NullLogger<SceneGroupingAgent>.Instance);
     }

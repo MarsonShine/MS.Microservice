@@ -103,8 +103,7 @@ public class SentenceImageBatchOrchestrator
             else
             {
                 // ── Eligible group: first row normal generate, subsequent rows reference-edit ──
-                string? lastActualImageUrl = null;
-                SentenceImageReferenceContext? referenceContext = null;
+                string? lastReferenceUrl = null;
 
                 for (var i = 0; i < orderedRows.Count; i++)
                 {
@@ -121,22 +120,15 @@ public class SentenceImageBatchOrchestrator
                             .GenerateFromTextAsync(inputText, generationOverrides, ct)
                             .ConfigureAwait(false);
 
-                        // Get the generated image URL to use as reference
-                        lastActualImageUrl = GetImageUrl(genResult.ImageResponse);
+                        // Get the generated image URL to use as reference for subsequent rows
+                        lastReferenceUrl = GetImageUrl(genResult.ImageResponse);
 
-                        if (string.IsNullOrWhiteSpace(lastActualImageUrl))
+                        if (string.IsNullOrWhiteSpace(lastReferenceUrl))
                         {
                             logger.LogWarning(
                                 "First generated image for group {GroupId} has no URL; later rows will fall back to independent generation.",
                                 group.GroupId);
                         }
-
-                        referenceContext = new SentenceImageReferenceContext(
-                            ImageUrl: lastActualImageUrl ?? string.Empty,
-                            SentenceText: row.English,
-                            VisualFocus: member?.VisualFocus,
-                            VisualAction: member?.VisualAction,
-                            VariableElements: member?.VariableElements ?? []);
 
                         results.Add(new SentenceImageBatchGenerationResult
                         {
@@ -153,11 +145,16 @@ public class SentenceImageBatchOrchestrator
                     }
                     else
                     {
-                        // Subsequent row: reference-image edit
-                        if (string.IsNullOrWhiteSpace(lastActualImageUrl))
+                        // Subsequent row: try reference-image edit via structured delta
+                        var editDelta = member?.EditDelta;
+
+                        if (string.IsNullOrWhiteSpace(lastReferenceUrl)
+                            || editDelta == null
+                            || !SentenceImageEditPromptBuilder.CanUseReferenceEdit(editDelta))
                         {
+                            // Fallback: independent generation
                             logger.LogWarning(
-                                "No reference image URL available for row {RowId} in group {GroupId}; falling back to independent generation.",
+                                "No eligible reference edit for row {RowId} in group {GroupId} (no URL, no delta, or delta ineligible); falling back to independent generation.",
                                 row.RowId, group.GroupId);
 
                             var sceneContext = SentenceImageContinuityPromptBuilder.BuildSceneContext(group, member);
@@ -181,29 +178,49 @@ public class SentenceImageBatchOrchestrator
                             continue;
                         }
 
-                        var editContext = SentenceImageContinuityPromptBuilder.BuildImageEditContext(
-                            group, referenceContext!, row.English, member);
+                        // Attempt reference edit via structured delta
+                        ReferenceImageEditResult editResult;
+                        try
+                        {
+                            editResult = await generationOrchestrator
+                                .GenerateFromReferenceEditDeltaAsync(editDelta, lastReferenceUrl, editOverrides, ct)
+                                .ConfigureAwait(false);
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            logger.LogWarning(ex,
+                                "Reference edit not available for row {RowId} in group {GroupId}; falling back to independent generation.",
+                                row.RowId, group.GroupId);
 
-                        var inputText = $"{row.English} {editContext}";
+                            var sceneContext = SentenceImageContinuityPromptBuilder.BuildSceneContext(group, member);
+                            var fallbackText = $"{row.English} {sceneContext}";
+                            var fallbackResult = await generationOrchestrator
+                                .GenerateFromTextAsync(fallbackText, generationOverrides, ct)
+                                .ConfigureAwait(false);
 
-                        var editResult = await generationOrchestrator
-                            .GenerateFromTextWithReferenceAsync(inputText, lastActualImageUrl, editOverrides, ct)
-                            .ConfigureAwait(false);
+                            results.Add(new SentenceImageBatchGenerationResult
+                            {
+                                RowId = row.RowId,
+                                SceneGroupId = group.GroupId,
+                                RichPrompt = fallbackResult.RichPrompt,
+                                SafePrompt = fallbackResult.SafePrompt,
+                                ImageResponse = fallbackResult.ImageResponse,
+                                UsedReferenceEdit = false,
+                                ReusedSourceImage = false,
+                                ReferenceImageUrl = null,
+                                ContextConfidence = rowConfidence.GetValueOrDefault(row.RowId, group.Confidence)
+                            });
+                            continue;
+                        }
 
-                        // Update reference context only if an actual edit occurred
+                        // Advance reference URL only if an actual edit occurred and produced a valid URL
                         if (!editResult.ReusedSourceImage)
                         {
                             var newImageUrl = GetImageUrl(editResult.ImageResponse);
 
                             if (!string.IsNullOrWhiteSpace(newImageUrl))
                             {
-                                lastActualImageUrl = newImageUrl;
-                                referenceContext = new SentenceImageReferenceContext(
-                                    ImageUrl: newImageUrl,
-                                    SentenceText: row.English,
-                                    VisualFocus: member?.VisualFocus,
-                                    VisualAction: member?.VisualAction,
-                                    VariableElements: member?.VariableElements ?? []);
+                                lastReferenceUrl = newImageUrl;
                             }
                         }
 

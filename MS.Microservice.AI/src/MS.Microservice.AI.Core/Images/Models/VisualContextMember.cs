@@ -36,4 +36,10 @@ public sealed class VisualContextMember
     /// </summary>
     [JsonPropertyName("variableElements")]
     public List<string> VariableElements { get; set; } = [];
+
+    /// <summary>
+    /// Structured localized edit delta from the group's anchor reference row to this row.
+    /// </summary>
+    [JsonPropertyName("editDelta")]
+    public SentenceImageEditDelta? EditDelta { get; set; }
 }

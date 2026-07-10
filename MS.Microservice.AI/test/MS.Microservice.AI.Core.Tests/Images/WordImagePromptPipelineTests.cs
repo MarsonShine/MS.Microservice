@@ -72,6 +72,24 @@ public sealed class WordImagePromptPipelineTests
     }
 
     [Fact]
+    public void Parse_ShouldHandleDeeplyNestedParentheses()
+    {
+        var result = WordImagePromptPipeline.Parse("apple (fruit (red variety))");
+
+        result.MeaningHint.Should().Be("fruit (red variety)");
+        result.TargetText.Should().Be("apple");
+    }
+
+    [Fact]
+    public void Parse_ShouldHandleNestedParentheses_WithMultipleClosing()
+    {
+        var result = WordImagePromptPipeline.Parse("box (container (wooden (small)))");
+
+        result.MeaningHint.Should().Be("container (wooden (small))");
+        result.TargetText.Should().Be("box");
+    }
+
+    [Fact]
     public void Parse_ShouldNotExtractHint_WhenOnlyParentheses()
     {
         var result = WordImagePromptPipeline.Parse("(hello)");

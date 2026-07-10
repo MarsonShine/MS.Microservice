@@ -1,4 +1,5 @@
 using MS.Microservice.AI.Abstractions;
+using MS.Microservice.AI.Core.Images.Building;
 using MS.Microservice.AI.Core.Images.Models;
 using Microsoft.Extensions.Logging;
 
@@ -25,21 +26,30 @@ public sealed record ImageGenerationResult(
 /// <code>
 /// var result = await orchestrator.GenerateFromTextAsync("Be careful! Don't run in the classroom.");
 /// </code>
+/// <para>Reference edit usage:</para>
+/// <code>
+/// var result = await orchestrator.GenerateFromReferenceEditDeltaAsync(delta, referenceImageUrl);
+/// </code>
 /// </remarks>
 public class ImageGenerationOrchestrator(
     WordImagePromptPipeline promptPipeline,
     IAIImageGenerationClient imageClient,
+    IEnumerable<IReferenceImageEditClient> referenceEditClients,
     ILogger<ImageGenerationOrchestrator> logger)
 {
     private readonly WordImagePromptPipeline promptPipeline = promptPipeline;
     private readonly IAIImageGenerationClient imageClient = imageClient;
+    private readonly IReferenceImageEditClient? referenceEditClient = referenceEditClients.FirstOrDefault();
     private readonly ILogger<ImageGenerationOrchestrator> logger = logger;
 
-    /// <summary>
-    /// Optional reference-image edit client. When not registered (e.g. no Qwen adapter),
-    /// reference-edit calls will throw a descriptive exception.
-    /// </summary>
-    public IReferenceImageEditClient? ReferenceEditClient { get; set; }
+    // Keep a backwards-compatible constructor for tests that don't inject IReferenceImageEditClient.
+    public ImageGenerationOrchestrator(
+        WordImagePromptPipeline promptPipeline,
+        IAIImageGenerationClient imageClient,
+        ILogger<ImageGenerationOrchestrator> logger)
+        : this(promptPipeline, imageClient, [], logger)
+    {
+    }
 
     /// <summary>
     /// Generates an educational image from raw text input (word, phrase, or sentence).
@@ -95,51 +105,33 @@ public class ImageGenerationOrchestrator(
     }
 
     /// <summary>
-    /// Generates (or reference-edits) an educational image from raw text input using a
-    /// reference source image. Requires <see cref="ReferenceEditClient"/> to be set
-    /// (registered via <c>AddQwen()</c> or equivalent adapter).
-    /// When the pipeline produces a concrete edit delta, an edit call is issued;
-    /// otherwise the source image is reused as-is.
+    /// Generates a reference-image edit from a structured <see cref="SentenceImageEditDelta"/>.
+    /// When the delta is not eligible for reference edit (low confidence, no concrete operations),
+    /// the source image is reused as-is.
     /// </summary>
-    public async Task<ReferenceImageEditResult> GenerateFromTextWithReferenceAsync(
-        string wordText,
+    /// <param name="delta">The structured edit delta produced by <see cref="SentenceEditDeltaAgent"/>.</param>
+    /// <param name="referenceImageUrl">The publicly accessible URL of the source/reference image.</param>
+    /// <param name="overrides">Optional generation overrides.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The edit result, with <see cref="ReferenceImageEditResult.ReusedSourceImage"/> indicating
+    /// whether the source was reused or an actual edit was performed.</returns>
+    public async Task<ReferenceImageEditResult> GenerateFromReferenceEditDeltaAsync(
+        SentenceImageEditDelta delta,
         string referenceImageUrl,
         ImageEditGenerationOverrides? overrides = null,
         CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(wordText);
+        ArgumentNullException.ThrowIfNull(delta);
         ArgumentException.ThrowIfNullOrWhiteSpace(referenceImageUrl);
 
-        if (ReferenceEditClient is null)
-        {
-            throw new InvalidOperationException(
-                "Reference image editing requires a provider adapter such as AddQwen(). Register IReferenceImageEditClient via DI.");
-        }
-
-        // Step 1: Build the reference-edit prompts
-        string? richPrompt = null;
-        string? safePrompt = null;
-
-        try
-        {
-            (richPrompt, safePrompt) = await promptPipeline
-                .GenerateReferenceEditPromptsAsync(wordText, ct)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Reference edit prompt planning failed for '{WordText}'.", wordText);
-        }
-
-        // Step 2: If no concrete visual delta, reuse source image
-        if (string.IsNullOrWhiteSpace(safePrompt))
+        if (!SentenceImageEditPromptBuilder.CanUseReferenceEdit(delta))
         {
             logger.LogInformation(
-                "Reference edit SKIPPED for '{WordText}': no concrete visual delta. Reusing source image.",
-                wordText);
+                "Reference edit SKIPPED for row {RowId}: delta not eligible (confidence={Confidence}). Reusing source image.",
+                delta.RowId, delta.Confidence);
 
             return new ReferenceImageEditResult(
-                RichPrompt: richPrompt,
+                RichPrompt: null,
                 SafePrompt: null,
                 ImageResponse: new AIImageResponse
                 {
@@ -151,12 +143,22 @@ public class ImageGenerationOrchestrator(
                 ReferenceImageUrl: referenceImageUrl);
         }
 
-        // Step 3: Build and send the reference edit request
-        var negativePrompt = promptPipeline.GenerateReferenceEditNegativePrompt(wordText);
+        if (referenceEditClient is null)
+        {
+            throw new InvalidOperationException(
+                "Reference image editing requires a provider adapter such as AddQwen(). Register IReferenceImageEditClient via DI.");
+        }
+
+        var editPrompt = SentenceImageEditPromptBuilder.BuildPrompt(delta);
+
+        var negativePrompt =
+            "style transfer, full redraw, new composition, changed background, " +
+            "changed character identity, darker image, over-saturated colors, " +
+            "extra objects, unrequested changes";
 
         var editRequest = new ReferenceImageEditRequest
         {
-            Prompt = safePrompt,
+            Prompt = editPrompt,
             ReferenceImageUrl = referenceImageUrl,
             NegativePrompt = negativePrompt,
             Model = overrides?.Model,
@@ -167,20 +169,39 @@ public class ImageGenerationOrchestrator(
             Timeout = overrides?.Timeout,
         };
 
-        var imageResponse = await ReferenceEditClient
-            .EditReferenceAsync(editRequest, ct)
-            .ConfigureAwait(false);
+        try
+        {
+            var imageResponse = await referenceEditClient
+                .EditReferenceAsync(editRequest, ct)
+                .ConfigureAwait(false);
 
-        logger.LogInformation(
-            "Reference edit completed for '{WordText}': {ImageCount} image(s) via {Provider}/{Model}",
-            wordText, imageResponse.Images.Count, imageResponse.Provider, imageResponse.Model);
+            logger.LogInformation(
+                "Reference edit completed for row {RowId}: {ImageCount} image(s) via {Provider}/{Model}",
+                delta.RowId, imageResponse.Images.Count, imageResponse.Provider, imageResponse.Model);
 
-        return new ReferenceImageEditResult(
-            RichPrompt: richPrompt,
-            SafePrompt: safePrompt,
-            ImageResponse: imageResponse,
-            ReusedSourceImage: false,
-            ReferenceImageUrl: referenceImageUrl);
+            return new ReferenceImageEditResult(
+                RichPrompt: null,
+                SafePrompt: editPrompt,
+                ImageResponse: imageResponse,
+                ReusedSourceImage: false,
+                ReferenceImageUrl: referenceImageUrl);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Reference edit failed for row {RowId}, reusing source image.", delta.RowId);
+
+            return new ReferenceImageEditResult(
+                RichPrompt: null,
+                SafePrompt: null,
+                ImageResponse: new AIImageResponse
+                {
+                    Provider = "ReferenceImage",
+                    Model = "reused-source-fallback",
+                    Images = [new AIImageData { Url = referenceImageUrl }],
+                },
+                ReusedSourceImage: true,
+                ReferenceImageUrl: referenceImageUrl);
+        }
     }
 
     /// <summary>
