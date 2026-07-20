@@ -36,4 +36,7 @@ public static class AIErrorCodes
 
     /// <summary>The requested capability is not supported by the resolved provider.</summary>
     public const string UnsupportedCapability = "unsupported_capability";
+
+    /// <summary>The requested chat response format is not supported by the resolved provider or model.</summary>
+    public const string UnsupportedResponseFormat = "unsupported_response_format";
 }

@@ -9,6 +9,23 @@ namespace MS.Microservice.AI.Core.Tests;
 public sealed class AIRequestValidatorTests
 {
     [Fact]
+    public void ValidateChatRequest_ShouldRejectStructuredFormatForStreaming()
+    {
+        var request = new AIChatRequest
+        {
+            Messages = [new AIChatMessage("user", "hello")],
+            ResponseFormat = AIChatResponseFormat.JsonObject,
+        };
+
+        Action action = () => AIRequestValidator.ValidateChatRequest(
+            request,
+            isStreaming: true);
+
+        action.Should().Throw<AIConfigurationException>()
+            .WithMessage("*not supported for streaming*");
+    }
+
+    [Fact]
     public void ValidateChatRequest_ShouldThrow_WhenMessagesAreEmpty()
     {
         var request = new AIChatRequest { Messages = [] };

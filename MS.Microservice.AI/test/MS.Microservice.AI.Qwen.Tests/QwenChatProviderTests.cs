@@ -74,6 +74,32 @@ public sealed class QwenChatProviderTests
         usage.TotalTokens.Should().Be(11);
     }
 
+    [Fact]
+    public async Task GetResponseAsync_ShouldSendJsonObjectResponseFormat()
+    {
+        var handler = new TestHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """
+                {
+                  "id": "qwen-json",
+                  "model": "qwen-plus",
+                  "choices": [{ "message": { "content": "{}" }, "finish_reason": "stop" }],
+                  "usage": { "prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2 }
+                }
+                """,
+                Encoding.UTF8,
+                "application/json"),
+        });
+        var provider = CreateProvider(handler);
+        var request = CreateRequest() with { ResponseFormat = AIChatResponseFormat.JsonObject };
+
+        await provider.GetResponseAsync(CreateResolvedModel(), request);
+
+        handler.RequestBodies.Should().ContainSingle()
+            .Which.Should().Contain("\"response_format\":{\"type\":\"json_object\"");
+    }
+
     private static IAIChatProvider CreateProvider(TestHandler handler)
     {
         var options = new AIOptions();
@@ -130,9 +156,15 @@ public sealed class QwenChatProviderTests
 
         public List<HttpRequestMessage> Requests { get; } = [];
 
+        public List<string> RequestBodies { get; } = [];
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests.Add(new HttpRequestMessage(request.Method, request.RequestUri));
+            RequestBodies.Add(
+                request.Content is null
+                    ? string.Empty
+                    : request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult());
             return Task.FromResult(_response);
         }
     }

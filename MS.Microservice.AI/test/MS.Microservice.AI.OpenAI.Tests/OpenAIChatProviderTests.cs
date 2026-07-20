@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -115,6 +116,64 @@ public sealed class OpenAIChatProviderTests
         var exception = await action.Should().ThrowAsync<AIProviderException>();
         exception.Which.ErrorCode.Should().Be(AIErrorCodes.ProviderAuthenticationFailed);
         exception.Which.Provider.Should().Be(OpenAIProviderDefaults.ProviderName);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_ShouldSendStrictJsonSchemaResponseFormat()
+    {
+        var handler = new SequenceHttpMessageHandler(
+            _ => CreateJsonResponse(
+                HttpStatusCode.OK,
+                """
+                {
+                  "id": "chatcmpl-schema",
+                  "model": "gpt-4.1-mini",
+                  "choices": [{ "message": { "content": "{\"answer\":\"ok\"}" }, "finish_reason": "stop" }],
+                  "usage": { "prompt_tokens": 2, "completion_tokens": 2, "total_tokens": 4 }
+                }
+                """));
+        var provider = CreateProvider(handler);
+        using var schema = JsonDocument.Parse(
+            """{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"],"additionalProperties":false}""");
+        var request = CreateRequest() with
+        {
+            ResponseFormat = AIChatResponseFormat.JsonSchema(
+                "answer_v1",
+                schema.RootElement),
+        };
+
+        await provider.GetResponseAsync(CreateResolvedModel(), request);
+
+        var body = await handler.Requests[0].Content!.ReadAsStringAsync();
+        using var payload = JsonDocument.Parse(body);
+        var responseFormat = payload.RootElement.GetProperty("response_format");
+        responseFormat.GetProperty("type").GetString().Should().Be("json_schema");
+        responseFormat.GetProperty("json_schema").GetProperty("name").GetString().Should().Be("answer_v1");
+        responseFormat.GetProperty("json_schema").GetProperty("strict").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_ShouldClassifyUnsupportedResponseFormat()
+    {
+        var handler = new SequenceHttpMessageHandler(
+            _ => CreateJsonResponse(
+                HttpStatusCode.BadRequest,
+                """
+                {
+                  "error": {
+                    "message": "response_format type json_schema is not supported",
+                    "code": "invalid_request_error"
+                  }
+                }
+                """));
+        var provider = CreateProvider(handler);
+        var request = CreateRequest() with { ResponseFormat = AIChatResponseFormat.JsonObject };
+
+        Func<Task> action = async () =>
+            await provider.GetResponseAsync(CreateResolvedModel(), request);
+
+        var exception = await action.Should().ThrowAsync<AIProviderException>();
+        exception.Which.ErrorCode.Should().Be(AIErrorCodes.UnsupportedResponseFormat);
     }
 
     [Fact]

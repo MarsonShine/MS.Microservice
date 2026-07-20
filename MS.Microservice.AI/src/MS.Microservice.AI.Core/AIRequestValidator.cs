@@ -64,6 +64,22 @@ internal static class AIRequestValidator
         {
             throw new AIConfigurationException("AI chat request scenario cannot be empty.");
         }
+
+        if (isStreaming &&
+            request.ResponseFormat?.Kind is AIChatResponseFormatKind.JsonObject or AIChatResponseFormatKind.JsonSchema)
+        {
+            throw new AIConfigurationException("Structured chat response formats are not supported for streaming requests.");
+        }
+
+        if (request.ResponseFormat?.Kind == AIChatResponseFormatKind.JsonSchema)
+        {
+            if (string.IsNullOrWhiteSpace(request.ResponseFormat.SchemaName) ||
+                request.ResponseFormat.Schema is null ||
+                request.ResponseFormat.Schema.Value.ValueKind != System.Text.Json.JsonValueKind.Object)
+            {
+                throw new AIConfigurationException("JSON Schema response formats require a name and an object schema.");
+            }
+        }
     }
 
     public static void ValidateTtsRequest(AITtsRequest request, AIPayloadLimitOptions? payloadLimits = null)

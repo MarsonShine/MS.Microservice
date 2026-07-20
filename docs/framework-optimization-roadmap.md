@@ -192,6 +192,8 @@ Implemented:
 - Payload limit options for chat, streaming chat, TTS text, ASR audio, image prompt, image edit source image, and image edit mask.
 - Cost accounting hooks through `IAICostReporter`, emitted from routing clients by provider/model/usage/duration/success/failure/category.
 - Production readiness registrations exposed through `AddMicroserviceAI(...)`, `AddAIRateLimiter(...)`, `AddAICircuitBreaker(...)`, `AddAILogSanitizer(...)`, `AddAISecretProvider(...)`, `AddAIPayloadLimits(...)`, and `AddAICostAccounting(...)`.
+- Provider-neutral non-streaming `Text`, `JsonObject`, and strict `JsonSchema` response formats for OpenAI-compatible chat providers.
+- `MS.Microservice.AI.QuestionGeneration` with pluggable question definitions, deterministic validation, independent review, bounded repair, Attempt observers, budgets, exact duplicate detection, and strict structured-output fallback.
 
 Completed next steps:
 
@@ -201,6 +203,8 @@ Completed next steps:
 - [x] Secret Provider integration
 - [x] Payload limit options for audio/image requests, plus chat/streaming text limits
 - [x] Cost accounting hooks by provider/model/usage
+- [x] Provider-neutral JSON Object and JSON Schema chat response formats
+- [x] Business-neutral QuestionGeneration Harness and AI gateway adapter
 
 Remaining production TODO:
 
@@ -209,3 +213,6 @@ Remaining production TODO:
 - [ ] Add cloud-specific secret-provider adapters only in consuming services or optional packages; the framework remains provider-neutral.
 - [ ] Connect `IAICostReporter` to a real metrics, billing, or audit sink in application hosts.
 - [ ] Decide whether prompt/response tracing should be fully disabled by default in host observability; the sanitizer is available, but host logging policy remains product-specific.
+- [ ] Add an optional distributed QuestionGeneration Attempt Store and invocation-reservation implementation for multi-instance crash recovery.
+- [ ] Add optional host packages for task scheduling, persistence, human review, and resource orchestration; these remain outside the reusable Harness.
+- [ ] Build a versioned offline evaluation runner and application-owned golden datasets for question definitions.

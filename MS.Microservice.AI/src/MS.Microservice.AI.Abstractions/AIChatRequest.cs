@@ -33,6 +33,12 @@ public sealed record AIChatRequest
     /// <summary>Per-request timeout override. Falls back to the resolved model timeout.</summary>
     public TimeSpan? Timeout { get; init; }
 
+    /// <summary>
+    /// Optional provider-neutral response format. Structured response formats are only
+    /// supported for non-streaming requests.
+    /// </summary>
+    public AIChatResponseFormat? ResponseFormat { get; init; }
+
     /// <summary>Arbitrary key/value pairs forwarded to provider-specific extensions.</summary>
     public IReadOnlyDictionary<string, string>? Metadata { get; init; }
 }

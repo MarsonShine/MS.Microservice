@@ -1,6 +1,6 @@
 ## MS.Microservice.AI
 
-Independent AI module family for MS.Microservice. It now provides provider-neutral Chat, TTS, ASR, image generation, image edit, and **educational image prompt planning with scene grouping** entry points with concrete providers for OpenAI, DeepSeek, and Qwen.
+Independent AI module family for MS.Microservice. It provides provider-neutral Chat, structured JSON output, TTS, ASR, image generation, image edit, educational image prompt planning, and a bounded question-generation Harness with concrete providers for OpenAI, DeepSeek, and Qwen.
 
 ### Packages
 
@@ -8,6 +8,7 @@ Independent AI module family for MS.Microservice. It now provides provider-neutr
 |---|---|
 | `MS.Microservice.AI.Abstractions` | Stable business-facing contracts such as `IAIChatClient`, `IAITtsClient`, `IAIAsrClient`, `IAIImageGenerationClient`, `IAIImageEditClient`, request/response DTOs, and unified exceptions. |
 | `MS.Microservice.AI.Core` | Options binding, model resolution, routing clients, DI entry point, shared resilience, OpenAI-compatible HTTP/SSE implementations for chat, audio, and image capabilities. Also includes **`Images/`** — educational flashcard image prompt planning, scene grouping, structured edit delta, and batch generation pipeline. |
+| `MS.Microservice.AI.QuestionGeneration` | Business-neutral question contracts and a bounded Draft → Validate → Review → Repair Harness, strict JSON Schema integration, Attempt auditing, budgets, repair allowlists, and pluggable question definitions. |
 | `MS.Microservice.AI.OpenAI` | OpenAI chat, TTS, ASR, image generation, and image edit provider registration and validation. |
 | `MS.Microservice.AI.DeepSeek` | DeepSeek chat provider registration and validation. DeepSeek is currently enforced as chat-only. |
 | `MS.Microservice.AI.Qwen` | Qwen chat, TTS, ASR, image generation, image edit, and **reference-image edit** (via `IQwenImageReferenceEditClient` + `QwenReferenceImageEditAdapter`) provider registration and validation through compatible-mode endpoints. |
@@ -43,13 +44,42 @@ var results = await batchOrchestrator.GenerateBatchAsync(excelRows);
 
 > See `src/MS.Microservice.AI.Core/Images/README.md` for full documentation on the image prompt pipeline, scene grouping, structured edit delta, anti-clutter design, and dual-prompt architecture.
 
+### Quick Start — Question Generation Harness
+
+```csharp
+builder.Services.AddMicroserviceAI(builder.Configuration)
+    .AddOpenAI();
+
+builder.Services
+    .AddQuestionGeneration(options =>
+    {
+        options.DraftScenario = "QuestionGenerationDraft";
+        options.ReviewScenario = "QuestionGenerationReview";
+        options.RepairScenario = "QuestionGenerationRepair";
+    })
+    .AddDefinition<MyQuestionDefinition>();
+
+var harness = serviceProvider.GetRequiredService<IQuestionGenerationHarness>();
+var result = await harness.GenerateAsync(contextSnapshot, blueprint, cancellationToken: cancellationToken);
+
+if (result.Accepted)
+{
+    await repository.SaveAsync(result.Candidate!, cancellationToken);
+    harness.CommitAccepted(result); // only after the host transaction commits
+}
+```
+
+The framework contains no fixed educational question codes or database projection. Applications provide `QuestionCandidate`, `IQuestionDefinition`, `IQuestionBlueprintPlanner`, and versioned prompts. See [QuestionGeneration Code Guide](src/MS.Microservice.AI.QuestionGeneration/README.md) and [architecture deep dive](src/MS.Microservice.AI.QuestionGeneration/docs/ARCHITECTURE.md).
+
 ### Capability Matrix
 
-| Provider | Chat | TTS | ASR | Image Generation | Image Edit | Reference Image Edit |
-|---|---|---|---|---|---|---|
-| OpenAI | Yes | Yes | Yes | Yes | Yes | No |
-| DeepSeek | Yes | No | No | No | No | No |
-| Qwen | Yes | Yes | Yes | Yes | Yes | Yes |
+| Provider | Chat | JSON Object | JSON Schema request | TTS | ASR | Image Generation | Image Edit | Reference Image Edit |
+|---|---|---|---|---|---|---|---|---|
+| OpenAI | Yes | Yes | Yes, model-dependent | Yes | Yes | Yes | Yes | No |
+| DeepSeek | Yes | Yes, model-dependent | Requested with automatic fallback | No | No | No | No | No |
+| Qwen | Yes | Yes, model-dependent | Requested with automatic fallback | Yes | Yes | Yes | Yes | Yes |
+
+`AIChatRequest.ResponseFormat` supports `Text`, `JsonObject`, and `JsonSchema`. Structured formats are non-streaming only. A Provider must explicitly return `unsupported_response_format` before QuestionGeneration downgrades `JsonSchema → JsonObject → Text`; authentication, rate-limit, timeout, safety, and unrelated request errors never trigger format fallback.
 
 > **架构说明**：
 > - `OpenAICompatible*ProviderBase` 是 provider HTTP 复用层（chat/completions, images/generations 等），不是参考图编辑通道。
@@ -119,7 +149,6 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
     "DefaultProvider": "OpenAI",
     "Providers": {
       "OpenAI": {
-        "ApiKey": "",
         "ApiKeySecretName": "AI_OPENAI_API_KEY",
         "BaseAddress": "https://api.openai.com/v1/",
         "TimeoutSeconds": 100,
@@ -127,14 +156,14 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
         "ConcurrencyLimit": 8
       },
       "DeepSeek": {
-        "ApiKey": "",
+        "ApiKeySecretName": "AI_DEEPSEEK_API_KEY",
         "BaseAddress": "https://api.deepseek.com/",
         "TimeoutSeconds": 80,
         "MaxRetryAttempts": 2,
         "ConcurrencyLimit": 4
       },
       "Qwen": {
-        "ApiKey": "",
+        "ApiKeySecretName": "AI_QWEN_API_KEY",
         "BaseAddress": "https://dashscope.aliyuncs.com/compatible-mode/v1/",
         "TimeoutSeconds": 120,
         "MaxRetryAttempts": 2,
@@ -158,6 +187,24 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
           "Provider": "Qwen",
           "Model": "qwen-plus",
           "Temperature": 0.3
+        },
+        "QuestionGenerationDraft": {
+          "Provider": "OpenAI",
+          "Model": "draft-model",
+          "Temperature": 0.4,
+          "MaxOutputTokens": 3000
+        },
+        "QuestionGenerationReview": {
+          "Provider": "OpenAI",
+          "Model": "review-model",
+          "Temperature": 0,
+          "MaxOutputTokens": 1800
+        },
+        "QuestionGenerationRepair": {
+          "Provider": "OpenAI",
+          "Model": "repair-model",
+          "Temperature": 0.2,
+          "MaxOutputTokens": 3000
         }
       },
       "Tts": {
@@ -222,16 +269,18 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
 
 ### Environment Variables
 
-- `AI__Providers__OpenAI__ApiKey`
-- `AI__Providers__DeepSeek__ApiKey`
-- `AI__Providers__Qwen__ApiKey`
+- `AI__PROVIDERS__OpenAI__ApiKey`
+- `AI__PROVIDERS__DeepSeek__ApiKey`
+- `AI__PROVIDERS__Qwen__ApiKey`
+- `AI_OPENAI_API_KEY`, `AI_DEEPSEEK_API_KEY`, `AI_QWEN_API_KEY` when the corresponding `ApiKeySecretName` is configured
 - `AI__Models__Tts__Speech__Voice`
 - `AI__Models__ImageGeneration__Poster__ResponseFormat`
 
 ### Current Scope
 
-- Implemented: chat/completion, streaming SSE parsing, TTS, ASR, image generation, image edit, timeout, retry, provider-neutral errors, model routing, provider validation, DI, and offline unit tests.
+- Implemented: chat/completion, provider-neutral JSON Object/JSON Schema response formats, streaming SSE parsing, TTS, ASR, image generation, image edit, and the business-neutral QuestionGeneration Harness.
 - Production readiness already covered: `HttpClientFactory`, provider/model timeout, exponential retry with `Retry-After`, provider concurrency limit, streaming cancellation, token usage mapping, provider-neutral error classification, Activity tracing, provider capability validation, rate limiter abstraction, circuit breaker abstraction, log sanitizer, provider-neutral secret lookup, payload limits, and cost accounting hooks.
 - Production extension points: `IAIRateLimiter`, `IAICircuitBreaker`, `IAILogSanitizer`, `IAISecretProvider`, and `IAICostReporter` can be replaced by application hosts without changing provider code.
 - Current constraint: DeepSeek remains chat-only and is explicitly blocked for TTS, ASR, image generation, and image edit configuration.
-- Planned next: distributed quota/circuit state, real cost sinks, richer observability, provider-specific advanced parameters, and optional Agent Framework integration on top of this provider gateway layer. See `../docs/framework-optimization-roadmap.md`.
+- QuestionGeneration deliberately excludes distributed Attempt storage, task scheduling, persistence, business question definitions, resources, and human-review APIs; application hosts own those responsibilities.
+- Planned next: distributed quota/circuit state, real cost sinks, richer observability, and optional host-side durable QuestionGeneration execution. See `../docs/framework-optimization-roadmap.md`.

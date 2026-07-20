@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.QuestionGeneration</PackageId>
+    <Title>MS.Microservice AI Question Generation</Title>
+    <Description>Provider-neutral question generation harness with deterministic validation and bounded review/repair loops.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;questions;harness;structured-output</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+</Project>

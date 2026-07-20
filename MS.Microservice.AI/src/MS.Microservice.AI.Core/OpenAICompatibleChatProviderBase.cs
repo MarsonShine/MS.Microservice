@@ -272,6 +272,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             MaxTokens = model.MaxOutputTokens,
             Stream = isStreaming,
             StreamOptions = isStreaming ? new OpenAICompatibleStreamOptions { IncludeUsage = true } : null,
+            ResponseFormat = MapResponseFormat(request.ResponseFormat),
         };
 
         CustomizeRequest(payload, request, model);
@@ -287,6 +288,29 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
 
         requestMessage.Content = JsonContent.Create(payload, options: SerializerOptions);
         return requestMessage;
+    }
+
+    private static OpenAICompatibleResponseFormat? MapResponseFormat(AIChatResponseFormat? format)
+    {
+        return format?.Kind switch
+        {
+            null or AIChatResponseFormatKind.Text => null,
+            AIChatResponseFormatKind.JsonObject => new OpenAICompatibleResponseFormat
+            {
+                Type = "json_object",
+            },
+            AIChatResponseFormatKind.JsonSchema => new OpenAICompatibleResponseFormat
+            {
+                Type = "json_schema",
+                JsonSchema = new OpenAICompatibleJsonSchema
+                {
+                    Name = format.SchemaName!,
+                    Strict = format.Strict,
+                    Schema = format.Schema!.Value,
+                },
+            },
+            _ => throw new AIConfigurationException($"Unsupported chat response format '{format.Kind}'."),
+        };
     }
 
     private async Task<AIChatResponse> ParseChatCompletionResponseAsync(
@@ -462,13 +486,15 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
                 retryAfter: retryAfter);
         }
 
-        var errorCode = httpResponse.StatusCode switch
-        {
-            HttpStatusCode.BadRequest => AIErrorCodes.InvalidRequest,
-            HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => AIErrorCodes.ProviderAuthenticationFailed,
-            HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => AIErrorCodes.ProviderTimeout,
-            _ => AIErrorCodes.ProviderUnavailable,
-        };
+        var errorCode = IsUnsupportedResponseFormat(httpResponse.StatusCode, providerCode, message)
+            ? AIErrorCodes.UnsupportedResponseFormat
+            : httpResponse.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => AIErrorCodes.InvalidRequest,
+                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => AIErrorCodes.ProviderAuthenticationFailed,
+                HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => AIErrorCodes.ProviderTimeout,
+                _ => AIErrorCodes.ProviderUnavailable,
+            };
 
         return new AIProviderException(
             message ?? $"AI provider '{Name}' request failed with status code {(int)httpResponse.StatusCode}.",
@@ -530,6 +556,27 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         return value.Contains("content_filter", StringComparison.OrdinalIgnoreCase)
             || value.Contains("content policy", StringComparison.OrdinalIgnoreCase)
             || value.Contains("safety", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsUnsupportedResponseFormat(
+        HttpStatusCode statusCode,
+        string? providerCode,
+        string? message)
+    {
+        if (statusCode != HttpStatusCode.BadRequest)
+        {
+            return false;
+        }
+
+        var value = $"{providerCode} {message}";
+        var mentionsFormat = value.Contains("response_format", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("json_schema", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("json object", StringComparison.OrdinalIgnoreCase);
+        var unsupported = value.Contains("unsupported", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("not support", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("unknown", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("invalid type", StringComparison.OrdinalIgnoreCase);
+        return mentionsFormat && unsupported;
     }
 
     private static bool IsTransient(HttpStatusCode statusCode)
@@ -611,6 +658,30 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
 
         [JsonPropertyName("stream_options")]
         public OpenAICompatibleStreamOptions? StreamOptions { get; init; }
+
+        [JsonPropertyName("response_format")]
+        public OpenAICompatibleResponseFormat? ResponseFormat { get; init; }
+    }
+
+    protected sealed class OpenAICompatibleResponseFormat
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; init; } = string.Empty;
+
+        [JsonPropertyName("json_schema")]
+        public OpenAICompatibleJsonSchema? JsonSchema { get; init; }
+    }
+
+    protected sealed class OpenAICompatibleJsonSchema
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; init; } = string.Empty;
+
+        [JsonPropertyName("strict")]
+        public bool Strict { get; init; }
+
+        [JsonPropertyName("schema")]
+        public JsonElement Schema { get; init; }
     }
 
     protected sealed class OpenAICompatibleChatMessage

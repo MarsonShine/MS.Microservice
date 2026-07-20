@@ -83,12 +83,12 @@
     "DefaultProvider": "OpenAI",
     "Providers": {
       "OpenAI": {
-        "ApiKey": "<from-user-secrets>",
+        "ApiKeySecretName": "AI_OPENAI_API_KEY",
         "BaseAddress": "https://api.openai.com/v1/",
         "TimeoutSeconds": 120
       },
       "Qwen": {
-        "ApiKey": "<from-user-secrets>",
+        "ApiKeySecretName": "AI_QWEN_API_KEY",
         "BaseAddress": "https://dashscope.aliyuncs.com/compatible-mode/v1/",
         "TimeoutSeconds": 120
       }
@@ -123,7 +123,7 @@
   "AI": {
     "Providers": {
       "Qwen": {
-        "ApiKey": "<secret>",
+        "ApiKeySecretName": "AI_QWEN_API_KEY",
         "BaseAddress": "https://dashscope.aliyuncs.com/compatible-mode/v1/",
         "Endpoints": {
           "MultimodalGeneration": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
