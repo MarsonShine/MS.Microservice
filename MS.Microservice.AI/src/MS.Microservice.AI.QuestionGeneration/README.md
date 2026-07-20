@@ -18,8 +18,6 @@ Targeted Repair ──┐
 Duplicate Gate → Accepted
 ```
 
-模块来源于 `Fz.ChatGPT.QuestionGeneration` 的控制思想，但没有迁移教材、目录、年级、固定题型码、八类题型、数据库投影、TTS 或图片等业务内容。
-
 深入理解状态机和故障语义，请阅读 [架构深入解析](docs/ARCHITECTURE.md)。
 
 ## 模块边界
