@@ -59,16 +59,33 @@ namespace MS.Microservice.Infrastructure.Tests
                 .Returns(1);
 
             var service = new UserDomainService(repository);
-            var candidate = new User("demo", "Password123", "salt", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "");
+            var candidate = new User("demo", "placeholder", string.Empty, false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "");
+            candidate.SetPasswordHash("versioned-password-hash");
 
             var result = await service.CreateUserEitherAsync(candidate);
 
             Assert.True(result.IsRight);
             Assert.True(result.Right);
-            Assert.False(string.IsNullOrWhiteSpace(candidate.Password));
-            Assert.NotEqual("Password123", candidate.Password);
+            Assert.Equal("versioned-password-hash", candidate.Password);
+            Assert.Equal(User.ModernPasswordSaltMarker, candidate.Salt);
             await repository.Received(1).InsertEitherAsync(candidate, Arg.Any<CancellationToken>());
             await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task CreateUserEitherAsync_WhenPasswordIsNotVersioned_ReturnsValidationError()
+        {
+            var repository = Substitute.For<IUserRepository>();
+            repository.FindOptionAsync(Arg.Any<Expression<Func<User, bool>>>(), Arg.Any<CancellationToken>())
+                .Returns((Option<User>)F.None);
+            var service = new UserDomainService(repository);
+            var candidate = new User("demo", "Password123", "a1b2", false, "13800138000", 1, 1, "demo@example.com", "Demo", "", "");
+
+            var result = await service.CreateUserEitherAsync(candidate);
+
+            Assert.True(result.IsLeft);
+            Assert.Equal("validation", result.Left.Code);
+            await repository.DidNotReceiveWithAnyArgs().InsertEitherAsync(default!, default);
         }
 
         [Fact]

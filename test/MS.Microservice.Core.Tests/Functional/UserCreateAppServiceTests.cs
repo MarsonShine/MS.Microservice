@@ -4,6 +4,7 @@ using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Web.Application.Commands;
+using MS.Microservice.Web.Application.Identity;
 using MS.Microservice.Web.Application.Users;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 using NSubstitute;
@@ -27,10 +28,12 @@ namespace MS.Microservice.Core.Tests.Functional
                 .Returns((MS.Microservice.Domain.Aggregates.IdentityModel.User?)null);
             userDomainService.GetAllRolesAsync(Arg.Any<CancellationToken>())
                 .Returns([new Role(1, "Admin", "管理员")]);
-            userDomainService.PasswordSalt()
-                .Returns("salt-value");
             userDomainService.CreateUserEitherAsync(Arg.Any<MS.Microservice.Domain.Aggregates.IdentityModel.User>(), Arg.Any<CancellationToken>())
                 .Returns((Either<Error, bool>)F.Right(true));
+            var userPasswordService = Substitute.For<IUserPasswordService>();
+            userPasswordService
+                .HashPassword(Arg.Any<User>(), "Password123")
+                .Returns("versioned-password-hash");
 
             var httpContext = new DefaultHttpContext();
             httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -44,7 +47,7 @@ namespace MS.Microservice.Core.Tests.Functional
             accessor.HttpContext.Returns(httpContext);
 
             var currentUserResolver = new CurrentUserResolver(accessor, userDomainService);
-            var service = new UserCreateAppService(userDomainService, currentUserResolver);
+            var service = new UserCreateAppService(userDomainService, currentUserResolver, userPasswordService);
 
             var result = await service.CreateAsync(CreateCommand([new RoleDto { Id = 1, Name = "Admin" }]));
 
@@ -53,7 +56,9 @@ namespace MS.Microservice.Core.Tests.Functional
             await userDomainService.Received(1).CreateUserEitherAsync(
                 Arg.Is<MS.Microservice.Domain.Aggregates.IdentityModel.User>(user =>
                     user.Account == "demo-account"
-                    && user.Salt == "salt-value"
+                    && user.Password == "versioned-password-hash"
+                    && user.Salt == User.ModernPasswordSaltMarker
+                    && user.HasModernPasswordHash()
                     && user.CreatorId == 7
                     && user.Roles.Count == 1
                     && user.Roles.Single().Id == 1),

@@ -2,7 +2,6 @@
 using MS.Microservice.Core.Domain;
 using MS.Microservice.Core.Domain.Entity;
 using MS.Microservice.Core.Extension;
-using MS.Microservice.Core.Security.Cryptology;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,17 +45,16 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
             _fzId = fzId;
         }
 
-        internal void ChangePassword()
-        {
-            Password = CryptologyHelper.HmacSha256(_password + _salt);
-        }
-
         public void SetPasswordHash(string passwordHash)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
             _password = passwordHash;
             _salt = ModernPasswordSaltMarker;
         }
+
+        public bool HasModernPasswordHash()
+            => !string.IsNullOrWhiteSpace(_password)
+                && string.Equals(_salt, ModernPasswordSaltMarker, StringComparison.Ordinal);
 
         public string? Account { get => _account; private set => _account = value; }
         public string? Name { get => _name; private set => _name = value; }

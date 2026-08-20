@@ -42,10 +42,11 @@ namespace MS.Microservice.Core.Tests.Functional
             var command = CreateCommand([new RoleDto { Id = 1, Name = "Admin" }]);
             var currentUser = new CurrentUser(7, "creator", "creator@demo.local", "13800138000", []);
 
-            var user = command.ToDomainUser(currentUser, "salt-value");
+            var user = command.ToDomainUser(currentUser);
 
             Assert.Equal("demo-account", user.Account);
-            Assert.Equal("salt-value", user.Salt);
+            Assert.Equal(string.Empty, user.Salt);
+            Assert.Equal("Password123", user.Password);
             Assert.Equal("示例用户", user.Name);
             Assert.Equal("13800138000", user.Telephone);
             Assert.Equal("demo@example.com", user.Email);
@@ -99,7 +100,7 @@ namespace MS.Microservice.Core.Tests.Functional
                 []);
             var currentUser = new CurrentUser(7, "creator", "creator@demo.local", "13800138000", []);
 
-            var result = command.ToDomainUserEither(currentUser, "salt-value");
+            var result = command.ToDomainUserEither(currentUser);
 
             Assert.True(result.IsLeft);
             Assert.Equal("user.mapping", result.Left.Code);

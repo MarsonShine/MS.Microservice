@@ -1,6 +1,7 @@
 ﻿using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Web.Application.Commands;
+using MS.Microservice.Web.Application.Identity;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 
 namespace MS.Microservice.Web.Application.Users
@@ -11,10 +12,12 @@ namespace MS.Microservice.Web.Application.Users
     /// </summary>
     public class UserCreateAppService(
         IUserDomainService userDomainService,
-        CurrentUserResolver currentUserResolver) : IUserCreateAppService
+        CurrentUserResolver currentUserResolver,
+        IUserPasswordService userPasswordService) : IUserCreateAppService
     {
         private readonly IUserDomainService _userDomainService = userDomainService;
         private readonly CurrentUserResolver _currentUserResolver = currentUserResolver;
+        private readonly IUserPasswordService _userPasswordService = userPasswordService;
 
         /// <summary>
         /// 组合输入校验、角色校验、DTO 映射和领域调用。
@@ -25,7 +28,12 @@ namespace MS.Microservice.Web.Application.Users
                 .BindAsync(currentUser => request.ValidateEitherAsync(cancellationToken)
                     .BindAsync(validRequest => EitherExtensions.TryAsync(() => _userDomainService.GetAllRolesAsync(cancellationToken), code: "user.roles")
                         .Bind(roles => validRequest.EnsureRolesExistEither(roles))
-                        .Bind(validCommand => validCommand.ToDomainUserEither(currentUser, _userDomainService.PasswordSalt()))
+                        .Bind(validCommand => validCommand.ToDomainUserEither(currentUser))
+                        .Map(user =>
+                        {
+                            user.SetPasswordHash(_userPasswordService.HashPassword(user, user.Password!));
+                            return user;
+                        })
                         .BindAsync(user => _userDomainService.CreateUserEitherAsync(user, cancellationToken))));
     }
 }

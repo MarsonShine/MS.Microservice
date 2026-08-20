@@ -1,6 +1,4 @@
-using System.Reflection;
 using FluentAssertions;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using Xunit;
 
@@ -32,16 +30,6 @@ public sealed class UserTests
     }
 
     [Fact]
-    public void ChangePassword_ShouldHashPassword()
-    {
-        var user = CreateUser(password: "Password123", salt: "salt-value");
-
-        Invoke(user, "ChangePassword");
-
-        user.Password.Should().Be(CryptologyHelper.HmacSha256("Password123salt-value"));
-    }
-
-    [Fact]
     public void SetPasswordHash_ShouldStoreHashAndModernVersionMarker()
     {
         var user = CreateUser();
@@ -50,6 +38,7 @@ public sealed class UserTests
 
         user.Password.Should().Be("versioned-password-hash");
         user.Salt.Should().Be(User.ModernPasswordSaltMarker);
+        user.HasModernPasswordHash().Should().BeTrue();
     }
 
     [Fact]
@@ -57,7 +46,9 @@ public sealed class UserTests
     {
         var user = CreateUser();
 
-        Invoke(user, "Update", "New Name", null, "", "new-password", "new-salt");
+        typeof(User)
+            .GetMethod("Update", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(user, ["New Name", null, "", "new-password", "new-salt"]);
 
         user.Name.Should().Be("New Name");
         user.Telephone.Should().Be("13800138000");
@@ -69,10 +60,4 @@ public sealed class UserTests
     private static User CreateUser(string password = "Password123", string salt = "salt")
         => new("demo", password, salt, false, "13800138000", 1, 1, "demo@example.com", "Demo", "fz-demo", "fz-id");
 
-    private static void Invoke(User user, string methodName, params object?[] parameters)
-    {
-        typeof(User)
-            .GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(user, parameters);
-    }
 }

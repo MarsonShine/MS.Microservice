@@ -472,7 +472,7 @@ bool same = passwordHasher.HashPassword(user, password)
 
 由于每次哈希包含随机盐，验证必须调用 `VerifyHashedPassword`。
 
-> 当前提交只完成登录验证和旧用户迁移。新用户创建以及两条修改密码路径仍暂时使用旧 HMAC，将在下一个独立安全提交中统一切换，便于逐个 review。
+> 当前登录和新用户创建已经使用版本化哈希。两条修改密码路径仍暂时使用旧 HMAC，将在下一个独立安全提交中统一切换，便于逐个 review。
 
 ## 十、调整工作因子
 

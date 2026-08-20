@@ -15,6 +15,22 @@ public class UserPasswordServiceTests
     private const string Password = "Password123";
 
     [Fact]
+    public void HashPassword_ReturnsHashThatCanBeVerified()
+    {
+        var passwordHasher = CreateHasher();
+        var user = new PersistedUser(7, "placeholder", string.Empty);
+        var service = new UserPasswordService(
+            passwordHasher,
+            Substitute.For<IUserDomainService>());
+
+        var passwordHash = service.HashPassword(user, Password);
+
+        Assert.Equal(
+            PasswordVerificationResult.Success,
+            passwordHasher.VerifyHashedPassword(user, passwordHash, Password));
+    }
+
+    [Fact]
     public void IdentityApplicationModule_ResolvesPasswordService()
     {
         var containerBuilder = new ContainerBuilder();

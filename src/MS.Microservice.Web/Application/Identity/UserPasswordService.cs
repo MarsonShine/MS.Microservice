@@ -9,6 +9,8 @@ namespace MS.Microservice.Web.Application.Identity;
 
 public interface IUserPasswordService
 {
+    string HashPassword(User user, string password);
+
     Task<bool> VerifyAndUpgradeAsync(
         User user,
         string providedPassword,
@@ -23,6 +25,13 @@ public sealed class UserPasswordService(
         ?? throw new ArgumentNullException(nameof(passwordHasher));
     private readonly IUserDomainService _userDomainService = userDomainService
         ?? throw new ArgumentNullException(nameof(userDomainService));
+
+    public string HashPassword(User user, string password)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentException.ThrowIfNullOrWhiteSpace(password);
+        return _passwordHasher.HashPassword(user, password);
+    }
 
     public async Task<bool> VerifyAndUpgradeAsync(
         User user,
@@ -52,7 +61,7 @@ public sealed class UserPasswordService(
             return true;
         }
 
-        var upgradedHash = _passwordHasher.HashPassword(user, providedPassword);
+        var upgradedHash = HashPassword(user, providedPassword);
         return await _userDomainService.UpdatePasswordHashAsync(user, upgradedHash, cancellationToken);
     }
 

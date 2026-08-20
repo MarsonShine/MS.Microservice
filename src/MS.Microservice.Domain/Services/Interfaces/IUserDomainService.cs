@@ -23,7 +23,5 @@ namespace MS.Microservice.Domain.Services.Interfaces
 
         Task<User?> FindFzAccountAsync(string fzAccount, CancellationToken cancellationToken = default);
 
-        string PasswordSalt();
-        
     }
 }

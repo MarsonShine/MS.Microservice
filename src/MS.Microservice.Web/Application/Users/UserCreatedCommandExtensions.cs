@@ -78,12 +78,12 @@ namespace MS.Microservice.Web.Application.Users
             /// 将 API 命令映射为领域聚合。
             /// 该转换保持纯函数特征，不做 IO，只做数据塑形。
             /// </summary>
-            public User ToDomainUser(CurrentUser currentUser, string salt)
+            public User ToDomainUser(CurrentUser currentUser)
             {
                 var user = new User(
                     request.Account,
                     request.Passowrd,
-                    salt,
+                    string.Empty,
                     false,
                     request.Telephone,
                     currentUser.Id,
@@ -102,11 +102,11 @@ namespace MS.Microservice.Web.Application.Users
                 return user;
             }
 
-            public Result<User> ToDomainUserResult(CurrentUser currentUser, string salt)
-                => ResultExtensions.Try(() => request.ToDomainUser(currentUser, salt));
+            public Result<User> ToDomainUserResult(CurrentUser currentUser)
+                => ResultExtensions.Try(() => request.ToDomainUser(currentUser));
 
-            public Either<Error, User> ToDomainUserEither(CurrentUser currentUser, string salt)
-                => EitherExtensions.Try(() => request.ToDomainUser(currentUser, salt), code: "user.mapping")
+            public Either<Error, User> ToDomainUserEither(CurrentUser currentUser)
+                => EitherExtensions.Try(() => request.ToDomainUser(currentUser), code: "user.mapping")
                     .MapLeft(error => error with { Message = "用户命令映射为领域对象失败" });
         }
     }

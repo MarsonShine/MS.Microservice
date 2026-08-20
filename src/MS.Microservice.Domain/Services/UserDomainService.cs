@@ -28,7 +28,13 @@ namespace MS.Microservice.Domain.Services
                 .MatchAsync(
                     none: async () =>
                     {
-                        user.ChangePassword();
+                        if (!user.HasModernPasswordHash())
+                        {
+                            return F.Left(Error.Validation(
+                                "用户密码尚未使用版本化哈希",
+                                ["创建用户前必须通过 IPasswordHasher<User> 生成密码哈希。"]));
+                        }
+
                         var insertResult = await _userRepository.InsertEitherAsync(user, cancellationToken);
                         return await insertResult.BindAsync(async _ =>
                         {
@@ -93,8 +99,6 @@ namespace MS.Microservice.Domain.Services
         {
             return await _userRepository.FindAsync(u => u.FzAccount == fzAccount, cancellationToken);
         }
-
-        public string PasswordSalt() => PasswordSaltHelper.Generate();
 
         public async Task<bool> UpdatePasswordHashAsync(
             User user,
