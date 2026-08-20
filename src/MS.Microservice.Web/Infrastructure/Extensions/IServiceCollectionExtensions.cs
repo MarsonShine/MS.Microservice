@@ -207,7 +207,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(issuers, ClaimTypes.Role, "")));
                 });
 
-                services.AddSingleton<IAuthorizationHandler, RbacAuthorizationHandler>();
+                services.AddScoped<IAuthorizationHandler, RbacAuthorizationHandler>();
 
                 return services;
             }
