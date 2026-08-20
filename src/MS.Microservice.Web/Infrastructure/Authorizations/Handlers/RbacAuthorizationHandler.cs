@@ -10,6 +10,14 @@ using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
+/*
+身份认证应由 JWT Bearer 中间件负责；RBAC 再次解析 Token 会产生两套可能不一致的认证规则。
+授权操作不应该自动创建用户，否则一次权限检查会产生数据库写入。
+使用“Token 角色与数据库当前角色的交集”可以让角色被撤销后及时失效，避免只相信旧 Token 中的角色。
+默认拒绝保证任何缺失、非法或无法判断的状态都不会意外放行。
+
+注意：这里特意删除授权过程中自动创建用户的数据库副作用。
+ */
 namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
 {
     public class RbacAuthorizationHandler : AuthorizationHandler<RbacRequirement>
@@ -39,6 +47,7 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
                 return;
             }
 
+            // 使用“Token 角色与数据库当前角色的交集”可以让角色被撤销后及时失效，避免只相信旧 Token 中的角色。
             var user = await FindUserAsync(userId, httpContext.RequestAborted);
             if (user is null || !HasPermission(user, claimedRoleIds, permissionPath))
             {
