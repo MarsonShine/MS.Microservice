@@ -93,6 +93,170 @@ PasswordVerificationResult result = passwordHasher.VerifyHashedPassword(
 
 第三种结果使系统能够逐步提高密码安全强度，而不要求所有用户同时重置密码。
 
+### PasswordHasher&lt;TUser&gt; 的内核：自描述密码哈希
+
+最容易产生疑惑的代码是：
+
+```csharp
+passwordHasher.VerifyHashedPassword(
+    user,
+    passwordHash,
+    providedPassword);
+```
+
+这里没有单独传入 salt、PRF 或迭代次数，因为这些验证参数已经编码进 `passwordHash`。默认实现生成的字符串不是“只有最终 hash 的文本”，而是一个二进制密码哈信封（password hash envelope）经过 Base64 编码后的结果：
+
+```text
+passwordHash = Base64(
+    格式版本
+    + 算法参数
+    + 随机 salt
+    + 最终派生出的 subkey
+)
+```
+
+Base64 只是把二进制转换成便于数据库保存的文本，不提供加密能力。任何人都可以解码并看到格式参数和 salt，但无法从中直接还原密码。salt 本来就不需要保密。
+
+#### 当前 Identity V3 的二进制布局
+
+根据当前 ASP.NET Core 官方源码，Identity V3 的格式为：
+
+```text
+{ 0x01, prf, iterationCount, saltLength, salt, subkey }
+```
+
+精确布局如下：
+
+| 偏移 | 长度 | 内容 | 说明 |
+| --- | ---: | --- | --- |
+| `0` | 1 byte | 格式标记 `0x01` | 表示 Identity V3 |
+| `1` | 4 bytes | PRF | `UInt32`，大端序 |
+| `5` | 4 bytes | 迭代次数 | `UInt32`，大端序 |
+| `9` | 4 bytes | salt 长度 | `UInt32`，大端序 |
+| `13` | `saltLength` | 随机 salt | 默认 128 bit，即 16 bytes |
+| `13 + saltLength` | 剩余部分 | PBKDF2 subkey | 默认 256 bit，即 32 bytes |
+
+当前官方默认参数是：
+
+```text
+格式             Identity V3
+密码派生函数     PBKDF2
+PRF              HMAC-SHA512
+迭代次数         100,000
+salt             128 bit，由安全随机数生成器产生
+subkey           256 bit
+```
+
+因此，使用默认参数时，Base64 之前的 payload 可以理解为：
+
+```text
+1 byte format marker
++ 4 bytes PRF
++ 4 bytes iteration count
++ 4 bytes salt length
++ 16 bytes salt
++ 32 bytes subkey
+= 61 bytes
+```
+
+最终数据库保存的是这 61 bytes 的 Base64 文本，而不是 61 个可直接阅读的字符。
+
+#### Identity V2 为什么也能验证
+
+旧的 Identity V2 格式是：
+
+```text
+{ 0x00, salt, subkey }
+```
+
+V2 的算法参数没有逐项写入 payload，而是由 `0x00` 格式标记隐式确定：PBKDF2-HMAC-SHA1、1,000 次迭代、128-bit salt、256-bit subkey。
+
+这说明“参数包含在 passwordHash 中”有两种形式：
+
+- V2：格式标记决定一套固定参数；
+- V3：格式标记之外，还显式存储 PRF、迭代次数和 salt 长度。
+
+#### HashPassword 内部做了什么
+
+Identity V3 的生成过程可以简化为：
+
+```text
+1. 使用 RandomNumberGenerator 生成随机 salt
+2. 使用 PBKDF2(password, salt, PRF, iterationCount) 派生 subkey
+3. 写入格式标记 0x01
+4. 以大端序写入 PRF、迭代次数和 salt 长度
+5. 追加 salt
+6. 追加 subkey
+7. 对整个 byte[] 进行 Base64 编码
+```
+
+对应伪代码：
+
+```csharp
+byte[] salt = SecureRandom(16);
+byte[] subkey = Pbkdf2(password, salt, prf, iterationCount, 32);
+
+byte[] payload = Combine(
+    formatMarker,
+    prf,
+    iterationCount,
+    salt.Length,
+    salt,
+    subkey);
+
+string passwordHash = Convert.ToBase64String(payload);
+```
+
+#### VerifyHashedPassword 内部做了什么
+
+验证过程不是“再次调用 HashPassword 然后比较字符串”，因为再次生成的随机 salt 会不同。真正流程是：
+
+```text
+1. Base64 解码数据库中的 passwordHash
+2. 读取第一个 byte，识别 V2 或 V3
+3. 按对应格式读取 PRF、迭代次数和 salt
+4. 使用读取出的参数和 providedPassword 重新派生 subkey
+5. 使用固定时间比较重新派生的 subkey 与 payload 中的 subkey
+6. 根据格式和参数返回 Failed、Success 或 SuccessRehashNeeded
+```
+
+可以把核心逻辑理解成：
+
+```csharp
+var payload = Convert.FromBase64String(passwordHash);
+var formatVersion = payload[0];
+var parameters = ReadParameters(payload, formatVersion);
+
+var actualSubkey = Pbkdf2(
+    providedPassword,
+    parameters.Salt,
+    parameters.Prf,
+    parameters.IterationCount,
+    parameters.SubkeyLength);
+
+return FixedTimeEquals(actualSubkey, parameters.ExpectedSubkey);
+```
+
+这就是为什么调用 `VerifyHashedPassword` 时不需要传 salt：验证器从 `passwordHash` 自己读取 salt 和算法参数。
+
+#### SuccessRehashNeeded 如何判断
+
+当前官方实现会在下列典型情况中返回 `SuccessRehashNeeded`：
+
+- 当前配置为 Identity V3，但数据库仍是 V2 格式；
+- V3 payload 中的迭代次数低于当前配置；
+- V3 使用旧 PRF，例如 HMAC-SHA1 或 HMAC-SHA256，而当前要求 HMAC-SHA512。
+
+因此调高工作因子或升级框架算法时，不需要额外新增“哈希版本”数据库列。哈希字符串本身已经携带判断依据。
+
+应用代码仍应把该字符串视为不透明值。上面的布局用于理解、审计和故障排查，不建议在业务代码中自行解析；格式兼容应交给 `IPasswordHasher<User>`。
+
+官方依据：
+
+- [ASP.NET Core PasswordHasher 官方源码](https://github.com/dotnet/aspnetcore/blob/main/src/Identity/Extensions.Core/src/PasswordHasher.cs)
+- [PasswordHasherOptions 官方源码](https://github.com/dotnet/aspnetcore/blob/main/src/Identity/Extensions.Core/src/PasswordHasherOptions.cs)
+- [ASP.NET Core Identity Password Hasher 配置说明](https://learn.microsoft.com/aspnet/core/security/authentication/identity-configuration#password-hasher-options)
+
 ## 三、它能解决什么，不能解决什么
 
 `IPasswordHasher<User>` 能够提供：
@@ -238,7 +402,47 @@ Salt     = "v2"
 
 `Salt = "v2"` 只是当前数据库结构的兼容标记，不是真正的密码盐。真实随机盐已经包含在 `Password` 的版本化哈希字符串中。
 
-之所以保留标记，是因为现有 EF Core 映射要求 `Salt` 必填且最大长度为 4。未来数据库迁移可以把该字段改成可空或重命名为密码格式版本，但不应尝试把现代哈希内部的盐拆出来保存。
+对于纯现代 `IPasswordHasher<User>` 方案，用户表只需要一个 `PasswordHash` 字段，独立 `Salt` 字段可以并且应该删除。即使未来提高迭代次数或调整 PRF，也不需要新增独立算法版本字段，因为这些信息已经包含在 `passwordHash` 中。
+
+当前代码暂时保留 `Salt`，不是因为 `IPasswordHasher<User>` 需要它，而是因为系统仍要兼容尚未迁移的旧 HMAC 用户：
+
+```text
+旧用户验证需要：旧 Password + 旧 Salt
+现代用户验证只需：版本化 PasswordHash
+```
+
+如果现在直接删除数据库 `Salt`，尚未登录完成升级的旧用户将无法验证密码，只能全部走密码重置。
+
+因此删除 `Salt` 字段应采用明确的迁移顺序：
+
+1. 所有新建用户和修改密码流程停止生成旧 HMAC；
+2. 登录流程继续把活跃旧用户升级为现代哈希；
+3. 统计仍为旧格式的用户数量；
+4. 对长期不登录的旧用户执行密码重置或离线迁移策略；
+5. 确认数据库中不再存在需要旧 Salt 验证的用户；
+6. 删除 `UserPasswordService` 中的旧 HMAC fallback；
+7. 通过 EF Core migration 删除 `Salt` 列；
+8. 删除 `User.Salt`、`PasswordSaltHelper`、构造参数和相关测试。
+
+当前实体写入 `Salt = "v2"`，只是让现代哈希在现有“必填、最大长度 4”的数据库约束下可落库，并方便迁移期间统计。完成上述步骤后，`v2` 标记和整个 `Salt` 字段都应删除。
+
+推荐最终模型：
+
+```csharp
+public class User
+{
+    public string PasswordHash { get; private set; } = string.Empty;
+}
+```
+
+而不是：
+
+```csharp
+public string PasswordHash { get; private set; }
+public string Salt { get; private set; } // 现代 PasswordHasher 不需要
+public int IterationCount { get; private set; } // 已包含在 PasswordHash
+public string PasswordAlgorithm { get; private set; } // 已包含在 PasswordHash
+```
 
 ## 九、在新用户或改密流程中如何使用
 
