@@ -156,7 +156,6 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
             FzId = user.FzId,
             Id = user.Id,
             Name = user.Name,
-            Password = user.Password,
             Roles = user.Roles.Select(role => new RoleCacheItem
             {
                 Id = role.Id,
@@ -165,7 +164,6 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
                     .Select(action => new ActionCacheItem { Path = action.Path })
                     .ToList()
             }).ToList(),
-            Salt = user.Salt,
             Telephone = user.Telephone,
         };
     }

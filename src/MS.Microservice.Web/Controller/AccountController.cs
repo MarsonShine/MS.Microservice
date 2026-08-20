@@ -9,7 +9,6 @@ using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Infrastructure.Attributes;
 using MS.Microservice.Core.Extension;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Domain.Identity;
 using MS.Microservice.Domain.Identity.Token;
@@ -24,13 +23,15 @@ public class AccountController : ControllerBase
     private readonly SignInManager _signInManager;
     private readonly ITokenGenerator _tokenGenerator;
     private readonly IUserDomainService _userDomainService;
+    private readonly IUserPasswordService _userPasswordService;
     private readonly IDistributedCache _cache;
-    public AccountController(SignInManager signInManager, ITokenGenerator tokenGenerator, IUserDomainService userDomainService,
+    public AccountController(SignInManager signInManager, ITokenGenerator tokenGenerator, IUserDomainService userDomainService, IUserPasswordService userPasswordService,
         IDistributedCache cache)
     {
         _signInManager = signInManager;
         _tokenGenerator = tokenGenerator;
         _userDomainService = userDomainService;
+        _userPasswordService = userPasswordService;
 
         _cache = cache;
     }
@@ -66,7 +67,9 @@ public class AccountController : ControllerBase
         var user = await _userDomainService.FindAsync(request.Account);
 
 
-        if (user == null || user.IsTransient() || CryptologyHelper.HmacSha256(passworld + user.Salt) != user.Password)
+        if (user == null
+            || user.IsTransient()
+            || !await _userPasswordService.VerifyAndUpgradeAsync(user, passworld, HttpContext.RequestAborted))
         {
             return Ok(new ResultDto(false, ExceptionConsts.AccountOrPasswordError, 200));
         }

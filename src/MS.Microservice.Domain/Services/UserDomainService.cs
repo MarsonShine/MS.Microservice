@@ -96,6 +96,17 @@ namespace MS.Microservice.Domain.Services
 
         public string PasswordSalt() => PasswordSaltHelper.Generate();
 
+        public async Task<bool> UpdatePasswordHashAsync(
+            User user,
+            string passwordHash,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(user);
+            user.SetPasswordHash(passwordHash);
+            await _userRepository.UpdateAsync(user, cancellationToken);
+            return await _userRepository.UnitOfWork.SaveEntitiesAsync(cancellationToken);
+        }
+
         public async Task<bool> UpdateUserAsync(User user, CancellationToken cancellationToken = default)
         {
             var existUser = await _userRepository.FindAsync(p => p.Account == user.Account, cancellationToken);

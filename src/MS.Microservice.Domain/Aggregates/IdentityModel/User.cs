@@ -12,6 +12,8 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
 {
     public class User : EntityBase<int>, IFullAuditTracker<int>, IAggregateRoot
     {
+        public const string ModernPasswordSaltMarker = "v2";
+
         private bool _isDisabled;
         private string? _telephone;
         private DateTime? _deletedAt;
@@ -47,6 +49,13 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
         internal void ChangePassword()
         {
             Password = CryptologyHelper.HmacSha256(_password + _salt);
+        }
+
+        public void SetPasswordHash(string passwordHash)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
+            _password = passwordHash;
+            _salt = ModernPasswordSaltMarker;
         }
 
         public string? Account { get => _account; private set => _account = value; }

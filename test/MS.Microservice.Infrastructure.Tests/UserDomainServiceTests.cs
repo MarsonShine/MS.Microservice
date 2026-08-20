@@ -70,5 +70,27 @@ namespace MS.Microservice.Infrastructure.Tests
             await repository.Received(1).InsertEitherAsync(candidate, Arg.Any<CancellationToken>());
             await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         }
+
+        [Fact]
+        public async Task UpdatePasswordHashAsync_SetsVersionedHashAndPersistsUser()
+        {
+            var repository = Substitute.For<IUserRepository>();
+            var unitOfWork = Substitute.For<IUnitOfWork>();
+            repository.UnitOfWork.Returns(unitOfWork);
+            repository.UpdateAsync(Arg.Any<User>(), Arg.Any<CancellationToken>())
+                .Returns(call => call.Arg<User>());
+            unitOfWork.SaveEntitiesAsync(Arg.Any<CancellationToken>())
+                .Returns(true);
+            var service = new UserDomainService(repository);
+            var user = new PersistedUser(1, "demo");
+
+            var result = await service.UpdatePasswordHashAsync(user, "versioned-password-hash");
+
+            Assert.True(result);
+            Assert.Equal("versioned-password-hash", user.Password);
+            Assert.Equal(User.ModernPasswordSaltMarker, user.Salt);
+            await repository.Received(1).UpdateAsync(user, Arg.Any<CancellationToken>());
+            await unitOfWork.Received(1).SaveEntitiesAsync(Arg.Any<CancellationToken>());
+        }
     }
 }

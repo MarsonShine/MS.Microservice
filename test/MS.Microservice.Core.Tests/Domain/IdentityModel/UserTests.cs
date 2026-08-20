@@ -42,6 +42,17 @@ public sealed class UserTests
     }
 
     [Fact]
+    public void SetPasswordHash_ShouldStoreHashAndModernVersionMarker()
+    {
+        var user = CreateUser();
+
+        user.SetPasswordHash("versioned-password-hash");
+
+        user.Password.Should().Be("versioned-password-hash");
+        user.Salt.Should().Be(User.ModernPasswordSaltMarker);
+    }
+
+    [Fact]
     public void Update_ShouldOnlyReplaceNonEmptyValues()
     {
         var user = CreateUser();

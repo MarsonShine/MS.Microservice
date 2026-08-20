@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
+using MS.Microservice.Web.Application.Models.Caching;
 using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using NSubstitute;
@@ -14,6 +15,13 @@ namespace MS.Microservice.Core.Tests.Web.Infrastructure;
 
 public class RbacAuthorizationHandlerTests
 {
+    [Fact]
+    public void UserCacheItem_DoesNotExposePasswordOrSalt()
+    {
+        Assert.Null(typeof(UserCacheItem).GetProperty("Password"));
+        Assert.Null(typeof(UserCacheItem).GetProperty("Salt"));
+    }
+
     [Fact]
     public async Task HandleAsync_WhenPrincipalIsAnonymous_DeniesWithoutQueryingUser()
     {
