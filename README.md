@@ -75,6 +75,79 @@ IdentityOptions__JwtBearerOption__SecurityKeys__1=<另一个至少 32 个 ASCII 
 
 缺少密钥或任一密钥长度不足时，Web Host 会在启动阶段失败。
 
+### JWT 生产部署
+
+`dotnet publish` 和 Docker 镜像构建阶段不注入 JWT 密钥。发布产物保持无密钥，部署平台在应用启动时通过环境变量或 Secret Store 提供配置。ASP.NET Core 会把环境变量名中的双下划线 `__` 映射为配置层级，并覆盖 `appsettings.json`。
+
+直接运行发布产物时，可以在进程环境中设置密钥：
+
+```powershell
+$env:IdentityOptions__JwtBearerOption__SecurityKeys__0 = $env:JWT_KEY_0
+$env:IdentityOptions__JwtBearerOption__SecurityKeys__1 = $env:JWT_KEY_1
+dotnet MS.Microservice.Web.dll
+```
+
+Docker 部署时由宿主机或 CI/CD 变量传入，不要把密钥直接写进 Dockerfile：
+
+```powershell
+docker run --rm -p 8080:8080 `
+  -e IdentityOptions__JwtBearerOption__SecurityKeys__0="$env:JWT_KEY_0" `
+  -e IdentityOptions__JwtBearerOption__SecurityKeys__1="$env:JWT_KEY_1" `
+  ms-microservice-web
+```
+
+Docker Compose 可以把部署环境中的变量映射到容器：
+
+```yaml
+services:
+  web:
+    image: ms-microservice-web
+    environment:
+      IdentityOptions__JwtBearerOption__SecurityKeys__0: ${JWT_KEY_0:?JWT_KEY_0 is required}
+      IdentityOptions__JwtBearerOption__SecurityKeys__1: ${JWT_KEY_1:?JWT_KEY_1 is required}
+```
+
+`.env` 文件只能保存在部署服务器并设置严格访问权限，不得提交到 Git。CI/CD 场景应把 `JWT_KEY_0`、`JWT_KEY_1` 保存为受保护的 Secret 变量，部署任务只负责映射，日志中不得输出其值。
+
+Kubernetes 使用 Secret 引用，不把实际密钥写入 Deployment：
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ms-microservice-jwt
+type: Opaque
+stringData:
+  key-0: "<由部署系统提供>"
+  key-1: "<由部署系统提供>"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-microservice-web
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          image: ms-microservice-web
+          env:
+            - name: IdentityOptions__JwtBearerOption__SecurityKeys__0
+              valueFrom:
+                secretKeyRef:
+                  name: ms-microservice-jwt
+                  key: key-0
+            - name: IdentityOptions__JwtBearerOption__SecurityKeys__1
+              valueFrom:
+                secretKeyRef:
+                  name: ms-microservice-jwt
+                  key: key-1
+```
+
+普通 Kubernetes Secret 的 Base64 只是编码，不是加密。生产集群应结合 External Secrets、Vault 或云厂商 Secret Manager 管理实际值，示例清单不得携带真实密钥。
+
+> 当前兼容代码需要两个密钥槽位，并使用索引 `1` 的密钥签发 Token。部署时两个值都必须提供且不能相同；后续会单独重构为显式的当前签发密钥与历史验证密钥配置。
+
 ## Docker
 
 ```bash
