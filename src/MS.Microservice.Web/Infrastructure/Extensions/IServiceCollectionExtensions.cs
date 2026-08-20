@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -204,7 +203,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 services.AddAuthorization(option =>
                 {
                     // TODO
-                    option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(issuers, ClaimTypes.Role, "")));
+                    option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(issuers, JwtClaimTypes.Role, "")));
                 });
 
                 services.AddScoped<IAuthorizationHandler, RbacAuthorizationHandler>();

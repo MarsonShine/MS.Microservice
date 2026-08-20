@@ -1,220 +1,145 @@
-﻿using MS.Microservice.Core.Extension;
-using MS.Microservice.Domain.Aggregates.IdentityModel;
-using MS.Microservice.Domain.Identity;
-using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Infrastructure.Caching.Consts;
-using MS.Microservice.Infrastructure.Common.Http.Extensions;
-using MS.Microservice.Web.Application.Models.Caching;
-using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
-using System;
+using MS.Microservice.Core.Identity;
+using MS.Microservice.Domain.Aggregates.IdentityModel;
+using MS.Microservice.Domain.Services.Interfaces;
+using MS.Microservice.Infrastructure.Caching.Consts;
+using MS.Microservice.Web.Application.Models.Caching;
+using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using System.Diagnostics.CodeAnalysis;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
 {
     public class RbacAuthorizationHandler : AuthorizationHandler<RbacRequirement>
     {
-        private readonly IdentityOptions _identityOptions;
-        private readonly ILogger<RbacAuthorizationHandler> _logger;
         private readonly IUserDomainService _userDomainService;
         private readonly IDistributedCache _cache;
+
         public RbacAuthorizationHandler(
             IUserDomainService userDomainService,
-            IOptions<IdentityOptions> identityOptionsAccessor,
-            ILogger<RbacAuthorizationHandler> logger,
             IDistributedCache cache)
         {
-            if (identityOptionsAccessor == null || identityOptionsAccessor.Value == null)
-            {
-                throw new ArgumentNullException(nameof(identityOptionsAccessor));
-            }
-            _identityOptions = identityOptionsAccessor.Value;
-            _logger = logger;
-            _userDomainService = userDomainService;
-            _cache = cache;
-        }
-        public override async Task HandleAsync(AuthorizationHandlerContext context)
-        {
-            if (!context.User.Identity!.IsAuthenticated)
-            {
-                if (context.Resource is HttpContext httpContext)
-                {
-                    if (!httpContext.User.Identity!.IsAuthenticated)
-                    {
-                        //var endpoint = httpContext.GetEndpoint();
-                        string? token = httpContext.Request.BearerAuthorization();
-                        if (token.IsNotNullOrEmpty())
-                        {
-                            if (!await ValidateTokenAsync(httpContext, token))
-                            {
-                                _logger.LogInformation("token unthorization");
-                                context.Fail();
-                            }
-                            else
-                            {
-                                context.User.AddIdentities(httpContext.User.Identities);
-                                var identity = new ClaimsIdentity("BearerIdentity");
-                                identity.AddClaims(httpContext.User.Claims);
-
-                                var ju = UserClaimHelper.JWT2User(identity);
-                                User? user = await _userDomainService.FindFzAccountAsync(ju.Account!);
-                                if (user == null || user.IsTransient())
-                                {
-                                    var b = _userDomainService.CreateUserAsync(ju);
-                                    if (!b.Result)
-                                    {
-                                        //创建失败
-                                        _logger.LogError("自动创建用户失败:{ju}", ju);
-                                    }
-                                }
-                                httpContext.Items["User"] = user;
-                            }
-                        }
-                    }
-                }
-            }
-            await base.HandleAsync(context);
+            _userDomainService = userDomainService ?? throw new ArgumentNullException(nameof(userDomainService));
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
-        private async ValueTask<bool> ValidateTokenAsync(HttpContext context, string token)
+        protected override async Task HandleRequirementAsync(
+            AuthorizationHandlerContext context,
+            RbacRequirement requirement)
         {
-            try
+            if (context.User.Identity?.IsAuthenticated != true
+                || context.Resource is not HttpContext httpContext
+                || !TryGetUserId(context.User, out var userId)
+                || !TryGetClaimedRoleIds(context.User, requirement.ClaimType, out var claimedRoleIds)
+                || !TryGetPermissionPath(httpContext, requirement, out var permissionPath))
             {
-                var securityKeys = _identityOptions.JwtBearerOption!.SecurityKeys!
-                        .Select(key => new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)));
+                context.Fail();
+                return;
+            }
 
-                var tokenHandler = new JsonWebTokenHandler();
-                var result = await tokenHandler.ValidateTokenAsync(token, new TokenValidationParameters
-                {
-                    ValidIssuers = _identityOptions.JwtBearerOption.Issuers,
-                    ValidAudiences = _identityOptions.JwtBearerOption.Audiences,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKeys = securityKeys,
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ClockSkew = TimeSpan.Zero
-                });
-                if (result.IsValid)
-                {
-                    var identity = new ClaimsIdentity("BearerIdentity");
-                    var jwtToken = (JwtSecurityToken)result.SecurityToken;
-                    identity.AddClaims(jwtToken.Claims);
-                    var principal = new ClaimsPrincipal(identity);
-                    context.User = principal;
-                    return true;
-                }
-                // 这里可以实现自动刷新 token
-                // attach user to context on successful jwt validation
-                //context.Items["User"] = userService.GetById(userId);
+            var user = await FindUserAsync(userId, httpContext.RequestAborted);
+            if (user is null || !HasPermission(user, claimedRoleIds, permissionPath))
+            {
+                context.Fail();
+                return;
+            }
 
+            context.Succeed(requirement);
+        }
+
+        private async Task<UserCacheItem?> FindUserAsync(int userId, CancellationToken cancellationToken)
+        {
+            return await _cache.GetAsync(CacheConsts.UserIdKey + userId, async () =>
+            {
+                var user = await _userDomainService.GetUserAsync(userId, cancellationToken);
+                return user is null || user.IsTransient() ? null : ToUserCache(user);
+            }, cancellationToken: cancellationToken);
+        }
+
+        private static bool TryGetUserId(ClaimsPrincipal principal, out int userId)
+        {
+            var claimValue = principal.FindFirst(JwtClaimTypes.Id)?.Value;
+            return int.TryParse(claimValue, out userId) && userId > 0;
+        }
+
+        private static bool TryGetClaimedRoleIds(
+            ClaimsPrincipal principal,
+            string claimType,
+            [NotNullWhen(true)] out HashSet<int>? roleIds)
+        {
+            roleIds = [];
+            var claims = principal.FindAll(claimType).ToArray();
+            if (claims.Length == 0)
+            {
                 return false;
             }
-            catch (Exception ex)
+
+            foreach (var value in claims.SelectMany(claim => claim.Value.Split(
+                ';',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
             {
-                _logger.LogError(ex.Message);
-                return false;
-            }
-        }
-
-        //检查用户是否有Action 权限
-        private async Task<bool> CheckActionAsync([NotNull] AuthorizationHandlerContext context)
-        {
-            if (context.Resource is HttpContext httpContext)
-            {
-                var identity = new ClaimsIdentity("BearerIdentity");
-                identity.AddClaims(httpContext.User.Claims);
-
-                var ju = UserClaimHelper.JWT2User(identity);
-
-
-                //TODO:应用层 appservice
-                var user = await FindFzAccountUserAsync(ju);
-                if (user == null)
+                if (!int.TryParse(value, out var roleId) || roleId <= 0)
                 {
-                    user = await FindUserAsync(ju);
-                }
-
-                if (user == null && ju.FzAccount.IsNotNullOrEmpty())
-                {
-                    ju.AddRole(new Role(7, "ExternalStaff", "外部人员"));
-                    var b = await _userDomainService.CreateUserAsync(ju);
-                    if (!b)
-                    {
-                        //创建失败
-                        _logger.LogError("自动创建用户失败:{ju}", ju);
-                    }
-                    else
-                    {
-                        user = ToUserCache(ju);
-                    }
-
-                }
-
-                if (user == null)
-                {
+                    roleIds = null;
                     return false;
                 }
 
-                //判断是否有配合权限
-                bool find = false;
-                //临时调整需求放到2期实现
-                find = true;
-                //var route = httpContext.GetRouteData();
-                //var controller = route.Values.First(r => r.Key == "controller");
-                //var action = route.Values.First(r => r.Key == "action");
-
-                //var questUrl = controller.Value + "/" + action.Value;
-                //foreach (var role in user.Roles)
-                //{
-                //    foreach (var act in role.Actions)
-                //    {
-                //        if (string.Equals(act.Path, questUrl, StringComparison.OrdinalIgnoreCase))
-                //        {
-                //            find = true;
-                //            return find;
-                //        }
-                //    }
-                //}
-
-                return find;
+                roleIds.Add(roleId);
             }
-            return false;
-        }
 
-        private async Task<UserCacheItem?> FindUserAsync(User ju)
-        {
-            var user = await _cache.GetAsync(CacheConsts.UserAccountKey + ju.Account, async () =>
+            if (roleIds.Count == 0)
             {
-                var user = await _userDomainService.FindAsync(ju.Account!);
-                if (user == null) return default;
-                return ToUserCache(user);
-            });
-            return user;
+                roleIds = null;
+                return false;
+            }
+
+            return true;
         }
 
-        private async Task<UserCacheItem?> FindFzAccountUserAsync(User ju)
+        private static bool TryGetPermissionPath(
+            HttpContext httpContext,
+            RbacRequirement requirement,
+            [NotNullWhen(true)] out string? permissionPath)
         {
-            UserCacheItem? user = await _cache.GetAsync(CacheConsts.UserFzAccountKey + ju.FzAccount, async () =>
+            if (!string.IsNullOrWhiteSpace(requirement.Path))
             {
-                var user = await _userDomainService.FindFzAccountAsync(ju.FzAccount!);
-                if (user == null) return default;
-                return ToUserCache(user);
-            });
-            return user;
+                permissionPath = NormalizePath(requirement.Path);
+                return permissionPath.Length > 0;
+            }
+
+            var routeValues = httpContext.Request.RouteValues;
+            var controller = routeValues["controller"]?.ToString();
+            var action = routeValues["action"]?.ToString();
+            if (string.IsNullOrWhiteSpace(controller) || string.IsNullOrWhiteSpace(action))
+            {
+                permissionPath = null;
+                return false;
+            }
+
+            permissionPath = NormalizePath($"{controller}/{action}");
+            return true;
         }
 
-        private static UserCacheItem ToUserCache(User user) => new UserCacheItem
+        private static bool HasPermission(
+            UserCacheItem user,
+            IReadOnlySet<int> claimedRoleIds,
+            string permissionPath)
+        {
+            return user.Roles.Any(role =>
+                claimedRoleIds.Contains(role.Id)
+                && role.Actions?.Any(action =>
+                    !string.IsNullOrWhiteSpace(action.Path)
+                    && string.Equals(
+                        NormalizePath(action.Path),
+                        permissionPath,
+                        StringComparison.OrdinalIgnoreCase)) == true);
+        }
+
+        private static string NormalizePath(string path) => path.Trim().Trim('/');
+
+        private static UserCacheItem ToUserCache(User user) => new()
         {
             Account = user.Account,
             Email = user.Email,
@@ -223,38 +148,16 @@ namespace MS.Microservice.Web.Infrastructure.Authorizations.Handlers
             Id = user.Id,
             Name = user.Name,
             Password = user.Password,
-            Roles = user.Roles.Select((r, i) => new RoleCacheItem
+            Roles = user.Roles.Select(role => new RoleCacheItem
             {
-                Id = r.Id,
-                Name = r.Name,
-                Actions = r.Actions.Select(ac => new ActionCacheItem { Path = ac.Path }).ToList()
+                Id = role.Id,
+                Name = role.Name,
+                Actions = role.Actions
+                    .Select(action => new ActionCacheItem { Path = action.Path })
+                    .ToList()
             }).ToList(),
             Salt = user.Salt,
             Telephone = user.Telephone,
         };
-
-        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, RbacRequirement requirement)
-        {
-            // 判断角色是否一致
-            // c.Type == ClaimTypes.Role &&
-            var rolesClaim = context.User.FindFirst(c => requirement.Issuers.Contains(c.Issuer));
-            if (rolesClaim == null || rolesClaim.Value.IsNullOrEmpty())
-            {
-                context.Fail();
-                await Task.CompletedTask;
-                return;
-            }
-
-
-            if (await CheckActionAsync(context))
-            {
-                context.Succeed(requirement);
-                return;
-            }
-
-
-            context.Fail();
-            await Task.CompletedTask;
-        }
     }
 }
