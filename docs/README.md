@@ -28,6 +28,7 @@
 | 数据库与数据架构 | [Data-Partition.md](./Data-Partition.md) → [distribution-database/cassandra.md](./distribution-database/cassandra.md) | 数据分区与分布式数据库 |
 | 可观测与诊断 | [observable-system/metrics-monitor-and-altering-system.md](./observable-system/metrics-monitor-and-altering-system.md) → [diagnosis/README.md](./diagnosis/README.md) | 监控告警 + Linux 诊断工具矩阵 |
 | 工程实践 | [Domain-Command-Patterns-Handlers.md](./Domain-Command-Patterns-Handlers.md) → [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) | 命令模式、验证与设计原则 |
+| 密码安全 | [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 结合本项目理解密码哈希、旧密码迁移与自动重新哈希 |
 
 ---
 
@@ -159,11 +160,12 @@ flowchart TD
 
 ### 7. 框架优化 / 工程实践路径
 1. [framework-optimization-roadmap.md](./framework-optimization-roadmap.md) — 框架拆分路线图
-2. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
-3. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
-4. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
-5. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
-6. [LDAP.md](./LDAP.md) — 目录服务
+2. [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) — 版本化密码哈希与旧 HMAC 平滑迁移
+3. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
+4. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
+5. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
+6. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
+7. [LDAP.md](./LDAP.md) — 目录服务
 
 ---
 
@@ -311,6 +313,7 @@ flowchart TD
 
 | 文档 | 说明 |
 | --- | --- |
+| [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 密码安全：`IPasswordHasher<User>`、旧 HMAC 迁移、自动重新哈希与项目实战 |
 | [Separated-Interface.md](./Separated-Interface.md) | 接口分离：消费方定义接口降低耦合 |
 | [Enumeration.md](./Enumeration.md) | 枚举类：替代原生 enum 以支持多态 |
 | [ConwayLaw.md](./ConwayLaw.md) | 康威定律：组织沟通结构决定系统架构 |
@@ -351,6 +354,7 @@ flowchart TD
 | [MassTransit-QuicklyStart.md](./MassTransit-QuicklyStart.md) | MassTransit 快速入门 |
 | [Microservices-Collaborate-And-Interact.md](./Microservices-Collaborate-And-Interact.md) | 微服务之间的交互与协作 |
 | [Multiple-Cannoical-Models.md](./Multiple-Cannoical-Models.md) | 多规范模型 |
+| [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 使用 IPasswordHasher 实现安全的密码存储与平滑升级 |
 | [Persistence-Ignorance.md](./Persistence-Ignorance.md) | 持久化透明原则 |
 | [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) | 验证——通知代替抛错 |
 | [Reporting-Database.md](./Reporting-Database.md) | 报表数据库（ReportingDatabase） |
