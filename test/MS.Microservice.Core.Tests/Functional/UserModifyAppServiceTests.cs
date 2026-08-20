@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Core.Identity;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Infrastructure.Caching.Consts;
 using MS.Microservice.Web.Application.Commands;
+using MS.Microservice.Web.Application.Identity;
 using MS.Microservice.Web.Application.Users;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 using NSubstitute;
@@ -47,6 +47,10 @@ namespace MS.Microservice.Core.Tests.Functional
         {
             var userDomainService = Substitute.For<IUserDomainService>();
             var cache = Substitute.For<IDistributedCache>();
+            var userPasswordService = Substitute.For<IUserPasswordService>();
+            userPasswordService
+                .HashPassword(Arg.Any<User>(), "Password123")
+                .Returns("versioned-password-hash");
 
             userDomainService.FindFzAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns((User?)null);
@@ -72,7 +76,7 @@ namespace MS.Microservice.Core.Tests.Functional
             accessor.HttpContext.Returns(httpContext);
 
             var currentUserResolver = new CurrentUserResolver(accessor, userDomainService);
-            var service = new UserModifyAppService(userDomainService, currentUserResolver, cache);
+            var service = new UserModifyAppService(userDomainService, currentUserResolver, cache, userPasswordService);
 
             var result = await service.ModifyAsync(CreateCommand([new RoleDto { Id = 1, Name = "Admin" }]));
 
@@ -81,10 +85,10 @@ namespace MS.Microservice.Core.Tests.Functional
             await userDomainService.Received(1).UpdateUserAsync(
                 Arg.Is<User>(user =>
                     user.Account == "demo-account"
-                    && user.Salt == "salt-value"
+                    && user.Salt == User.ModernPasswordSaltMarker
                     && user.CreatorId == 7
                     && user.UpdatorId == 7
-                    && user.Password == CryptologyHelper.HmacSha256("Password123" + "salt-value")
+                    && user.Password == "versioned-password-hash"
                     && user.Roles.Count == 1
                     && user.Roles.Single().Id == 1),
                 Arg.Any<CancellationToken>());
@@ -92,9 +96,26 @@ namespace MS.Microservice.Core.Tests.Functional
             await cache.Received(1).RemoveAsync(CacheConsts.UserIdKey + 11, Arg.Any<CancellationToken>());
         }
 
-        private static UserModifyCommand CreateCommand(List<RoleDto>? roles = null)
+        [Fact]
+        public void ToExecutionEither_WhenPasswordIsEmpty_DoesNotReplacePassword()
         {
-            var rawPassword = "Password123";
+            var userPasswordService = Substitute.For<IUserPasswordService>();
+            var state = new UserModifyReadyState(
+                CreateCommand(rawPassword: string.Empty),
+                new CurrentUser(7, "creator", "creator@example.com", "13800138000", []),
+                [],
+                new PersistedUser(11));
+
+            var result = state.ToExecutionEither(userPasswordService);
+
+            Assert.True(result.IsRight);
+            Assert.Equal(string.Empty, result.Right.User.Password);
+            Assert.Equal(string.Empty, result.Right.User.Salt);
+            userPasswordService.DidNotReceiveWithAnyArgs().HashPassword(default!, default!);
+        }
+
+        private static UserModifyCommand CreateCommand(List<RoleDto>? roles = null, string rawPassword = "Password123")
+        {
             var encodedPassword = Convert.ToBase64String(Encoding.UTF8.GetBytes(rawPassword));
 
             return new UserModifyCommand(

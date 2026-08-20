@@ -472,7 +472,7 @@ bool same = passwordHasher.HashPassword(user, password)
 
 由于每次哈希包含随机盐，验证必须调用 `VerifyHashedPassword`。
 
-> 当前登录和新用户创建已经使用版本化哈希。两条修改密码路径仍暂时使用旧 HMAC，将在下一个独立安全提交中统一切换，便于逐个 review。
+> 当前正式登录、新用户创建、函数式用户修改和 Wolverine 用户修改路径均已使用版本化哈希。`DemoController` 中的学习示例仍是独立演示 SQL，不属于正式身份写入链路。
 
 ## 十、调整工作因子
 

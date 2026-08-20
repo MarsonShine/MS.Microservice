@@ -1,10 +1,10 @@
 using MS.Microservice.Core.Extension;
 using MS.Microservice.Core.Functional;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Infrastructure.Caching.Consts;
 using MS.Microservice.Web.Application.Commands;
+using MS.Microservice.Web.Application.Identity;
 using MS.Microservice.Web.Application.Validations;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 using User = MS.Microservice.Domain.Aggregates.IdentityModel.User;
@@ -59,18 +59,15 @@ namespace MS.Microservice.Web.Application.Users
 
         extension(UserModifyReadyState state)
         {
-            public Either<Error, UserModifyExecution> ToExecutionEither()
+            public Either<Error, UserModifyExecution> ToExecutionEither(IUserPasswordService userPasswordService)
                 => EitherExtensions.Try(() =>
                 {
-                    var salt = state.ExistingUser.Salt ?? string.Empty;
-                    var password = state.Command.Passowrd.IsNotNullOrEmpty()
-                        ? CryptologyHelper.HmacSha256(state.Command.Passowrd + salt)
-                        : string.Empty;
+                    ArgumentNullException.ThrowIfNull(userPasswordService);
 
                     var user = new User(
                         state.Command.Account,
-                        password,
-                        salt,
+                        string.Empty,
+                        string.Empty,
                         false,
                         state.Command.Telephone,
                         state.CurrentUser.Id,
@@ -79,6 +76,11 @@ namespace MS.Microservice.Web.Application.Users
                         state.Command.UserName,
                         string.Empty,
                         string.Empty);
+
+                    if (state.Command.Passowrd.IsNotNullOrEmpty())
+                    {
+                        user.SetPasswordHash(userPasswordService.HashPassword(user, state.Command.Passowrd));
+                    }
 
                     if (state.Command.Roles.Count > 0)
                     {

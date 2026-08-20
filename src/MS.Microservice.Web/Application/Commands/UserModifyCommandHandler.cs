@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Core.Extension;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Infrastructure.Caching.Consts;
+using MS.Microservice.Web.Application.Identity;
 using Wolverine;
 
 namespace MS.Microservice.Web.Application.Commands
@@ -19,14 +19,17 @@ namespace MS.Microservice.Web.Application.Commands
         private readonly IUserDomainService _userDomainService;
         private readonly CurrentUser _currentUser;
         private readonly IDistributedCache _cache;
+        private readonly IUserPasswordService _userPasswordService;
         public UserModifyCommandHandler(
             IUserDomainService userDomainService,
             IDistributedCache cache,
-            CurrentUserResolver currentUserResolver)
+            CurrentUserResolver currentUserResolver,
+            IUserPasswordService userPasswordService)
         {
             _userDomainService = userDomainService;
             _currentUser = currentUserResolver.CurrentUser() ?? throw new ArgumentException(nameof(CurrentUserResolver));
             _cache = cache;
+            _userPasswordService = userPasswordService;
         }
         public async Task<(bool, string?)> Handle(UserModifyCommand request, CancellationToken cancellationToken)
         {
@@ -57,13 +60,11 @@ namespace MS.Microservice.Web.Application.Commands
                 return (false, ExceptionConsts.UserNotExisted);
             }
 
-            // 这里调用领域服务
-            string salt = exitUser.Salt!;
-            var pwd = "";
+            var user = new Domain.Aggregates.IdentityModel.User(request.Account, string.Empty, string.Empty, false, request.Telephone, _currentUser.Id, _currentUser.Id, request.Email, request.UserName, "", "");
             if (request.Passowrd.IsNotNullOrEmpty())
-                pwd = CryptologyHelper.HmacSha256(request.Passowrd + salt);
-
-            var user = new Domain.Aggregates.IdentityModel.User(request.Account, pwd, salt, false, request.Telephone, _currentUser.Id, _currentUser.Id, request.Email, request.UserName, "", "");
+            {
+                user.SetPasswordHash(_userPasswordService.HashPassword(user, request.Passowrd));
+            }
             if (request.Roles?.Count > 0)
             {
                 user.Roles.AddIfNotContains(
