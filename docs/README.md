@@ -29,6 +29,7 @@
 | 可观测与诊断 | [observable-system/metrics-monitor-and-altering-system.md](./observable-system/metrics-monitor-and-altering-system.md) → [diagnosis/README.md](./diagnosis/README.md) | 监控告警 + Linux 诊断工具矩阵 |
 | 工程实践 | [Domain-Command-Patterns-Handlers.md](./Domain-Command-Patterns-Handlers.md) → [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) | 命令模式、验证与设计原则 |
 | 密码安全 | [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 结合本项目理解密码哈希、旧密码迁移与自动重新哈希 |
+| 函数式编程核心类型 | [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) | 结合本项目理解 Option、Either、Exceptional、Map、Bind、Apply 与 Match |
 
 ---
 
@@ -160,12 +161,13 @@ flowchart TD
 
 ### 7. 框架优化 / 工程实践路径
 1. [framework-optimization-roadmap.md](./framework-optimization-roadmap.md) — 框架拆分路线图
-2. [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) — 版本化密码哈希与旧 HMAC 平滑迁移
-3. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
-4. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
-5. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
-6. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
-7. [LDAP.md](./LDAP.md) — 目录服务
+2. [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) — Option / Either 与 Map / Bind / Apply 的统一心智模型
+3. [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) — 版本化密码哈希与旧 HMAC 平滑迁移
+4. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
+5. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
+6. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
+7. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
+8. [LDAP.md](./LDAP.md) — 目录服务
 
 ---
 
@@ -205,6 +207,7 @@ flowchart TD
 | [Multiple-Cannoical-Models.md](./Multiple-Cannoical-Models.md) | 多规范模型：跨限界上下文维护多套有效数据模型 |
 | [ConwayLaw.md](./ConwayLaw.md) | 康威定律：系统架构反映组织沟通结构 |
 | [framework-optimization-roadmap.md](./framework-optimization-roadmap.md) | 框架优化路线图：EF Core / SqlSugar / 可观测 / 消息拆分计划 |
+| [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) | 函数式核心类型：Some / None、Option、Either、Exceptional、Unit 与 Map / Bind / Apply / Match |
 
 ### 分布式系统理论
 
