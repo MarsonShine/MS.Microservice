@@ -21,6 +21,7 @@ using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
 using MS.Microservice.Web.Infrastructure.Cors;
 using MS.Microservice.Web.Infrastructure.Filters;
+using MS.Microservice.Web.Infrastructure.Uploads;
 using MS.Microservice.Swagger;
 
 namespace MS.Microservice.Web.Infrastructure.Extensions
@@ -156,6 +157,19 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     .Validate(
                         options => options.JwtBearerOption?.SecurityKeys is not { Length: > 0 } securityKeys || securityKeys.All(IsValidJwtSecurityKey),
                         $"IdentityOptions:JwtBearerOption:SecurityKeys entries must contain at least {MinimumJwtSecurityKeyLength} ASCII characters.")
+                    .ValidateOnStart();
+
+                services.AddOptions<SampleUploadOptions>()
+                    .Bind(configuration.GetSection(SampleUploadOptions.SectionName))
+                    .Validate(
+                        options => options.MaxImageBytes is > 0 and <= SampleUploadOptions.MaximumConfiguredFileBytes,
+                        $"SampleUploadOptions:MaxImageBytes must be between 1 and {SampleUploadOptions.MaximumConfiguredFileBytes} bytes.")
+                    .Validate(
+                        options => options.MaxExcelBytes is > 0 and <= SampleUploadOptions.MaximumConfiguredFileBytes,
+                        $"SampleUploadOptions:MaxExcelBytes must be between 1 and {SampleUploadOptions.MaximumConfiguredFileBytes} bytes.")
+                    .Validate(
+                        options => SampleUploadOptions.IsSafeStorageDirectory(options.StorageDirectory),
+                        "SampleUploadOptions:StorageDirectory must be a safe relative path below the content root.")
                     .ValidateOnStart();
 
                 return services;
