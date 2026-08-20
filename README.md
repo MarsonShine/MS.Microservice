@@ -53,6 +53,28 @@ dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
 - `FzPlatformDbContextSettings`
 - `ConnectionStrings:ActivationConnection`
 
+### JWT 本地密钥
+
+JWT 签名密钥不存放在 `appsettings*.json` 中。每个密钥必须是至少 32 个 ASCII 字符；建议使用 32 字节密码学随机数的 Base64 文本。
+
+Development 环境使用 .NET User Secrets。先生成两个不同的随机值，再分别写入当前兼容配置所需的两个密钥槽位：
+
+```powershell
+$jwtKey0 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$jwtKey1 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+dotnet user-secrets set "IdentityOptions:JwtBearerOption:SecurityKeys:0" $jwtKey0 --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
+dotnet user-secrets set "IdentityOptions:JwtBearerOption:SecurityKeys:1" $jwtKey1 --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
+```
+
+容器和其他非 Development 环境通过环境变量注入：
+
+```text
+IdentityOptions__JwtBearerOption__SecurityKeys__0=<至少 32 个 ASCII 字符的随机密钥>
+IdentityOptions__JwtBearerOption__SecurityKeys__1=<另一个至少 32 个 ASCII 字符的随机密钥>
+```
+
+缺少密钥或任一密钥长度不足时，Web Host 会在启动阶段失败。
+
 ## Docker
 
 ```bash

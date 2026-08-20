@@ -2,6 +2,7 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>MS.Microservice.Web-2f65739a-b8f3-49b4-b4c5-2d94286bcbde</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Application\DomainEventHandlers\**" />

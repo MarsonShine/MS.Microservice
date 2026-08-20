@@ -28,6 +28,8 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 {
     public static partial class IServiceCollectionExtensions
     {
+        private const int MinimumJwtSecurityKeyLength = 32;
+
         extension(IServiceCollection services)
         {
             public IServiceCollection AddCoreServices([NotNull] IConfiguration configuration)
@@ -152,6 +154,9 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                     .Validate(options => options.JwtBearerOption?.Audiences?.Length > 0, "IdentityOptions:JwtBearerOption:Audiences is required.")
                     .Validate(options => options.JwtBearerOption?.Issuers?.Length > 0, "IdentityOptions:JwtBearerOption:Issuers is required.")
                     .Validate(options => options.JwtBearerOption?.SecurityKeys?.Length > 0, "IdentityOptions:JwtBearerOption:SecurityKeys is required.")
+                    .Validate(
+                        options => options.JwtBearerOption?.SecurityKeys is not { Length: > 0 } securityKeys || securityKeys.All(IsValidJwtSecurityKey),
+                        $"IdentityOptions:JwtBearerOption:SecurityKeys entries must contain at least {MinimumJwtSecurityKeyLength} ASCII characters.")
                     .ValidateOnStart();
 
                 return services;
@@ -171,7 +176,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 var jwtBearerOption = GetRequiredJwtBearerOption(configuration);
                 var audiences = GetRequiredValues(jwtBearerOption.Audiences, "IdentityOptions:JwtBearerOption:Audiences");
                 var issuers = GetRequiredValues(jwtBearerOption.Issuers, "IdentityOptions:JwtBearerOption:Issuers");
-                var securityKeys = GetRequiredValues(jwtBearerOption.SecurityKeys, "IdentityOptions:JwtBearerOption:SecurityKeys");
+                var securityKeys = GetRequiredSecurityKeys(jwtBearerOption.SecurityKeys);
 
                 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
@@ -236,6 +241,27 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 
                 return values;
             }
+
+            private static string[] GetRequiredSecurityKeys(string[]? values)
+            {
+                const string configurationPath = "IdentityOptions:JwtBearerOption:SecurityKeys";
+                var securityKeys = GetRequiredValues(values, configurationPath);
+
+                if (securityKeys.Any(key => !IsValidJwtSecurityKey(key)))
+                {
+                    throw new OptionsValidationException(
+                        configurationPath,
+                        typeof(string[]),
+                        [$"{configurationPath} entries must contain at least {MinimumJwtSecurityKeyLength} ASCII characters."]);
+                }
+
+                return securityKeys;
+            }
+
+            private static bool IsValidJwtSecurityKey(string? securityKey)
+                => !string.IsNullOrWhiteSpace(securityKey)
+                    && securityKey.Length >= MinimumJwtSecurityKeyLength
+                    && securityKey.All(char.IsAscii);
         }
     }
 }
