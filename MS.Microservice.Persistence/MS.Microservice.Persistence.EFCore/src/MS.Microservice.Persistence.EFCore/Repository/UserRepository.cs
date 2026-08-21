@@ -20,14 +20,29 @@ namespace MS.Microservice.Persistence.EFCore.Repository
             _dbContext = dbContext;
         }
 
-        public override Task<bool> DeleteAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
+        public override async Task<bool> DeleteAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(predicate);
+
+            var users = await _dbContext.Users
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
+            foreach (var user in users)
+            {
+                user.Delete();
+            }
+
+            return users.Count != 0;
         }
 
         public override Task<bool> DeleteAsync([NotNull] User entity, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(entity);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            entity.Delete();
+            _dbContext.Users.Update(entity);
+            return Task.FromResult(true);
         }
 
         public override async Task<User?> FindAsync([NotNull] Expression<Func<User, bool>> predicate, CancellationToken cancellationToken = default)

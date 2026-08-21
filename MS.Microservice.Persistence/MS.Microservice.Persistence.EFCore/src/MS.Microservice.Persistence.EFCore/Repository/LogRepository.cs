@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MS.Microservice.Core.Domain.Repository;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
 using MS.Microservice.Domain.Aggregates.LogAggregate.Repository;
@@ -19,19 +20,35 @@ namespace MS.Microservice.Persistence.EFCore.Repository
             _dbContext = dbContext;
         }
 
-        public override Task<bool> DeleteAsync([NotNull] Expression<Func<LogAggregateRoot, bool>> predicate, CancellationToken cancellationToken = default)
+        public override async Task<bool> DeleteAsync([NotNull] Expression<Func<LogAggregateRoot, bool>> predicate, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(predicate);
+
+            var logs = await _dbContext.Logs
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
+            if (logs.Count == 0)
+            {
+                return false;
+            }
+
+            _dbContext.Logs.RemoveRange(logs);
+            return true;
         }
 
         public override Task<bool> DeleteAsync([NotNull] LogAggregateRoot entity, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(entity);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _dbContext.Logs.Remove(entity);
+            return Task.FromResult(true);
         }
 
-        public override Task<LogAggregateRoot?> FindAsync([NotNull] Expression<Func<LogAggregateRoot, bool>> predicate, CancellationToken cancellationToken = default)
+        public override async Task<LogAggregateRoot?> FindAsync([NotNull] Expression<Func<LogAggregateRoot, bool>> predicate, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(predicate);
+            return await _dbContext.Logs.FirstOrDefaultAsync(predicate, cancellationToken);
         }
 
         public override async Task<LogAggregateRoot> InsertAsync([NotNull] LogAggregateRoot entity, CancellationToken cancellationToken = default)
@@ -42,7 +59,11 @@ namespace MS.Microservice.Persistence.EFCore.Repository
 
         public override Task<LogAggregateRoot> UpdateAsync([NotNull] LogAggregateRoot entity, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(entity);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _dbContext.Entry(entity).State = EntityState.Modified;
+            return Task.FromResult(entity);
         }
     }
 }
