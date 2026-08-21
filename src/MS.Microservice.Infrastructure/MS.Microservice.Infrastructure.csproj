@@ -29,6 +29,7 @@
     <PackageReference Include="NAudio" />
     <PackageReference Include="NAudio.Lame" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="NPOI" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />

@@ -131,8 +131,13 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
             public IServiceCollection AddHealthChecks(IConfiguration configuration)
             {
                 var hcBuilder = services.AddHealthChecks();
-                hcBuilder.AddCheck("self", () => HealthCheckResult.Healthy());
-                hcBuilder.AddCheck<SqlHealthCheck>(SqlHealthCheck.Name);
+                hcBuilder.AddCheck(
+                    "self",
+                    () => HealthCheckResult.Healthy(),
+                    tags: ["live"]);
+                hcBuilder.AddCheck<SqlHealthCheck>(
+                    SqlHealthCheck.Name,
+                    tags: [SqlHealthCheck.ReadinessTag]);
                 return services;
             }
 

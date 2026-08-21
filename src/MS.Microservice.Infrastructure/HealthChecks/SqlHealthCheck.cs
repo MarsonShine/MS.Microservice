@@ -1,42 +1,43 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using MySqlConnector;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using Npgsql;
 
-namespace MS.Microservice.Infrastructure.HealthChecks
+namespace MS.Microservice.Infrastructure.HealthChecks;
+
+public sealed class SqlHealthCheck(IConfiguration configuration) : IHealthCheck
 {
-    public class SqlHealthCheck : IHealthCheck
-    {
-        public const string Name = nameof(SqlHealthCheck);
-        private readonly string _connectionString;
-        public SqlHealthCheck(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("Default")
-                ?? configuration.GetConnectionString("ActivationConnection")
-                ?? string.Empty;
-        }
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(_connectionString))
-            {
-                return HealthCheckResult.Unhealthy("ConnectionStrings:Default or ConnectionStrings:ActivationConnection is required.");
-            }
+    public const string Name = "postgresql";
+    public const string ReadinessTag = "ready";
+    private readonly string _connectionString =
+        configuration.GetConnectionString("ActivationConnection") ?? string.Empty;
 
-            try
-            {
-                using var sqlConnection = new MySqlConnection(_connectionString);
-                await sqlConnection.OpenAsync(cancellationToken);
-                using var command = sqlConnection.CreateCommand();
-                command.CommandText = "SELECT 1";
-                await command.ExecuteScalarAsync(cancellationToken);
-                return HealthCheckResult.Healthy();
-            }
-            catch (Exception ex)
-            {
-                return HealthCheckResult.Unhealthy("数据库连接异常", exception: ex);
-            }
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_connectionString))
+        {
+            return HealthCheckResult.Unhealthy("PostgreSQL database configuration is missing.");
+        }
+
+        try
+        {
+            await using var connection = new NpgsqlConnection(_connectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            await command.ExecuteScalarAsync(cancellationToken);
+            return HealthCheckResult.Healthy();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return HealthCheckResult.Unhealthy(
+                "PostgreSQL database is unavailable.",
+                exception: exception);
         }
     }
 }

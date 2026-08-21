@@ -217,6 +217,16 @@ docker run --rm -p 8080:8080 ms-microservice-web
 
 容器默认监听 `http://+:8080`。Dockerfile 使用 .NET 10 SDK/Runtime，并按当前仓库结构 restore/publish `src/MS.Microservice.Web`。
 
+健康检查端点：
+
+| 路径 | 用途 | 检查内容 | 失败状态 |
+| --- | --- | --- | --- |
+| `/health/live` | liveness | 进程自身 | 503 |
+| `/health/ready` | readiness | PostgreSQL `ActivationConnection` | 503 |
+| `/hc` | 兼容旧探针 | 与 readiness 相同 | 503 |
+
+健康响应不会返回异常、连接串或数据库错误详情。Kubernetes 应将 livenessProbe 指向 `/health/live`，readinessProbe 指向 `/health/ready`。
+
 ## Logging
 
 Web Host 已接入新 Logging 模块：

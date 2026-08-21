@@ -19,6 +19,7 @@ using Wolverine;
 using MS.Microservice.Web.Infrastructure.Mediator.Behaviors;
 using MS.Microservice.Core.Serialization;
 using MS.Microservice.Web.Infrastructure.Labs;
+using MS.Microservice.Web.Infrastructure.HealthChecks;
 
 public partial class Program
 {
@@ -130,7 +131,7 @@ public partial class Program
 
         app.UsePlatformSwagger();
 
-        app.MapHealthChecks("/hc");
+        app.MapPlatformHealthChecks();
         app.MapControllers();
 
         app.Run();
