@@ -9,7 +9,7 @@ namespace MS.Microservice.Domain
     /// <summary>
     /// Marker interface for domain events.
     /// </summary>
-    public interface IDomainEvent { }
+    public interface IDomainEvent : Core.Messaging.IDomainEvent { }
 
     [Serializable]
     public abstract class Entity : IEntity, IHasDomainEvents

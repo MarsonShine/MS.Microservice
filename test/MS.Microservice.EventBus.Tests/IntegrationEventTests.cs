@@ -1,5 +1,6 @@
 using MS.Microservice.EventBus.Events;
 using System.Text.Json;
+using IIntegrationEvent = MS.Microservice.Core.Messaging.IIntegrationEvent;
 
 namespace MS.Microservice.EventBus.Tests
 {
@@ -15,6 +16,7 @@ namespace MS.Microservice.EventBus.Tests
             Assert.NotEqual(Guid.Empty, evt.Id);
             Assert.InRange(evt.CreationDate, before, after);
             Assert.Equal(DateTimeKind.Utc, evt.CreationDate.Kind);
+            Assert.IsAssignableFrom<IIntegrationEvent>(evt);
         }
 
         [Fact]

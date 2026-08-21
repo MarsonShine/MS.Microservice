@@ -80,6 +80,22 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void CanonicalEventContracts_ShouldNot_DependOn_MessagingFrameworksOrPersistence()
+    {
+        var referencedAssemblies = typeof(MS.Microservice.Core.Messaging.IEventContract)
+            .Assembly
+            .GetReferencedAssemblies()
+            .Select(assembly => assembly.Name)
+            .ToArray();
+
+        Assert.DoesNotContain("Wolverine", referencedAssemblies);
+        Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
+        Assert.DoesNotContain("SqlSugar", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Infrastructure", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+    }
+
+    [Fact]
     public void Infrastructure_ShouldNot_DependOn_Web()
     {
         var infraAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;

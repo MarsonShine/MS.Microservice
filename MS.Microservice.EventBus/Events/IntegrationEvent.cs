@@ -1,26 +1,18 @@
-﻿using System.Text.Json.Serialization;
-
 namespace MS.Microservice.EventBus.Events;
 
 /// <summary>
-/// Base contract for integration events exchanged through the event bus.
+/// Compatibility base for existing EventBus consumers. New contracts should derive from
+/// <see cref="Core.Messaging.IntegrationEvent" /> directly.
 /// </summary>
-public class IntegrationEvent
+public class IntegrationEvent : Core.Messaging.IntegrationEvent
 {
     public IntegrationEvent()
     {
-        Id = Guid.NewGuid();
-        CreationDate = DateTime.UtcNow;
     }
 
-    [JsonConstructor]
+    [System.Text.Json.Serialization.JsonConstructor]
     public IntegrationEvent(Guid id, DateTime creationDate)
+        : base(id, creationDate)
     {
-        Id = id;
-        CreationDate = creationDate;
     }
-
-    public Guid Id { get; private set; }
-
-    public DateTime CreationDate { get; private set; }
 }

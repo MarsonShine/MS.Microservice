@@ -39,7 +39,7 @@ public sealed class WolverineIntegrationEventPublisher : IIntegrationEventPublis
     }
 
     /// <inheritdoc />
-    public async Task PublishAsync(object integrationEvent, CancellationToken cancellationToken = default)
+    public async Task PublishAsync(Core.Messaging.IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
         cancellationToken.ThrowIfCancellationRequested();

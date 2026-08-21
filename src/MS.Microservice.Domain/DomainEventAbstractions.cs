@@ -33,7 +33,7 @@ public interface IIntegrationEventPublisher
     /// <summary>
     /// Publishes an integration event.
     /// </summary>
-    /// <param name="integrationEvent">The event object to publish.</param>
+    /// <param name="integrationEvent">The integration-event contract to publish.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task PublishAsync(object integrationEvent, CancellationToken cancellationToken = default);
+    Task PublishAsync(Core.Messaging.IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default);
 }

@@ -16,7 +16,7 @@ public sealed class NoOpDomainEventDispatcher : IDomainEventDispatcher
 public sealed class NoOpIntegrationEventPublisher : IIntegrationEventPublisher
 {
     /// <inheritdoc />
-    public Task PublishAsync(object integrationEvent, CancellationToken cancellationToken = default)
+    public Task PublishAsync(Core.Messaging.IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

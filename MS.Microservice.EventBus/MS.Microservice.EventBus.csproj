@@ -13,4 +13,7 @@
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<None Include="samples\basic-usage.md" Pack="true" PackagePath="contentFiles/any/any/samples/" />
 	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\src\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+	</ItemGroup>
 </Project>
