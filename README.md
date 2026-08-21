@@ -75,6 +75,32 @@ Docker 未设置 `ASPNETCORE_ENVIRONMENT` 时默认为 Production，因此实验
 - `FzPlatformDbContextSettings`
 - `ConnectionStrings:ActivationConnection`
 
+### Infrastructure Profile
+
+Web Host 保留统一的 `AddInfrastructure` 门面，并通过 `Infrastructure:Profile` 显式选择模块组合：
+
+| Profile | 模块 |
+| --- | --- |
+| `Production` | Wolverine Messaging、EF Core Persistence、OpenTelemetry |
+| `Sample` | Wolverine Messaging、EF Core、SqlSugar、Event Sourcing、OpenTelemetry |
+
+基础 `appsettings.json` 使用 `Production`；`appsettings.Development.json` 使用 `Sample`。`Lab` 环境如需完整实验模块，应通过环境变量设置：
+
+```text
+Infrastructure__Profile=Sample
+```
+
+消费方也可以跳过预设，显式选择模块：
+
+```csharp
+services.AddInfrastructure(configuration, options =>
+{
+    options.UseMessaging();
+    options.UseEfCorePersistence();
+    options.UseTelemetry();
+});
+```
+
 ### JWT 本地密钥
 
 JWT 签名密钥不存放在 `appsettings*.json` 中。每个密钥必须是至少 32 个 ASCII 字符；建议使用 32 字节密码学随机数的 Base64 文本。

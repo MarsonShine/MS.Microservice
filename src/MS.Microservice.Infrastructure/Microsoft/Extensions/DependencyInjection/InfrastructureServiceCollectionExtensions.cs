@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MS.Microservice.Domain;
 using MS.Microservice.Infrastructure.Messaging;
+using MS.Microservice.Infrastructure.DependencyInjection;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -47,16 +48,72 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             // -----------------------------------------------------------------------
-            // 一次注册所有 Infrastructure 模块
-            // 调用顺序建议：消息派发实现 → 持久化 → 事件溯源 → 可观测性
+            // 消息派发 — Wolverine
             // -----------------------------------------------------------------------
-            public void AddInfrastructure(IConfiguration configuration)
+            public void AddInfrastructureMessaging()
             {
                 services.TryAddScoped<IDomainEventDispatcher, WolverineDomainEventDispatcher>();
                 services.TryAddScoped<IIntegrationEventPublisher, WolverineIntegrationEventPublisher>();
-                services.AddInfrastructurePersistence(configuration);
-                services.AddInfrastructureEventSourcing(configuration);
-                services.AddInfrastructureTelemetry();
+            }
+
+            // -----------------------------------------------------------------------
+            // 默认生产门面：Messaging + EF Core + Telemetry
+            // -----------------------------------------------------------------------
+            public IServiceCollection AddInfrastructure(IConfiguration configuration)
+                => services.AddInfrastructure(configuration, InfrastructureProfile.Production);
+
+            public IServiceCollection AddInfrastructure(
+                IConfiguration configuration,
+                InfrastructureProfile profile)
+            {
+                return profile switch
+                {
+                    InfrastructureProfile.Production => services.AddInfrastructure(
+                        configuration,
+                        options => options.UseProductionDefaults()),
+                    InfrastructureProfile.Sample => services.AddInfrastructure(
+                        configuration,
+                        options => options.UseSampleDefaults()),
+                    _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unknown infrastructure profile.")
+                };
+            }
+
+            public IServiceCollection AddInfrastructure(
+                IConfiguration configuration,
+                Action<InfrastructureModuleOptions> configure)
+            {
+                ArgumentNullException.ThrowIfNull(configuration);
+                ArgumentNullException.ThrowIfNull(configure);
+
+                var options = new InfrastructureModuleOptions();
+                configure(options);
+
+                if (options.MessagingEnabled)
+                {
+                    services.AddInfrastructureMessaging();
+                }
+
+                if (options.EfCorePersistenceEnabled)
+                {
+                    services.AddMicroserviceEfCorePersistence(configuration);
+                }
+
+                if (options.SqlSugarPersistenceEnabled)
+                {
+                    services.AddMicroserviceSqlSugarPersistence(configuration);
+                }
+
+                if (options.EventSourcingEnabled)
+                {
+                    services.AddInfrastructureEventSourcing(configuration);
+                }
+
+                if (options.TelemetryEnabled)
+                {
+                    services.AddInfrastructureTelemetry();
+                }
+
+                return services;
             }
 
             private static string GetRequiredConnectionString(IConfiguration configuration, string name)

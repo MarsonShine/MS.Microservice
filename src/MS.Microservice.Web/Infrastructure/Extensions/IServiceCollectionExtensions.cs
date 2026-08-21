@@ -16,6 +16,7 @@ using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
 using MS.Microservice.Infrastructure.HealthChecks;
+using MS.Microservice.Infrastructure.DependencyInjection;
 using MS.Microservice.Web.Application.Orders;
 using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
@@ -37,7 +38,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 services
                     .AddCustomMvc(configuration)
                     .AddHealthChecks(configuration)
-                    .AddMySql(configuration)
+                    .AddApplicationInfrastructure(configuration)
                     .AddCustomSwagger(configuration)
                     .AddCustomConfiguration(configuration)
                     .AddCustomAuthentication(configuration)
@@ -135,13 +136,24 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 return services;
             }
 
-            public IServiceCollection AddMySql(IConfiguration configuration)
+            public IServiceCollection AddApplicationInfrastructure(IConfiguration configuration)
             {
-                //services.AddEntityFrameworkMySql(configuration.GetConnectionString("ActivationConnection")!);
-                //services.AddMicroserviceSqlSugarPersistence(configuration);
-                services.AddInfrastructure(configuration);
-                services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
-                services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();
+                var profileName = configuration["Infrastructure:Profile"]
+                    ?? nameof(InfrastructureProfile.Production);
+                if (!Enum.TryParse<InfrastructureProfile>(profileName, ignoreCase: true, out var profile))
+                {
+                    throw new OptionsValidationException(
+                        "Infrastructure:Profile",
+                        typeof(InfrastructureProfile),
+                        [$"Infrastructure:Profile must be one of: {string.Join(", ", Enum.GetNames<InfrastructureProfile>())}."]);
+                }
+
+                services.AddInfrastructure(configuration, profile);
+                if (profile == InfrastructureProfile.Sample)
+                {
+                    services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
+                    services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();
+                }
 
                 return services;
             }
