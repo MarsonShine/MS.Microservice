@@ -75,6 +75,12 @@ public sealed class InboxMessage
     /// <summary>UTC time when processing started.</summary>
     public DateTimeOffset? ProcessingStartedAtUtc { get; set; }
 
+    /// <summary>Unique token owned by the active consumer attempt.</summary>
+    public Guid? ProcessingToken { get; set; }
+
+    /// <summary>UTC time after which another delivery may reclaim processing.</summary>
+    public DateTimeOffset? ProcessingLeaseExpiresAtUtc { get; set; }
+
     /// <summary>UTC time when processing completed.</summary>
     public DateTimeOffset? ProcessedAtUtc { get; set; }
 
@@ -113,12 +119,27 @@ public sealed class InboxMessage
         ProcessingStartedAtUtc = nowUtc;
     }
 
+    /// <summary>Claims this receipt for one consumer attempt.</summary>
+    public void ClaimProcessing(Guid token, DateTimeOffset nowUtc, DateTimeOffset leaseExpiresAtUtc)
+    {
+        if (leaseExpiresAtUtc <= nowUtc)
+        {
+            throw new ArgumentOutOfRangeException(nameof(leaseExpiresAtUtc));
+        }
+
+        MarkProcessing(nowUtc);
+        ProcessingToken = token;
+        ProcessingLeaseExpiresAtUtc = leaseExpiresAtUtc;
+    }
+
     /// <summary>Marks the message as processed.</summary>
     public void MarkProcessed(DateTimeOffset nowUtc)
     {
         Status = InboxMessageStatus.Processed;
         ProcessedAtUtc = nowUtc;
         LastError = null;
+        ProcessingToken = null;
+        ProcessingLeaseExpiresAtUtc = null;
     }
 
     /// <summary>Marks the message as failed.</summary>
@@ -127,5 +148,7 @@ public sealed class InboxMessage
         ArgumentException.ThrowIfNullOrWhiteSpace(error);
         Status = InboxMessageStatus.Failed;
         LastError = error;
+        ProcessingToken = null;
+        ProcessingLeaseExpiresAtUtc = null;
     }
 }

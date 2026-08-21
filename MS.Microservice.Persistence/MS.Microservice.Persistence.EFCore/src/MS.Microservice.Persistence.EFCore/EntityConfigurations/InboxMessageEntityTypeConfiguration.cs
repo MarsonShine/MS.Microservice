@@ -20,6 +20,7 @@ internal sealed class InboxMessageEntityTypeConfiguration : IEntityTypeConfigura
             .IsRequired();
         builder.Property(message => message.ReceivedAtUtc).HasColumnType("timestamp with time zone").IsRequired();
         builder.Property(message => message.ProcessingStartedAtUtc).HasColumnType("timestamp with time zone");
+        builder.Property(message => message.ProcessingLeaseExpiresAtUtc).HasColumnType("timestamp with time zone");
         builder.Property(message => message.ProcessedAtUtc).HasColumnType("timestamp with time zone");
         builder.Property(message => message.LastDuplicateAtUtc).HasColumnType("timestamp with time zone");
         builder.Property(message => message.LastError).HasMaxLength(4000);
@@ -28,5 +29,6 @@ internal sealed class InboxMessageEntityTypeConfiguration : IEntityTypeConfigura
 
         builder.HasIndex(message => new { message.MessageId, message.Consumer }).IsUnique();
         builder.HasIndex(message => new { message.Status, message.ReceivedAtUtc });
+        builder.HasIndex(message => message.ProcessingLeaseExpiresAtUtc);
     }
 }

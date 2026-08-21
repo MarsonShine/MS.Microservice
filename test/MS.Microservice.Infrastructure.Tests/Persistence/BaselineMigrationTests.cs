@@ -22,7 +22,7 @@ public sealed class BaselineMigrationTests
             toMigration: migrations.Last(),
             options: MigrationsSqlGenerationOptions.Idempotent);
 
-        Assert.Equal(3, migrations.Length);
+        Assert.Equal(4, migrations.Length);
         Assert.Contains(migrations, migration => migration.EndsWith("_BaselineIdentityAndLog", StringComparison.Ordinal));
         Assert.Contains("fz_platform_activation", script, StringComparison.Ordinal);
         Assert.Contains("CREATE TABLE", script, StringComparison.Ordinal);

@@ -20,6 +20,8 @@ using MS.Microservice.Web.Infrastructure.Mediator.Behaviors;
 using MS.Microservice.Core.Serialization;
 using MS.Microservice.Web.Infrastructure.Labs;
 using MS.Microservice.Web.Infrastructure.HealthChecks;
+using MS.Microservice.Core.Messaging;
+using MS.Microservice.Infrastructure.Messaging;
 
 public partial class Program
 {
@@ -43,6 +45,8 @@ public partial class Program
             opts.Discovery.IncludeAssembly(typeof(ActivationDbContext).Assembly);
             opts.Policies.AddMiddleware<LoggingMiddleware>();
             opts.Policies.AddMiddleware<ValidatorMiddleware>();
+            opts.Policies.AddMiddleware<InboxConsumptionMiddleware>(chain =>
+                typeof(IEventContract).IsAssignableFrom(chain.MessageType));
         });
 
         AddCollectionService(builder);

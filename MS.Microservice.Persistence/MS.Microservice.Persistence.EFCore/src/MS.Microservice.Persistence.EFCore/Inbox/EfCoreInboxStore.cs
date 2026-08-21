@@ -21,11 +21,20 @@ public interface IInboxStore
 
     Task<bool> MarkProcessedAsync(
         string deduplicationKey,
+        Guid processingToken,
         DateTimeOffset processedAtUtc,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> TryBeginProcessingAsync(
+        string deduplicationKey,
+        Guid processingToken,
+        DateTimeOffset nowUtc,
+        TimeSpan processingLease,
         CancellationToken cancellationToken = default);
 
     Task<bool> MarkFailedAsync(
         string deduplicationKey,
+        Guid processingToken,
         string error,
         CancellationToken cancellationToken = default);
 }
@@ -75,34 +84,70 @@ public sealed class EfCoreInboxStore(ActivationDbContext dbContext) : IInboxStor
 
     public async Task<bool> MarkProcessedAsync(
         string deduplicationKey,
+        Guid processingToken,
         DateTimeOffset processedAtUtc,
         CancellationToken cancellationToken = default)
     {
-        var receipt = await dbContext.InboxMessages.FindAsync([deduplicationKey], cancellationToken);
-        if (receipt is null)
+        var updated = await dbContext.InboxMessages
+            .Where(receipt => receipt.DeduplicationKey == deduplicationKey
+                && receipt.ProcessingToken == processingToken
+                && receipt.Status == InboxMessageStatus.Processing)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(receipt => receipt.Status, InboxMessageStatus.Processed)
+                .SetProperty(receipt => receipt.ProcessedAtUtc, processedAtUtc)
+                .SetProperty(receipt => receipt.LastError, (string?)null)
+                .SetProperty(receipt => receipt.ProcessingToken, (Guid?)null)
+                .SetProperty(receipt => receipt.ProcessingLeaseExpiresAtUtc, (DateTimeOffset?)null),
+                cancellationToken);
+        return updated == 1;
+    }
+
+    public async Task<bool> TryBeginProcessingAsync(
+        string deduplicationKey,
+        Guid processingToken,
+        DateTimeOffset nowUtc,
+        TimeSpan processingLease,
+        CancellationToken cancellationToken = default)
+    {
+        if (processingLease <= TimeSpan.Zero)
         {
-            return false;
+            throw new ArgumentOutOfRangeException(nameof(processingLease));
         }
 
-        receipt.MarkProcessed(processedAtUtc);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        var leaseExpiresAtUtc = nowUtc.Add(processingLease);
+        var updated = await dbContext.InboxMessages
+            .Where(receipt => receipt.DeduplicationKey == deduplicationKey
+                && receipt.Status != InboxMessageStatus.Processed
+                && (receipt.Status != InboxMessageStatus.Processing
+                    || receipt.ProcessingLeaseExpiresAtUtc <= nowUtc))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(receipt => receipt.Status, InboxMessageStatus.Processing)
+                .SetProperty(receipt => receipt.ProcessingStartedAtUtc, nowUtc)
+                .SetProperty(receipt => receipt.ProcessingToken, processingToken)
+                .SetProperty(receipt => receipt.ProcessingLeaseExpiresAtUtc, leaseExpiresAtUtc)
+                .SetProperty(receipt => receipt.LastError, (string?)null),
+                cancellationToken);
+        return updated == 1;
     }
 
     public async Task<bool> MarkFailedAsync(
         string deduplicationKey,
+        Guid processingToken,
         string error,
         CancellationToken cancellationToken = default)
     {
-        var receipt = await dbContext.InboxMessages.FindAsync([deduplicationKey], cancellationToken);
-        if (receipt is null)
-        {
-            return false;
-        }
-
-        receipt.MarkFailed(error);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        var sanitizedError = error.Length <= 4000 ? error : error[..4000];
+        var updated = await dbContext.InboxMessages
+            .Where(receipt => receipt.DeduplicationKey == deduplicationKey
+                && receipt.ProcessingToken == processingToken
+                && receipt.Status == InboxMessageStatus.Processing)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(receipt => receipt.Status, InboxMessageStatus.Failed)
+                .SetProperty(receipt => receipt.LastError, sanitizedError)
+                .SetProperty(receipt => receipt.ProcessingToken, (Guid?)null)
+                .SetProperty(receipt => receipt.ProcessingLeaseExpiresAtUtc, (DateTimeOffset?)null),
+                cancellationToken);
+        return updated == 1;
     }
 
     private async Task<InboxRegistration> RecordDuplicateAsync(

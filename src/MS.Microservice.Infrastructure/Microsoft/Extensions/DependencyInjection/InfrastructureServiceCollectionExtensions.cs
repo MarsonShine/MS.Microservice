@@ -122,6 +122,10 @@ namespace Microsoft.Extensions.DependencyInjection
                         .Validate(option => option.LockDuration > TimeSpan.Zero, "OutboxPublisher:LockDuration must be greater than zero.")
                         .Validate(option => option.FailureRetryDelay >= TimeSpan.Zero, "OutboxPublisher:FailureRetryDelay cannot be negative.")
                         .ValidateOnStart();
+                    services.AddOptions<InboxConsumerOptions>()
+                        .Bind(configuration.GetSection(InboxConsumerOptions.SectionName))
+                        .Validate(option => option.ProcessingLease > TimeSpan.Zero, "InboxConsumer:ProcessingLease must be greater than zero.")
+                        .ValidateOnStart();
                     services.TryAddSingleton(TimeProvider.System);
                     services.AddScoped<OutboxPublisher>();
                     services.AddHostedService<OutboxPublisherBackgroundService>();

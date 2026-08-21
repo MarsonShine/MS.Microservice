@@ -1,0 +1,95 @@
+using Microsoft.Extensions.Options;
+using MS.Microservice.Core.Messaging;
+using MS.Microservice.Domain.Events;
+using MS.Microservice.Infrastructure.Messaging;
+using MS.Microservice.Persistence.EFCore.Inbox;
+using NSubstitute;
+using Wolverine;
+using Xunit;
+
+namespace MS.Microservice.Infrastructure.Tests.Messaging;
+
+public sealed class InboxConsumptionMiddlewareTests
+{
+    [Fact]
+    public async Task BeforeAndAfter_FirstDelivery_ContinuesAndMarksProcessed()
+    {
+        var store = Substitute.For<IInboxStore>();
+        var message = new TestIntegrationEvent();
+        var envelope = CreateEnvelope(message.Id);
+        var receipt = InboxMessage.Create(message.Id, ConsumerName, DateTimeOffset.UtcNow);
+        store.TryRegisterAsync(message.Id, ConsumerName, Arg.Any<DateTimeOffset>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new InboxRegistration(true, receipt));
+        store.TryBeginProcessingAsync(receipt.DeduplicationKey, Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        store.MarkProcessedAsync(receipt.DeduplicationKey, Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var (continuation, execution) = await BeforeAsync(message, envelope, store);
+        await InboxConsumptionMiddleware.AfterAsync(execution, store, TimeProvider.System, CancellationToken.None);
+        await InboxConsumptionMiddleware.FinallyAsync(execution, store, CancellationToken.None);
+
+        Assert.Equal(HandlerContinuation.Continue, continuation);
+        Assert.True(execution.Completed);
+        await store.Received(1).MarkProcessedAsync(receipt.DeduplicationKey, execution.ProcessingToken, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+        await store.DidNotReceiveWithAnyArgs().MarkFailedAsync(default!, default, default!, default);
+    }
+
+    [Fact]
+    public async Task Before_DuplicateWithActiveOrCompletedReceipt_StopsHandler()
+    {
+        var store = Substitute.For<IInboxStore>();
+        var message = new TestIntegrationEvent();
+        var envelope = CreateEnvelope(message.Id);
+        var receipt = InboxMessage.Create(message.Id, ConsumerName, DateTimeOffset.UtcNow);
+        receipt.MarkProcessed(DateTimeOffset.UtcNow);
+        store.TryRegisterAsync(message.Id, ConsumerName, Arg.Any<DateTimeOffset>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new InboxRegistration(false, receipt));
+        store.TryBeginProcessingAsync(receipt.DeduplicationKey, Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+
+        var (continuation, execution) = await BeforeAsync(message, envelope, store);
+
+        Assert.Equal(HandlerContinuation.Stop, continuation);
+        Assert.False(execution.ShouldExecute);
+    }
+
+    [Fact]
+    public async Task Finally_WhenHandlerDidNotComplete_MarksOwnedReceiptFailed()
+    {
+        var store = Substitute.For<IInboxStore>();
+        var execution = new InboxExecution("consumer:key", Guid.NewGuid(), true);
+
+        await InboxConsumptionMiddleware.FinallyAsync(execution, store, CancellationToken.None);
+
+        await store.Received(1).MarkFailedAsync(
+            execution.DeduplicationKey,
+            execution.ProcessingToken,
+            "Handler execution did not complete successfully.",
+            Arg.Any<CancellationToken>());
+    }
+
+    private static Task<(HandlerContinuation, InboxExecution)> BeforeAsync(
+        TestIntegrationEvent message,
+        Envelope envelope,
+        IInboxStore store)
+        => InboxConsumptionMiddleware.BeforeAsync(
+            message,
+            envelope,
+            store,
+            Options.Create(new InboxConsumerOptions()),
+            TimeProvider.System,
+            CancellationToken.None);
+
+    private static Envelope CreateEnvelope(Guid messageId)
+        => new()
+        {
+            Id = messageId,
+            EndpointName = "orders",
+            MessageType = typeof(TestIntegrationEvent).AssemblyQualifiedName
+        };
+
+    private const string ConsumerName = "orders:MS.Microservice.Infrastructure.Tests.Messaging.InboxConsumptionMiddlewareTests+TestIntegrationEvent";
+
+    public sealed class TestIntegrationEvent : IntegrationEvent;
+}
