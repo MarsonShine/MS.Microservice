@@ -1,6 +1,6 @@
 using Dapper;
 using MS.Microservice.Core.Functional;
-using MySqlConnector;
+using Npgsql;
 
 namespace MS.Microservice.Web.Infrastructure.Dapper
 {
@@ -8,9 +8,9 @@ namespace MS.Microservice.Web.Infrastructure.Dapper
     {
         extension(ConnectionString connectionString)
         {
-            public MySqlConnection CreateConnection() => new(connectionString);
+            public NpgsqlConnection CreateConnection() => new(connectionString);
 
-            public Func<Func<MySqlConnection, CancellationToken, Task<TResult>>, Func<CancellationToken, Task<TResult>>> WithConnection<TResult>()
+            public Func<Func<NpgsqlConnection, CancellationToken, Task<TResult>>, Func<CancellationToken, Task<TResult>>> WithConnection<TResult>()
                 => work => async cancellationToken =>
                 {
                     await using var connection = connectionString.CreateConnection();

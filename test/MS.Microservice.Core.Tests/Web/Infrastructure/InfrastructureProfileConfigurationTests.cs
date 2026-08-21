@@ -52,6 +52,7 @@ public class InfrastructureProfileConfigurationTests
             {
                 ["Infrastructure:Profile"] = profile,
                 ["ConnectionStrings:ActivationConnection"] = "Host=localhost;Database=activation_test;Username=test;Password=test",
+                ["ConnectionStrings:EventStoreConnection"] = "Host=localhost;Database=event_store_test;Username=test;Password=test",
                 ["ConnectionStrings:Default"] = "Host=localhost;Database=sqlsugar_test;Username=test;Password=test",
                 ["FzPlatformDbContextSettings:AutoTimeTracker"] = "Disabled",
                 ["FzPlatformDbContextSettings:EnabledSoftDeleted"] = "true",

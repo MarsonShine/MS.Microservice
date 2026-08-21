@@ -74,6 +74,18 @@ Docker 未设置 `ASPNETCORE_ENVIRONMENT` 时默认为 Production，因此实验
 - `IdentityOptions:JwtBearerOption`
 - `FzPlatformDbContextSettings`
 - `ConnectionStrings:ActivationConnection`
+- `ConnectionStrings:ActivationReaderConnection`
+- `ConnectionStrings:EventStoreConnection`（Sample/Event Sourcing）
+
+Production 正式数据访问统一使用 PostgreSQL：EF Core 使用 `ActivationConnection`，Dapper 查询使用 `ActivationReaderConnection`。Sample Profile 的 Event Sourcing 使用独立的 `EventStoreConnection`。部署环境通过 Secret 注入完整连接串，例如：
+
+```text
+ConnectionStrings__ActivationConnection=Host=...;Database=...;Username=...;Password=...
+ConnectionStrings__ActivationReaderConnection=Host=...;Database=...;Username=...;Password=...
+ConnectionStrings__EventStoreConnection=Host=...;Database=...;Username=...;Password=...
+```
+
+仓库配置不保存数据库密码。SqlSugar/Sharding 仍属于 Sample Profile，可以继续使用其独立配置和数据库类型。
 
 ### Infrastructure Profile
 

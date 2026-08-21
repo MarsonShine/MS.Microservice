@@ -27,6 +27,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="NLog" />
     <PackageReference Include="NLog.Web.AspNetCore" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>

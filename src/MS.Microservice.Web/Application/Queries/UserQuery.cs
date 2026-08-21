@@ -25,7 +25,12 @@ namespace MS.Microservice.Web.Application.Queries
         public async Task<List<RoleResponse>> GetAllRoleAsync(CancellationToken cancellationToken = default)
         {
             var builder = new SqlBuilder();
-            var selector = builder.AddTemplate(@"select * from roles /**where**/ /**orderby**/");
+            var selector = builder.AddTemplate("""
+                select *
+                from "Roles"
+                /**where**/
+                /**orderby**/
+                """);
             var queryAsync = _connectionString.QueryAsync<dynamic>();
             var queryRoles = queryAsync(selector.RawSql);
             var queryRolesWithParameters = queryRoles((object?)selector.Parameters);
@@ -66,15 +71,30 @@ namespace MS.Microservice.Web.Application.Queries
         public async Task<PagedResultDto<UserPagedResponse>> GetPagedAsync(string account, int pageIndex = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
             var builder = new SqlBuilder();
-            var selector = builder.AddTemplate(@"select Account,IsDisabled,Telephone,creatorId,updatorId,Email,Name,FzAccount,FzId,RoleIds from users as u left join(select UserId,GROUP_CONCAT(RoleId) as RoleIds from userroles group by UserId) as r1 on u.Id = r1.UserId /**where**/ /**orderby**/");
-            var counter = builder.AddTemplate(@"select count(*) from users /**where**/");
-            builder.WhereIf(account?.Length > 0, "account = @account", new { account = account });
+            var selector = builder.AddTemplate("""
+                select u."Account", u."IsDisabled", u."Telephone", u."CreatorId", u."UpdatorId",
+                       u."Email", u."Name", u."FzAccount", u."FzId", r1."RoleIds"
+                from "Users" as u
+                left join (
+                    select "UserId", string_agg("RoleId"::text, ',') as "RoleIds"
+                    from "UserRoles"
+                    group by "UserId"
+                ) as r1 on u."Id" = r1."UserId"
+                /**where**/
+                /**orderby**/
+                """);
+            var counter = builder.AddTemplate("""
+                select count(*)
+                from "Users"
+                /**where**/
+                """);
+            builder.WhereIf(account?.Length > 0, "\"Account\" = @account", new { account = account });
             var executeScalarAsync = _connectionString.ExecuteScalarAsync<long>();
             var countUsers = executeScalarAsync(counter.RawSql);
             var countUsersWithParameters = countUsers((object?)counter.Parameters);
             var totalCount = await countUsersWithParameters(cancellationToken);
 
-            builder.OrderBy("Id asc limit @PageIndex,@PageSize", new { pageIndex = (pageIndex - 1) * pageSize, pageSize });
+            builder.OrderBy("\"Id\" asc limit @PageSize offset @Offset", new { Offset = (pageIndex - 1) * pageSize, PageSize = pageSize });
             var queryAsync = _connectionString.QueryAsync<dynamic>();
             var queryUsers = queryAsync(selector.RawSql);
             var queryUsersWithParameters = queryUsers((object?)selector.Parameters);
@@ -85,8 +105,8 @@ namespace MS.Microservice.Web.Application.Queries
                 Account = p.Account,
                 IsDisabled = p.IsDisabled,
                 Telephone = SecretField.Phone(p.Telephone),
-                CreatorId = p.creatorId,
-                UpdatorId = p.updatorId,
+                CreatorId = p.CreatorId,
+                UpdatorId = p.UpdatorId,
                 Email = SecretField.HideEmailDetails(p.Email),
                 Name = p.Name,
                 FzAccount = p.FzAccount,

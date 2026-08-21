@@ -94,12 +94,30 @@ public sealed class PersistenceRegistrationTests
         services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(TracerProvider));
     }
 
+    [Fact]
+    public void AddInfrastructureEventSourcing_WhenDedicatedConnectionMissing_FailsFast()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:ActivationConnection"] = "Host=localhost;Database=activation_test;Username=test;Password=test"
+            })
+            .Build();
+
+        var action = () => services.AddInfrastructureEventSourcing(configuration);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*EventStoreConnection*");
+    }
+
     private static IConfiguration CreateConfiguration()
     {
         return new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:ActivationConnection"] = "Host=localhost;Database=activation_test;Username=test;Password=test",
+                ["ConnectionStrings:EventStoreConnection"] = "Host=localhost;Database=event_store_test;Username=test;Password=test",
                 ["ConnectionStrings:Default"] = "Host=localhost;Database=sqlsugar_test;Username=test;Password=test",
                 ["FzPlatformDbContextSettings:AutoTimeTracker"] = "Disabled",
                 ["FzPlatformDbContextSettings:EnabledSoftDeleted"] = "true",

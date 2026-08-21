@@ -33,7 +33,7 @@ namespace Microsoft.Extensions.DependencyInjection
             // -----------------------------------------------------------------------
             public void AddInfrastructureEventSourcing(IConfiguration configuration)
             {
-                var connectionString = GetRequiredConnectionString(configuration, "ActivationConnection");
+                var connectionString = GetRequiredConnectionString(configuration, "EventStoreConnection");
                 services.AddPostgresEventSourcing(connectionString);
             }
 

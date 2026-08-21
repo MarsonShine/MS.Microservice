@@ -1,6 +1,6 @@
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Web.Infrastructure.Dapper;
-using MySqlConnector;
+using Npgsql;
 
 namespace MS.Microservice.Core.Tests.Functional
 {
@@ -9,19 +9,19 @@ namespace MS.Microservice.Core.Tests.Functional
         [Fact]
         public void ImplicitConversion_FromString_RoundTripsValue()
         {
-            ConnectionString connectionString = "Server=localhost;Database=test;Uid=root;Pwd=secret;";
+            ConnectionString connectionString = "Host=localhost;Port=5432;Database=test;Username=postgres;Password=secret";
 
             string value = connectionString;
 
-            Assert.Equal("Server=localhost;Database=test;Uid=root;Pwd=secret;", value);
+            Assert.Equal("Host=localhost;Port=5432;Database=test;Username=postgres;Password=secret", value);
         }
 
         [Fact]
         public void CreateConnection_WhenCalled_UsesWrappedValue()
         {
-            ConnectionString connectionString = "Server=localhost;Database=test;Uid=root;Pwd=secret;";
+            ConnectionString connectionString = "Host=localhost;Port=5432;Database=test;Username=postgres;Password=secret";
 
-            using MySqlConnection connection = connectionString.CreateConnection();
+            using NpgsqlConnection connection = connectionString.CreateConnection();
 
             Assert.Equal(connectionString.Value, connection.ConnectionString);
         }
@@ -29,7 +29,7 @@ namespace MS.Microservice.Core.Tests.Functional
         [Fact]
         public void QueryAsync_WhenAppliedProgressively_ReturnsDeferredOperation()
         {
-            ConnectionString connectionString = "Server=localhost;Database=test;Uid=root;Pwd=secret;";
+            ConnectionString connectionString = "Host=localhost;Port=5432;Database=test;Username=postgres;Password=secret";
 
             var operation = connectionString
                 .QueryAsync<int>()
