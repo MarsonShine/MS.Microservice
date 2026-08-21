@@ -16,33 +16,15 @@ namespace MS.Microservice.Web.Controller;
 [RequestSizeLimit(SampleUploadOptions.MaximumRequestBodyBytes)]
 public sealed class ImageController(
     IWebHostEnvironment environment,
-    IOptions<SampleUploadOptions> options) : ControllerBase
+    IOptions<SampleUploadOptions> options,
+    FileUploadValidator uploadValidator) : ControllerBase
 {
-    private static readonly byte[] JpegSignature = [0xFF, 0xD8, 0xFF];
-    private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-    private static readonly byte[] XlsxSignature = [0x50, 0x4B, 0x03, 0x04];
-    private static readonly byte[] XlsSignature = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
-
-    private static readonly IReadOnlyDictionary<string, string> ImageContentTypes =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [".jpg"] = "image/jpeg",
-            [".jpeg"] = "image/jpeg",
-            [".png"] = "image/png",
-            [".webp"] = "image/webp"
-        };
-
-    private static readonly IReadOnlyDictionary<string, string> ExcelContentTypes =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [".xls"] = "application/vnd.ms-excel",
-            [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        };
-
     private readonly IWebHostEnvironment _environment = environment
         ?? throw new ArgumentNullException(nameof(environment));
     private readonly SampleUploadOptions _options = options?.Value
         ?? throw new ArgumentNullException(nameof(options));
+    private readonly FileUploadValidator _uploadValidator = uploadValidator
+        ?? throw new ArgumentNullException(nameof(uploadValidator));
 
     [HttpPost("upload")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -51,33 +33,20 @@ public sealed class ImageController(
     [ProducesResponseType(StatusCodes.Status415UnsupportedMediaType)]
     public async Task<IActionResult> Upload(IFormFile? file)
     {
-        if (file is null || file.Length == 0)
+        var validation = await _uploadValidator.ValidateAsync(
+            file,
+            UploadFileKind.Image,
+            _options.MaxImageBytes,
+            HttpContext.RequestAborted);
+        if (!validation.IsValid)
         {
-            return BadRequest("请选择非空图片文件。");
+            return StatusCode(validation.StatusCode, validation.Message);
         }
 
-        if (file.Length > _options.MaxImageBytes)
-        {
-            return StatusCode(StatusCodes.Status413PayloadTooLarge, "图片文件超过允许大小。");
-        }
-
-        var extension = Path.GetExtension(file.FileName);
-        if (!ImageContentTypes.TryGetValue(extension, out var expectedContentType)
-            || !string.Equals(file.ContentType, expectedContentType, StringComparison.OrdinalIgnoreCase))
-        {
-            return StatusCode(StatusCodes.Status415UnsupportedMediaType, "不支持的图片类型。");
-        }
-
-        await using var input = file.OpenReadStream();
-        var header = await ReadHeaderAsync(input, 12, HttpContext.RequestAborted);
-        if (!HasValidImageSignature(extension, header))
-        {
-            return StatusCode(StatusCodes.Status415UnsupportedMediaType, "图片文件头与声明类型不一致。");
-        }
-
+        await using var input = file!.OpenReadStream();
         var storageRoot = ResolveStorageRoot();
         Directory.CreateDirectory(storageRoot);
-        var storedFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var storedFileName = $"{Guid.NewGuid():N}{validation.Extension}";
         var storedFilePath = Path.Combine(storageRoot, storedFileName);
 
         try
@@ -89,7 +58,6 @@ public sealed class ImageController(
                 FileShare.None,
                 bufferSize: 81920,
                 useAsync: true);
-            await output.WriteAsync(header, HttpContext.RequestAborted);
             await input.CopyToAsync(output, HttpContext.RequestAborted);
         }
         catch
@@ -113,33 +81,19 @@ public sealed class ImageController(
     [ProducesResponseType(StatusCodes.Status415UnsupportedMediaType)]
     public async Task<IActionResult> ExcelReader(IFormFile? file)
     {
-        if (file is null || file.Length == 0)
+        var validation = await _uploadValidator.ValidateAsync(
+            file,
+            UploadFileKind.Excel,
+            _options.MaxExcelBytes,
+            HttpContext.RequestAborted);
+        if (!validation.IsValid)
         {
-            return BadRequest("请选择非空 Excel 文件。");
+            return StatusCode(validation.StatusCode, validation.Message);
         }
 
-        if (file.Length > _options.MaxExcelBytes)
-        {
-            return StatusCode(StatusCodes.Status413PayloadTooLarge, "Excel 文件超过允许大小。");
-        }
-
-        var extension = Path.GetExtension(file.FileName);
-        if (!ExcelContentTypes.TryGetValue(extension, out var expectedContentType)
-            || !string.Equals(file.ContentType, expectedContentType, StringComparison.OrdinalIgnoreCase))
-        {
-            return StatusCode(StatusCodes.Status415UnsupportedMediaType, "不支持的 Excel 类型。");
-        }
-
-        await using var input = file.OpenReadStream();
+        await using var input = file!.OpenReadStream();
         using var buffered = new MemoryStream(capacity: checked((int)file.Length));
         await input.CopyToAsync(buffered, HttpContext.RequestAborted);
-        buffered.Position = 0;
-        var header = await ReadHeaderAsync(buffered, 8, HttpContext.RequestAborted);
-        if (!HasValidExcelSignature(extension, header))
-        {
-            return StatusCode(StatusCodes.Status415UnsupportedMediaType, "Excel 文件头与声明类型不一致。");
-        }
-
         buffered.Position = 0;
         var excelHelper = new ExcelHelper()
             .InitSheetIndex(0)
@@ -185,45 +139,4 @@ public sealed class ImageController(
         return storageRoot;
     }
 
-    private static async Task<byte[]> ReadHeaderAsync(
-        Stream stream,
-        int maximumLength,
-        CancellationToken cancellationToken)
-    {
-        var buffer = new byte[maximumLength];
-        var totalRead = 0;
-        while (totalRead < maximumLength)
-        {
-            var read = await stream.ReadAsync(
-                buffer.AsMemory(totalRead, maximumLength - totalRead),
-                cancellationToken);
-            if (read == 0)
-            {
-                break;
-            }
-
-            totalRead += read;
-        }
-
-        return buffer[..totalRead];
-    }
-
-    private static bool HasValidImageSignature(string extension, ReadOnlySpan<byte> header)
-        => extension.ToLowerInvariant() switch
-        {
-            ".jpg" or ".jpeg" => header.StartsWith(JpegSignature),
-            ".png" => header.StartsWith(PngSignature),
-            ".webp" => header.Length >= 12
-                && header[..4].SequenceEqual("RIFF"u8)
-                && header[8..12].SequenceEqual("WEBP"u8),
-            _ => false
-        };
-
-    private static bool HasValidExcelSignature(string extension, ReadOnlySpan<byte> header)
-        => extension.ToLowerInvariant() switch
-        {
-            ".xlsx" => header.StartsWith(XlsxSignature),
-            ".xls" => header.StartsWith(XlsSignature),
-            _ => false
-        };
 }

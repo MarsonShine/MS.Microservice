@@ -153,7 +153,8 @@ public sealed class ImageControllerSecurityTests : IDisposable
                 MaxImageBytes = maxImageBytes,
                 MaxExcelBytes = maxExcelBytes,
                 StorageDirectory = "uploads"
-            }))
+            }),
+            new FileUploadValidator())
         {
             ControllerContext = new ControllerContext
             {

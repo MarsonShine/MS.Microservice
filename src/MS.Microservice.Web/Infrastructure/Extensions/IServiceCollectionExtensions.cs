@@ -77,6 +77,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
 #endif
 
                 services.AddHttpClient<LogHttpClient>();
+                services.AddScoped<FileUploadValidator>();
 
                 // 异常处理，可以管道化
                 services.AddExceptionHandler<GlobalExceptionHandler>();  // 处理第一个异常
