@@ -50,12 +50,24 @@ public sealed class OutboxPublisher(
                     lockToken,
                     error,
                     timeProvider.GetUtcNow(),
-                    _options.FailureRetryDelay,
+                    CalculateRetryDelay(message.RetryCount + 1),
                     cancellationToken);
             }
         }
 
         return messages.Count;
+    }
+
+    public TimeSpan CalculateRetryDelay(int retryAttempt)
+    {
+        if (retryAttempt <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(retryAttempt));
+        }
+
+        var multiplier = Math.Pow(_options.RetryBackoffFactor, retryAttempt - 1);
+        var delayTicks = _options.InitialRetryDelay.Ticks * multiplier;
+        return TimeSpan.FromTicks((long)Math.Min(delayTicks, _options.MaximumRetryDelay.Ticks));
     }
 
     private static string SanitizeError(string error)

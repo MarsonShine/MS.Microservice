@@ -120,7 +120,9 @@ namespace Microsoft.Extensions.DependencyInjection
                         .Validate(option => option.BatchSize > 0, "OutboxPublisher:BatchSize must be greater than zero.")
                         .Validate(option => option.PollInterval > TimeSpan.Zero, "OutboxPublisher:PollInterval must be greater than zero.")
                         .Validate(option => option.LockDuration > TimeSpan.Zero, "OutboxPublisher:LockDuration must be greater than zero.")
-                        .Validate(option => option.FailureRetryDelay >= TimeSpan.Zero, "OutboxPublisher:FailureRetryDelay cannot be negative.")
+                        .Validate(option => option.InitialRetryDelay > TimeSpan.Zero, "OutboxPublisher:InitialRetryDelay must be greater than zero.")
+                        .Validate(option => option.RetryBackoffFactor >= 1, "OutboxPublisher:RetryBackoffFactor must be at least one.")
+                        .Validate(option => option.MaximumRetryDelay >= option.InitialRetryDelay, "OutboxPublisher:MaximumRetryDelay must be greater than or equal to InitialRetryDelay.")
                         .ValidateOnStart();
                     services.AddOptions<InboxConsumerOptions>()
                         .Bind(configuration.GetSection(InboxConsumerOptions.SectionName))

@@ -57,16 +57,39 @@ public sealed class OutboxPublisherTests
             Arg.Any<Guid>(),
             "transport  failed",
             Arg.Any<DateTimeOffset>(),
-            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(5),
             Arg.Any<CancellationToken>());
         await store.DidNotReceiveWithAnyArgs().MarkPublishedAsync(default, default, default, default);
     }
 
-    private static OutboxPublisher CreatePublisher(IOutboxStore store, IMessageBus bus)
+    [Fact]
+    public void CalculateRetryDelay_UsesExponentialBackoffAndMaximumDelay()
+    {
+        var publisher = CreatePublisher(
+            Substitute.For<IOutboxStore>(),
+            Substitute.For<IMessageBus>(),
+            new OutboxPublisherOptions
+            {
+                InitialRetryDelay = TimeSpan.FromSeconds(5),
+                RetryBackoffFactor = 2,
+                MaximumRetryDelay = TimeSpan.FromSeconds(30)
+            });
+
+        Assert.Equal(TimeSpan.FromSeconds(5), publisher.CalculateRetryDelay(1));
+        Assert.Equal(TimeSpan.FromSeconds(10), publisher.CalculateRetryDelay(2));
+        Assert.Equal(TimeSpan.FromSeconds(20), publisher.CalculateRetryDelay(3));
+        Assert.Equal(TimeSpan.FromSeconds(30), publisher.CalculateRetryDelay(4));
+        Assert.Equal(TimeSpan.FromSeconds(30), publisher.CalculateRetryDelay(10));
+    }
+
+    private static OutboxPublisher CreatePublisher(
+        IOutboxStore store,
+        IMessageBus bus,
+        OutboxPublisherOptions? options = null)
         => new(
             store,
             bus,
-            Options.Create(new OutboxPublisherOptions()),
+            Options.Create(options ?? new OutboxPublisherOptions()),
             TimeProvider.System);
 
     private static OutboxMessage CreateMessage(TestMessage payload)

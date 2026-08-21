@@ -10,5 +10,9 @@ public sealed class OutboxPublisherOptions
 
     public TimeSpan LockDuration { get; set; } = TimeSpan.FromMinutes(1);
 
-    public TimeSpan FailureRetryDelay { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(5);
+
+    public double RetryBackoffFactor { get; set; } = 2;
+
+    public TimeSpan MaximumRetryDelay { get; set; } = TimeSpan.FromMinutes(15);
 }

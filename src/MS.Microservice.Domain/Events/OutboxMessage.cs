@@ -158,4 +158,22 @@ public sealed class OutboxMessage
         LockToken = null;
         LockedUntilUtc = null;
     }
+
+    /// <summary>Resets a dead-lettered message for an explicit operator replay.</summary>
+    public void Replay(DateTimeOffset nowUtc)
+    {
+        if (Status != OutboxMessageStatus.DeadLettered)
+        {
+            throw new InvalidOperationException("Only dead-lettered outbox messages can be replayed.");
+        }
+
+        Status = OutboxMessageStatus.Pending;
+        RetryCount = 0;
+        NextAttemptAtUtc = nowUtc;
+        LastAttemptAtUtc = null;
+        PublishedAtUtc = null;
+        LastError = null;
+        LockToken = null;
+        LockedUntilUtc = null;
+    }
 }

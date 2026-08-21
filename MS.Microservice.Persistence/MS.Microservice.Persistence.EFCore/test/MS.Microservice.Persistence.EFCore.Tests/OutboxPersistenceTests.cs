@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using MS.Microservice.Domain;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
 using MS.Microservice.Domain.Events;
+using MS.Microservice.Persistence.EFCore.Outbox;
 using NSubstitute;
 
 namespace MS.Microservice.Persistence.EFCore.Tests;
@@ -48,6 +49,25 @@ public sealed class OutboxPersistenceTests
         log.DomainEvents.Should().ContainSingle().Which.Should().BeSameAs(domainEvent);
         context.ChangeTracker.Entries<OutboxMessage>().Should().BeEmpty();
         await dispatcher.DidNotReceiveWithAnyArgs().DispatchAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task ReplayDeadLetterAsync_OnlyResetsDeadLetteredMessage()
+    {
+        await using var context = CreateContext(Substitute.For<IDomainEventDispatcher>());
+        var now = DateTimeOffset.UtcNow;
+        var message = OutboxMessage.Create("event", "{}", now, maxRetryCount: 0);
+        message.MarkFailed("permanent", now, TimeSpan.Zero);
+        context.OutboxMessages.Add(message);
+        await context.SaveChangesAsync();
+        var store = new EfCoreOutboxStore(context);
+
+        var replayed = await store.ReplayDeadLetterAsync(message.MessageId, now.AddMinutes(1));
+
+        replayed.Should().BeTrue();
+        message.Status.Should().Be(OutboxMessageStatus.Pending);
+        message.RetryCount.Should().Be(0);
+        message.NextAttemptAtUtc.Should().Be(now.AddMinutes(1));
     }
 
     private static ActivationDbContext CreateContext(

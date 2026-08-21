@@ -26,6 +26,11 @@ public interface IOutboxStore
         DateTimeOffset nowUtc,
         TimeSpan retryDelay,
         CancellationToken cancellationToken = default);
+
+    Task<bool> ReplayDeadLetterAsync(
+        Guid messageId,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class EfCoreOutboxStore(ActivationDbContext dbContext) : IOutboxStore
@@ -108,6 +113,25 @@ public sealed class EfCoreOutboxStore(ActivationDbContext dbContext) : IOutboxSt
         }
 
         message.MarkFailed(error, nowUtc, retryDelay);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> ReplayDeadLetterAsync(
+        Guid messageId,
+        DateTimeOffset nowUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var message = await dbContext.OutboxMessages.SingleOrDefaultAsync(
+            candidate => candidate.MessageId == messageId
+                && candidate.Status == OutboxMessageStatus.DeadLettered,
+            cancellationToken);
+        if (message is null)
+        {
+            return false;
+        }
+
+        message.Replay(nowUtc);
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }

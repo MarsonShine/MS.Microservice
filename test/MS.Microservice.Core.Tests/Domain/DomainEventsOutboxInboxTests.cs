@@ -56,6 +56,22 @@ public sealed class DomainEventsOutboxInboxTests
     }
 
     [Fact]
+    public void OutboxMessage_DeadLetterReplay_ShouldResetLifecycleState()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var message = OutboxMessage.Create("OrderCreated", "{}", now, maxRetryCount: 0);
+        message.MarkFailed("permanent", now, TimeSpan.Zero);
+        message.Status.Should().Be(OutboxMessageStatus.DeadLettered);
+
+        message.Replay(now.AddMinutes(1));
+
+        message.Status.Should().Be(OutboxMessageStatus.Pending);
+        message.RetryCount.Should().Be(0);
+        message.NextAttemptAtUtc.Should().Be(now.AddMinutes(1));
+        message.LastError.Should().BeNull();
+    }
+
+    [Fact]
     public void InboxMessage_ShouldExposeStableDeduplicationKeyAndDuplicateMetadata()
     {
         var messageId = Guid.NewGuid();
