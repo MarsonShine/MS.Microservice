@@ -91,19 +91,21 @@ EF Core 敏感数据日志默认关闭。只有 `appsettings.Development.json` �
 
 ### PostgreSQL 数据库迁移
 
-数据库迁移由独立的 `MS.Microservice.DatabaseMigrator` 执行，Web Host 启动时不会自动创建或升级生产数据库。发布前先注入连接串，再显式选择迁移目标：
+生产环境默认不由应用或 `DatabaseMigrator` 直接修改数据库，而是使用 `dotnet ef migrations script` 生成 SQL，经过开发、DBA review 和测试后，由 DBA 使用受控 DDL 账号执行。Web Host 启动时不会自动创建或升级生产数据库，其运行账号不应拥有建表、改表权限。
+
+基线如何生成、EF Core 的 Model/Snapshot 差异原理、后续迁移命令和已有数据库风险，见 [PostgreSQL EF Core 基线迁移手册](docs/PostgreSQL-EF-Core-Baseline-Migrations.md)。
 
 ```powershell
-$env:ConnectionStrings__ActivationConnection = "Host=...;Database=...;Username=...;Password=..."
-$env:ConnectionStrings__EventStoreConnection = "Host=...;Database=...;Username=...;Password=..."
+New-Item -ItemType Directory -Force artifacts/migrations | Out-Null
 
-dotnet run --project src/MS.Microservice.DatabaseMigrator -- --context activation
-dotnet run --project src/MS.Microservice.DatabaseMigrator -- --context eventstore
-# 明确需要同时升级两个数据库时：
-dotnet run --project src/MS.Microservice.DatabaseMigrator -- --context all
+dotnet tool run dotnet-ef migrations script 0 BaselineIdentityAndLog --idempotent --project MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj --startup-project src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj --context ActivationDbContext --output artifacts/migrations/activation.sql
+
+dotnet tool run dotnet-ef migrations script 0 BaselineEventSourcing --idempotent --project src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj --startup-project src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj --context EventStoreDbContext --output artifacts/migrations/event-sourcing.sql
 ```
 
-`activation` 管理 Identity 与 Log 表，schema 为 `fz_platform_activation`；`eventstore` 管理事件、快照、投影 checkpoint 和订单读模型，schema 为 `event_sourcing`。每个 schema 都有独立的 `__MigrationsHistory`。迁移应作为部署流水线中的独立步骤执行，失败时不得启动新版本应用实例。
+Activation 管理 Identity 与 Log 表，schema 为 `fz_platform_activation`；Event Sourcing 管理事件、快照、投影 checkpoint 和订单读模型，schema 为 `event_sourcing`。每个 schema 都有独立的 `__MigrationsHistory`。生成的 SQL 和 SHA-256 应随发布版本归档；DBA 执行失败时不得启动新版本应用实例。
+
+`MS.Microservice.DatabaseMigrator` 会直接调用 `MigrateAsync()`，只允许用于本地、集成测试或经过 DBA 明确批准且提供短期 DDL 凭据的独立部署 Job，不是默认生产发布方式。
 
 生成后续迁移前先恢复仓库固定的 EF CLI：
 
