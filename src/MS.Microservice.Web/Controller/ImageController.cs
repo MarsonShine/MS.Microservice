@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using MS.Microservice.Infrastructure.Utils;
-using MS.Microservice.Web.Application.Models;
+using MS.Microservice.Web.Application.Uploads;
 using MS.Microservice.Web.Infrastructure.Uploads;
 using System.Net;
-using System.Text;
 
 namespace MS.Microservice.Web.Controller;
 
@@ -17,7 +15,8 @@ namespace MS.Microservice.Web.Controller;
 public sealed class ImageController(
     IOptions<SampleUploadOptions> options,
     FileUploadValidator uploadValidator,
-    IUploadStorage uploadStorage) : ControllerBase
+    IUploadStorage uploadStorage,
+    IExcelImportService excelImportService) : ControllerBase
 {
     private readonly SampleUploadOptions _options = options?.Value
         ?? throw new ArgumentNullException(nameof(options));
@@ -25,6 +24,8 @@ public sealed class ImageController(
         ?? throw new ArgumentNullException(nameof(uploadValidator));
     private readonly IUploadStorage _uploadStorage = uploadStorage
         ?? throw new ArgumentNullException(nameof(uploadStorage));
+    private readonly IExcelImportService _excelImportService = excelImportService
+        ?? throw new ArgumentNullException(nameof(excelImportService));
 
     [HttpPost("upload")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -75,37 +76,18 @@ public sealed class ImageController(
         }
 
         await using var input = file!.OpenReadStream();
-        using var buffered = new MemoryStream(capacity: checked((int)file.Length));
-        await input.CopyToAsync(buffered, HttpContext.RequestAborted);
-        buffered.Position = 0;
-        var excelHelper = new ExcelHelper()
-            .InitSheetIndex(0)
-            .InitStartReadRowIndex(0, 1);
-        List<ExcelDemoRequest> list;
         try
         {
-            list = excelHelper.Import<ExcelDemoRequest>(Path.GetFileName(file.FileName), buffered);
+            var sql = await _excelImportService.BuildBookClassificationSqlAsync(
+                Path.GetFileName(file.FileName),
+                input,
+                HttpContext.RequestAborted);
+            return Ok(sql);
         }
         catch (InvalidOperationException)
         {
             return BadRequest("Excel 模板格式错误。");
         }
-        finally
-        {
-            excelHelper.Workbook?.Dispose();
-        }
-
-        var sql = new StringBuilder();
-        foreach (var item in list)
-        {
-            foreach (var bookClassify in item.BookClassify)
-            {
-                sql.AppendLine(
-                    $"INSERT INTO [dbo].[book_type]([BookId], [ClassifyId]) VALUES ({item.BookId}, {(int)bookClassify});");
-            }
-        }
-
-        return Ok(sql.ToString());
     }
 
 }

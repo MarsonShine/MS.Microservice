@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Web.Controller;
+using MS.Microservice.Web.Application.Uploads;
 using MS.Microservice.Web.Infrastructure.Uploads;
 using NSubstitute;
 using System.Reflection;
@@ -173,7 +174,8 @@ public sealed class ImageControllerSecurityTests : IDisposable
         var controller = new ImageController(
             options,
             new FileUploadValidator(),
-            new LocalUploadStorage(environment, options))
+            new LocalUploadStorage(environment, options),
+            Substitute.For<IExcelImportService>())
         {
             ControllerContext = new ControllerContext
             {

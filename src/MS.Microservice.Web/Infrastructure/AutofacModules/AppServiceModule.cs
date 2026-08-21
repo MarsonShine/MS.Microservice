@@ -4,6 +4,7 @@ using MS.Microservice.Web.Application.Commands;
 using MS.Microservice.Web.Application.Demo;
 using MS.Microservice.Web.Application.Queries;
 using MS.Microservice.Web.Application.Queries.Constract;
+using MS.Microservice.Web.Application.Uploads;
 using MS.Microservice.Web.Application.Users;
 using MS.Microservice.Web.Infrastructure.Applications.Users;
 using MS.Microservice.Web.Infrastructure.Dapper;
@@ -37,6 +38,10 @@ namespace MS.Microservice.Web.AutofacModules
 
             builder.RegisterType<UserModifyAppService>()
                 .As<IUserModifyAppService>()
+                .InstancePerLifetimeScope();
+
+            builder.RegisterType<ExcelImportService>()
+                .As<IExcelImportService>()
                 .InstancePerLifetimeScope();
 
             // -----------------------------------------------------------------------
