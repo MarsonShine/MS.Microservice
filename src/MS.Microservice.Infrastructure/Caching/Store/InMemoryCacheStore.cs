@@ -55,8 +55,8 @@ namespace MS.Microservice.Infrastructure.Caching.Store
 				ValueType = typeof(T),
 				Operations = [CacheOperation.Success(CacheOperationType.Set, DateTimeOffset.Now)],
 			};
-			_cache.TryAdd(key, value!);
-			await _keyStore.StoreKeyMetadataAsync(metadata);
+			_cache[key] = value!;
+			await _keyStore.UpdateKeyMetadataAsync(metadata);
 		}
 	}
 }
