@@ -14,6 +14,11 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
         /// </summary>
         public bool EnabledSoftDeleted { get; set; } = true;
 
+        /// <summary>
+        /// 是否在 EF Core 日志中包含实体值和 SQL 参数。仅用于受控的本地开发环境。
+        /// </summary>
+        public bool EnableSensitiveDataLogging { get; set; }
+
         internal bool EnabledAutoTimeTracker() => AutoTimeTracker == "Enabled";
     }
 }

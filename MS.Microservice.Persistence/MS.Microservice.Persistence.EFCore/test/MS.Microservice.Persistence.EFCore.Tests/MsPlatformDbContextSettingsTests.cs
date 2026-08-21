@@ -17,4 +17,12 @@ public class MsPlatformDbContextSettingsTests
 
         settings.EnabledAutoTimeTracker().Should().BeFalse();
     }
+
+    [Fact]
+    public void EnableSensitiveDataLogging_ShouldBeDisabledByDefault()
+    {
+        var settings = new MsPlatformDbContextSettings();
+
+        settings.EnableSensitiveDataLogging.Should().BeFalse();
+    }
 }

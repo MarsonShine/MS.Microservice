@@ -87,6 +87,8 @@ ConnectionStrings__EventStoreConnection=Host=...;Database=...;Username=...;Passw
 
 仓库配置不保存数据库密码。SqlSugar/Sharding 仍属于 Sample Profile，可以继续使用其独立配置和数据库类型。
 
+EF Core 敏感数据日志默认关闭。只有 `appsettings.Development.json` 显式设置 `FzPlatformDbContextSettings:EnableSensitiveDataLogging=true`，用于受控的本地调试；生产配置必须保持 `false`，因为该日志可能包含 SQL 参数、用户输入和实体字段值。
+
 ### Infrastructure Profile
 
 Web Host 保留统一的 `AddInfrastructure` 门面，并通过 `Infrastructure:Profile` 显式选择模块组合：

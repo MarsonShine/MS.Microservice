@@ -54,7 +54,11 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.EnableSensitiveDataLogging();
+            if (_platformDbContextOption.EnableSensitiveDataLogging)
+            {
+                optionsBuilder.EnableSensitiveDataLogging();
+            }
+
             base.OnConfiguring(optionsBuilder);
         }
 
