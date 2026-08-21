@@ -113,6 +113,27 @@ services.AddInfrastructure(configuration, options =>
 });
 ```
 
+### 缓存注册与生产部署
+
+Web Host 同时注册两种缓存抽象，但它们服务于不同的调用方式：
+
+- `HybridCache` 是新代码优先使用的高层缓存 API，负责组合本地缓存与可选的二级分布式缓存，并提供并发请求合并等能力。
+- `IDistributedCache` 是现有 Controller、应用服务和授权处理器使用的兼容契约。当前默认实现是 `DistributedMemoryCache`，便于单实例开发和启动验证，也可以由 Redis 等 Provider 替换。
+
+当前默认的 `HybridCache` 本地层和 `IDistributedCache` 兼容实现都只保存在当前进程内。应用重启后数据会丢失，多副本之间也不会共享，因此不能把它们用于跨实例权限失效、分布式会话或其他要求全局一致的场景。生产环境部署多个实例时，应注册 Redis 等共享 `IDistributedCache` Provider；`HybridCache` 会在存在分布式实现时将其作为二级缓存使用。
+
+缓存配置使用与 `CacheOptions` 属性一致的秒数键名：
+
+```json
+"CacheOptions": {
+  "KeyPrefix": "",
+  "AbsoluteExpirationSecond": 7200,
+  "SlidingExpirationSecond": 7200
+}
+```
+
+`SlidingExpirationSecond` 必须大于零；配置了 `AbsoluteExpirationSecond` 时也必须大于零。当前 commit 只建立可替换的注册边界，不引入 Redis，也不改变现有缓存扩展方法的过期与并发语义。
+
 ### JWT 本地密钥
 
 JWT 签名密钥不存放在 `appsettings*.json` 中。每个密钥必须是至少 32 个 ASCII 字符；建议使用 32 字节密码学随机数的 Base64 文本。

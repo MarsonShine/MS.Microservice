@@ -2,6 +2,8 @@
 {
     public class CacheOptions
     {
+        public const string SectionName = "CacheOptions";
+
         public CacheOptions()
         {
             KeyPrefix = "Fz.Activation.";

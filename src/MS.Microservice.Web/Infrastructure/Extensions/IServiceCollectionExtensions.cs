@@ -62,20 +62,7 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 });
 
                 services.AddCorsService(configuration);
-
-#if NET9_0_OR_GREATER
-                services.AddHybridCache();
-#else
-                services.AddMemoryCache(options =>
-                {
-                    var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
-                    options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
-                }).AddDistributedMemoryCache(options =>
-                    {
-                        var cacheOptions = configuration.GetSection("CacheOptions").Get<CacheOptions>() ?? throw new ArgumentException(nameof(CacheOptions));
-                        options.ExpirationScanFrequency = System.TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
-                    });
-#endif
+                services.AddApplicationCaching(configuration);
 
                 services.AddHttpClient<LogHttpClient>();
                 services.AddScoped<FileUploadValidator>();
@@ -138,6 +125,42 @@ namespace MS.Microservice.Web.Infrastructure.Extensions
                 hcBuilder.AddCheck<SqlHealthCheck>(
                     SqlHealthCheck.Name,
                     tags: [SqlHealthCheck.ReadinessTag]);
+                return services;
+            }
+
+            public IServiceCollection AddApplicationCaching(IConfiguration configuration)
+            {
+                ArgumentNullException.ThrowIfNull(configuration);
+
+                var section = configuration.GetSection(CacheOptions.SectionName);
+                services.AddOptions<CacheOptions>()
+                    .Bind(section)
+                    .Validate(
+                        options => options.SlidingExpirationSecond > 0,
+                        "CacheOptions:SlidingExpirationSecond must be greater than zero.")
+                    .Validate(
+                        options => options.AbsoluteExpirationSecond is null or > 0,
+                        "CacheOptions:AbsoluteExpirationSecond must be greater than zero when configured.")
+                    .ValidateOnStart();
+
+                var cacheOptions = section.Get<CacheOptions>() ?? new CacheOptions();
+                var expirationScanFrequency = TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
+
+                // HybridCache is the preferred high-level API. Existing application services still
+                // consume IDistributedCache, so a replaceable compatibility backend is registered too.
+                services.AddMemoryCache(options =>
+                {
+                    options.ExpirationScanFrequency = expirationScanFrequency;
+                });
+                services.AddDistributedMemoryCache(options =>
+                {
+                    options.ExpirationScanFrequency = expirationScanFrequency;
+                });
+
+#if NET9_0_OR_GREATER
+                services.AddHybridCache();
+#endif
+
                 return services;
             }
 
