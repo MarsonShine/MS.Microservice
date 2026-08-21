@@ -29,6 +29,7 @@
 | 可观测与诊断 | [observable-system/metrics-monitor-and-altering-system.md](./observable-system/metrics-monitor-and-altering-system.md) → [diagnosis/README.md](./diagnosis/README.md) | 监控告警 + Linux 诊断工具矩阵 |
 | 工程实践 | [Domain-Command-Patterns-Handlers.md](./Domain-Command-Patterns-Handlers.md) → [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) | 命令模式、验证与设计原则 |
 | 密码安全 | [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 结合本项目理解密码哈希、旧密码迁移与自动重新哈希 |
+| 实验端点隔离 | [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) | 理解 ApplicationPart、FeatureProvider、Controller discovery 与环境隔离 |
 | 函数式编程核心类型 | [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) | 结合本项目理解 Option、Either、Exceptional、Map、Bind、Apply 与 Match |
 
 ---
@@ -163,11 +164,12 @@ flowchart TD
 1. [framework-optimization-roadmap.md](./framework-optimization-roadmap.md) — 框架拆分路线图
 2. [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) — Option / Either 与 Map / Bind / Apply 的统一心智模型
 3. [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) — 版本化密码哈希与旧 HMAC 平滑迁移
-4. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
-5. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
-6. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
-7. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
-8. [LDAP.md](./LDAP.md) — 目录服务
+4. [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) — Development/Lab Controller 发现与生产隔离
+5. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
+6. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
+7. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
+8. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
+9. [LDAP.md](./LDAP.md) — 目录服务
 
 ---
 
@@ -317,6 +319,7 @@ flowchart TD
 | 文档 | 说明 |
 | --- | --- |
 | [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 密码安全：`IPasswordHasher<User>`、旧 HMAC 迁移、自动重新哈希与项目实战 |
+| [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) | MVC 工程实践：ApplicationPart、FeatureProvider、Controller discovery 与实验端点隔离 |
 | [Separated-Interface.md](./Separated-Interface.md) | 接口分离：消费方定义接口降低耦合 |
 | [Enumeration.md](./Enumeration.md) | 枚举类：替代原生 enum 以支持多态 |
 | [ConwayLaw.md](./ConwayLaw.md) | 康威定律：组织沟通结构决定系统架构 |
@@ -353,6 +356,7 @@ flowchart TD
 | [Gateway.md](./Gateway.md) | 网关(Gateway) |
 | [How-To-Do-Distributed-Locking.md](./How-To-Do-Distributed-Locking.md) | 如何使用分布式锁 |
 | [Infrastructure-Ignorance.md](./Infrastructure-Ignorance.md) | 基础架构透明原则 |
+| [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) | 使用 IApplicationFeatureProvider 隔离 Development/Lab Controller |
 | [LDAP.md](./LDAP.md) | LDAP |
 | [MassTransit-QuicklyStart.md](./MassTransit-QuicklyStart.md) | MassTransit 快速入门 |
 | [Microservices-Collaborate-And-Interact.md](./Microservices-Collaborate-And-Interact.md) | 微服务之间的交互与协作 |

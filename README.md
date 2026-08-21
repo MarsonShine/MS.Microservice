@@ -43,6 +43,8 @@ dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
 
 ### 实验端点环境
 
+详细原理与扩展方式见 [Development/Lab Controller 发现机制](docs/Lab-Only-Controller-Discovery.md)。
+
 `DemoController`、`ImageController`、`OrdersController` 和 `FeatureManagerController` 仅在 `Development` 或显式的 `Lab` 环境中参与 MVC Controller discovery。其他环境中这些 Controller 不会生成路由，也不会出现在 Swagger 文档中。
 
 本地使用 Development：
