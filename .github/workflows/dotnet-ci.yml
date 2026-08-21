@@ -35,5 +35,9 @@ jobs:
       - name: Publish Web
         run: dotnet publish src/MS.Microservice.Web/MS.Microservice.Web.csproj --no-build -c Release -o artifacts/publish/web
 
+      - name: Build and smoke test container
+        shell: pwsh
+        run: ./build/container-smoke-test.ps1
+
       - name: Vulnerable Packages
         run: dotnet list package --vulnerable --include-transitive

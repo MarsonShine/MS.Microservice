@@ -8,6 +8,8 @@ COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Co
 COPY src/MS.Microservice.Domain/MS.Microservice.Domain.csproj src/MS.Microservice.Domain/
 COPY src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj src/MS.Microservice.Infrastructure/
 COPY src/MS.Microservice.Web/MS.Microservice.Web.csproj src/MS.Microservice.Web/
+COPY MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/src/MS.Microservice.Persistence.EFCore/
+COPY MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/
 COPY MS.Microservice.Swagger/MS.Microservice.Swagger.csproj MS.Microservice.Swagger/
 COPY MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.Core/
 COPY MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/

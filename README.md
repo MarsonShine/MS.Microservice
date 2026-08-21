@@ -258,10 +258,17 @@ spec:
 
 ```bash
 docker build -t ms-microservice-web .
-docker run --rm -p 8080:8080 ms-microservice-web
 ```
 
-容器默认监听 `http://+:8080`。Dockerfile 使用 .NET 10 SDK/Runtime，并按当前仓库结构 restore/publish `src/MS.Microservice.Web`。
+容器默认监听 `http://+:8080`。Dockerfile 使用 .NET 10 SDK/Runtime，并在 restore 前复制 Web 的完整项目引用闭包，包括 EFCore、SqlSugar、Infrastructure、Logging 和 Swagger。
+
+本地及 CI 使用同一个冒烟脚本验证镜像能够构建、容器能够启动且 liveness 返回 HTTP 200：
+
+```powershell
+./build/container-smoke-test.ps1
+```
+
+脚本只注入启动所需的非生产测试值，并使用随机宿主机端口；它不会连接数据库，因为 `/health/live` 只验证进程自身。真实部署仍必须通过 Secret 注入 JWT 密钥和 PostgreSQL 连接串，并使用 `/health/ready` 判断实例能否接收业务流量。
 
 健康检查端点：
 
