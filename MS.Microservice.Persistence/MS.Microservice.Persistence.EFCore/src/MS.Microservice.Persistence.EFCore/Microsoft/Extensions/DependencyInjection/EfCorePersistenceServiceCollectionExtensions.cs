@@ -8,6 +8,7 @@ using MS.Microservice.Domain.Aggregates.LogAggregate.Repository;
 using MS.Microservice.Domain.Events;
 using MS.Microservice.Persistence.EFCore.DbContext;
 using MS.Microservice.Persistence.EFCore.Repository;
+using MS.Microservice.Persistence.EFCore.Outbox;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -30,6 +31,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddScoped<IDomainEventDispatcher, NoOpDomainEventDispatcher>();
             services.TryAddScoped<IUserRepository, UserRepository>();
             services.TryAddScoped<ILogRepository, LogRepository>();
+            services.TryAddScoped<IOutboxStore, EfCoreOutboxStore>();
 
             var connectionString = GetRequiredConnectionString(configuration, "ActivationConnection");
             services.AddEntityFrameworkNpgSql(connectionString);

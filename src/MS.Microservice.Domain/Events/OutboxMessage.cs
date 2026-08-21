@@ -117,6 +117,19 @@ public sealed class OutboxMessage
         LastAttemptAtUtc = nowUtc;
     }
 
+    /// <summary>Claims the message for one publisher until the supplied UTC lease expires.</summary>
+    public void Claim(Guid lockToken, DateTimeOffset nowUtc, DateTimeOffset lockedUntilUtc)
+    {
+        if (lockedUntilUtc <= nowUtc)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lockedUntilUtc), "Lock expiry must be after the claim time.");
+        }
+
+        MarkPublishing(nowUtc);
+        LockToken = lockToken;
+        LockedUntilUtc = lockedUntilUtc;
+    }
+
     /// <summary>Marks the message as published and clears retry metadata.</summary>
     public void MarkPublished(DateTimeOffset nowUtc)
     {
@@ -124,6 +137,8 @@ public sealed class OutboxMessage
         PublishedAtUtc = nowUtc;
         NextAttemptAtUtc = null;
         LastError = null;
+        LockToken = null;
+        LockedUntilUtc = null;
     }
 
     /// <summary>Records a failed publishing attempt and schedules retry or dead-letter.</summary>
@@ -140,5 +155,7 @@ public sealed class OutboxMessage
         LastError = error;
         Status = RetryCount > MaxRetryCount ? OutboxMessageStatus.DeadLettered : OutboxMessageStatus.Failed;
         NextAttemptAtUtc = Status == OutboxMessageStatus.Failed ? nowUtc.Add(retryDelay) : null;
+        LockToken = null;
+        LockedUntilUtc = null;
     }
 }

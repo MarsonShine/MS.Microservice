@@ -113,6 +113,20 @@ namespace Microsoft.Extensions.DependencyInjection
                     services.AddInfrastructureTelemetry();
                 }
 
+                if (options.MessagingEnabled && options.EfCorePersistenceEnabled)
+                {
+                    services.AddOptions<OutboxPublisherOptions>()
+                        .Bind(configuration.GetSection(OutboxPublisherOptions.SectionName))
+                        .Validate(option => option.BatchSize > 0, "OutboxPublisher:BatchSize must be greater than zero.")
+                        .Validate(option => option.PollInterval > TimeSpan.Zero, "OutboxPublisher:PollInterval must be greater than zero.")
+                        .Validate(option => option.LockDuration > TimeSpan.Zero, "OutboxPublisher:LockDuration must be greater than zero.")
+                        .Validate(option => option.FailureRetryDelay >= TimeSpan.Zero, "OutboxPublisher:FailureRetryDelay cannot be negative.")
+                        .ValidateOnStart();
+                    services.TryAddSingleton(TimeProvider.System);
+                    services.AddScoped<OutboxPublisher>();
+                    services.AddHostedService<OutboxPublisherBackgroundService>();
+                }
+
                 return services;
             }
 
