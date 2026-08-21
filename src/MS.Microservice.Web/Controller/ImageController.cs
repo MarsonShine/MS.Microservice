@@ -15,16 +15,16 @@ namespace MS.Microservice.Web.Controller;
 [RequestFormLimits(MultipartBodyLengthLimit = SampleUploadOptions.MaximumRequestBodyBytes)]
 [RequestSizeLimit(SampleUploadOptions.MaximumRequestBodyBytes)]
 public sealed class ImageController(
-    IWebHostEnvironment environment,
     IOptions<SampleUploadOptions> options,
-    FileUploadValidator uploadValidator) : ControllerBase
+    FileUploadValidator uploadValidator,
+    IUploadStorage uploadStorage) : ControllerBase
 {
-    private readonly IWebHostEnvironment _environment = environment
-        ?? throw new ArgumentNullException(nameof(environment));
     private readonly SampleUploadOptions _options = options?.Value
         ?? throw new ArgumentNullException(nameof(options));
     private readonly FileUploadValidator _uploadValidator = uploadValidator
         ?? throw new ArgumentNullException(nameof(uploadValidator));
+    private readonly IUploadStorage _uploadStorage = uploadStorage
+        ?? throw new ArgumentNullException(nameof(uploadStorage));
 
     [HttpPost("upload")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -44,33 +44,16 @@ public sealed class ImageController(
         }
 
         await using var input = file!.OpenReadStream();
-        var storageRoot = ResolveStorageRoot();
-        Directory.CreateDirectory(storageRoot);
-        var storedFileName = $"{Guid.NewGuid():N}{validation.Extension}";
-        var storedFilePath = Path.Combine(storageRoot, storedFileName);
-
-        try
-        {
-            await using var output = new FileStream(
-                storedFilePath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 81920,
-                useAsync: true);
-            await input.CopyToAsync(output, HttpContext.RequestAborted);
-        }
-        catch
-        {
-            System.IO.File.Delete(storedFilePath);
-            throw;
-        }
+        var storedUpload = await _uploadStorage.SaveAsync(
+            input,
+            validation.Extension,
+            HttpContext.RequestAborted);
 
         return Ok(new
         {
             timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             status = StatusCodes.Status200OK,
-            fileName = storedFileName
+            fileName = storedUpload.FileName
         });
     }
 
@@ -123,20 +106,6 @@ public sealed class ImageController(
         }
 
         return Ok(sql.ToString());
-    }
-
-    private string ResolveStorageRoot()
-    {
-        var contentRoot = Path.GetFullPath(_environment.ContentRootPath)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        var storageRoot = Path.GetFullPath(Path.Combine(contentRoot, _options.StorageDirectory));
-        if (!storageRoot.StartsWith(contentRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("上传目录必须位于应用内容根目录下。");
-        }
-
-        return storageRoot;
     }
 
 }

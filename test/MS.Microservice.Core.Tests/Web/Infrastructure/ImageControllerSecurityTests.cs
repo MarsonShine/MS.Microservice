@@ -97,6 +97,24 @@ public sealed class ImageControllerSecurityTests : IDisposable
     }
 
     [Fact]
+    public async Task LocalUploadStorage_WhenCopyFails_RemovesPartialFile()
+    {
+        Directory.CreateDirectory(_contentRoot);
+        var environment = Substitute.For<IWebHostEnvironment>();
+        environment.ContentRootPath.Returns(_contentRoot);
+        var options = Options.Create(new SampleUploadOptions { StorageDirectory = "uploads" });
+        var storage = new LocalUploadStorage(environment, options);
+        await using var content = new ThrowingCopyStream();
+
+        await Assert.ThrowsAsync<IOException>(
+            () => storage.SaveAsync(content, ".png", CancellationToken.None));
+
+        var storageDirectory = Path.Combine(_contentRoot, "uploads");
+        Assert.True(Directory.Exists(storageDirectory));
+        Assert.Empty(Directory.GetFiles(storageDirectory));
+    }
+
+    [Fact]
     public async Task ExcelReader_WhenFileExceedsLimit_ReturnsPayloadTooLarge()
     {
         var controller = CreateController(maxExcelBytes: 4);
@@ -146,15 +164,16 @@ public sealed class ImageControllerSecurityTests : IDisposable
         Directory.CreateDirectory(_contentRoot);
         var environment = Substitute.For<IWebHostEnvironment>();
         environment.ContentRootPath.Returns(_contentRoot);
-        var controller = new ImageController(
-            environment,
-            Options.Create(new SampleUploadOptions
+        var options = Options.Create(new SampleUploadOptions
             {
                 MaxImageBytes = maxImageBytes,
                 MaxExcelBytes = maxExcelBytes,
                 StorageDirectory = "uploads"
-            }),
-            new FileUploadValidator())
+            });
+        var controller = new ImageController(
+            options,
+            new FileUploadValidator(),
+            new LocalUploadStorage(environment, options))
         {
             ControllerContext = new ControllerContext
             {
@@ -172,5 +191,17 @@ public sealed class ImageControllerSecurityTests : IDisposable
             Headers = new HeaderDictionary(),
             ContentType = contentType
         };
+    }
+
+    private sealed class ThrowingCopyStream : MemoryStream
+    {
+        public override async Task CopyToAsync(
+            Stream destination,
+            int bufferSize,
+            CancellationToken cancellationToken)
+        {
+            await destination.WriteAsync(new byte[] { 0x01 }, cancellationToken);
+            throw new IOException("Simulated copy failure.");
+        }
     }
 }
