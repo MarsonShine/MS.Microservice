@@ -11,7 +11,9 @@ using MS.Microservice.Domain.Events;
 using MS.Microservice.Persistence.EFCore.EntityConfigurations;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Action = MS.Microservice.Domain.Aggregates.IdentityModel.Action;
@@ -40,15 +42,15 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
 
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
-        private readonly IDomainEventDispatcher _domainEventDispatcher;
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
+        private static readonly JsonSerializerOptions OutboxSerializerOptions = new(JsonSerializerDefaults.Web);
 
         public ActivationDbContext(
             DbContextOptions<ActivationDbContext> dbContextOptions,
             IOptions<MsPlatformDbContextSettings> settingsOptions,
             IDomainEventDispatcher domainEventDispatcher) : base(dbContextOptions)
         {
-            _domainEventDispatcher = domainEventDispatcher ?? throw new ArgumentNullException(nameof(domainEventDispatcher));
+            ArgumentNullException.ThrowIfNull(domainEventDispatcher);
             _platformDbContextOption = settingsOptions?.Value ?? throw new ArgumentNullException(nameof(settingsOptions));
         }
 
@@ -125,31 +127,60 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
                 }
             }
 
-            return await base.SaveChangesAsync(cancellationToken);
-        }
-
-        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
-        {
             var domainEntities = ChangeTracker
                 .Entries()
                 .Select(entry => entry.Entity)
                 .OfType<IHasDomainEvents>()
                 .Where(entity => entity.DomainEvents.Count != 0)
                 .ToList();
-
             var domainEvents = domainEntities
                 .SelectMany(entity => entity.DomainEvents)
                 .ToList();
+            var outboxMessages = domainEvents
+                .Select(CreateOutboxMessage)
+                .ToList();
 
-            await SaveChangesAsync(cancellationToken);
-
-            if (domainEvents.Count != 0)
+            if (outboxMessages.Count != 0)
             {
-                await _domainEventDispatcher.DispatchAsync(domainEvents, cancellationToken);
-                domainEntities.ForEach(entity => entity.ClearDomainEvents());
+                OutboxMessages.AddRange(outboxMessages);
             }
 
+            try
+            {
+                var result = await base.SaveChangesAsync(cancellationToken);
+                domainEntities.ForEach(entity => entity.ClearDomainEvents());
+                return result;
+            }
+            catch
+            {
+                foreach (var outboxMessage in outboxMessages)
+                {
+                    Entry(outboxMessage).State = EntityState.Detached;
+                }
+
+                throw;
+            }
+        }
+
+        public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+        {
+            await SaveChangesAsync(cancellationToken);
             return true;
+        }
+
+        private static OutboxMessage CreateOutboxMessage(IDomainEvent domainEvent)
+        {
+            var eventType = domainEvent.GetType();
+            var messageType = eventType.AssemblyQualifiedName
+                ?? throw new InvalidOperationException($"Domain event type '{eventType}' has no assembly-qualified name.");
+            var payload = JsonSerializer.Serialize(domainEvent, eventType, OutboxSerializerOptions);
+            var activity = Activity.Current;
+            return OutboxMessage.Create(
+                messageType,
+                payload,
+                DateTimeOffset.UtcNow,
+                traceId: activity?.TraceId.ToString(),
+                correlationId: activity?.GetBaggageItem("correlationId") ?? activity?.RootId);
         }
 
         private IDbContextTransaction? _currentTransaction;
