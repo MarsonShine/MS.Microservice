@@ -42,6 +42,8 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
 
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
+        public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
         private static readonly JsonSerializerOptions OutboxSerializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -78,6 +80,7 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
             modelBuilder.ApplyConfiguration(new IdentityRoleEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new IdentityActionEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new OutboxMessageEntityTypeConfiguration());
+            modelBuilder.ApplyConfiguration(new InboxMessageEntityTypeConfiguration());
 
             SettingDatetimePrecision(modelBuilder);
         }
