@@ -30,6 +30,7 @@
 | 工程实践 | [Domain-Command-Patterns-Handlers.md](./Domain-Command-Patterns-Handlers.md) → [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) | 命令模式、验证与设计原则 |
 | 密码安全 | [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 结合本项目理解密码哈希、旧密码迁移与自动重新哈希 |
 | PostgreSQL 迁移 | [PostgreSQL-EF-Core-Baseline-Migrations.md](./PostgreSQL-EF-Core-Baseline-Migrations.md) | 记录本项目基线迁移生成原理、命令、发布与风险控制 |
+| 可靠消息 | [Messaging-Inbox-Outbox-With-Wolverine.md](./Messaging-Inbox-Outbox-With-Wolverine.md) | Message、Inbox、Outbox 与 Wolverine 的职责及投递语义 |
 | 实验端点隔离 | [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) | 理解 ApplicationPart、FeatureProvider、Controller discovery 与环境隔离 |
 | 函数式编程核心类型 | [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) | 结合本项目理解 Option、Either、Exceptional、Map、Bind、Apply 与 Match |
 
@@ -166,12 +167,13 @@ flowchart TD
 2. [Functional-Programming-Option-Either-Map-Bind-Apply.md](./Functional-Programming-Option-Either-Map-Bind-Apply.md) — Option / Either 与 Map / Bind / Apply 的统一心智模型
 3. [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) — 版本化密码哈希与旧 HMAC 平滑迁移
 4. [PostgreSQL-EF-Core-Baseline-Migrations.md](./PostgreSQL-EF-Core-Baseline-Migrations.md) — PostgreSQL 基线迁移生成与生产发布手册
-5. [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) — Development/Lab Controller 发现与生产隔离
-6. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
-7. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
-8. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
-9. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
-10. [LDAP.md](./LDAP.md) — 目录服务
+5. [Messaging-Inbox-Outbox-With-Wolverine.md](./Messaging-Inbox-Outbox-With-Wolverine.md) — 可靠消息、幂等消费和 Wolverine 配合方式
+6. [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) — Development/Lab Controller 发现与生产隔离
+7. [Replace-Throw-Exception-With-Notification.md](./Replace-Throw-Exception-With-Notification.md) — 通知替代异常
+8. [Enumeration.md](./Enumeration.md) — 枚举类替代方案
+9. [Separated-Interface.md](./Separated-Interface.md) — 接口分离
+10. [ConwayLaw.md](./ConwayLaw.md) — 康威定律
+11. [LDAP.md](./LDAP.md) — 目录服务
 
 ---
 
