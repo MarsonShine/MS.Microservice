@@ -168,9 +168,21 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
                 await SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
             }
-            catch
+            catch (Exception transactionException)
             {
-                await _currentTransaction.RollbackAsync(cancellationToken);
+                try
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+                catch (Exception rollbackException)
+                {
+                    throw new AggregateException(
+                        "The transaction failed and could not be rolled back.",
+                        transactionException,
+                        rollbackException);
+                }
+
+                throw;
             }
             finally
             {
