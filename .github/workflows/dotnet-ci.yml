@@ -35,6 +35,11 @@ jobs:
       - name: Publish Web
         run: dotnet publish src/MS.Microservice.Web/MS.Microservice.Web.csproj --no-build -c Release -o artifacts/publish/web
 
+      - name: Messaging crash recovery integration tests
+        env:
+          RUN_MESSAGING_INTEGRATION_TESTS: "true"
+        run: dotnet test test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj --no-build -c Release --verbosity normal
+
       - name: Build and smoke test container
         shell: pwsh
         run: ./build/container-smoke-test.ps1

@@ -71,5 +71,6 @@
   <Folder Name="/test/">
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
     <Project Path="test/MS.Microservice.Infrastructure.Tests/MS.Microservice.Infrastructure.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj" />
   </Folder>
 </Solution>
