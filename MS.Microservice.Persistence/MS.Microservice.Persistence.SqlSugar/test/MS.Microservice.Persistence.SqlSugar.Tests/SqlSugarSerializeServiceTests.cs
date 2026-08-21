@@ -32,9 +32,59 @@ public class SqlSugarSerializeServiceTests
         result.Value.Should().Be(42);
     }
 
+    [Fact]
+    public void SugarSerializeObject_ShouldUseTheSameConfiguredContractAsSerializeObject()
+    {
+        var options = new JsonSerializerOptions(JsonOptions);
+        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        var service = new SqlSugarSerializeService(options);
+        var value = new CompatibilityDto
+        {
+            DisplayName = "compatible",
+            State = CompatibilityState.Ready
+        };
+
+        var sugarJson = service.SugarSerializeObject(value);
+        var regularJson = service.SerializeObject(value);
+
+        sugarJson.Should().Be(regularJson);
+        sugarJson.Should().Contain("\"displayName\"")
+            .And.Contain("\"Ready\"");
+    }
+
+    [Fact]
+    public void SugarSerializeObject_Output_ShouldRoundTripThroughConfiguredDeserializer()
+    {
+        var options = new JsonSerializerOptions(JsonOptions);
+        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        var service = new SqlSugarSerializeService(options);
+        var value = new CompatibilityDto
+        {
+            DisplayName = "round-trip",
+            State = CompatibilityState.Ready
+        };
+
+        var json = service.SugarSerializeObject(value);
+        var result = service.DeserializeObject<CompatibilityDto>(json);
+
+        result.DisplayName.Should().Be(value.DisplayName);
+        result.State.Should().Be(value.State);
+    }
+
     public class TestDto
     {
         public string Name { get; set; } = string.Empty;
         public int Value { get; set; }
+    }
+
+    public class CompatibilityDto
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public CompatibilityState State { get; set; }
+    }
+
+    public enum CompatibilityState
+    {
+        Ready
     }
 }

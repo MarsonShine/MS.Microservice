@@ -21,7 +21,7 @@ namespace MS.Microservice.Persistence.SqlSugar
 
         public string SugarSerializeObject(object value)
         {
-            throw new NotImplementedException();
+            return JsonSerializer.Serialize(value, options);
         }
     }
 }
