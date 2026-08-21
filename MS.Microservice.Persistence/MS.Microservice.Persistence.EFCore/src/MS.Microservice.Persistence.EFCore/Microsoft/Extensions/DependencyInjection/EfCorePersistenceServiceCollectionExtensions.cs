@@ -52,7 +52,9 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     dbContextOptions.UseNpgsql(
                         connectionString,
-                        optionBuilder => optionBuilder.MigrationsHistoryTable("__MigrationsHistory")
+                        optionBuilder => optionBuilder.MigrationsHistoryTable(
+                            "__MigrationsHistory",
+                            ActivationDbContext.DEFAULT_SCHEMA)
                     );
                 }, contextLifetime: ServiceLifetime.Scoped);
 

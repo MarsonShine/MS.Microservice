@@ -89,6 +89,29 @@ ConnectionStrings__EventStoreConnection=Host=...;Database=...;Username=...;Passw
 
 EF Core 敏感数据日志默认关闭。只有 `appsettings.Development.json` 显式设置 `FzPlatformDbContextSettings:EnableSensitiveDataLogging=true`，用于受控的本地调试；生产配置必须保持 `false`，因为该日志可能包含 SQL 参数、用户输入和实体字段值。
 
+### PostgreSQL 数据库迁移
+
+数据库迁移由独立的 `MS.Microservice.DatabaseMigrator` 执行，Web Host 启动时不会自动创建或升级生产数据库。发布前先注入连接串，再显式选择迁移目标：
+
+```powershell
+$env:ConnectionStrings__ActivationConnection = "Host=...;Database=...;Username=...;Password=..."
+$env:ConnectionStrings__EventStoreConnection = "Host=...;Database=...;Username=...;Password=..."
+
+dotnet run --project src/MS.Microservice.DatabaseMigrator -- --context activation
+dotnet run --project src/MS.Microservice.DatabaseMigrator -- --context eventstore
+# 明确需要同时升级两个数据库时：
+dotnet run --project src/MS.Microservice.DatabaseMigrator -- --context all
+```
+
+`activation` 管理 Identity 与 Log 表，schema 为 `fz_platform_activation`；`eventstore` 管理事件、快照、投影 checkpoint 和订单读模型，schema 为 `event_sourcing`。每个 schema 都有独立的 `__MigrationsHistory`。迁移应作为部署流水线中的独立步骤执行，失败时不得启动新版本应用实例。
+
+生成后续迁移前先恢复仓库固定的 EF CLI：
+
+```bash
+dotnet tool restore
+dotnet tool run dotnet-ef migrations add <MigrationName> --project <ContextProject> --startup-project src/MS.Microservice.DatabaseMigrator --context <DbContext> --output-dir <MigrationsDirectory>
+```
+
 ### Infrastructure Profile
 
 Web Host 保留统一的 `AddInfrastructure` 门面，并通过 `Infrastructure:Profile` 显式选择模块组合：

@@ -19,7 +19,10 @@ namespace Microsoft.Extensions.DependencyInjection
             ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
             services.AddDbContext<EventStoreDbContext>(options =>
-                options.UseNpgsql(connectionString));
+                options.UseNpgsql(connectionString, npgsql =>
+                    npgsql.MigrationsHistoryTable(
+                        "__MigrationsHistory",
+                        EventStoreDbContext.DefaultSchema)));
 
             var eventTypeRegistry = new EventTypeRegistry()
                 .Register<OrderCreated>()

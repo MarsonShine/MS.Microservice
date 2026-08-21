@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
 using System;
 using EfCoreDbContext = Microsoft.EntityFrameworkCore.DbContext;
 using EfCoreDbContextOptions = Microsoft.EntityFrameworkCore.DbContextOptions<MS.Microservice.Infrastructure.EventSourcing.EventStoreDbContext>;
@@ -73,6 +74,20 @@ namespace MS.Microservice.Infrastructure.EventSourcing
                 entity.Property(x => x.TotalAmount).HasPrecision(18, 2);
                 entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone").IsRequired();
             });
+        }
+    }
+
+    public sealed class EventStoreDbContextDesignFactory : IDesignTimeDbContextFactory<EventStoreDbContext>
+    {
+        public EventStoreDbContext CreateDbContext(string[] args)
+        {
+            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__EventStoreConnection")
+                ?? "Host=localhost;Database=event_store_design;Username=postgres;Password=postgres";
+            var options = new DbContextOptionsBuilder<EventStoreDbContext>()
+                .UseNpgsql(connectionString, npgsql =>
+                    npgsql.MigrationsHistoryTable("__MigrationsHistory", EventStoreDbContext.DefaultSchema))
+                .Options;
+            return new EventStoreDbContext(options);
         }
     }
 

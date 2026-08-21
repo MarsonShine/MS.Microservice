@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Core.Domain.Entity;
 using MS.Microservice.Core.Domain.Repository;
@@ -12,7 +11,6 @@ using MS.Microservice.Domain.Events;
 using MS.Microservice.Persistence.EFCore.EntityConfigurations;
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,6 +62,8 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.HasDefaultSchema(DEFAULT_SCHEMA);
+
             if (_platformDbContextOption.EnabledSoftDeleted)
             {
                 EnableSoftDeletedQueryFilter(modelBuilder);
@@ -203,26 +203,16 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
     {
         public ActivationDbContext CreateDbContext(string[] args)
         {
-            var configuration = BuildConfiguration();
-            var connectionString = configuration.GetConnectionString("ActivationConnection")
-                ?? throw new InvalidOperationException("ConnectionStrings:ActivationConnection is required.");
+            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__ActivationConnection")
+                ?? "Host=localhost;Database=activation_design;Username=postgres;Password=postgres";
             var builder = new DbContextOptionsBuilder<ActivationDbContext>()
-                .UseNpgsql(connectionString);
+                .UseNpgsql(connectionString, npgsql =>
+                    npgsql.MigrationsHistoryTable("__MigrationsHistory", ActivationDbContext.DEFAULT_SCHEMA));
 
-            var settings = configuration
-                .GetSection(MsPlatformDbContextSettings.SectionName)
-                .Get<MsPlatformDbContextSettings>() ?? new MsPlatformDbContextSettings();
-
-            return new ActivationDbContext(builder.Options, Options.Create(settings), new NoOpDomainEventDispatcher());
-        }
-
-        private static IConfigurationRoot BuildConfiguration()
-        {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../Migrators/"))
-                .AddJsonFile("appsettings.Development.json", optional: false);
-
-            return builder.Build();
+            return new ActivationDbContext(
+                builder.Options,
+                Options.Create(new MsPlatformDbContextSettings()),
+                new NoOpDomainEventDispatcher());
         }
     }
 }

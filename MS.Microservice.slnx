@@ -63,6 +63,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <Project Path="src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj" />
     <Project Path="src/MS.Microservice.Domain/MS.Microservice.Domain.csproj" />
     <Project Path="src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj" />
     <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
