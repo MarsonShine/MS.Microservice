@@ -89,6 +89,12 @@ public sealed class OutboxMessage
     /// <summary>UTC time when the message can be retried.</summary>
     public DateTimeOffset? NextAttemptAtUtc { get; set; }
 
+    /// <summary>Token owned by the publisher that claimed this message.</summary>
+    public Guid? LockToken { get; set; }
+
+    /// <summary>UTC time after which another publisher may reclaim this message.</summary>
+    public DateTimeOffset? LockedUntilUtc { get; set; }
+
     /// <summary>UTC time of the latest publishing attempt.</summary>
     public DateTimeOffset? LastAttemptAtUtc { get; set; }
 

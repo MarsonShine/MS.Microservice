@@ -19,15 +19,16 @@ public sealed class BaselineMigrationTests
         var migrations = context.Database.GetMigrations().ToArray();
         var script = context.GetService<IMigrator>().GenerateScript(
             fromMigration: Migration.InitialDatabase,
-            toMigration: migrations.Single(),
+            toMigration: migrations.Last(),
             options: MigrationsSqlGenerationOptions.Idempotent);
 
-        Assert.Single(migrations);
-        Assert.EndsWith("_BaselineIdentityAndLog", migrations[0], StringComparison.Ordinal);
+        Assert.Equal(2, migrations.Length);
+        Assert.Contains(migrations, migration => migration.EndsWith("_BaselineIdentityAndLog", StringComparison.Ordinal));
         Assert.Contains("fz_platform_activation", script, StringComparison.Ordinal);
         Assert.Contains("CREATE TABLE", script, StringComparison.Ordinal);
         Assert.Contains("\"Users\"", script, StringComparison.Ordinal);
         Assert.Contains("\"Logs\"", script, StringComparison.Ordinal);
+        Assert.Contains("\"OutboxMessages\"", script, StringComparison.Ordinal);
     }
 
     [Fact]

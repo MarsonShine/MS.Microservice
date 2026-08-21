@@ -38,6 +38,8 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
         [NotNull]
         public DbSet<LogAggregateRoot>? Logs { get; set; }
 
+        public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
         private readonly IDomainEventDispatcher _domainEventDispatcher;
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
 
@@ -73,6 +75,7 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
             modelBuilder.ApplyConfiguration(new IdentityUserEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new IdentityRoleEntityTypeConfiguration());
             modelBuilder.ApplyConfiguration(new IdentityActionEntityTypeConfiguration());
+            modelBuilder.ApplyConfiguration(new OutboxMessageEntityTypeConfiguration());
 
             SettingDatetimePrecision(modelBuilder);
         }
