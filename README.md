@@ -41,6 +41,26 @@ dotnet test
 dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
 ```
 
+### 实验端点环境
+
+`DemoController`、`ImageController`、`OrdersController` 和 `FeatureManagerController` 仅在 `Development` 或显式的 `Lab` 环境中参与 MVC Controller discovery。其他环境中这些 Controller 不会生成路由，也不会出现在 Swagger 文档中。
+
+本地使用 Development：
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
+```
+
+独立实验部署使用 Lab：
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Lab"
+dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
+```
+
+Docker 未设置 `ASPNETCORE_ENVIRONMENT` 时默认为 Production，因此实验端点默认不可见。正式 Controller 不受该规则影响。
+
 默认配置位于：
 
 - `src/MS.Microservice.Web/appsettings.json`

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Web.Application.Models.Orders;
 using MS.Microservice.Web.Application.Orders;
+using MS.Microservice.Web.Infrastructure.Labs;
 using System.Net;
 
 namespace MS.Microservice.Web.Controller
@@ -10,6 +11,7 @@ namespace MS.Microservice.Web.Controller
     /// 订单事件溯源示例控制器。
     /// 用于演示从 Controller -> Application -> Domain(Core) -> Infrastructure(PostgreSQL) 的完整调用链。
     /// </summary>
+    [LabOnly]
     [ApiController]
     [Route("api/v1/[controller]")]
     public sealed class OrdersController : ControllerBase

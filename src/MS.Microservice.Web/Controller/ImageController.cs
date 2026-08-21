@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Web.Application.Uploads;
 using MS.Microservice.Web.Infrastructure.Uploads;
+using MS.Microservice.Web.Infrastructure.Labs;
 using System.Net;
 
 namespace MS.Microservice.Web.Controller;
 
+[LabOnly]
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]

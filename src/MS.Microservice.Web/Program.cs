@@ -18,6 +18,7 @@ using MS.Microservice.Web.Application.FeatureManager;
 using Wolverine;
 using MS.Microservice.Web.Infrastructure.Mediator.Behaviors;
 using MS.Microservice.Core.Serialization;
+using MS.Microservice.Web.Infrastructure.Labs;
 
 public partial class Program
 {
@@ -50,6 +51,11 @@ public partial class Program
             builder.Services.AddFeatureToggle(builder.Configuration);
             builder.Services.AddMsRequestLogging();
             builder.Services.AddControllers()
+            .ConfigureApplicationPartManager(options =>
+            {
+                options.FeatureProviders.Add(
+                    new LabOnlyControllerFeatureProvider(builder.Environment.EnvironmentName));
+            })
             .AddMvcOptions(options =>
             {
                 //options.Filters.Add(typeof(HttpGlobalExceptionFilter));

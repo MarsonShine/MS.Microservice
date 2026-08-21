@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MS.Microservice.Core.FeatureManager;
 using MS.Microservice.Web.Application.FeatureManager;
+using MS.Microservice.Web.Infrastructure.Labs;
 
 namespace MS.Microservice.Web.Controller;
 
+[LabOnly]
 [Route("api/[controller]")]
 [ApiController]
 public class FeatureManagerController(FeatureToggleManager featureToggleManager, ILogger<FeatureManagerController> logger) : ControllerBase

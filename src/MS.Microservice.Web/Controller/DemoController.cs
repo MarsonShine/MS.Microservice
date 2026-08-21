@@ -3,6 +3,7 @@ using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Web.Application.Commands;
 using MS.Microservice.Web.Application.Demo;
+using MS.Microservice.Web.Infrastructure.Labs;
 using System.Net;
 
 namespace MS.Microservice.Web.Controller
@@ -20,6 +21,7 @@ namespace MS.Microservice.Web.Controller
     ///   </item>
     /// </list>
     /// </summary>
+    [LabOnly]
     [ApiController]
     [Route("api/v1/[controller]")]
     public class DemoController(
