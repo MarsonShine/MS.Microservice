@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
+using MS.Microservice.Domain.Consts;
 using MS.Microservice.Web.Application.Commands;
 using MS.Microservice.Web.Application.Models;
 using MS.Microservice.Web.Application.Queries.Constract;
 using MS.Microservice.Web.Application.Users;
+using MS.Microservice.Web.Infrastructure.Http;
 using System.Net;
 using Wolverine;
 
@@ -33,14 +35,14 @@ namespace MS.Microservice.Web.Controller
         [HttpPost("create")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(ResultDto<bool>), (int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.Conflict)]
         public async Task<IActionResult> CreateUser([FromBody] UserCreatedCommand request)
         {
             var result = await _userCreateAppService.CreateAsync(request, HttpContext.RequestAborted);
-            var response = result.Match(
-                left: error => new ResultDto<bool>(false, false, error.ToDisplayMessage(), 200),
-                right: success => new ResultDto<bool>(success, true, "", 200));
-            return Ok(response);
+            return result.Match<IActionResult>(
+                left: error => this.ToProblem(error),
+                right: success => Ok(new ResultDto<bool>(success, true, "", 200)));
         }
 
 
@@ -79,12 +81,21 @@ namespace MS.Microservice.Web.Controller
         /// <param name="request"></param>
         /// <returns></returns>        
         [HttpPost("modify")]
-        [ProducesResponseType(typeof(ResultDto<Domain.Identity.ActionResult>), (int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ResultDto<bool>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> Modify([FromBody] UserModifyCommand request)
         {
             (bool success, string? message) = await _messageBus.InvokeAsync<(bool, string?)>(request);
-            return Ok(new ResultDto<bool>(success, success, message ?? "", 200));
+            if (!success)
+            {
+                var error = string.Equals(message, ExceptionConsts.UserNotExisted, StringComparison.Ordinal)
+                    ? Error.NotFound(message!)
+                    : Error.Validation(message ?? "用户修改失败。");
+                return this.ToProblem(error);
+            }
+
+            return Ok(new ResultDto<bool>(true, true, string.Empty, 200));
         }
 
         /// <summary>
@@ -94,14 +105,14 @@ namespace MS.Microservice.Web.Controller
         /// <returns></returns>
         [HttpPost("modify-functional")]
         [ProducesResponseType(typeof(ResultDto<bool>), (int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> ModifyFunctional([FromBody] UserModifyCommand request)
         {
             var result = await _userModifyAppService.ModifyAsync(request, HttpContext.RequestAborted);
-            var response = result.Match(
-                left: error => new ResultDto<bool>(false, false, error.ToDisplayMessage(), 200),
-                right: success => new ResultDto<bool>(success, true, "", 200));
-            return Ok(response);
+            return result.Match<IActionResult>(
+                left: error => this.ToProblem(error),
+                right: success => Ok(new ResultDto<bool>(success, true, "", 200)));
         }
     }
 }

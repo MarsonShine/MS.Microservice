@@ -103,7 +103,7 @@ public partial class Program
         }
         else
         {
-            app.UseExceptionHandler("/Error");
+            app.UseExceptionHandler();
             app.UseHsts();
         }
 

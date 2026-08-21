@@ -24,6 +24,9 @@ namespace MS.Microservice.Core.Functional
         public static Error Unauthorized(string message, IReadOnlyList<string>? details = null)
             => new("unauthorized", message, details);
 
+        public static Error NotFound(string message, IReadOnlyList<string>? details = null)
+            => new("not_found", message, details);
+
         public static Error Unexpected(string message, IReadOnlyList<string>? details = null)
             => new("unexpected", message, details);
 

@@ -1,37 +1,36 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using MS.Microservice.Core.Dto;
+using Microsoft.AspNetCore.Diagnostics;
 using MS.Microservice.Domain.Exception;
-using System;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
+using MS.Microservice.Web.Infrastructure.Http;
+using System.Text.Json;
 
-namespace MS.Microservice.Web.Infrastructure.Filters
+namespace MS.Microservice.Web.Infrastructure.Filters;
+
+public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
-	/// <summary>
-	/// https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.diagnostics.iexceptionhandler?view=aspnetcore-8.0
-	/// </summary>
-	/// <param name="logger"></param>
-	public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
-	{
-		private readonly ILogger<GlobalExceptionHandler> _logger = logger;
-		public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
-		{
-			if (exception is DomainException domainException)
-			{
-				_logger.LogError(exception, exception.Message);
-				var result = new ResultDto(false, domainException.Message, domainException!.Code);
-				await context.Response.WriteAsJsonAsync(result, cancellationToken);
-			}
-			else
-			{
-				var result = new ResultDto(false, exception.Message, (int)HttpStatusCode.InternalServerError);
-				await context.Response.WriteAsJsonAsync(result, cancellationToken);
-				context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-			}
-			return true;
-		}
-	}
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private readonly ILogger<GlobalExceptionHandler> _logger = logger;
+
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext context,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        var problem = ApiProblemDetails.FromException(context, exception);
+        if (exception is DomainException)
+        {
+            _logger.LogWarning(exception, "Domain request failed with status {StatusCode}", problem.Status);
+        }
+        else
+        {
+            _logger.LogError(exception, "Unhandled request exception");
+        }
+
+        context.Response.StatusCode = problem.Status ?? StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(
+            problem,
+            SerializerOptions,
+            ApiProblemDetails.ContentType,
+            cancellationToken);
+        return true;
+    }
 }

@@ -7,12 +7,14 @@ using System.Security.Claims;
 using System.Text;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Core.Dto;
+using MS.Microservice.Core.Functional;
 using MS.Microservice.Infrastructure.Attributes;
 using MS.Microservice.Core.Extension;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Domain.Identity;
 using MS.Microservice.Domain.Identity.Token;
 using MS.Microservice.Web.Application.Identity;
+using MS.Microservice.Web.Infrastructure.Http;
 
 namespace MS.Microservice.Web.Controller;
 
@@ -43,13 +45,14 @@ public class AccountController : ControllerBase
     /// <returns></returns>
     [HttpPost("login")]
     [ProducesResponseType(typeof(ResultDto<AuthenticateResult>), (int)HttpStatusCode.OK)]
-    [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.Unauthorized)]
     [NoEncrypt]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (request.Account == null || request.Password.IsNullOrEmpty())
         {
-            return BadRequest();
+            return this.ToProblem(Error.Validation("账号和密码不能为空。"));
         }
 
         byte[]? base64Buffer = null;
@@ -57,9 +60,9 @@ public class AccountController : ControllerBase
         {
             base64Buffer = Convert.FromBase64String(request.Password);
         }
-        catch (Exception)
+        catch (FormatException)
         {
-            return BadRequest();
+            return this.ToProblem(Error.Validation("密码传输格式无效。"));
         }
         var passworld = Encoding.UTF8.GetString(base64Buffer);
 
@@ -71,7 +74,7 @@ public class AccountController : ControllerBase
             || user.IsTransient()
             || !await _userPasswordService.VerifyAndUpgradeAsync(user, passworld, HttpContext.RequestAborted))
         {
-            return Ok(new ResultDto(false, ExceptionConsts.AccountOrPasswordError, 200));
+            return this.ToProblem(Error.Unauthorized(ExceptionConsts.AccountOrPasswordError));
         }
         //var user = new User(request.Account, request.Password, "", false, "18975152023", 1, 1, "marsonshine@163.com", "marsonshine", "", "");
         //user.Id = 1;

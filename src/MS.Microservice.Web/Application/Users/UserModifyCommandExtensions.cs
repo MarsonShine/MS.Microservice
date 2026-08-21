@@ -53,7 +53,7 @@ namespace MS.Microservice.Web.Application.Users
 
             public Either<Error, UserModifyReadyState> EnsureExistingUserEither()
                 => state.ExistingUser is null || state.ExistingUser.IsTransient()
-                    ? F.Left(Error.Validation(ExceptionConsts.UserNotExisted, [$"Account={state.Command.Account}"]))
+                    ? F.Left(Error.NotFound(ExceptionConsts.UserNotExisted, [$"Account={state.Command.Account}"]))
                     : F.Right(new UserModifyReadyState(state.Command, state.CurrentUser, state.AvailableRoles, state.ExistingUser));
         }
 
