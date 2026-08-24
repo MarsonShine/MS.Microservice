@@ -22,14 +22,13 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="MiniExcel" />
-    <PackageReference Include="NAudio" />
-    <PackageReference Include="NAudio.Lame" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="NPOI" />
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MS.Microservice.Audio\MS.Microservice.Audio.csproj" />
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
     <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
     <ProjectReference Include="..\MS.Microservice.EventSourcing\MS.Microservice.EventSourcing.csproj" />

@@ -19,6 +19,7 @@ MS.Microservice 是一个面向 .NET 10 的微服务基础框架仓库，当前�
 | 模块 | 说明 |
 | --- | --- |
 | `src/MS.Microservice.Core` | 通用领域接口、函数式类型、规范模式、缓存、序列化、安全工具。 |
+| `src/MS.Microservice.Audio` | 基于 NAudio 的音频格式识别、拼接、混音与转换能力。 |
 | `src/MS.Microservice.Domain` | 当前示例业务领域模型、聚合、领域服务和领域事件暂存。 |
 | `src/MS.Microservice.EventSourcing` | Provider-neutral 事件流、快照和投影检查点契约。 |
 | `src/MS.Microservice.Observability` | OpenTelemetry Resource、Tracing、Metrics 与注册入口。 |
