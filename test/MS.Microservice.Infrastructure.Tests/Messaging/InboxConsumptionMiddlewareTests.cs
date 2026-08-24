@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Domain.Events;
 using MS.Microservice.Infrastructure.Messaging;
+using MS.Microservice.Infrastructure.Telemetry;
 using MS.Microservice.Persistence.EFCore.Inbox;
 using NSubstitute;
 using Wolverine;
@@ -28,8 +30,8 @@ public sealed class InboxConsumptionMiddlewareTests
             .Returns(true);
 
         var (continuation, execution) = await BeforeAsync(message, envelope, store, transactionCoordinator);
-        await InboxConsumptionMiddleware.AfterAsync(execution, store, transactionCoordinator, TimeProvider.System, CancellationToken.None);
-        await InboxConsumptionMiddleware.FinallyAsync(execution, store, Substitute.For<ILogger<InboxExecution>>(), CancellationToken.None);
+        await InboxConsumptionMiddleware.AfterAsync(execution, store, transactionCoordinator, Metrics, TimeProvider.System, CancellationToken.None);
+        await InboxConsumptionMiddleware.FinallyAsync(execution, store, Metrics, Substitute.For<ILogger<InboxExecution>>(), CancellationToken.None);
 
         Assert.Equal(HandlerContinuation.Continue, continuation);
         Assert.True(execution.Completed);
@@ -92,11 +94,12 @@ public sealed class InboxConsumptionMiddlewareTests
     {
         var store = Substitute.For<IInboxStore>();
         var transaction = Substitute.For<IInboxTransaction>();
-        var execution = new InboxExecution("consumer:key", Guid.NewGuid(), true, transaction);
+        var execution = new InboxExecution("consumer:key", Guid.NewGuid(), true, transaction, Stopwatch.GetTimestamp());
 
         await InboxConsumptionMiddleware.FinallyAsync(
             execution,
             store,
+            Metrics,
             Substitute.For<ILogger<InboxExecution>>(),
             CancellationToken.None);
 
@@ -119,9 +122,12 @@ public sealed class InboxConsumptionMiddlewareTests
             envelope,
             store,
             transactionCoordinator,
+            Metrics,
             Options.Create(new InboxConsumerOptions()),
             TimeProvider.System,
             CancellationToken.None);
+
+    private static readonly PlatformMetrics Metrics = new();
 
     private static IInboxTransactionCoordinator CreateTransactionCoordinator(
         out IInboxTransaction transaction)

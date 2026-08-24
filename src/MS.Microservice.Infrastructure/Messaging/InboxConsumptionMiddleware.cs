@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Persistence.EFCore.Inbox;
+using MS.Microservice.Infrastructure.Telemetry;
 using Wolverine;
 
 namespace MS.Microservice.Infrastructure.Messaging;
@@ -11,7 +12,8 @@ public sealed record InboxExecution(
     string DeduplicationKey,
     Guid ProcessingToken,
     bool ShouldExecute,
-    IInboxTransaction? BusinessTransaction)
+    IInboxTransaction? BusinessTransaction,
+    long StartedTimestamp)
 {
     public bool Completed { get; set; }
 }
@@ -23,6 +25,7 @@ public sealed class InboxConsumptionMiddleware
         Envelope envelope,
         IInboxStore inboxStore,
         IInboxTransactionCoordinator transactionCoordinator,
+        PlatformMetrics metrics,
         IOptions<InboxConsumerOptions> options,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
@@ -48,6 +51,7 @@ public sealed class InboxConsumptionMiddleware
             Activity.Current?.TraceId.ToString(),
             envelope.CorrelationId,
             cancellationToken);
+        metrics.RecordInboxRegistration(registration.IsFirstDelivery);
         var processingToken = Guid.NewGuid();
         var acquired = await inboxStore.TryBeginProcessingAsync(
             registration.Receipt.DeduplicationKey,
@@ -62,7 +66,12 @@ public sealed class InboxConsumptionMiddleware
             registration.Receipt.DeduplicationKey,
             processingToken,
             acquired,
-            businessTransaction);
+            businessTransaction,
+            Stopwatch.GetTimestamp());
+        if (!acquired)
+        {
+            metrics.RecordInboxShortCircuited();
+        }
         return (acquired ? HandlerContinuation.Continue : HandlerContinuation.Stop, execution);
     }
 
@@ -89,6 +98,7 @@ public sealed class InboxConsumptionMiddleware
         InboxExecution execution,
         IInboxStore inboxStore,
         IInboxTransactionCoordinator transactionCoordinator,
+        PlatformMetrics metrics,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -110,11 +120,14 @@ public sealed class InboxConsumptionMiddleware
 
         await execution.BusinessTransaction!.CommitAsync(cancellationToken);
         execution.Completed = true;
+        metrics.RecordInboxProcessed(
+            Stopwatch.GetElapsedTime(execution.StartedTimestamp).TotalMilliseconds);
     }
 
     public static async Task FinallyAsync(
         InboxExecution execution,
         IInboxStore inboxStore,
+        PlatformMetrics metrics,
         ILogger<InboxExecution> logger,
         CancellationToken cancellationToken)
     {
@@ -147,6 +160,8 @@ public sealed class InboxConsumptionMiddleware
                 execution.ProcessingToken,
                 "Handler execution did not complete successfully.",
                 CancellationToken.None);
+            metrics.RecordInboxFailed(
+                Stopwatch.GetElapsedTime(execution.StartedTimestamp).TotalMilliseconds);
         }
         catch (Exception exception)
         {

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using MS.Microservice.Domain.Events;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Infrastructure.Messaging;
+using MS.Microservice.Infrastructure.Telemetry;
 using MS.Microservice.Persistence.EFCore.Outbox;
 using NSubstitute;
 using Wolverine;
@@ -96,7 +97,8 @@ public sealed class OutboxPublisherTests
             store,
             bus,
             Options.Create(options ?? new OutboxPublisherOptions()),
-            TimeProvider.System);
+            TimeProvider.System,
+            new PlatformMetrics());
 
     private static OutboxMessage CreateMessage(TestMessage payload)
         => OutboxMessage.Create(

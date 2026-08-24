@@ -6,6 +6,7 @@ using MS.Microservice.Domain;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
 using MS.Microservice.Domain.Events;
 using MS.Microservice.Infrastructure.Messaging;
+using MS.Microservice.Infrastructure.Telemetry;
 using MS.Microservice.Persistence.EFCore.Inbox;
 using MS.Microservice.Persistence.EFCore.Outbox;
 using NSubstitute;
@@ -104,7 +105,8 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             store,
             fixture.MessageBus,
             Options.Create(new OutboxPublisherOptions()),
-            TimeProvider.System);
+            TimeProvider.System,
+            new PlatformMetrics());
 
         await publisher.PublishBatchAsync();
         await fixture.Recorder.WaitAsync(TimeSpan.FromSeconds(15));
@@ -139,7 +141,8 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
                 InitialRetryDelay = TimeSpan.FromSeconds(1),
                 MaximumRetryDelay = TimeSpan.FromSeconds(10)
             }),
-            timeProvider);
+            timeProvider,
+            new PlatformMetrics());
 
         await publisher.PublishBatchAsync();
         timeProvider.Advance(TimeSpan.FromSeconds(2));
@@ -168,6 +171,7 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             envelope,
             store,
             coordinator,
+            new PlatformMetrics(),
             Options.Create(new InboxConsumerOptions()),
             TimeProvider.System,
             CancellationToken.None);
@@ -179,11 +183,13 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             execution,
             store,
             coordinator,
+            new PlatformMetrics(),
             TimeProvider.System,
             CancellationToken.None);
         await InboxConsumptionMiddleware.FinallyAsync(
             execution,
             store,
+            new PlatformMetrics(),
             Substitute.For<ILogger<InboxExecution>>(),
             CancellationToken.None);
 
@@ -207,6 +213,7 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             envelope,
             store,
             coordinator,
+            new PlatformMetrics(),
             Options.Create(new InboxConsumerOptions()),
             TimeProvider.System,
             CancellationToken.None);
@@ -216,6 +223,7 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
         await InboxConsumptionMiddleware.FinallyAsync(
             execution,
             store,
+            new PlatformMetrics(),
             Substitute.For<ILogger<InboxExecution>>(),
             CancellationToken.None);
 

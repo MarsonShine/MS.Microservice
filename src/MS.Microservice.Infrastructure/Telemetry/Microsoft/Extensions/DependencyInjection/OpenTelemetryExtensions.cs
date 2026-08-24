@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Infrastructure.Telemetry;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 namespace MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection
@@ -49,7 +51,17 @@ namespace MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.Dependen
                             .AddAspNetCoreInstrumentation()
                             .AddHttpClientInstrumentation()
                             .AddOtlpExporter();
+                    })
+                    .WithMetrics(cfg =>
+                    {
+                        cfg.AddMeter(PlatformMetrics.MeterName)
+                            .AddRuntimeInstrumentation()
+                            .AddAspNetCoreInstrumentation()
+                            .AddHttpClientInstrumentation()
+                            .AddConsoleExporter()
+                            .AddOtlpExporter();
                     });
+                services.TryAddSingleton<PlatformMetrics>();
                 return services;
             }
         }

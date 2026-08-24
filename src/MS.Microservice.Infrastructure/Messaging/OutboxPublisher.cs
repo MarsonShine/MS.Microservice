@@ -1,7 +1,9 @@
 using System.Text.Json;
+using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Persistence.EFCore.Outbox;
+using MS.Microservice.Infrastructure.Telemetry;
 using Wolverine;
 
 namespace MS.Microservice.Infrastructure.Messaging;
@@ -10,7 +12,8 @@ public sealed class OutboxPublisher(
     IOutboxStore outboxStore,
     IMessageBus messageBus,
     IOptions<OutboxPublisherOptions> options,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    PlatformMetrics metrics)
 {
     private readonly OutboxPublisherOptions _options = options.Value;
 
@@ -23,9 +26,11 @@ public sealed class OutboxPublisher(
             timeProvider.GetUtcNow(),
             _options.LockDuration,
             cancellationToken);
+        metrics.RecordOutboxClaimed(messages.Count);
 
         foreach (var message in messages)
         {
+            var startedAt = Stopwatch.GetTimestamp();
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
@@ -44,6 +49,7 @@ public sealed class OutboxPublisher(
                     lockToken,
                     timeProvider.GetUtcNow(),
                     cancellationToken);
+                metrics.RecordOutboxPublished(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -52,13 +58,18 @@ public sealed class OutboxPublisher(
             catch (Exception exception)
             {
                 var error = SanitizeError(exception.Message);
+                var nextRetryAttempt = message.RetryCount + 1;
+                var willDeadLetter = nextRetryAttempt > message.MaxRetryCount;
                 await outboxStore.MarkFailedAsync(
                     message.MessageId,
                     lockToken,
                     error,
                     timeProvider.GetUtcNow(),
-                    CalculateRetryDelay(message.RetryCount + 1),
+                    CalculateRetryDelay(nextRetryAttempt),
                     cancellationToken);
+                metrics.RecordOutboxFailed(
+                    Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds,
+                    willDeadLetter);
             }
         }
 
