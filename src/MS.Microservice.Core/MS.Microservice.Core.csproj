@@ -3,6 +3,9 @@
 		<InternalsVisibleTo Include="MS.Microservice.Core.Tests" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\MS.Microservice.Domain.Primitives\MS.Microservice.Domain.Primitives.csproj" />
+	</ItemGroup>
+	<ItemGroup>
 		<Compile Remove="Entity\**" />
 		<Compile Remove="EventEntity\**" />
 		<Compile Remove="Repository\**" />

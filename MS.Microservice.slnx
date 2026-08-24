@@ -66,6 +66,7 @@
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <Project Path="src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj" />
     <Project Path="src/MS.Microservice.Domain/MS.Microservice.Domain.csproj" />
+    <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
     <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
     <Project Path="src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj" />
