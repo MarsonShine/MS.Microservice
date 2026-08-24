@@ -18,7 +18,14 @@ namespace MS.Microservice.Web.Application.Models
         /// <summary>
         /// 更新人
         /// </summary>
-        public int UpdatorId { get; set; }
+        public int UpdaterId { get; set; }
+
+        [Obsolete("Use UpdaterId instead. This compatibility property will be removed in a future major version.")]
+        public int UpdatorId
+        {
+            get => UpdaterId;
+            set => UpdaterId = value;
+        }
         /// <summary>
         /// Email
         /// </summary>

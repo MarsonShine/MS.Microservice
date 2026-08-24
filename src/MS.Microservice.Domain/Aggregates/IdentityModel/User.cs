@@ -69,7 +69,10 @@ namespace MS.Microservice.Domain.Aggregates.IdentityModel
 
         public int CreatorId { get => _creatorId; private set => _creatorId = value; }
 
-        public int UpdatorId { get => _updatorId; private set => _updatorId = value; }
+        public int UpdaterId => _updatorId;
+
+        [Obsolete("Use UpdaterId instead. The legacy name remains mapped to the existing database column.")]
+        public int UpdatorId { get => UpdaterId; private set => _updatorId = value; }
 
         public ICollection<Role> Roles { get; private set; }
         public string? FzAccount { get => _fzAccount; private set => _fzAccount = value; }

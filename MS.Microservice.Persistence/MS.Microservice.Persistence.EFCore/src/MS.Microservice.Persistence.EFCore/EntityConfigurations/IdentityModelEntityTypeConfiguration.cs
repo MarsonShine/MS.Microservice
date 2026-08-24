@@ -10,6 +10,7 @@ namespace MS.Microservice.Persistence.EFCore.EntityConfigurations
         {
             builder.ToTable("Users");
             builder.Ignore(p => p.DomainEvents);
+            builder.Ignore(p => p.UpdaterId);
 
             builder.Property(p => p.Account)
                 .HasField("_account")

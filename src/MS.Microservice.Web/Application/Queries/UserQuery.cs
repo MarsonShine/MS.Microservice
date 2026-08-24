@@ -106,7 +106,7 @@ namespace MS.Microservice.Web.Application.Queries
                 IsDisabled = p.IsDisabled,
                 Telephone = SecretField.Phone(p.Telephone),
                 CreatorId = p.CreatorId,
-                UpdatorId = p.UpdatorId,
+                UpdaterId = p.UpdatorId,
                 Email = SecretField.HideEmailDetails(p.Email),
                 Name = p.Name,
                 FzAccount = p.FzAccount,

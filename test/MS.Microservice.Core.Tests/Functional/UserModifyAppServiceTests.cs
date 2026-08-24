@@ -87,7 +87,7 @@ namespace MS.Microservice.Core.Tests.Functional
                     user.Account == "demo-account"
                     && user.Salt == User.ModernPasswordSaltMarker
                     && user.CreatorId == 7
-                    && user.UpdatorId == 7
+                    && user.UpdaterId == 7
                     && user.Password == "versioned-password-hash"
                     && user.Roles.Count == 1
                     && user.Roles.Single().Id == 1),
