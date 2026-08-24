@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using MS.Microservice.Domain;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
 using MS.Microservice.Domain.Events;
@@ -9,6 +10,7 @@ using MS.Microservice.Persistence.EFCore.Inbox;
 using MS.Microservice.Persistence.EFCore.Outbox;
 using NSubstitute;
 using Wolverine;
+using MessageHeaders = MS.Microservice.Core.Messaging.MessageHeaders;
 
 namespace MS.Microservice.Messaging.IntegrationTests;
 
@@ -152,6 +154,77 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
         afterDeadLetterCount.Should().Be(0);
     }
 
+    [MessagingIntegrationFact]
+    public async Task InboxAfter_CommitsHandlerBusinessDataAndProcessedReceiptTogether()
+    {
+        await using var context = fixture.CreateDbContext();
+        var store = new EfCoreInboxStore(context);
+        var coordinator = new EfCoreInboxTransactionCoordinator(context);
+        var message = new RecoveryIntegrationEvent("atomic-success");
+        var envelope = CreateEnvelope(message, Guid.NewGuid());
+
+        var (continuation, execution) = await InboxConsumptionMiddleware.BeforeAsync(
+            message,
+            envelope,
+            store,
+            coordinator,
+            Options.Create(new InboxConsumerOptions()),
+            TimeProvider.System,
+            CancellationToken.None);
+        continuation.Should().Be(HandlerContinuation.Continue);
+        context.Logs.Add(CreateLog());
+        await context.SaveChangesAsync();
+
+        await InboxConsumptionMiddleware.AfterAsync(
+            execution,
+            store,
+            coordinator,
+            TimeProvider.System,
+            CancellationToken.None);
+        await InboxConsumptionMiddleware.FinallyAsync(
+            execution,
+            store,
+            Substitute.For<ILogger<InboxExecution>>(),
+            CancellationToken.None);
+
+        await using var verificationContext = fixture.CreateDbContext();
+        (await verificationContext.Logs.CountAsync()).Should().Be(1);
+        (await verificationContext.InboxMessages.SingleAsync()).Status
+            .Should().Be(InboxMessageStatus.Processed);
+    }
+
+    [MessagingIntegrationFact]
+    public async Task InboxFinally_RollsBackHandlerBusinessDataBeforeRecordingFailure()
+    {
+        await using var context = fixture.CreateDbContext();
+        var store = new EfCoreInboxStore(context);
+        var coordinator = new EfCoreInboxTransactionCoordinator(context);
+        var message = new RecoveryIntegrationEvent("atomic-failure");
+        var envelope = CreateEnvelope(message, Guid.NewGuid());
+
+        var (_, execution) = await InboxConsumptionMiddleware.BeforeAsync(
+            message,
+            envelope,
+            store,
+            coordinator,
+            Options.Create(new InboxConsumerOptions()),
+            TimeProvider.System,
+            CancellationToken.None);
+        context.Logs.Add(CreateLog());
+        await context.SaveChangesAsync();
+
+        await InboxConsumptionMiddleware.FinallyAsync(
+            execution,
+            store,
+            Substitute.For<ILogger<InboxExecution>>(),
+            CancellationToken.None);
+
+        await using var verificationContext = fixture.CreateDbContext();
+        (await verificationContext.Logs.CountAsync()).Should().Be(0);
+        (await verificationContext.InboxMessages.SingleAsync()).Status
+            .Should().Be(InboxMessageStatus.Failed);
+    }
+
     private static OutboxMessage CreateOutboxMessage(
         RecoveryIntegrationEvent message,
         DateTimeOffset occurredAtUtc)
@@ -159,6 +232,18 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             message.GetType().AssemblyQualifiedName!,
             JsonSerializer.Serialize(message, message.GetType()),
             occurredAtUtc);
+
+    private static Envelope CreateEnvelope(RecoveryIntegrationEvent message, Guid outboxMessageId)
+    {
+        var envelope = new Envelope
+        {
+            Id = Guid.NewGuid(),
+            EndpointName = "integration-tests",
+            MessageType = message.GetType().AssemblyQualifiedName
+        };
+        envelope.Headers[MessageHeaders.MessageId] = outboxMessageId.ToString("N");
+        return envelope;
+    }
 
     private static LogAggregateRoot CreateLog()
         => new(

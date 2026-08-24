@@ -34,6 +34,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddScoped<ILogRepository, LogRepository>();
             services.TryAddScoped<IOutboxStore, EfCoreOutboxStore>();
             services.TryAddScoped<IInboxStore, EfCoreInboxStore>();
+            services.TryAddScoped<IInboxTransactionCoordinator, EfCoreInboxTransactionCoordinator>();
 
             var connectionString = GetRequiredConnectionString(configuration, "ActivationConnection");
             services.AddEntityFrameworkNpgSql(connectionString);

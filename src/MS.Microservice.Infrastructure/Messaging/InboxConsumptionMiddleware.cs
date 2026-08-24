@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Persistence.EFCore.Inbox;
@@ -6,7 +7,11 @@ using Wolverine;
 
 namespace MS.Microservice.Infrastructure.Messaging;
 
-public sealed record InboxExecution(string DeduplicationKey, Guid ProcessingToken, bool ShouldExecute)
+public sealed record InboxExecution(
+    string DeduplicationKey,
+    Guid ProcessingToken,
+    bool ShouldExecute,
+    IInboxTransaction? BusinessTransaction)
 {
     public bool Completed { get; set; }
 }
@@ -17,6 +22,7 @@ public sealed class InboxConsumptionMiddleware
         TMessage message,
         Envelope envelope,
         IInboxStore inboxStore,
+        IInboxTransactionCoordinator transactionCoordinator,
         IOptions<InboxConsumerOptions> options,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
@@ -49,7 +55,14 @@ public sealed class InboxConsumptionMiddleware
             nowUtc,
             options.Value.ProcessingLease,
             cancellationToken);
-        var execution = new InboxExecution(registration.Receipt.DeduplicationKey, processingToken, acquired);
+        var businessTransaction = acquired
+            ? await transactionCoordinator.BeginAsync(cancellationToken)
+            : null;
+        var execution = new InboxExecution(
+            registration.Receipt.DeduplicationKey,
+            processingToken,
+            acquired,
+            businessTransaction);
         return (acquired ? HandlerContinuation.Continue : HandlerContinuation.Stop, execution);
     }
 
@@ -75,6 +88,7 @@ public sealed class InboxConsumptionMiddleware
     public static async Task AfterAsync(
         InboxExecution execution,
         IInboxStore inboxStore,
+        IInboxTransactionCoordinator transactionCoordinator,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -83,28 +97,64 @@ public sealed class InboxConsumptionMiddleware
             return;
         }
 
-        execution.Completed = await inboxStore.MarkProcessedAsync(
+        await transactionCoordinator.SaveChangesAsync(cancellationToken);
+        var markedProcessed = await inboxStore.MarkProcessedAsync(
             execution.DeduplicationKey,
             execution.ProcessingToken,
             timeProvider.GetUtcNow(),
             cancellationToken);
+        if (!markedProcessed)
+        {
+            throw new InvalidOperationException("Inbox processing lease was lost before completion.");
+        }
+
+        await execution.BusinessTransaction!.CommitAsync(cancellationToken);
+        execution.Completed = true;
     }
 
     public static async Task FinallyAsync(
         InboxExecution execution,
         IInboxStore inboxStore,
+        ILogger<InboxExecution> logger,
         CancellationToken cancellationToken)
     {
-        if (!execution.ShouldExecute || execution.Completed || cancellationToken.IsCancellationRequested)
+        if (!execution.ShouldExecute || execution.BusinessTransaction is null)
         {
             return;
         }
 
-        await inboxStore.MarkFailedAsync(
-            execution.DeduplicationKey,
-            execution.ProcessingToken,
-            "Handler execution did not complete successfully.",
-            cancellationToken);
+        try
+        {
+            if (!execution.Completed)
+            {
+                await execution.BusinessTransaction.RollbackAsync(CancellationToken.None);
+            }
+        }
+        finally
+        {
+            await execution.BusinessTransaction.DisposeAsync();
+        }
+
+        if (execution.Completed || cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await inboxStore.MarkFailedAsync(
+                execution.DeduplicationKey,
+                execution.ProcessingToken,
+                "Handler execution did not complete successfully.",
+                CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Unable to record failed Inbox execution for {DeduplicationKey}",
+                execution.DeduplicationKey);
+        }
     }
 
     private static string BuildConsumerName<TMessage>(Envelope envelope)

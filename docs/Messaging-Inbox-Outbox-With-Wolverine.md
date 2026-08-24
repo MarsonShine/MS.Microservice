@@ -136,6 +136,8 @@ Inbox receipt 使用 `ProcessingToken` 和 `ProcessingLeaseExpiresAtUtc`：
 
 Wolverine 官方 middleware 约定允许 Before 返回 `HandlerContinuation.Stop`，并把 Before 产生的状态对象传给 After/Finally。[Wolverine：Handler Middleware](https://wolverinefx.net/guide/handlers/middleware.html)
 
+抢占 Processing lease 后，middleware 会在 Handler 前开启 `ActivationDbContext` 事务。Handler 的业务 `SaveChangesAsync`、可能产生的新 Outbox，以及 After 阶段的 Inbox `Processed` 更新共享该事务：全部成功才 commit；Handler 异常则 rollback，再独立记录 Inbox `Failed`。因此不会出现“业务副作用已提交，但 Inbox 尚未确认”而导致的重复副作用窗口。
+
 ## 5. Wolverine 在这里负责什么
 
 本项目没有使用 Wolverine 自带数据库表替代自定义 Outbox/Inbox，而是复用 Wolverine 的两个能力：
