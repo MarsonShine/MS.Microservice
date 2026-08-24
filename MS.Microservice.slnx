@@ -67,6 +67,7 @@
     <Project Path="src/MS.Microservice.Domain/MS.Microservice.Domain.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
     <Project Path="src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj" />
+    <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
   </Folder>
   <Folder Name="/test/">

@@ -27,18 +27,13 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="NPOI" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />    
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
     <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
     <ProjectReference Include="..\MS.Microservice.EventSourcing\MS.Microservice.EventSourcing.csproj" />
+    <ProjectReference Include="..\MS.Microservice.Observability\MS.Microservice.Observability.csproj" />
     <ProjectReference Include="..\..\MS.Microservice.Persistence\MS.Microservice.Persistence.EFCore\src\MS.Microservice.Persistence.EFCore\MS.Microservice.Persistence.EFCore.csproj" />
     <ProjectReference Include="..\..\MS.Microservice.Persistence\MS.Microservice.Persistence.SqlSugar\src\MS.Microservice.Persistence.SqlSugar\MS.Microservice.Persistence.SqlSugar.csproj" />
   </ItemGroup>

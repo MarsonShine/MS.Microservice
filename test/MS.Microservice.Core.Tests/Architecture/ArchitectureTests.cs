@@ -111,6 +111,21 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void ObservabilityPackage_ShouldNot_DependOn_WebSampleDomainOrOrm()
+    {
+        var referencedAssemblies = typeof(MS.Microservice.Infrastructure.Telemetry.PlatformMetrics)
+            .Assembly
+            .GetReferencedAssemblies()
+            .Select(assembly => assembly.Name)
+            .ToArray();
+
+        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Domain", referencedAssemblies);
+        Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
+        Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
+    }
+
+    [Fact]
     public void Infrastructure_ShouldNot_DependOn_Web()
     {
         var infraAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;

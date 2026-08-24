@@ -35,6 +35,7 @@ public sealed class PlatformMetrics : IDisposable
     }
 
     public void RecordOutboxClaimed(int count) => _outboxClaimed.Add(count);
+
     public void RecordOutboxPublished(double durationMilliseconds)
     {
         _outboxPublished.Add(1);
@@ -46,7 +47,11 @@ public sealed class PlatformMetrics : IDisposable
     public void RecordOutboxFailed(double durationMilliseconds, bool deadLettered)
     {
         _outboxFailed.Add(1);
-        if (deadLettered) _outboxDeadLettered.Add(1);
+        if (deadLettered)
+        {
+            _outboxDeadLettered.Add(1);
+        }
+
         _outboxPublishDuration.Record(
             durationMilliseconds,
             new KeyValuePair<string, object?>[]
@@ -57,11 +62,18 @@ public sealed class PlatformMetrics : IDisposable
 
     public void RecordInboxRegistration(bool firstDelivery)
     {
-        if (firstDelivery) _inboxRegistered.Add(1);
-        else _inboxDuplicate.Add(1);
+        if (firstDelivery)
+        {
+            _inboxRegistered.Add(1);
+        }
+        else
+        {
+            _inboxDuplicate.Add(1);
+        }
     }
 
     public void RecordInboxShortCircuited() => _inboxShortCircuited.Add(1);
+
     public void RecordInboxProcessed(double durationMilliseconds)
     {
         _inboxProcessed.Add(1);
