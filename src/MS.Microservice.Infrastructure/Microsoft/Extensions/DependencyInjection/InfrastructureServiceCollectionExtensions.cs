@@ -42,9 +42,9 @@ namespace Microsoft.Extensions.DependencyInjection
             // 文件: Telemetry/OpenTelemetryExtensions.cs
             // 提供 Tracing、Console Exporter、OTLP Exporter、ASP.NET Core 监控
             // -----------------------------------------------------------------------
-            public void AddInfrastructureTelemetry()
+            public void AddInfrastructureTelemetry(IConfiguration configuration)
             {
-                services.AddMsOpenTelemetry();
+                services.AddMsOpenTelemetry(configuration);
             }
 
             // -----------------------------------------------------------------------
@@ -110,7 +110,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 if (options.TelemetryEnabled)
                 {
-                    services.AddInfrastructureTelemetry();
+                    services.AddInfrastructureTelemetry(configuration);
                 }
 
                 if (options.MessagingEnabled && options.EfCorePersistenceEnabled)

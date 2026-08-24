@@ -140,6 +140,10 @@ services.AddInfrastructure(configuration, options =>
 });
 ```
 
+### OpenTelemetry Resource
+
+`OpenTelemetry` 配置节定义 service name、namespace、version、instance、environment 和 `ActivitySourceName`。部署流水线应通过 `OpenTelemetry__ServiceVersion`、`OpenTelemetry__ServiceInstanceId` 等环境变量覆盖发布版本与实例身份，避免不同服务实例在可观测后端中被错误合并。
+
 ### 缓存注册与生产部署
 
 Web Host 同时注册两种缓存抽象，但它们服务于不同的调用方式：
