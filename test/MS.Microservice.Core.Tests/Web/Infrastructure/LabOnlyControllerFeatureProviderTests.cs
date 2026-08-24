@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.Extensions.Hosting;
 using MS.Microservice.Web.Controller;
 using MS.Microservice.Web.Infrastructure.Labs;
 using System.Reflection;
@@ -28,7 +27,7 @@ public class LabOnlyControllerFeatureProviderTests
     public void PopulateFeature_InProduction_RemovesLabControllersAndKeepsFormalController()
     {
         var feature = CreateFeature();
-        var provider = new LabOnlyControllerFeatureProvider(Environments.Production);
+        var provider = new LabOnlyControllerFeatureProvider(labEndpointsEnabled: false);
 
         provider.PopulateFeature(Array.Empty<ApplicationPart>(), feature);
 
@@ -37,14 +36,11 @@ public class LabOnlyControllerFeatureProviderTests
         Assert.Contains(typeof(AccountController).GetTypeInfo(), feature.Controllers);
     }
 
-    [Theory]
-    [InlineData("Development")]
-    [InlineData("Lab")]
-    [InlineData("lab")]
-    public void PopulateFeature_InDevelopmentOrLab_KeepsAllControllers(string environmentName)
+    [Fact]
+    public void PopulateFeature_WhenStartedByLabHost_KeepsAllControllers()
     {
         var feature = CreateFeature();
-        var provider = new LabOnlyControllerFeatureProvider(environmentName);
+        var provider = new LabOnlyControllerFeatureProvider(labEndpointsEnabled: true);
 
         provider.PopulateFeature(Array.Empty<ApplicationPart>(), feature);
 

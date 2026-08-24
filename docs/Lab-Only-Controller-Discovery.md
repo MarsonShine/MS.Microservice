@@ -1,11 +1,12 @@
-# 使用 IApplicationFeatureProvider 隔离 Development/Lab Controller
+# 独立 Lab Host 与 IApplicationFeatureProvider Controller 隔离
 
-本文从 ASP.NET Core MVC 的 Controller 发现机制开始，解释 `LabOnlyControllerFeatureProvider : IApplicationFeatureProvider<ControllerFeature>` 为什么能让实验端点只在 `Development` 或 `Lab` 环境中存在，以及它与认证授权、路由、Swagger 的区别。
+本文从 ASP.NET Core MVC 的 Controller 发现机制开始，解释独立 Lab Host 如何通过 `LabOnlyControllerFeatureProvider : IApplicationFeatureProvider<ControllerFeature>` 装载实验端点，以及它与环境变量、认证授权、路由和 Swagger 的区别。
 
 对应实现：
 
 - [`LabOnlyControllerFeatureProvider`](../src/MS.Microservice.Web/Infrastructure/Labs/LabOnlyControllerFeatureProvider.cs)
-- [`Program.cs` 注册入口](../src/MS.Microservice.Web/Program.cs)
+- [`PlatformWebHost` 共享启动流水线](../src/MS.Microservice.Web/Hosting/PlatformWebHost.cs)
+- [`Lab Program` 实验启动入口](../samples/MS.Microservice.Lab/Program.cs)
 - [`LabOnlyControllerFeatureProviderTests`](../test/MS.Microservice.Core.Tests/Web/Infrastructure/LabOnlyControllerFeatureProviderTests.cs)
 
 ## 一、我们真正要解决的问题
@@ -15,11 +16,11 @@
 本项目需要的结果是：
 
 ```text
-Development / Lab
+samples/MS.Microservice.Lab
     → 实验 Controller 被 MVC 发现
     → 生成 ActionDescriptor、路由和 Swagger 描述
 
-Production / Staging / 其他环境
+src/MS.Microservice.Web（包括 Development）
     → 实验 Controller 不进入 ControllerFeature
     → 不生成 ActionDescriptor、路由和 Swagger 描述
     → 请求最终得到 404
@@ -50,8 +51,8 @@ flowchart LR
     A[ApplicationPart] --> B[内置 ControllerFeatureProvider]
     B --> C[加入合法 Controller TypeInfo]
     C --> D[LabOnlyControllerFeatureProvider]
-    D -->|Development / Lab| E[保持列表]
-    D -->|其他环境| F[移除 LabOnly Controller]
+    D -->|Lab Host 显式启用| E[保持列表]
+    D -->|正式 Host 固定关闭| F[移除 LabOnly Controller]
     E --> G[最终 ControllerFeature]
     F --> G
 ```
@@ -112,7 +113,7 @@ builder.Services.AddControllers()
     {
         options.FeatureProviders.Add(
             new LabOnlyControllerFeatureProvider(
-                builder.Environment.EnvironmentName));
+                enableLabEndpoints));
     });
 ```
 
@@ -123,7 +124,7 @@ builder.Services.AddControllers()
     → 先发现并加入 Controller
 
 LabOnlyControllerFeatureProvider
-    → 再按当前环境移除实验 Controller
+    → 再按当前 Host 能力移除实验 Controller
 ```
 
 如果 Lab Provider 位于内置 Provider 前面，它只会看到空列表；内置 Provider 随后又会把所有 Controller 加入，Production 隔离就会失效。因此 Provider 顺序是正确性的一部分。
@@ -180,17 +181,15 @@ public sealed class LabOnlyControllerFeatureProvider
 
 这表示它只参与 ControllerFeature 构建，不影响 Razor、Tag Helper、ViewComponent 或 Minimal API。
 
-### 2. 启动时计算环境开关
+### 2. 接收 Host 能力开关
 
 ```csharp
-private readonly bool _labEndpointsEnabled =
-    environmentName == Development
-    || environmentName == Lab;
+new LabOnlyControllerFeatureProvider(enableLabEndpoints)
 ```
 
-实际实现大小写不敏感，因此 `Lab` 和 `lab` 都有效。环境在启动时确定，不会在每个请求中重新读取；修改环境变量后必须重启。
+这个布尔值不是普通配置项，而是由两个启动入口写死：正式 `Program` 传 `false`，samples 下的 Lab `Program` 传 `true`。因此在生产部署里误设 `ASPNETCORE_ENVIRONMENT=Lab`，也不能让正式 Host 暴露实验端点。
 
-### 3. Development/Lab 保持列表
+### 3. Lab Host 保持列表
 
 ```csharp
 if (_labEndpointsEnabled)
@@ -255,21 +254,21 @@ Swagger 的 Controller 描述依赖 MVC ApiExplorer，而 ApiExplorer 建立在 
 
 本项目的实验和正式 Controller 位于同一程序集，FeatureProvider 的粒度最合适。
 
-## 十、环境判定与部署风险
+## 十、Host 判定与部署风险
 
-当前只允许 `Development` 和 `Lab`。可通过 `ASPNETCORE_ENVIRONMENT` 设置。未设置时默认 Production，因此 Docker 默认不发现实验 Controller。
+实验能力现在由可执行入口决定，不由 `ASPNETCORE_ENVIRONMENT` 决定：
 
 ```powershell
-$env:ASPNETCORE_ENVIRONMENT = "Lab"
-dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
+dotnet run --project samples/MS.Microservice.Lab/MS.Microservice.Lab.csproj
 ```
 
-### Lab 不是认证机制
+Lab 项目的 launch profile 会把环境设为 `Lab`，用于读取 `appsettings.Lab.json` 和开启开发诊断；真正开启 Controller 的是 Lab Program 传入的 `enableLabEndpoints: true`。
 
-如果生产部署错误地设置成 `Lab`，实验接口就会启用。因此仍应：
+### Lab Host 不是认证机制
 
-- CI/CD 明确设置 Production；
-- 禁止生产配置复用 Lab 环境；
+独立 Host 消除了“正式 Host 环境名配错就开启端点”的风险，但 Lab Host 本身仍应：
+
+- 不进入正式镜像或生产部署清单；
 - 部署后核对环境名和路由；
 - Lab 不直接暴露公网；
 - 必要时增加网络层访问控制。
@@ -285,13 +284,13 @@ FeatureProvider 只影响 MVC Controller discovery：
 - 后台服务不会自动停用；
 - Minimal API 不经过 ControllerFeature，因此不会自动过滤。
 
-未来把实验模块移动到独立 Sample Host 后，Production 才能从依赖和 DI 层面完全不加载它们。
+当前 Controller 类型仍在 Web 程序集中，以避免一次提交同时迁移其大量应用服务依赖；正式 Host 在 MVC 建模前移除它们。后续提取示例业务包时，可把 Controller 与依赖一起物理迁出 Web，进一步缩小生产程序集。
 
 ## 十二、测试如何证明行为
 
 测试构造包含 `AccountController` 和四个实验 Controller 的 ControllerFeature，然后直接调用 Provider。
 
-Production 断言所有 `[LabOnly]` 类型被移除且 `AccountController` 保留；Development/Lab 断言全部保留；另逐个检查四个目标 Controller 是否带有 Attribute。
+正式 Host 开关断言所有 `[LabOnly]` 类型被移除且 `AccountController` 保留；Lab Host 开关断言全部保留；另逐个检查四个目标 Controller 是否带有 Attribute。架构测试还约束 Web 程序集不能反向依赖 Lab Host。
 
 ```bash
 dotnet test test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj \

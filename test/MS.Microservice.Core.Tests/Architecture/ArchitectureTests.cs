@@ -139,7 +139,7 @@ public class ArchitectureTests
     [Fact]
     public void WebApplicationTypes_ShouldResideIn_WebApplicationNamespace()
     {
-        var webAssembly = typeof(MS.Microservice.Web.Controller.FeatureManagerController).Assembly;
+        var webAssembly = typeof(MS.Microservice.Web.Controller.AccountController).Assembly;
 
         var violatingTypes = Types
             .InAssembly(webAssembly)
@@ -150,6 +150,17 @@ public class ArchitectureTests
             .GetTypes();
 
         Assert.Empty(violatingTypes);
+    }
+
+    [Fact]
+    public void ProductionWeb_ShouldNot_DependOn_LabHost()
+    {
+        var referencedAssemblies = typeof(MS.Microservice.Web.Controller.AccountController)
+            .Assembly
+            .GetReferencedAssemblies()
+            .Select(assembly => assembly.Name);
+
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
     }
 
     [Fact]

@@ -22,6 +22,7 @@ MS.Microservice 是一个面向 .NET 10 的微服务基础框架仓库，当前�
 | `src/MS.Microservice.Domain` | 当前示例业务领域模型、聚合、领域服务和领域事件暂存。 |
 | `src/MS.Microservice.Infrastructure` | EF Core、SqlSugar、事件溯源、健康检查、OpenTelemetry 等基础设施实现。 |
 | `src/MS.Microservice.Web` | ASP.NET Core Host、API 入口、认证授权、Swagger、Wolverine 接入。 |
+| `samples/MS.Microservice.Lab` | 独立实验 Host；唯一允许装载 Lab Controller 的启动入口。 |
 | `MS.Microservice.Logging` | Provider-agnostic request logging，支持 NLog 和 Serilog。 |
 | `MS.Microservice.Swagger` | Swagger 注册与 UI 封装。 |
 | `MS.Microservice.EventBus` | 事件总线抽象与内存订阅管理。 |
@@ -41,27 +42,25 @@ dotnet test
 dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
 ```
 
-### 实验端点环境
+### 实验端点宿主
 
-详细原理与扩展方式见 [Development/Lab Controller 发现机制](docs/Lab-Only-Controller-Discovery.md)。
+详细原理与扩展方式见 [独立 Lab Host 与 Controller 发现机制](docs/Lab-Only-Controller-Discovery.md)。
 
-`DemoController`、`ImageController`、`OrdersController` 和 `FeatureManagerController` 仅在 `Development` 或显式的 `Lab` 环境中参与 MVC Controller discovery。其他环境中这些 Controller 不会生成路由，也不会出现在 Swagger 文档中。
+`DemoController`、`ImageController`、`OrdersController` 和 `FeatureManagerController` 只由 `samples/MS.Microservice.Lab` 装载。正式 `MS.Microservice.Web` Host 即使以 Development 环境运行，也会从 MVC discovery 中移除这些 Controller，因此不会生成路由或 Swagger 描述。
 
-本地使用 Development：
+运行正式 Web Host：
 
 ```powershell
-$env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
 ```
 
-独立实验部署使用 Lab：
+运行独立实验 Host（launch profile 已设置 Lab 环境）：
 
 ```powershell
-$env:ASPNETCORE_ENVIRONMENT = "Lab"
-dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
+dotnet run --project samples/MS.Microservice.Lab/MS.Microservice.Lab.csproj
 ```
 
-Docker 未设置 `ASPNETCORE_ENVIRONMENT` 时默认为 Production，因此实验端点默认不可见。正式 Controller 不受该规则影响。
+是否启用实验端点由启动入口显式传给共享启动流水线，不再由环境名隐式决定。环境名仍用于选择 `appsettings.{Environment}.json` 和诊断行为，但不能让正式 Host 开启实验路由。
 
 默认配置位于：
 
