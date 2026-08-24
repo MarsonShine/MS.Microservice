@@ -22,6 +22,7 @@ MS.Microservice 是一个面向 .NET 10 的微服务基础框架仓库，当前�
 | `src/MS.Microservice.Audio` | 基于 NAudio 的音频格式识别、拼接、混音与转换能力。 |
 | `src/MS.Microservice.Domain` | 当前示例业务领域模型、聚合、领域服务和领域事件暂存。 |
 | `src/MS.Microservice.EventSourcing` | Provider-neutral 事件流、快照和投影检查点契约。 |
+| `src/MS.Microservice.Excel` | 基于 NPOI/MiniExcel 的导入、导出、模板和动态表格能力。 |
 | `src/MS.Microservice.Observability` | OpenTelemetry Resource、Tracing、Metrics 与注册入口。 |
 | `src/MS.Microservice.Infrastructure` | EF Core、SqlSugar、事件溯源、健康检查、OpenTelemetry 等基础设施实现。 |
 | `src/MS.Microservice.Web` | ASP.NET Core Host、API 入口、认证授权、Swagger、Wolverine 接入。 |
