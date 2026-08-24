@@ -183,7 +183,9 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
                 payload,
                 DateTimeOffset.UtcNow,
                 traceId: activity?.TraceId.ToString(),
-                correlationId: activity?.GetBaggageItem("correlationId") ?? activity?.RootId);
+                correlationId: activity?.GetBaggageItem("correlationId") ?? activity?.RootId,
+                traceParent: activity?.Id,
+                traceState: activity?.TraceStateString);
         }
 
         private IDbContextTransaction? _currentTransaction;

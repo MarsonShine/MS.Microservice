@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Domain;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
@@ -68,6 +69,26 @@ public sealed class OutboxPersistenceTests
         message.Status.Should().Be(OutboxMessageStatus.Pending);
         message.RetryCount.Should().Be(0);
         message.NextAttemptAtUtc.Should().Be(now.AddMinutes(1));
+    }
+
+    [Fact]
+    public async Task SaveEntitiesAsync_CapturesW3CTraceAndCorrelationContext()
+    {
+        using var activity = new Activity("request").SetIdFormat(ActivityIdFormat.W3C).Start();
+        activity.TraceStateString = "vendor=value";
+        activity.AddBaggage("correlationId", "correlation-7");
+        await using var context = CreateContext(Substitute.For<IDomainEventDispatcher>());
+        var log = CreateLog();
+        log.AddDomainEvent(new TestDomainEvent("traced"));
+        context.Logs.Add(log);
+
+        await context.SaveEntitiesAsync();
+
+        var outbox = await context.OutboxMessages.SingleAsync();
+        outbox.TraceParent.Should().Be(activity.Id);
+        outbox.TraceState.Should().Be("vendor=value");
+        outbox.TraceId.Should().Be(activity.TraceId.ToString());
+        outbox.CorrelationId.Should().Be("correlation-7");
     }
 
     private static ActivationDbContext CreateContext(

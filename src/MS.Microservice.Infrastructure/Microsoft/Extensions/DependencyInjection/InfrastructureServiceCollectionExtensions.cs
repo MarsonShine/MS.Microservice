@@ -116,6 +116,9 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (options.MessagingEnabled && options.EfCorePersistenceEnabled)
                 {
                     services.TryAddSingleton<MS.Microservice.Infrastructure.Telemetry.PlatformMetrics>();
+                    services.TryAddSingleton(new MS.Microservice.Infrastructure.Telemetry.PlatformTracing(
+                        configuration[$"{MS.Microservice.Infrastructure.Telemetry.TelemetryResourceOptions.SectionName}:ActivitySourceName"]
+                            ?? "MS.Microservice"));
                     services.AddOptions<OutboxPublisherOptions>()
                         .Bind(configuration.GetSection(OutboxPublisherOptions.SectionName))
                         .Validate(option => option.BatchSize > 0, "OutboxPublisher:BatchSize must be greater than zero.")

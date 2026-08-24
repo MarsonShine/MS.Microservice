@@ -32,6 +32,8 @@ public sealed class OutboxMessage
         string contentType = "application/json",
         string? traceId = null,
         string? correlationId = null,
+        string? traceParent = null,
+        string? traceState = null,
         int maxRetryCount = 10)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
@@ -56,6 +58,8 @@ public sealed class OutboxMessage
             MaxRetryCount = maxRetryCount,
             TraceId = traceId,
             CorrelationId = correlationId,
+            TraceParent = traceParent,
+            TraceState = traceState,
         };
     }
 
@@ -109,6 +113,12 @@ public sealed class OutboxMessage
 
     /// <summary>Application correlation id associated with the message.</summary>
     public string? CorrelationId { get; set; }
+
+    /// <summary>W3C parent context captured with the business transaction.</summary>
+    public string? TraceParent { get; set; }
+
+    /// <summary>W3C vendor trace state captured with the business transaction.</summary>
+    public string? TraceState { get; set; }
 
     /// <summary>Marks the message as currently being published.</summary>
     public void MarkPublishing(DateTimeOffset nowUtc)

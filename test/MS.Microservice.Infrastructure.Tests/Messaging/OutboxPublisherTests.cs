@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using MS.Microservice.Domain.Events;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Infrastructure.Messaging;
@@ -18,6 +19,9 @@ public sealed class OutboxPublisherTests
         var store = Substitute.For<IOutboxStore>();
         var bus = Substitute.For<IMessageBus>();
         var message = CreateMessage(new TestMessage("success"));
+        message.TraceParent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        message.TraceState = "vendor=value";
+        message.CorrelationId = "correlation-7";
         Guid claimedToken = default;
         DeliveryOptions? capturedOptions = null;
         bus.PublishAsync(Arg.Any<object>(), Arg.Do<DeliveryOptions?>(options => capturedOptions = options))
@@ -37,6 +41,9 @@ public sealed class OutboxPublisherTests
         Assert.NotNull(capturedOptions);
         Assert.Equal(message.MessageId.ToString("N"), capturedOptions!.Headers[MessageHeaders.MessageId]);
         Assert.Equal(message.MessageId.ToString("N"), capturedOptions.DeduplicationId);
+        Assert.Equal(message.TraceParent, capturedOptions.Headers[MessageHeaders.TraceParent]);
+        Assert.Equal(message.TraceState, capturedOptions.Headers[MessageHeaders.TraceState]);
+        Assert.Equal(message.CorrelationId, capturedOptions.Headers[MessageHeaders.CorrelationId]);
         await store.Received(1).MarkPublishedAsync(message.MessageId, claimedToken, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
         await store.DidNotReceiveWithAnyArgs().MarkFailedAsync(default, default, default!, default, default, default);
     }
@@ -98,7 +105,9 @@ public sealed class OutboxPublisherTests
             bus,
             Options.Create(options ?? new OutboxPublisherOptions()),
             TimeProvider.System,
-            new PlatformMetrics());
+            new PlatformMetrics(),
+            new PlatformTracing("tests"),
+            Substitute.For<ILogger<OutboxPublisher>>());
 
     private static OutboxMessage CreateMessage(TestMessage payload)
         => OutboxMessage.Create(

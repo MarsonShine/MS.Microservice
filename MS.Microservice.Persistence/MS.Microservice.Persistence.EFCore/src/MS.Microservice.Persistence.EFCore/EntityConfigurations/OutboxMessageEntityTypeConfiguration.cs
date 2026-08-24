@@ -27,6 +27,8 @@ internal sealed class OutboxMessageEntityTypeConfiguration : IEntityTypeConfigur
         builder.Property(message => message.PublishedAtUtc).HasColumnType("timestamp with time zone");
         builder.Property(message => message.TraceId).HasMaxLength(64);
         builder.Property(message => message.CorrelationId).HasMaxLength(100);
+        builder.Property(message => message.TraceParent).HasMaxLength(128);
+        builder.Property(message => message.TraceState).HasMaxLength(512);
 
         builder.HasIndex(message => new
         {

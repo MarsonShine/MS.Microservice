@@ -62,6 +62,7 @@ namespace MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.Dependen
                             .AddOtlpExporter();
                     });
                 services.TryAddSingleton<PlatformMetrics>();
+                services.TryAddSingleton(new PlatformTracing(resourceOptions.ActivitySourceName));
                 return services;
             }
         }

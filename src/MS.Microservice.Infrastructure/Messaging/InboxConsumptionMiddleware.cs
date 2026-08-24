@@ -13,7 +13,9 @@ public sealed record InboxExecution(
     Guid ProcessingToken,
     bool ShouldExecute,
     IInboxTransaction? BusinessTransaction,
-    long StartedTimestamp)
+    long StartedTimestamp,
+    Activity? ConsumerActivity,
+    IDisposable? LogScope)
 {
     public bool Completed { get; set; }
 }
@@ -26,6 +28,8 @@ public sealed class InboxConsumptionMiddleware
         IInboxStore inboxStore,
         IInboxTransactionCoordinator transactionCoordinator,
         PlatformMetrics metrics,
+        PlatformTracing tracing,
+        ILogger<InboxExecution> logger,
         IOptions<InboxConsumerOptions> options,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
@@ -42,14 +46,31 @@ public sealed class InboxConsumptionMiddleware
 
         var consumer = BuildConsumerName<TMessage>(envelope);
         var nowUtc = timeProvider.GetUtcNow();
+        envelope.TryGetHeader(MessageHeaders.TraceParent, out var traceParent);
+        envelope.TryGetHeader(MessageHeaders.TraceState, out var traceState);
+        envelope.TryGetHeader(MessageHeaders.CorrelationId, out var correlationId);
+        var consumerActivity = tracing.StartActivity(
+            "messaging.inbox.consume",
+            ActivityKind.Consumer,
+            traceParent,
+            traceState);
+        consumerActivity?.SetTag("messaging.system", "wolverine");
+        consumerActivity?.SetTag("messaging.operation.name", "process");
+        consumerActivity?.SetTag("messaging.message.id", messageId.ToString("N"));
+        var logScope = logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["MessageId"] = messageId,
+            ["CorrelationId"] = correlationId ?? envelope.CorrelationId,
+            ["MessagingStage"] = "inbox.consume"
+        });
         var registration = await inboxStore.TryRegisterAsync(
             messageId,
             consumer,
             nowUtc,
             envelope.MessageType ?? typeof(TMessage).AssemblyQualifiedName,
             envelope.Source?.ToString(),
-            Activity.Current?.TraceId.ToString(),
-            envelope.CorrelationId,
+            consumerActivity?.TraceId.ToString() ?? Activity.Current?.TraceId.ToString(),
+            correlationId ?? envelope.CorrelationId,
             cancellationToken);
         metrics.RecordInboxRegistration(registration.IsFirstDelivery);
         var processingToken = Guid.NewGuid();
@@ -67,10 +88,15 @@ public sealed class InboxConsumptionMiddleware
             processingToken,
             acquired,
             businessTransaction,
-            Stopwatch.GetTimestamp());
+            Stopwatch.GetTimestamp(),
+            acquired ? consumerActivity : null,
+            acquired ? logScope : null);
         if (!acquired)
         {
             metrics.RecordInboxShortCircuited();
+            consumerActivity?.SetTag("messaging.outcome", "duplicate");
+            consumerActivity?.Dispose();
+            logScope?.Dispose();
         }
         return (acquired ? HandlerContinuation.Continue : HandlerContinuation.Stop, execution);
     }
@@ -122,6 +148,7 @@ public sealed class InboxConsumptionMiddleware
         execution.Completed = true;
         metrics.RecordInboxProcessed(
             Stopwatch.GetElapsedTime(execution.StartedTimestamp).TotalMilliseconds);
+        execution.ConsumerActivity?.SetTag("messaging.outcome", "processed");
     }
 
     public static async Task FinallyAsync(
@@ -138,37 +165,47 @@ public sealed class InboxConsumptionMiddleware
 
         try
         {
-            if (!execution.Completed)
+            try
             {
-                await execution.BusinessTransaction.RollbackAsync(CancellationToken.None);
+                if (!execution.Completed)
+                {
+                    await execution.BusinessTransaction.RollbackAsync(CancellationToken.None);
+                }
+            }
+            finally
+            {
+                await execution.BusinessTransaction.DisposeAsync();
+            }
+
+            if (execution.Completed || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            try
+            {
+                await inboxStore.MarkFailedAsync(
+                    execution.DeduplicationKey,
+                    execution.ProcessingToken,
+                    "Handler execution did not complete successfully.",
+                    CancellationToken.None);
+                metrics.RecordInboxFailed(
+                    Stopwatch.GetElapsedTime(execution.StartedTimestamp).TotalMilliseconds);
+                execution.ConsumerActivity?.SetTag("messaging.outcome", "failed");
+                execution.ConsumerActivity?.SetStatus(ActivityStatusCode.Error);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Unable to record failed Inbox execution for {DeduplicationKey}",
+                    execution.DeduplicationKey);
             }
         }
         finally
         {
-            await execution.BusinessTransaction.DisposeAsync();
-        }
-
-        if (execution.Completed || cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        try
-        {
-            await inboxStore.MarkFailedAsync(
-                execution.DeduplicationKey,
-                execution.ProcessingToken,
-                "Handler execution did not complete successfully.",
-                CancellationToken.None);
-            metrics.RecordInboxFailed(
-                Stopwatch.GetElapsedTime(execution.StartedTimestamp).TotalMilliseconds);
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Unable to record failed Inbox execution for {DeduplicationKey}",
-                execution.DeduplicationKey);
+            execution.ConsumerActivity?.Dispose();
+            execution.LogScope?.Dispose();
         }
     }
 

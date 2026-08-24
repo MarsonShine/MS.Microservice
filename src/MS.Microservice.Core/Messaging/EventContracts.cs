@@ -7,6 +7,9 @@ public static class MessageHeaders
 {
     /// <summary>Stable message id preserved across outbox retries and transport redelivery.</summary>
     public const string MessageId = "ms-microservice-message-id";
+    public const string TraceParent = "traceparent";
+    public const string TraceState = "tracestate";
+    public const string CorrelationId = "ms-microservice-correlation-id";
 }
 
 /// <summary>Canonical marker for events exchanged by platform messaging components.</summary>

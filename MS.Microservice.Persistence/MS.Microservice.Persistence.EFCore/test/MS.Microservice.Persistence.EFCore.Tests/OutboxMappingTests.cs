@@ -20,6 +20,8 @@ public sealed class OutboxMappingTests
         entity.FindProperty(nameof(OutboxMessage.Payload))!.GetColumnType().Should().Be("jsonb");
         entity.FindProperty(nameof(OutboxMessage.ContentType))!.GetMaxLength().Should().Be(100);
         entity.FindProperty(nameof(OutboxMessage.Status))!.GetMaxLength().Should().Be(32);
+        entity.FindProperty(nameof(OutboxMessage.TraceParent))!.GetMaxLength().Should().Be(128);
+        entity.FindProperty(nameof(OutboxMessage.TraceState))!.GetMaxLength().Should().Be(512);
 
         var indexPropertySets = entity.GetIndexes()
             .Select(index => index.Properties.Select(property => property.Name).ToArray())

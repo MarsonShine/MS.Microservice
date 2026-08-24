@@ -106,7 +106,9 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             fixture.MessageBus,
             Options.Create(new OutboxPublisherOptions()),
             TimeProvider.System,
-            new PlatformMetrics());
+            new PlatformMetrics(),
+            new PlatformTracing("tests"),
+            Substitute.For<ILogger<OutboxPublisher>>());
 
         await publisher.PublishBatchAsync();
         await fixture.Recorder.WaitAsync(TimeSpan.FromSeconds(15));
@@ -142,7 +144,9 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
                 MaximumRetryDelay = TimeSpan.FromSeconds(10)
             }),
             timeProvider,
-            new PlatformMetrics());
+            new PlatformMetrics(),
+            new PlatformTracing("tests"),
+            Substitute.For<ILogger<OutboxPublisher>>());
 
         await publisher.PublishBatchAsync();
         timeProvider.Advance(TimeSpan.FromSeconds(2));
@@ -172,6 +176,8 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             store,
             coordinator,
             new PlatformMetrics(),
+            new PlatformTracing("tests"),
+            Substitute.For<ILogger<InboxExecution>>(),
             Options.Create(new InboxConsumerOptions()),
             TimeProvider.System,
             CancellationToken.None);
@@ -214,6 +220,8 @@ public sealed class MessagingCrashRecoveryTests(MessagingRecoveryFixture fixture
             store,
             coordinator,
             new PlatformMetrics(),
+            new PlatformTracing("tests"),
+            Substitute.For<ILogger<InboxExecution>>(),
             Options.Create(new InboxConsumerOptions()),
             TimeProvider.System,
             CancellationToken.None);

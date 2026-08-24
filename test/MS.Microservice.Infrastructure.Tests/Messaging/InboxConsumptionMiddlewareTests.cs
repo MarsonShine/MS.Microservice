@@ -72,6 +72,7 @@ public sealed class InboxConsumptionMiddlewareTests
         var stableMessageId = Guid.NewGuid();
         var envelope = CreateEnvelope(Guid.NewGuid());
         envelope.Headers[MessageHeaders.MessageId] = stableMessageId.ToString("N");
+        envelope.Headers[MessageHeaders.CorrelationId] = "correlation-7";
         var receipt = InboxMessage.Create(stableMessageId, ConsumerName, DateTimeOffset.UtcNow);
         store.TryRegisterAsync(stableMessageId, ConsumerName, Arg.Any<DateTimeOffset>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new InboxRegistration(false, receipt));
@@ -85,7 +86,7 @@ public sealed class InboxConsumptionMiddlewareTests
             Arg.Any<string?>(),
             Arg.Any<string?>(),
             Arg.Any<string?>(),
-            Arg.Any<string?>(),
+            "correlation-7",
             Arg.Any<CancellationToken>());
     }
 
@@ -94,7 +95,14 @@ public sealed class InboxConsumptionMiddlewareTests
     {
         var store = Substitute.For<IInboxStore>();
         var transaction = Substitute.For<IInboxTransaction>();
-        var execution = new InboxExecution("consumer:key", Guid.NewGuid(), true, transaction, Stopwatch.GetTimestamp());
+        var execution = new InboxExecution(
+            "consumer:key",
+            Guid.NewGuid(),
+            true,
+            transaction,
+            Stopwatch.GetTimestamp(),
+            null,
+            null);
 
         await InboxConsumptionMiddleware.FinallyAsync(
             execution,
@@ -123,11 +131,14 @@ public sealed class InboxConsumptionMiddlewareTests
             store,
             transactionCoordinator,
             Metrics,
+            Tracing,
+            Substitute.For<ILogger<InboxExecution>>(),
             Options.Create(new InboxConsumerOptions()),
             TimeProvider.System,
             CancellationToken.None);
 
     private static readonly PlatformMetrics Metrics = new();
+    private static readonly PlatformTracing Tracing = new("tests");
 
     private static IInboxTransactionCoordinator CreateTransactionCoordinator(
         out IInboxTransaction transaction)

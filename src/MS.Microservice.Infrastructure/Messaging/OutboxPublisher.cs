@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Diagnostics;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Persistence.EFCore.Outbox;
 using MS.Microservice.Infrastructure.Telemetry;
@@ -13,7 +14,9 @@ public sealed class OutboxPublisher(
     IMessageBus messageBus,
     IOptions<OutboxPublisherOptions> options,
     TimeProvider timeProvider,
-    PlatformMetrics metrics)
+    PlatformMetrics metrics,
+    PlatformTracing tracing,
+    ILogger<OutboxPublisher> logger)
 {
     private readonly OutboxPublisherOptions _options = options.Value;
 
@@ -31,6 +34,20 @@ public sealed class OutboxPublisher(
         foreach (var message in messages)
         {
             var startedAt = Stopwatch.GetTimestamp();
+            using var activity = tracing.StartActivity(
+                "messaging.outbox.publish",
+                ActivityKind.Producer,
+                message.TraceParent,
+                message.TraceState);
+            activity?.SetTag("messaging.system", "wolverine");
+            activity?.SetTag("messaging.operation.name", "publish");
+            activity?.SetTag("messaging.message.id", message.MessageId.ToString("N"));
+            using var logScope = logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["MessageId"] = message.MessageId,
+                ["CorrelationId"] = message.CorrelationId,
+                ["MessagingStage"] = "outbox.publish"
+            });
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
@@ -43,6 +60,9 @@ public sealed class OutboxPublisher(
                     DeduplicationId = stableMessageId
                 };
                 deliveryOptions.Headers[MessageHeaders.MessageId] = stableMessageId;
+                SetHeader(deliveryOptions, MessageHeaders.TraceParent, activity?.Id ?? message.TraceParent);
+                SetHeader(deliveryOptions, MessageHeaders.TraceState, activity?.TraceStateString ?? message.TraceState);
+                SetHeader(deliveryOptions, MessageHeaders.CorrelationId, message.CorrelationId);
                 await messageBus.PublishAsync(payload, deliveryOptions);
                 await outboxStore.MarkPublishedAsync(
                     message.MessageId,
@@ -50,6 +70,8 @@ public sealed class OutboxPublisher(
                     timeProvider.GetUtcNow(),
                     cancellationToken);
                 metrics.RecordOutboxPublished(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
+                activity?.SetTag("messaging.outcome", "published");
+                logger.LogInformation("Published Outbox message");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -70,10 +92,18 @@ public sealed class OutboxPublisher(
                 metrics.RecordOutboxFailed(
                     Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds,
                     willDeadLetter);
+                activity?.SetTag("messaging.outcome", willDeadLetter ? "dead_lettered" : "failed");
+                activity?.SetStatus(ActivityStatusCode.Error, error);
+                logger.LogWarning("Outbox publish failed with outcome {Outcome}", willDeadLetter ? "dead_lettered" : "failed");
             }
         }
 
         return messages.Count;
+    }
+
+    private static void SetHeader(DeliveryOptions options, string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) options.Headers[key] = value;
     }
 
     public TimeSpan CalculateRetryDelay(int retryAttempt)
