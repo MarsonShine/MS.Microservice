@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+    <ProjectReference Include="..\MS.Microservice.EventSourcing\MS.Microservice.EventSourcing.csproj" />
   </ItemGroup>
 </Project>

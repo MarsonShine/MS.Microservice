@@ -20,6 +20,7 @@ MS.Microservice 是一个面向 .NET 10 的微服务基础框架仓库，当前�
 | --- | --- |
 | `src/MS.Microservice.Core` | 通用领域接口、函数式类型、规范模式、缓存、序列化、安全工具。 |
 | `src/MS.Microservice.Domain` | 当前示例业务领域模型、聚合、领域服务和领域事件暂存。 |
+| `src/MS.Microservice.EventSourcing` | Provider-neutral 事件流、快照和投影检查点契约。 |
 | `src/MS.Microservice.Infrastructure` | EF Core、SqlSugar、事件溯源、健康检查、OpenTelemetry 等基础设施实现。 |
 | `src/MS.Microservice.Web` | ASP.NET Core Host、API 入口、认证授权、Swagger、Wolverine 接入。 |
 | `samples/MS.Microservice.Lab` | 独立实验 Host；唯一允许装载 Lab Controller 的启动入口。 |

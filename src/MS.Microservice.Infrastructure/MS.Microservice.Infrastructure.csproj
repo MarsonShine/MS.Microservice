@@ -38,6 +38,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MS.Microservice.Core\MS.Microservice.Core.csproj" />
     <ProjectReference Include="..\MS.Microservice.Domain\MS.Microservice.Domain.csproj" />
+    <ProjectReference Include="..\MS.Microservice.EventSourcing\MS.Microservice.EventSourcing.csproj" />
     <ProjectReference Include="..\..\MS.Microservice.Persistence\MS.Microservice.Persistence.EFCore\src\MS.Microservice.Persistence.EFCore\MS.Microservice.Persistence.EFCore.csproj" />
     <ProjectReference Include="..\..\MS.Microservice.Persistence\MS.Microservice.Persistence.SqlSugar\src\MS.Microservice.Persistence.SqlSugar\MS.Microservice.Persistence.SqlSugar.csproj" />
   </ItemGroup>
