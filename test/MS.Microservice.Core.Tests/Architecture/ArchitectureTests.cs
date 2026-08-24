@@ -80,6 +80,28 @@ public class ArchitectureTests
     }
 
     [Fact]
+    public void Core_ShouldNot_DefineOrReference_OrmSpecificAbstractions()
+    {
+        var coreAssembly = typeof(MS.Microservice.Core.Extension.StringExtensions).Assembly;
+        var referencedAssemblies = coreAssembly
+            .GetReferencedAssemblies()
+            .Select(assembly => assembly.Name)
+            .ToArray();
+        var forbiddenTypes = coreAssembly
+            .GetTypes()
+            .Where(type =>
+                type.FullName?.Contains("SqlSugar", StringComparison.OrdinalIgnoreCase) == true
+                || type.Name == "IRepositoryBase`1")
+            .Select(type => type.FullName)
+            .ToArray();
+
+        Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Persistence.SqlSugar", referencedAssemblies);
+        Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
+        Assert.Empty(forbiddenTypes);
+    }
+
+    [Fact]
     public void CanonicalEventContracts_ShouldNot_DependOn_MessagingFrameworksOrPersistence()
     {
         var referencedAssemblies = typeof(MS.Microservice.Core.Messaging.IEventContract)
