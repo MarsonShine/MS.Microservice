@@ -55,6 +55,31 @@ public sealed class InboxConsumptionMiddlewareTests
     }
 
     [Fact]
+    public async Task Before_OutboxRetry_UsesStableHeaderInsteadOfNewEnvelopeId()
+    {
+        var store = Substitute.For<IInboxStore>();
+        var message = new TestIntegrationEvent();
+        var stableMessageId = Guid.NewGuid();
+        var envelope = CreateEnvelope(Guid.NewGuid());
+        envelope.Headers[MessageHeaders.MessageId] = stableMessageId.ToString("N");
+        var receipt = InboxMessage.Create(stableMessageId, ConsumerName, DateTimeOffset.UtcNow);
+        store.TryRegisterAsync(stableMessageId, ConsumerName, Arg.Any<DateTimeOffset>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new InboxRegistration(false, receipt));
+
+        await BeforeAsync(message, envelope, store);
+
+        await store.Received(1).TryRegisterAsync(
+            stableMessageId,
+            ConsumerName,
+            Arg.Any<DateTimeOffset>(),
+            Arg.Any<string?>(),
+            Arg.Any<string?>(),
+            Arg.Any<string?>(),
+            Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Finally_WhenHandlerDidNotComplete_MarksOwnedReceiptFailed()
     {
         var store = Substitute.For<IInboxStore>();

@@ -41,6 +41,8 @@ Domain、旧 Core EventBus 和独立 EventBus 都通过兼容 shim 指向这组�
 
 当前 Outbox 的 `MessageType` 使用 assembly-qualified CLR type，便于同版本反序列化。跨版本长期兼容仍应增加稳定 event name、schema version 和显式类型注册表，不能把 CLR 名称当作永久公共协议。
 
+Outbox 发布时会把 `OutboxMessage.MessageId` 写入 Wolverine Envelope 的 `ms-microservice-message-id` header，并设置相同的 transport `DeduplicationId`。Inbox 优先使用该 header，而不是 Wolverine 每次发送可能重新生成的 `Envelope.Id`，因此 Outbox 重试和 Broker 重投仍得到同一个 deduplication key。
+
 ## 3. Outbox 如何实现
 
 ### 写入

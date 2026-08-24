@@ -25,12 +25,7 @@ public sealed class InboxConsumptionMiddleware
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(envelope);
 
-        var messageId = envelope.Id;
-        if (messageId == Guid.Empty && message is IntegrationEvent integrationEvent)
-        {
-            messageId = integrationEvent.Id;
-        }
-
+        var messageId = ResolveMessageId(message, envelope);
         if (messageId == Guid.Empty)
         {
             throw new InvalidOperationException("Incoming event has no stable message identifier.");
@@ -56,6 +51,25 @@ public sealed class InboxConsumptionMiddleware
             cancellationToken);
         var execution = new InboxExecution(registration.Receipt.DeduplicationKey, processingToken, acquired);
         return (acquired ? HandlerContinuation.Continue : HandlerContinuation.Stop, execution);
+    }
+
+    private static Guid ResolveMessageId<TMessage>(TMessage message, Envelope envelope)
+        where TMessage : IEventContract
+    {
+        if (envelope.TryGetHeader(MessageHeaders.MessageId, out var stableMessageId)
+            && Guid.TryParse(stableMessageId, out var parsedMessageId))
+        {
+            return parsedMessageId;
+        }
+
+        if (envelope.Id != Guid.Empty)
+        {
+            return envelope.Id;
+        }
+
+        return message is IntegrationEvent integrationEvent
+            ? integrationEvent.Id
+            : Guid.Empty;
     }
 
     public static async Task AfterAsync(

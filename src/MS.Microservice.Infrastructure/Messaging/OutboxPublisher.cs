@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using MS.Microservice.Core.Messaging;
 using MS.Microservice.Persistence.EFCore.Outbox;
 using Wolverine;
 
@@ -31,7 +32,13 @@ public sealed class OutboxPublisher(
                 var messageType = Type.GetType(message.MessageType, throwOnError: true)!;
                 var payload = JsonSerializer.Deserialize(message.Payload, messageType)
                     ?? throw new JsonException($"Outbox message '{message.MessageId}' deserialized to null.");
-                await messageBus.PublishAsync(payload);
+                var stableMessageId = message.MessageId.ToString("N");
+                var deliveryOptions = new DeliveryOptions
+                {
+                    DeduplicationId = stableMessageId
+                };
+                deliveryOptions.Headers[MessageHeaders.MessageId] = stableMessageId;
+                await messageBus.PublishAsync(payload, deliveryOptions);
                 await outboxStore.MarkPublishedAsync(
                     message.MessageId,
                     lockToken,

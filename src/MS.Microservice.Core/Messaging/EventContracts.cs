@@ -2,6 +2,13 @@ using System.Text.Json.Serialization;
 
 namespace MS.Microservice.Core.Messaging;
 
+/// <summary>Transport-independent header names used by platform messaging.</summary>
+public static class MessageHeaders
+{
+    /// <summary>Stable message id preserved across outbox retries and transport redelivery.</summary>
+    public const string MessageId = "ms-microservice-message-id";
+}
+
 /// <summary>Canonical marker for events exchanged by platform messaging components.</summary>
 public interface IEventContract
 {
