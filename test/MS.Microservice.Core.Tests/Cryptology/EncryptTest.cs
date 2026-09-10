@@ -82,7 +82,7 @@ namespace MS.Microservice.Core.Tests.Cryptology
         {
             string invalidKey = Convert.ToBase64String([1, 2, 3, 4]);
 
-            Assert.Throws<ArgumentNullException>(() =>
+            Assert.Throws<CryptographicException>(() =>
                 CryptologyHelper.RsaCrypt.Encrypt("hello", invalidKey, Encoding.UTF8));
         }
 
