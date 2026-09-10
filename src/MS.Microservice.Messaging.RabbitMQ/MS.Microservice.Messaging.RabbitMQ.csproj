@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <PackageReference Include="RabbitMQ.Client" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="MS.Microservice.Messaging.RabbitMQ.Tests" /></ItemGroup>
+</Project>
