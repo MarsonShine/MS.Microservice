@@ -31,7 +31,7 @@ public sealed class LayerDependencyTests
     public void Infrastructure_Should_Not_Depend_On_Web(string dependency)
     {
         var result = Types
-            .InAssembly(typeof(InfrastructureServiceCollectionExtensions).Assembly)
+            .InAssembly(typeof(MS.Microservice.Infrastructure.Messaging.WolverineDomainEventDispatcher).Assembly)
             .ShouldNot()
             .HaveDependencyOn(dependency)
             .GetResult();

@@ -45,7 +45,6 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
         public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
         private readonly MsPlatformDbContextSettings _platformDbContextOption;
-        private static readonly JsonSerializerOptions OutboxSerializerOptions = new(JsonSerializerDefaults.Web);
 
         public ActivationDbContext(
             DbContextOptions<ActivationDbContext> dbContextOptions,
@@ -130,62 +129,14 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
                 }
             }
 
-            var domainEntities = ChangeTracker
-                .Entries()
-                .Select(entry => entry.Entity)
-                .OfType<IHasDomainEvents>()
-                .Where(entity => entity.DomainEvents.Count != 0)
-                .ToList();
-            var domainEvents = domainEntities
-                .SelectMany(entity => entity.DomainEvents)
-                .ToList();
-            var outboxMessages = domainEvents
-                .Select(CreateOutboxMessage)
-                .ToList();
-
-            if (outboxMessages.Count != 0)
-            {
-                OutboxMessages.AddRange(outboxMessages);
-            }
-
-            try
-            {
-                var result = await base.SaveChangesAsync(cancellationToken);
-                domainEntities.ForEach(entity => entity.ClearDomainEvents());
-                return result;
-            }
-            catch
-            {
-                foreach (var outboxMessage in outboxMessages)
-                {
-                    Entry(outboxMessage).State = EntityState.Detached;
-                }
-
-                throw;
-            }
+            // Legacy exercises keep their event list in memory. Reliable messaging lessons
+            // use the shared component and an independent database; old rows remain untouched.
+            return await base.SaveChangesAsync(cancellationToken);
         }
-
         public async Task<bool> SaveEntitiesAsync(CancellationToken cancellationToken = default)
         {
             await SaveChangesAsync(cancellationToken);
             return true;
-        }
-
-        private static OutboxMessage CreateOutboxMessage(IDomainEvent domainEvent)
-        {
-            var eventType = domainEvent.GetType();
-            var messageType = eventType.AssemblyQualifiedName
-                ?? throw new InvalidOperationException($"Domain event type '{eventType}' has no assembly-qualified name.");
-            var payload = JsonSerializer.Serialize(domainEvent, eventType, OutboxSerializerOptions);
-            var activity = Activity.Current;
-            return OutboxMessage.Create(
-                messageType,
-                payload,
-                DateTimeOffset.UtcNow,
-                traceId: activity?.TraceId.ToString(),
-                correlationId: activity?.GetBaggageItem("correlationId") ?? activity?.RootId,
-                traceParent: activity?.Id,
-                traceState: activity?.TraceStateString);
         }
 
         private IDbContextTransaction? _currentTransaction;

@@ -12,85 +12,52 @@ namespace MS.Microservice.Persistence.EFCore.Tests;
 
 public sealed class OutboxPersistenceTests
 {
-    [Fact]
-    public async Task SaveEntitiesAsync_PersistsBusinessDataAndOutboxInOneSaveWithoutDirectDispatch()
+    [Theory]
+    [InlineData("created")]
+    [InlineData("中文")]
+    [InlineData("")]
+    [InlineData("retry")]
+    public async Task LegacySavePreservesEventsWithoutCreatingAnotherOutbox(string name)
     {
         var dispatcher = Substitute.For<IDomainEventDispatcher>();
         await using var context = CreateContext(dispatcher);
         var log = CreateLog();
-        log.AddDomainEvent(new TestDomainEvent("created"));
+        log.AddDomainEvent(new TestDomainEvent(name));
         context.Logs.Add(log);
-
-        var saved = await context.SaveEntitiesAsync();
-
-        saved.Should().BeTrue();
-        (await context.Logs.CountAsync()).Should().Be(1);
-        var outbox = await context.OutboxMessages.SingleAsync();
-        outbox.Status.Should().Be(OutboxMessageStatus.Pending);
-        outbox.MessageType.Should().Contain(nameof(TestDomainEvent));
-        outbox.Payload.Should().Contain("created");
-        log.DomainEvents.Should().BeEmpty();
-        await dispatcher.DidNotReceiveWithAnyArgs().DispatchAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task SaveEntitiesAsync_WhenDatabaseSaveFails_KeepsDomainEventsAndDetachesOutbox()
-    {
-        var dispatcher = Substitute.For<IDomainEventDispatcher>();
-        await using var context = CreateContext(dispatcher, new ThrowingSaveChangesInterceptor());
-        var log = CreateLog();
-        var domainEvent = new TestDomainEvent("retry");
-        log.AddDomainEvent(domainEvent);
-        context.Logs.Add(log);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => context.SaveEntitiesAsync());
-
-        exception.Message.Should().Be("database save failed");
-        log.DomainEvents.Should().ContainSingle().Which.Should().BeSameAs(domainEvent);
-        context.ChangeTracker.Entries<OutboxMessage>().Should().BeEmpty();
-        await dispatcher.DidNotReceiveWithAnyArgs().DispatchAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task ReplayDeadLetterAsync_OnlyResetsDeadLetteredMessage()
-    {
-        await using var context = CreateContext(Substitute.For<IDomainEventDispatcher>());
-        var now = DateTimeOffset.UtcNow;
-        var message = OutboxMessage.Create("event", "{}", now, maxRetryCount: 0);
-        message.MarkFailed("permanent", now, TimeSpan.Zero);
-        context.OutboxMessages.Add(message);
-        await context.SaveChangesAsync();
-        var store = new EfCoreOutboxStore(context);
-
-        var replayed = await store.ReplayDeadLetterAsync(message.MessageId, now.AddMinutes(1));
-
-        replayed.Should().BeTrue();
-        message.Status.Should().Be(OutboxMessageStatus.Pending);
-        message.RetryCount.Should().Be(0);
-        message.NextAttemptAtUtc.Should().Be(now.AddMinutes(1));
-    }
-
-    [Fact]
-    public async Task SaveEntitiesAsync_CapturesW3CTraceAndCorrelationContext()
-    {
-        using var activity = new Activity("request").SetIdFormat(ActivityIdFormat.W3C).Start();
-        activity.TraceStateString = "vendor=value";
-        activity.AddBaggage("correlationId", "correlation-7");
-        await using var context = CreateContext(Substitute.For<IDomainEventDispatcher>());
-        var log = CreateLog();
-        log.AddDomainEvent(new TestDomainEvent("traced"));
-        context.Logs.Add(log);
-
         await context.SaveEntitiesAsync();
-
-        var outbox = await context.OutboxMessages.SingleAsync();
-        outbox.TraceParent.Should().Be(activity.Id);
-        outbox.TraceState.Should().Be("vendor=value");
-        outbox.TraceId.Should().Be(activity.TraceId.ToString());
-        outbox.CorrelationId.Should().Be("correlation-7");
+        Assert.Equal(1, await context.Logs.CountAsync());
+        Assert.Empty(await context.OutboxMessages.ToListAsync());
+        Assert.Single(log.DomainEvents);
+        await dispatcher.DidNotReceiveWithAnyArgs().DispatchAsync(default!, default);
     }
 
+    [Fact]
+    public async Task FailedLegacySavePreservesEventsAndDoesNotStageMessages()
+    {
+        await using var context = CreateContext(Substitute.For<IDomainEventDispatcher>(), new ThrowingSaveChangesInterceptor());
+        var log = CreateLog();
+        log.AddDomainEvent(new TestDomainEvent("failure"));
+        context.Logs.Add(log);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => context.SaveEntitiesAsync());
+        Assert.Single(log.DomainEvents);
+        Assert.Empty(context.ChangeTracker.Entries<OutboxMessage>());
+    }
+
+    [Fact]
+    public async Task LegacySaveLeavesHistoricalPendingAndDeadLettersUntouched()
+    {
+        await using var context = CreateContext(Substitute.For<IDomainEventDispatcher>());
+        var pending = OutboxMessage.Create("historical", "{}", DateTimeOffset.UtcNow);
+        var dead = OutboxMessage.Create("historical", "{}", DateTimeOffset.UtcNow, maxRetryCount: 0);
+        dead.MarkFailed("permanent", DateTimeOffset.UtcNow, TimeSpan.Zero);
+        context.OutboxMessages.AddRange(pending, dead);
+        await context.SaveChangesAsync();
+        context.Logs.Add(CreateLog());
+        await context.SaveEntitiesAsync();
+        Assert.Equal(2, await context.OutboxMessages.CountAsync());
+        Assert.Equal(OutboxMessageStatus.Pending, pending.Status);
+        Assert.Equal(OutboxMessageStatus.DeadLettered, dead.Status);
+    }
     private static ActivationDbContext CreateContext(
         IDomainEventDispatcher dispatcher,
         SaveChangesInterceptor? interceptor = null)

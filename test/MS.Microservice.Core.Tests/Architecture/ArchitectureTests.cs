@@ -195,7 +195,7 @@ public class ArchitectureTests
     [Fact]
     public void Infrastructure_ShouldNot_DependOn_Web()
     {
-        var infraAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;
+        var infraAssembly = typeof(MS.Microservice.Infrastructure.Messaging.WolverineDomainEventDispatcher).Assembly;
 
         var result = Types
             .InAssembly(infraAssembly)
@@ -212,7 +212,7 @@ public class ArchitectureTests
     [Fact]
     public void Infrastructure_ShouldNot_Define_ActivationEfCoreOrSqlSugarImplementationTypes()
     {
-        var infraAssembly = typeof(InfrastructureServiceCollectionExtensions).Assembly;
+        var infraAssembly = typeof(MS.Microservice.Infrastructure.Messaging.WolverineDomainEventDispatcher).Assembly;
         var forbiddenNamespacePrefixes = new[]
         {
             "MS.Microservice.Infrastructure.DbContext",

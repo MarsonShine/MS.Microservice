@@ -16,7 +16,7 @@ using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
 using MS.Microservice.Infrastructure.HealthChecks;
-using MS.Microservice.Infrastructure.DependencyInjection;
+using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Lab.Application.Orders;
 using MS.Microservice.Lab.Application.Identity.Token;
 using MS.Microservice.Lab.Infrastructure.Authorizations.Handlers;
@@ -167,22 +167,15 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
 
             public IServiceCollection AddApplicationInfrastructure(IConfiguration configuration)
             {
-                var profileName = configuration["Infrastructure:Profile"]
-                    ?? nameof(InfrastructureProfile.Production);
-                if (!Enum.TryParse<InfrastructureProfile>(profileName, ignoreCase: true, out var profile))
-                {
-                    throw new OptionsValidationException(
-                        "Infrastructure:Profile",
-                        typeof(InfrastructureProfile),
-                        [$"Infrastructure:Profile must be one of: {string.Join(", ", Enum.GetNames<InfrastructureProfile>())}."]);
-                }
-
-                services.AddInfrastructure(configuration, profile);
-                if (profile == InfrastructureProfile.Sample)
-                {
-                    services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
-                    services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();
-                }
+                services.AddMicroserviceEfCorePersistence(configuration);
+                services.AddMicroserviceSqlSugarPersistence(configuration);
+                var eventStore = configuration.GetConnectionString("EventStoreConnection");
+                if (string.IsNullOrWhiteSpace(eventStore))
+                    throw new InvalidOperationException("ConnectionStrings:EventStoreConnection is required.");
+                services.AddPostgresEventSourcing(eventStore);
+                services.AddMsOpenTelemetry(configuration);
+                services.AddScoped<IOrderWorkflowAppService, OrderWorkflowAppService>();
+                services.AddScoped<IOrderQueryAppService, OrderQueryAppService>();
 
                 return services;
             }

@@ -45,15 +45,13 @@ public static class PlatformWebHost
             }
         });
 
-        builder.Host.UseWolverine(options =>
+        LabMessaging.Configure(builder, options =>
         {
             options.Discovery.IncludeAssembly(typeof(PlatformWebHost).Assembly);
             options.Discovery.IncludeAssembly(typeof(Entity).Assembly);
             options.Discovery.IncludeAssembly(typeof(ActivationDbContext).Assembly);
             options.Policies.AddMiddleware<LoggingMiddleware>();
             options.Policies.AddMiddleware<ValidatorMiddleware>();
-            options.Policies.AddMiddleware<InboxConsumptionMiddleware>(chain =>
-                typeof(IEventContract).IsAssignableFrom(chain.MessageType));
         });
 
         AddServices(builder, enableLabEndpoints);
@@ -95,6 +93,7 @@ public static class PlatformWebHost
         app.UsePlatformSwagger();
         app.MapPlatformHealthChecks();
         app.MapControllers();
+        LabMessaging.Map(app);
 
         await app.RunAsync();
     }
