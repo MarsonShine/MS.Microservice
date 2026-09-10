@@ -44,6 +44,7 @@ public static class WolverineMessagingExtensions
                 provider.GetRequiredService<TContext>(), []), topology.Registry));
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<WolverineUnitOfWork<TContext>>());
         services.AddScoped<IIntegrationEventPublisher>(provider => provider.GetRequiredService<WolverineUnitOfWork<TContext>>());
+        services.AddScoped<IMessageStorageProbe, WolverineStorageProbe>();
         services.AddScoped<IFailedMessageOperations, WolverineFailedMessageOperations>();
         var broker = settings.BrokerOptions();
         foreach (var subscription in topology.Subscriptions)
