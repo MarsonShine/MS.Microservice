@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <Description>Provider-independent contracts for transactional integration messaging.</Description>
+  </PropertyGroup>
+</Project>
