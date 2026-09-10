@@ -127,6 +127,39 @@ public class RbacAuthorizationHandlerTests
         Assert.False(context.HasFailed);
     }
 
+    [Theory]
+    [InlineData("lab/messaging/operations", "1", true)]
+    [InlineData("LAB/MESSAGING/OPERATIONS", "1", true)]
+    [InlineData("User/List", "1", false)]
+    [InlineData("lab/messaging/operations", "2", false)]
+    [InlineData("lab/messaging/operations", "", false)]
+    public async Task ExplicitMessagePermissionWorksWithoutMvcRouteNames(string permission, string claimedRole, bool allowed)
+    {
+        var (handler, users) = CreateHandler();
+        users.GetUserAsync(7, Arg.Any<CancellationToken>()).Returns(Task.FromResult<User?>(CreateUser(7, 1, permission)));
+        var existing = CreateContext(roleClaim: claimedRole, controller: null, action: null);
+        var context = new AuthorizationHandlerContext(
+            [new RbacRequirement(["test-issuer"], JwtClaimTypes.Role, MS.Microservice.Domain.Consts.LabPermissions.MessagingOperations)],
+            existing.User, existing.Resource);
+        await handler.HandleAsync(context);
+        Assert.Equal(allowed, context.HasSucceeded);
+    }
+
+    [Fact]
+    public void LabMessagePolicyUsesExplicitPermissionRatherThanMvcRouteInference()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["LabTokenIssuer:SigningKey"] = new string('s', 64)
+        }).Build();
+        MS.Microservice.Lab.Infrastructure.Extensions.IServiceCollectionExtensions.AddCustomAuthentication(services, configuration);
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<global::Microsoft.Extensions.Options.IOptions<AuthorizationOptions>>().Value;
+        var policy = options.GetPolicy("LabMessagingOperations")!;
+        var requirement = Assert.Single(policy.Requirements.OfType<RbacRequirement>());
+        Assert.Equal(MS.Microservice.Domain.Consts.LabPermissions.MessagingOperations, requirement.Path);
+    }
     private static (RbacAuthorizationHandler Handler, IUserDomainService UserDomainService) CreateHandler()
     {
         var userDomainService = Substitute.For<IUserDomainService>();

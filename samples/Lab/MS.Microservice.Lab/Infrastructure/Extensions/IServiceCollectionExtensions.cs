@@ -259,7 +259,9 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
                     });
                 services.AddAuthorization(option =>
                 {
-                    // TODO
+                    option.AddPolicy("LabMessagingOperations", policy => policy.RequireAuthenticatedUser()
+                        .AddRequirements(new RbacRequirement(issuers, JwtClaimTypes.Role,
+                            MS.Microservice.Domain.Consts.LabPermissions.MessagingOperations)));
                     option.AddPolicy("Manage", policy => policy.Requirements.Add(new RbacRequirement(issuers, JwtClaimTypes.Role, "")));
                 });
 

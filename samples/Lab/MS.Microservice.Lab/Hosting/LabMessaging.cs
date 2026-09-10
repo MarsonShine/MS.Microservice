@@ -77,13 +77,13 @@ public static class LabMessaging
         lesson.MapGet("/audit", async (IProfileAuditRepository repository, Guid? profileId, CancellationToken token) =>
             Results.Ok(await repository.ListAsync(profileId, 50, token)));
         lesson.MapGet("/failures", async (IFailedMessageOperations failures, CancellationToken token) =>
-            Results.Ok(await failures.ListAsync(100, token))).RequireAuthorization("Manage");
+            Results.Ok(await failures.ListAsync(100, token))).RequireAuthorization("LabMessagingOperations");
         lesson.MapPost("/failures/{failureId}/replay", async (string failureId, IFailedMessageOperations failures,
             CancellationToken token) => await failures.ReplayAsync(failureId, token) switch
             {
                 ReplayResult.Accepted => Results.Accepted(),
                 ReplayResult.NotFound => Results.NotFound(),
                 _ => Results.Conflict()
-            }).RequireAuthorization("Manage");
+            }).RequireAuthorization("LabMessagingOperations");
     }
 }
