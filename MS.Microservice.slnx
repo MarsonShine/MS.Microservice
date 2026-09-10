@@ -62,6 +62,7 @@
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
+    <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj" />
   </Folder>
   <Folder Name="/src/">
@@ -90,6 +91,7 @@
     <Project Path="test/MS.Microservice.Messaging.RabbitMQ.Tests/MS.Microservice.Messaging.RabbitMQ.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.SelfManaged.Tests/MS.Microservice.Messaging.SelfManaged.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/">
