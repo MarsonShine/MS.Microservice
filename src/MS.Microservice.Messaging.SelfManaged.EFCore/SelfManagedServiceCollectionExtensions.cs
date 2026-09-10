@@ -28,6 +28,7 @@ public static class SelfManagedServiceCollectionExtensions
         services.AddScoped<IIntegrationEventPublisher>(provider => provider.GetRequiredService<SelfManagedUnitOfWork<TContext>>());
         services.AddScoped<OutboxStore<TContext>>();
         services.AddScoped<InboxStore<TContext>>();
+        services.AddScoped<IFailedMessageOperations, SelfManagedFailedMessageOperations<TContext>>();
         services.AddSingleton<IMessageReceiver, SelfManagedReceiver<TContext>>();
         foreach (var subscription in topology.Subscriptions) services.TryAddScoped(subscription.HandlerType);
         return services;
