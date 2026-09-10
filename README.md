@@ -4,6 +4,9 @@
 
 | 入口 | 用途 |
 | --- | --- |
+| [快速启动](docs/Getting-Started.md) | 一个脚本准备 Reference 或 Lab，并演练消息恢复。 |
+| [六个递进 Lab](docs/labs/README.md) | 分层、事务、可靠消息、故障、诊断与组件替换。 |
+| [源码复制与包消费](docs/components/consumption.md) | 依赖闭包导出和仓库外接入验证。 |
 | [生产参考服务](samples/Reference/MS.Microservice.Reference.Web/README.md) | 外部 JWT/OIDC 身份、用户档案、业务角色、审计和可靠消息。 |
 | [消息契约](src/MS.Microservice.Messaging.Abstractions/README.md) | 业务层依赖的入队、工作单元、处理器和运维接口。 |
 | [默认 Inbox/Outbox](src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md) | 与业务 EF Core 事务共享的自研实现。 |
@@ -44,7 +47,7 @@ dotnet run --project samples/Reference/MS.Microservice.Reference.Web
 ## Lab
 
 ```powershell
-dotnet run --project samples/Lab/MS.Microservice.Lab
+./build/start-local.ps1 -Lab
 ```
 
 Lab 与正式 Host 是两个独立程序集。实验 Controller 只在 Lab 中，正式镜像不携带它们。旧 Host 的设置与历史接入资料保存在 [历史快照](docs/history/legacy-host-readme.txt)，其中的旧命令不适用于当前生产参考服务。
