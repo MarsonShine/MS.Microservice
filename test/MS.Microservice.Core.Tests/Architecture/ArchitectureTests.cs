@@ -38,7 +38,7 @@ public class ArchitectureTests
             .That()
             .ResideInNamespace("MS.Microservice.Domain")
             .ShouldNot()
-            .HaveDependencyOn("MS.Microservice.Web")
+            .HaveDependencyOn("MS.Microservice.Lab")
             .GetResult();
 
         Assert.True(result.IsSuccessful,
@@ -72,7 +72,7 @@ public class ArchitectureTests
             .That()
             .ResideInNamespace("MS.Microservice.Core")
             .ShouldNot()
-            .HaveDependencyOn("MS.Microservice.Web")
+            .HaveDependencyOn("MS.Microservice.Lab")
             .GetResult();
 
         Assert.True(result.IsSuccessful,
@@ -114,7 +114,7 @@ public class ArchitectureTests
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
         Assert.DoesNotContain("SqlSugar", referencedAssemblies);
         Assert.DoesNotContain("MS.Microservice.Infrastructure", referencedAssemblies);
-        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class ArchitectureTests
             .Select(assembly => assembly.Name)
             .ToArray();
 
-        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
         Assert.DoesNotContain("MS.Microservice.Domain", referencedAssemblies);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
         Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
@@ -141,7 +141,7 @@ public class ArchitectureTests
             .Select(assembly => assembly.Name)
             .ToArray();
 
-        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
         Assert.DoesNotContain("MS.Microservice.Domain", referencedAssemblies);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
         Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
@@ -156,7 +156,7 @@ public class ArchitectureTests
             .Select(assembly => assembly.Name)
             .ToArray();
 
-        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
         Assert.DoesNotContain("MS.Microservice.Domain", referencedAssemblies);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
         Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
@@ -171,7 +171,7 @@ public class ArchitectureTests
             .Select(assembly => assembly.Name)
             .ToArray();
 
-        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
         Assert.DoesNotContain("MS.Microservice.Domain", referencedAssemblies);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
         Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
@@ -186,7 +186,7 @@ public class ArchitectureTests
             .Select(assembly => assembly.Name)
             .ToArray();
 
-        Assert.DoesNotContain("MS.Microservice.Web", referencedAssemblies);
+        Assert.DoesNotContain("MS.Microservice.Lab", referencedAssemblies);
         Assert.DoesNotContain("MS.Microservice.Domain", referencedAssemblies);
         Assert.DoesNotContain("Microsoft.EntityFrameworkCore", referencedAssemblies);
         Assert.DoesNotContain("SqlSugarCore", referencedAssemblies);
@@ -202,7 +202,7 @@ public class ArchitectureTests
             .That()
             .ResideInNamespace("MS.Microservice.Infrastructure")
             .ShouldNot()
-            .HaveDependencyOn("MS.Microservice.Web")
+            .HaveDependencyOn("MS.Microservice.Lab")
             .GetResult();
 
         Assert.True(result.IsSuccessful,
@@ -236,7 +236,7 @@ public class ArchitectureTests
     [Fact]
     public void WebApplicationTypes_ShouldResideIn_WebApplicationNamespace()
     {
-        var webAssembly = typeof(MS.Microservice.Web.Controller.AccountController).Assembly;
+        var webAssembly = typeof(MS.Microservice.Lab.Controller.AccountController).Assembly;
 
         var violatingTypes = Types
             .InAssembly(webAssembly)
@@ -252,7 +252,7 @@ public class ArchitectureTests
     [Fact]
     public void ProductionWeb_ShouldNot_DependOn_LabHost()
     {
-        var referencedAssemblies = typeof(MS.Microservice.Web.Controller.AccountController)
+        var referencedAssemblies = typeof(MS.Microservice.Lab.Controller.AccountController)
             .Assembly
             .GetReferencedAssemblies()
             .Select(assembly => assembly.Name);

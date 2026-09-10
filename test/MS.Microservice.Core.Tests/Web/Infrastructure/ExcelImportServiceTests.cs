@@ -1,4 +1,4 @@
-using MS.Microservice.Web.Application.Uploads;
+using MS.Microservice.Lab.Application.Uploads;
 using NPOI.XSSF.UserModel;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;

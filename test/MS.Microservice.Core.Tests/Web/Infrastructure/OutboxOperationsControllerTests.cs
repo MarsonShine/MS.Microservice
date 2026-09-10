@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MS.Microservice.Persistence.EFCore.Outbox;
-using MS.Microservice.Web.Controller;
+using MS.Microservice.Lab.Controller;
 using NSubstitute;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;

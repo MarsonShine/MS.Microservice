@@ -5,9 +5,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Web.Application.Models.Caching;
-using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
-using MS.Microservice.Web.Infrastructure.Authorizations.Requirements;
+using MS.Microservice.Lab.Application.Models.Caching;
+using MS.Microservice.Lab.Infrastructure.Authorizations.Handlers;
+using MS.Microservice.Lab.Infrastructure.Authorizations.Requirements;
 using NSubstitute;
 using System.Security.Claims;
 

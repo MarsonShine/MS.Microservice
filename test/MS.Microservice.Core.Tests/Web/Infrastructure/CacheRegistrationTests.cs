@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Core.Ceching;
-using MS.Microservice.Web.Infrastructure.Extensions;
+using MS.Microservice.Lab.Infrastructure.Extensions;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;
 

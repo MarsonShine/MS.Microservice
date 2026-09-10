@@ -61,6 +61,9 @@
   <Folder Name="/MS.Microservice.Swagger/test/">
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
   </Folder>
+  <Folder Name="/samples/Lab/">
+    <Project Path="samples/Lab/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
+  </Folder>
   <Folder Name="/samples/Reference/">
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.DatabaseMigrator/MS.Microservice.Reference.DatabaseMigrator.csproj" />
@@ -83,7 +86,6 @@
     <Project Path="src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
     <Project Path="src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
-    <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
@@ -100,7 +102,5 @@
     <Project Path="test/MS.Microservice.Reference.Persistence.Tests/MS.Microservice.Reference.Persistence.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
   </Folder>
-  <Folder Name="/samples/">
-    <Project Path="samples/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
-  </Folder>
+  <Folder Name="/samples/" />
 </Solution>

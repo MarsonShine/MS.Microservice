@@ -24,11 +24,12 @@ try {
         --name $containerName `
         --publish "127.0.0.1::8080" `
         --env "ASPNETCORE_ENVIRONMENT=Production" `
-        --env "Infrastructure__Profile=Production" `
-        --env "IdentityOptions__JwtBearerOption__SecurityKeys__0=container-smoke-signing-key-0000000000000001" `
-        --env "IdentityOptions__JwtBearerOption__SecurityKeys__1=container-smoke-signing-key-0000000000000002" `
-        --env "ConnectionStrings__ActivationConnection=Host=127.0.0.1;Port=5432;Database=activation;Username=postgres;Password=not-used" `
-        --env "ConnectionStrings__ActivationReaderConnection=Host=127.0.0.1;Port=5432;Database=activation;Username=postgres;Password=not-used" `
+        --env "Messaging__Provider=SelfManaged" `
+        --env "Messaging__RabbitMQ__ConnectionString=amqp://127.0.0.1" `
+        --env "ConnectionStrings__ReferenceDatabase=Host=127.0.0.1;Port=5432;Database=reference;Username=unused;Password=unused" `
+        --env "Authentication__Authority=https://identity.example.invalid" `
+        --env "Authentication__Audience=ms-reference" `
+        --env "OpenTelemetry__Enabled=false" `
         $ImageName | Out-Null
     $containerStarted = $true
 

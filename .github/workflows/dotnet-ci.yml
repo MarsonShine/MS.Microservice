@@ -37,7 +37,7 @@ jobs:
         run: dotnet test --no-build -c Release --verbosity normal
 
       - name: Publish Web
-        run: dotnet publish src/MS.Microservice.Web/MS.Microservice.Web.csproj --no-build -c Release -o artifacts/publish/web
+        run: dotnet publish samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj --no-build -c Release -o artifacts/publish/web
 
       - name: Messaging crash recovery integration tests
         env:

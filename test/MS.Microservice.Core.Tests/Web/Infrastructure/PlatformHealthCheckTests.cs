@@ -4,8 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Infrastructure.HealthChecks;
-using MS.Microservice.Web.Infrastructure.Extensions;
-using MS.Microservice.Web.Infrastructure.HealthChecks;
+using MS.Microservice.Lab.Infrastructure.Extensions;
+using MS.Microservice.Lab.Infrastructure.HealthChecks;
 using System.Text.Json;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;

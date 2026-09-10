@@ -1,5 +1,5 @@
 using MS.Microservice.Core.Functional;
-using MS.Microservice.Web.Infrastructure.Dapper;
+using MS.Microservice.Lab.Infrastructure.Dapper;
 using Npgsql;
 
 namespace MS.Microservice.Core.Tests.Functional

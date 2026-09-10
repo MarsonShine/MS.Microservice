@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Controllers;
-using MS.Microservice.Web.Controller;
-using MS.Microservice.Web.Infrastructure.Labs;
+using MS.Microservice.Lab.Controller;
+using MS.Microservice.Lab.Infrastructure.Labs;
 using System.Reflection;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;

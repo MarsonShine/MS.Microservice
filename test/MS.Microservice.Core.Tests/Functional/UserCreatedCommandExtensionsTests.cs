@@ -1,8 +1,8 @@
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
-using MS.Microservice.Web.Application.Commands;
-using MS.Microservice.Web.Application.Users;
-using MS.Microservice.Web.Infrastructure.Applications.Users;
+using MS.Microservice.Lab.Application.Commands;
+using MS.Microservice.Lab.Application.Users;
+using MS.Microservice.Lab.Infrastructure.Applications.Users;
 using System.Text;
 using Xunit;
 

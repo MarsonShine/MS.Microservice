@@ -1,6 +1,6 @@
 using MS.Microservice.Core.Domain.Entity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
-using MS.Microservice.Web.Application.Models;
+using MS.Microservice.Lab.Application.Models;
 using System.Reflection;
 using System.Text.Json;
 

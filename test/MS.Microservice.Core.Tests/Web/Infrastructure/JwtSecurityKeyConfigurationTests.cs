@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MS.Microservice.Domain.Identity;
-using MS.Microservice.Web.Infrastructure.Extensions;
+using MS.Microservice.Lab.Infrastructure.Extensions;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;
 

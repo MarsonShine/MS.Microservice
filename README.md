@@ -1,389 +1,56 @@
 # MS.Microservice
 
-MS.Microservice 是一个面向 .NET 10 的微服务基础框架仓库，当前主线包含 Web Host、DDD Domain/Core、Infrastructure、Swagger、EventBus、Logging 和 AI Provider 模块。
+面向 .NET 10 的可复用组件与教学仓库。通用组件可以独立引用或复制；生产参考服务展示完整接入，Lab 保留本地登录、事件溯源、函数式、文件和其他实验。
 
-首页文档只描述当前可运行状态和接入方式；DDD、微服务、消息队列、Kubernetes 等长期资料保留在 `docs/`。
-
-## 版本矩阵
-
-| 项 | 当前值 |
+| 入口 | 用途 |
 | --- | --- |
-| TargetFramework | `net10.0` |
-| SDK | `10.0.401`，见 `global.json`；CI 与 Docker 使用同一基线 |
-| 主解决方案 | `MS.Microservice.slnx` |
-| Web Host | `src/MS.Microservice.Web` |
-| Docker Runtime | `mcr.microsoft.com/dotnet/aspnet:10.0` |
+| [生产参考服务](samples/Reference/MS.Microservice.Reference.Web/README.md) | 外部 JWT/OIDC 身份、用户档案、业务角色、审计和可靠消息。 |
+| [消息契约](src/MS.Microservice.Messaging.Abstractions/README.md) | 业务层依赖的入队、工作单元、处理器和运维接口。 |
+| [默认 Inbox/Outbox](src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md) | 与业务 EF Core 事务共享的自研实现。 |
+| [RabbitMQ 传输](src/MS.Microservice.Messaging.RabbitMQ/README.md) | 持久消息、mandatory、publisher confirms、手动 ACK。 |
+| [Wolverine 替换实现](src/MS.Microservice.Messaging.Wolverine/README.md) | 业务契约不变，使用框架原生存储、事务与恢复。 |
+| [参考数据库迁移](samples/Reference/MS.Microservice.Reference.DatabaseMigrator/README.md) | 默认导出 SQL 和校验清单，显式选择应用迁移。 |
+| [理论与专题资料](docs/README.md) | DDD、消息、数据库、部署等资料。 |
 
-## 模块
+## 构建
 
-| 模块 | 说明 |
-| --- | --- |
-| `src/MS.Microservice.Core` | Provider-neutral 仓储/工作单元、函数式类型、规范模式、缓存、序列化、安全工具。 |
-| `src/MS.Microservice.Audio` | 基于 NAudio 的音频格式识别、拼接、混音与转换能力。 |
-| `src/MS.Microservice.Domain` | 当前示例业务领域模型、聚合、领域服务和领域事件暂存。 |
-| `src/MS.Microservice.Domain.Primitives` | 无框架依赖的实体、聚合根、审计与软删除契约。 |
-| `src/MS.Microservice.EventSourcing` | Provider-neutral 事件流、快照和投影检查点契约。 |
-| `src/MS.Microservice.Excel` | 基于 NPOI/MiniExcel 的导入、导出、模板和动态表格能力。 |
-| `src/MS.Microservice.Observability` | OpenTelemetry Resource、Tracing、Metrics 与注册入口。 |
-| `src/MS.Microservice.Infrastructure` | EF Core、SqlSugar、事件溯源、健康检查、OpenTelemetry 等基础设施实现。 |
-| `src/MS.Microservice.Web` | ASP.NET Core Host、API 入口、认证授权、Swagger、Wolverine 接入。 |
-| `samples/MS.Microservice.Lab` | 独立实验 Host；唯一允许装载 Lab Controller 的启动入口。 |
-| `MS.Microservice.Logging` | Provider-agnostic request logging，支持 NLog 和 Serilog。 |
-| `MS.Microservice.Swagger` | Swagger 注册与 UI 封装。 |
-| `MS.Microservice.EventBus` | 事件总线抽象与内存订阅管理。 |
-| `MS.Microservice.AI` | Provider-neutral AI Gateway，支持 OpenAI、DeepSeek、Qwen。 |
-
-## 本地开发
-
-```bash
-dotnet restore
-dotnet build
-dotnet test
-```
-
-运行 Web Host：
-
-```bash
-dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
-```
-
-### 实验端点宿主
-
-详细原理与扩展方式见 [独立 Lab Host 与 Controller 发现机制](docs/Lab-Only-Controller-Discovery.md)。
-
-`DemoController`、`ImageController`、`OrdersController` 和 `FeatureManagerController` 只由 `samples/MS.Microservice.Lab` 装载。正式 `MS.Microservice.Web` Host 即使以 Development 环境运行，也会从 MVC discovery 中移除这些 Controller，因此不会生成路由或 Swagger 描述。
-
-运行正式 Web Host：
+SDK 基线为 `10.0.401`，由 `global.json` 定义；包版本见 `Directory.Packages.props`。依赖安全维护见 [依赖基线](docs/Dependency-Baseline.md)。
 
 ```powershell
-dotnet run --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
-```
-
-运行独立实验 Host（launch profile 已设置 Lab 环境）：
-
-```powershell
-dotnet run --project samples/MS.Microservice.Lab/MS.Microservice.Lab.csproj
-```
-
-是否启用实验端点由启动入口显式传给共享启动流水线，不再由环境名隐式决定。环境名仍用于选择 `appsettings.{Environment}.json` 和诊断行为，但不能让正式 Host 开启实验路由。
-
-默认配置位于：
-
-- `src/MS.Microservice.Web/appsettings.json`
-- `src/MS.Microservice.Web/appsettings.Development.json`
-
-关键配置启动期校验：
-
-- `CorsOptions`
-- `IdentityOptions:JwtBearerOption`
-- `FzPlatformDbContextSettings`
-- `ConnectionStrings:ActivationConnection`
-- `ConnectionStrings:ActivationReaderConnection`
-- `ConnectionStrings:EventStoreConnection`（Sample/Event Sourcing）
-
-Production 正式数据访问统一使用 PostgreSQL：EF Core 使用 `ActivationConnection`，Dapper 查询使用 `ActivationReaderConnection`。Sample Profile 的 Event Sourcing 使用独立的 `EventStoreConnection`。部署环境通过 Secret 注入完整连接串，例如：
-
-```text
-ConnectionStrings__ActivationConnection=Host=...;Database=...;Username=...;Password=...
-ConnectionStrings__ActivationReaderConnection=Host=...;Database=...;Username=...;Password=...
-ConnectionStrings__EventStoreConnection=Host=...;Database=...;Username=...;Password=...
-```
-
-仓库配置不保存数据库密码。SqlSugar/Sharding 仍属于 Sample Profile，可以继续使用其独立配置和数据库类型。
-
-EF Core 敏感数据日志默认关闭。只有 `appsettings.Development.json` 显式设置 `FzPlatformDbContextSettings:EnableSensitiveDataLogging=true`，用于受控的本地调试；生产配置必须保持 `false`，因为该日志可能包含 SQL 参数、用户输入和实体字段值。
-
-### PostgreSQL 数据库迁移
-
-生产环境默认不由应用或 `DatabaseMigrator` 直接修改数据库，而是使用 `dotnet ef migrations script` 生成 SQL，经过开发、DBA review 和测试后，由 DBA 使用受控 DDL 账号执行。Web Host 启动时不会自动创建或升级生产数据库，其运行账号不应拥有建表、改表权限。
-
-基线如何生成、EF Core 的 Model/Snapshot 差异原理、后续迁移命令和已有数据库风险，见 [PostgreSQL EF Core 基线迁移手册](docs/PostgreSQL-EF-Core-Baseline-Migrations.md)。
-
-```powershell
-New-Item -ItemType Directory -Force artifacts/migrations | Out-Null
-
-dotnet tool run dotnet-ef migrations script 0 BaselineIdentityAndLog --idempotent --project MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj --startup-project src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj --context ActivationDbContext --output artifacts/migrations/activation.sql
-
-dotnet tool run dotnet-ef migrations script 0 BaselineEventSourcing --idempotent --project src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj --startup-project src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj --context EventStoreDbContext --output artifacts/migrations/event-sourcing.sql
-```
-
-Activation 管理 Identity 与 Log 表，schema 为 `fz_platform_activation`；Event Sourcing 管理事件、快照、投影 checkpoint 和订单读模型，schema 为 `event_sourcing`。每个 schema 都有独立的 `__MigrationsHistory`。生成的 SQL 和 SHA-256 应随发布版本归档；DBA 执行失败时不得启动新版本应用实例。
-
-`MS.Microservice.DatabaseMigrator` 会直接调用 `MigrateAsync()`，只允许用于本地、集成测试或经过 DBA 明确批准且提供短期 DDL 凭据的独立部署 Job，不是默认生产发布方式。
-
-生成后续迁移前先恢复仓库固定的 EF CLI：
-
-```bash
-dotnet tool restore
-dotnet tool run dotnet-ef migrations add <MigrationName> --project <ContextProject> --startup-project src/MS.Microservice.DatabaseMigrator --context <DbContext> --output-dir <MigrationsDirectory>
-```
-
-### Infrastructure Profile
-
-Web Host 保留统一的 `AddInfrastructure` 门面，并通过 `Infrastructure:Profile` 显式选择模块组合：
-
-| Profile | 模块 |
-| --- | --- |
-| `Production` | Wolverine Messaging、EF Core Persistence、OpenTelemetry |
-| `Sample` | Wolverine Messaging、EF Core、SqlSugar、Event Sourcing、OpenTelemetry |
-
-基础 `appsettings.json` 使用 `Production`；`appsettings.Development.json` 使用 `Sample`。`Lab` 环境如需完整实验模块，应通过环境变量设置：
-
-```text
-Infrastructure__Profile=Sample
-```
-
-消费方也可以跳过预设，显式选择模块：
-
-```csharp
-services.AddInfrastructure(configuration, options =>
-{
-    options.UseMessaging();
-    options.UseEfCorePersistence();
-    options.UseTelemetry();
-});
-```
-
-### OpenTelemetry Resource
-
-`OpenTelemetry` 配置节定义 service name、namespace、version、instance、environment 和 `ActivitySourceName`。部署流水线应通过 `OpenTelemetry__ServiceVersion`、`OpenTelemetry__ServiceInstanceId` 等环境变量覆盖发布版本与实例身份，避免不同服务实例在可观测后端中被错误合并。
-
-### 缓存注册与生产部署
-
-Web Host 同时注册两种缓存抽象，但它们服务于不同的调用方式：
-
-- `HybridCache` 是新代码优先使用的高层缓存 API，负责组合本地缓存与可选的二级分布式缓存，并提供并发请求合并等能力。
-- `IDistributedCache` 是现有 Controller、应用服务和授权处理器使用的兼容契约。当前默认实现是 `DistributedMemoryCache`，便于单实例开发和启动验证，也可以由 Redis 等 Provider 替换。
-
-当前默认的 `HybridCache` 本地层和 `IDistributedCache` 兼容实现都只保存在当前进程内。应用重启后数据会丢失，多副本之间也不会共享，因此不能把它们用于跨实例权限失效、分布式会话或其他要求全局一致的场景。生产环境部署多个实例时，应注册 Redis 等共享 `IDistributedCache` Provider；`HybridCache` 会在存在分布式实现时将其作为二级缓存使用。
-
-缓存配置使用与 `CacheOptions` 属性一致的秒数键名：
-
-```json
-"CacheOptions": {
-  "KeyPrefix": "",
-  "AbsoluteExpirationSecond": 7200,
-  "SlidingExpirationSecond": 7200
-}
-```
-
-`SlidingExpirationSecond` 必须大于零；配置了 `AbsoluteExpirationSecond` 时也必须大于零。当前 commit 只建立可替换的注册边界，不引入 Redis，也不改变现有缓存扩展方法的过期与并发语义。
-
-### JWT 本地密钥
-
-JWT 签名密钥不存放在 `appsettings*.json` 中。每个密钥必须是至少 32 个 ASCII 字符；建议使用 32 字节密码学随机数的 Base64 文本。
-
-Development 环境使用 .NET User Secrets。先生成两个不同的随机值，再分别写入当前兼容配置所需的两个密钥槽位：
-
-```powershell
-$jwtKey0 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-$jwtKey1 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
-dotnet user-secrets set "IdentityOptions:JwtBearerOption:SecurityKeys:0" $jwtKey0 --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
-dotnet user-secrets set "IdentityOptions:JwtBearerOption:SecurityKeys:1" $jwtKey1 --project src/MS.Microservice.Web/MS.Microservice.Web.csproj
-```
-
-容器和其他非 Development 环境通过环境变量注入：
-
-```text
-IdentityOptions__JwtBearerOption__SecurityKeys__0=<至少 32 个 ASCII 字符的随机密钥>
-IdentityOptions__JwtBearerOption__SecurityKeys__1=<另一个至少 32 个 ASCII 字符的随机密钥>
-```
-
-缺少密钥或任一密钥长度不足时，Web Host 会在启动阶段失败。
-
-### JWT 生产部署
-
-`dotnet publish` 和 Docker 镜像构建阶段不注入 JWT 密钥。发布产物保持无密钥，部署平台在应用启动时通过环境变量或 Secret Store 提供配置。ASP.NET Core 会把环境变量名中的双下划线 `__` 映射为配置层级，并覆盖 `appsettings.json`。
-
-直接运行发布产物时，可以在进程环境中设置密钥：
-
-```powershell
-$env:IdentityOptions__JwtBearerOption__SecurityKeys__0 = $env:JWT_KEY_0
-$env:IdentityOptions__JwtBearerOption__SecurityKeys__1 = $env:JWT_KEY_1
-dotnet MS.Microservice.Web.dll
-```
-
-Docker 部署时由宿主机或 CI/CD 变量传入，不要把密钥直接写进 Dockerfile：
-
-```powershell
-docker run --rm -p 8080:8080 `
-  -e IdentityOptions__JwtBearerOption__SecurityKeys__0="$env:JWT_KEY_0" `
-  -e IdentityOptions__JwtBearerOption__SecurityKeys__1="$env:JWT_KEY_1" `
-  ms-microservice-web
-```
-
-Docker Compose 可以把部署环境中的变量映射到容器：
-
-```yaml
-services:
-  web:
-    image: ms-microservice-web
-    environment:
-      IdentityOptions__JwtBearerOption__SecurityKeys__0: ${JWT_KEY_0:?JWT_KEY_0 is required}
-      IdentityOptions__JwtBearerOption__SecurityKeys__1: ${JWT_KEY_1:?JWT_KEY_1 is required}
-```
-
-`.env` 文件只能保存在部署服务器并设置严格访问权限，不得提交到 Git。CI/CD 场景应把 `JWT_KEY_0`、`JWT_KEY_1` 保存为受保护的 Secret 变量，部署任务只负责映射，日志中不得输出其值。
-
-Kubernetes 使用 Secret 引用，不把实际密钥写入 Deployment：
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ms-microservice-jwt
-type: Opaque
-stringData:
-  key-0: "<由部署系统提供>"
-  key-1: "<由部署系统提供>"
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ms-microservice-web
-spec:
-  template:
-    spec:
-      containers:
-        - name: web
-          image: ms-microservice-web
-          env:
-            - name: IdentityOptions__JwtBearerOption__SecurityKeys__0
-              valueFrom:
-                secretKeyRef:
-                  name: ms-microservice-jwt
-                  key: key-0
-            - name: IdentityOptions__JwtBearerOption__SecurityKeys__1
-              valueFrom:
-                secretKeyRef:
-                  name: ms-microservice-jwt
-                  key: key-1
-```
-
-普通 Kubernetes Secret 的 Base64 只是编码，不是加密。生产集群应结合 External Secrets、Vault 或云厂商 Secret Manager 管理实际值，示例清单不得携带真实密钥。
-
-> 当前兼容代码需要两个密钥槽位，并使用索引 `1` 的密钥签发 Token。部署时两个值都必须提供且不能相同；后续会单独重构为显式的当前签发密钥与历史验证密钥配置。
-
-## Docker
-
-```bash
-docker build -t ms-microservice-web .
-```
-
-容器默认监听 `http://+:8080`。Dockerfile 使用 .NET 10 SDK/Runtime，并在 restore 前复制 Web 的完整项目引用闭包，包括 EFCore、SqlSugar、Infrastructure、Logging 和 Swagger。
-
-本地及 CI 使用同一个冒烟脚本验证镜像能够构建、容器能够启动且 liveness 返回 HTTP 200：
-
-```powershell
-./build/container-smoke-test.ps1
-```
-
-脚本只注入启动所需的非生产测试值，并使用随机宿主机端口；它不会连接数据库，因为 `/health/live` 只验证进程自身。真实部署仍必须通过 Secret 注入 JWT 密钥和 PostgreSQL 连接串，并使用 `/health/ready` 判断实例能否接收业务流量。
-
-健康检查端点：
-
-| 路径 | 用途 | 检查内容 | 失败状态 |
-| --- | --- | --- | --- |
-| `/health/live` | liveness | 进程自身 | 503 |
-| `/health/ready` | readiness | PostgreSQL `ActivationConnection` | 503 |
-| `/hc` | 兼容旧探针 | 与 readiness 相同 | 503 |
-
-健康响应不会返回异常、连接串或数据库错误详情。Kubernetes 应将 livenessProbe 指向 `/health/live`，readinessProbe 指向 `/health/ready`。
-
-## Logging
-
-Web Host 已接入新 Logging 模块：
-
-```csharp
-builder.ConfigureMsNLog();
-builder.Services.AddMsRequestLogging();
-app.UseMsRequestLogging();
-```
-
-请求日志上下文由 `MS.Microservice.Logging.AspNetCore` 写入，NLog/Serilog Provider 只负责渲染或结构化 enrich。旧 Web 内部 NLog 工具保留用于兼容测试，不再作为默认启动路径。
-
-## Swagger
-
-Swagger 通过 `MS.Microservice.Swagger` 接入：
-
-```csharp
-builder.Services.AddPlatformSwagger(options =>
-{
-    configuration.GetSection(SwaggerOptions.SectionName).Bind(options);
-});
-
-app.UsePlatformSwagger();
-```
-
-配置节：`SwaggerOptions`。
-
-## EventBus 与领域事件
-
-实体只负责暂存内存态 `DomainEvents`。完整生产链路仍需 Outbox/Inbox、事件版本、trace/correlationId、失败重试和死信记录。
-
-当前已修正：
-
-- `DomainEvents` 默认返回空集合。
-- `AddDomainEvent`/`RemoveDomainEvent` 拒绝 null。
-- `Id` setter 从公共写入收敛为 `protected set`。
-- `EntityBase<TId>` 不再缓存 HashCode。
-
-长期事件路线见 `docs/framework-optimization-roadmap.md`。
-
-## AI
-
-`MS.Microservice.AI` 当前已具备：
-
-- `HttpClientFactory`
-- Provider/model 级超时
-- 指数退避重试
-- Provider 并发限制
-- 流式 SSE cancellation
-- Token usage 解析
-- Provider-neutral 错误分类
-- Activity tracing
-- Provider capability validation
-- **图像 Prompt 规划管线**：文本 → LLM 视觉规划 → Safe/Rich Prompt → 图片生成
-- **场景分组与批量生图**：句子语义分组 → 结构化 EditDelta → 参考图编辑保持组内视觉连续性
-- **Qwen 参考图编辑**：通过 `IQwenImageReferenceEditClient` / `IReferenceImageEditClient` + `QwenReferenceImageEditAdapter`，不是 `AIImageEditRequest`
-
-> **架构说明**：
-> - `OpenAICompatible*ProviderBase` 是 provider HTTP 复用层（chat/completions, images/generations 等），不是参考图编辑通道。
-> - 参考图编辑有独立的 `IReferenceImageEditClient` 接口和 provider adapter（当前仅 Qwen 支持）。
-> - `MS.Microservice.Core` 是允许依赖的核心层，`AI.Core` 已引用它（`DefaultSerializeSetting` 等）。
-
-仍计划补齐：更细粒度限流策略、熔断策略、prompt/response 脱敏日志、Secret Provider、payload 限制和成本统计。路线见 `docs/framework-optimization-roadmap.md`。
-
-## CI
-
-GitHub Actions 工作流位于 `.github/workflows/dotnet-ci.yml`，执行：
-
-```bash
-dotnet restore
+dotnet restore --configfile nuget.config
 dotnet build --no-restore -c Release
-dotnet test --no-build -c Release
-dotnet publish src/MS.Microservice.Web/MS.Microservice.Web.csproj --no-build -c Release
-dotnet list package --vulnerable --include-transitive
 ```
 
-## 架构边界
+## 生产参考服务
 
-架构测试位于 `test/MS.Microservice.Core.Tests/Architecture`，当前守护：
+正式服务不提供账号密码登录或令牌签发。配置外部身份 Authority/Audience，并通过环境变量提供数据库和 Broker 连接信息：
 
-- Domain 不依赖 Infrastructure/Web/EF Core/SqlSugar。
-- Infrastructure 不依赖 Web。
-- Controller 不直接依赖具体 Repository、Dapper 或 `System.Data`。
+```text
+ConnectionStrings__ReferenceDatabase=Host=...;Database=ms_reference_self;Username=...;Password=...
+Messaging__RabbitMQ__ConnectionString=amqp://...
+Authentication__Authority=https://.../realms/...
+Authentication__Audience=ms-reference
+```
 
-## 文档入口
+默认 `Messaging:Provider=SelfManaged`；设为 `Wolverine` 可选择替换实现。两者不能同时接管同一事务。首次使用应先导出、审查并应用对应迁移；Web 不自动执行 DDL。
 
-- [文档中心总览](docs/)
-- [上下文边界](docs/Context-Bounded.md)
-- [领域命令模式处理程序](docs/Domain-Command-Patterns-Handlers.md)
-- [领域命令验证](docs/Domain-Command-Validation.md)
-- [值对象](docs/ValueObject.md)
-- [CQRS](docs/CQRS.md)
-- [事件溯源模式](docs/Event-Source-Pattern.md)
-- [最终一致性](docs/Eventual-Consistency.md)
-- [持久化透明](docs/Persistence-Ignorance.md)
-- [服务网格](docs/service-mesh/README.md)
-- [分布式系统模式](docs/patterns-of-distributed-systems/README.md)
+```powershell
+dotnet run --project samples/Reference/MS.Microservice.Reference.DatabaseMigrator -- --provider SelfManaged --output artifacts/migrations/reference-self
+dotnet run --project samples/Reference/MS.Microservice.Reference.Web
+```
+
+`/health/live` 检查进程，`/health/ready` 检查迁移、消息存储和 Broker。Broker 中断可降级，数据库或迁移未准备就绪则返回 503。档案管理需要 `profiles.manage`，消息运维需要 `messaging.manage`。
+
+## Lab
+
+```powershell
+dotnet run --project samples/Lab/MS.Microservice.Lab
+```
+
+Lab 与正式 Host 是两个独立程序集。实验 Controller 只在 Lab 中，正式镜像不携带它们。旧 Host 的设置与历史接入资料保存在 [历史快照](docs/history/legacy-host-readme.txt)，其中的旧命令不适用于当前生产参考服务。
+
+## 可选组件
+
+Core、Domain.Primitives、Observability、Swagger、Logging、EFCore、SqlSugar、EventSourcing、Audio、Excel 和 AI 按需接入。具体依赖与平台限制以模块文档为准；参考业务模型不作为通用组件的依赖。
+
+数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。

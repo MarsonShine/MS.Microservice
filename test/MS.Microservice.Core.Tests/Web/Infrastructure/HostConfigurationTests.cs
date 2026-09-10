@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
-using MS.Microservice.Web.Hosting;
+using MS.Microservice.Lab.Hosting;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;
 

@@ -3,8 +3,8 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Web.Infrastructure.Authorizations.Handlers;
-using MS.Microservice.Web.Infrastructure.Extensions;
+using MS.Microservice.Lab.Infrastructure.Authorizations.Handlers;
+using MS.Microservice.Lab.Infrastructure.Extensions;
 using NSubstitute;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;

@@ -4,8 +4,8 @@ using Microsoft.Extensions.Options;
 using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Web.Application.Identity;
-using MS.Microservice.Web.AutofacModules;
+using MS.Microservice.Lab.Application.Identity;
+using MS.Microservice.Lab.AutofacModules;
 using NSubstitute;
 
 namespace MS.Microservice.Core.Tests.Web.Infrastructure;
