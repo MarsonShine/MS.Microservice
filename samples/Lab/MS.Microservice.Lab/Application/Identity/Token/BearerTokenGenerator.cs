@@ -1,38 +1,38 @@
-using MS.Microservice.Core.Extension;
-using MS.Microservice.Domain.Aggregates.IdentityModel;
-using MS.Microservice.Domain.Identity;
-using MS.Microservice.Domain.Identity.Token;
+using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
+using MS.Microservice.Core.Identity;
+using MS.Microservice.Domain.Aggregates.IdentityModel;
+using MS.Microservice.Domain.Identity.Token;
 
 namespace MS.Microservice.Lab.Application.Identity.Token;
 
-public class BearerTokenGenerator : ITokenGenerator
+public sealed class BearerTokenGenerator(IOptions<LabTokenIssuerOptions> options, TimeProvider clock) : ITokenGenerator
 {
-    private readonly IdentityOptions _identityOptions;
-    public BearerTokenGenerator(IOptions<IdentityOptions> identityOptionsAccessor)
+    public Task<string> Generate(User user)
     {
-        if (identityOptionsAccessor==null||identityOptionsAccessor.Value==null)
+        ArgumentNullException.ThrowIfNull(user);
+        var issuer = options.Value;
+        issuer.Validate();
+        var now = clock.GetUtcNow().UtcDateTime;
+        var id = user.Id.ToString(CultureInfo.InvariantCulture);
+        var descriptor = new SecurityTokenDescriptor
         {
-            throw new ArgumentNullException(nameof(identityOptionsAccessor));
-        }
-        _identityOptions = identityOptionsAccessor.Value;
-    }
-    public async Task<string> Generate(User user)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var subject = await UserClaimHelper.GenerateClaimsAsync(user, _identityOptions.JwtBearerOption!.Audiences![1], _identityOptions.JwtBearerOption.Issuers![1]);
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = subject,
-            Expires = DateTime.Now.AddSeconds(_identityOptions.JwtBearerOption.Expires),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(_identityOptions.JwtBearerOption.SecurityKeys![1].ReadAsByte(Encoding.UTF8)),SecurityAlgorithms.HmacSha256Signature)
+            Issuer = issuer.Issuer, Audience = issuer.Audience, IssuedAt = now, NotBefore = now,
+            Expires = now.AddSeconds(issuer.LifetimeSeconds),
+            Subject = new ClaimsIdentity([
+                new("sub", id), new(JwtClaimTypes.Id, id),
+                new(JwtClaimTypes.NickName, user.Name ?? user.Account ?? id),
+                new(JwtClaimTypes.PhoneNumber, user.Telephone ?? ""), new(JwtClaimTypes.Email, user.Email ?? ""),
+                new(JwtClaimTypes.Role, string.Join(';', user.Roles.Select(role => role.Id))),
+                new(JwtClaimTypes.Issuer, issuer.Issuer), new(JwtClaimTypes.Audience, issuer.Audience)
+            ]),
+            SigningCredentials = new(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(issuer.SigningKey)), SecurityAlgorithms.HmacSha256)
         };
-
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        var handler = new JwtSecurityTokenHandler();
+        return Task.FromResult(handler.WriteToken(handler.CreateToken(descriptor)));
     }
 }

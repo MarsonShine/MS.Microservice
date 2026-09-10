@@ -18,6 +18,7 @@ using MS.Microservice.Domain.Identity;
 using MS.Microservice.Infrastructure.HealthChecks;
 using MS.Microservice.Infrastructure.DependencyInjection;
 using MS.Microservice.Lab.Application.Orders;
+using MS.Microservice.Lab.Application.Identity.Token;
 using MS.Microservice.Lab.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Lab.Infrastructure.Authorizations.Requirements;
 using MS.Microservice.Lab.Infrastructure.Cors;
@@ -189,9 +190,15 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
             public IServiceCollection AddCustomConfiguration(IConfiguration configuration)
             {
                 services.AddOptions();
+                services.AddSingleton(TimeProvider.System);
+                services.AddOptions<LabTokenIssuerOptions>()
+                    .Bind(configuration.GetSection(LabTokenIssuerOptions.SectionName))
+                    .PostConfigure(options => options.Validate())
+                    .ValidateOnStart();
 
                 services.AddOptions<IdentityOptions>()
                     .Bind(configuration.GetSection(IdentityOptions.Name))
+                    .PostConfigure(options => options.JwtBearerOption = LabTokenIssuerOptions.ValidationOptions(configuration))
                     .Validate(options => options.JwtBearerOption is not null, "IdentityOptions:JwtBearerOption is required.")
                     .Validate(options => options.JwtBearerOption?.Audiences?.Length > 0, "IdentityOptions:JwtBearerOption:Audiences is required.")
                     .Validate(options => options.JwtBearerOption?.Issuers?.Length > 0, "IdentityOptions:JwtBearerOption:Issuers is required.")
@@ -236,7 +243,8 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
                 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
-                        options.SaveToken = true;
+                        options.SaveToken = false;
+                        options.MapInboundClaims = false;
                         options.RequireHttpsMetadata = false;
 
                         // 设置token属性
@@ -268,21 +276,7 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
             }
 
             private static ActivationJwtBearerOption GetRequiredJwtBearerOption(IConfiguration configuration)
-            {
-                var option = configuration
-                    .GetSection($"{IdentityOptions.Name}:JwtBearerOption")
-                    .Get<ActivationJwtBearerOption>();
-
-                if (option is null)
-                {
-                    throw new OptionsValidationException(
-                        nameof(ActivationJwtBearerOption),
-                        typeof(ActivationJwtBearerOption),
-                        ["IdentityOptions:JwtBearerOption is required."]);
-                }
-
-                return option;
-            }
+                => LabTokenIssuerOptions.ValidationOptions(configuration);
 
             private static string[] GetRequiredValues(string[]? values, string configurationPath)
             {

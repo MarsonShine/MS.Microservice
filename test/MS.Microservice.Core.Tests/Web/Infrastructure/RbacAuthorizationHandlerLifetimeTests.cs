@@ -52,6 +52,9 @@ public class RbacAuthorizationHandlerLifetimeTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["LabTokenIssuer:Issuer"] = "http://lab.test",
+                ["LabTokenIssuer:Audience"] = "ms-lab",
+                ["LabTokenIssuer:SigningKey"] = "external-jwt-security-key-32-characters-long",
                 ["IdentityOptions:JwtBearerOption:Audiences:0"] = "test-audience",
                 ["IdentityOptions:JwtBearerOption:Issuers:0"] = "test-issuer",
                 ["IdentityOptions:JwtBearerOption:SecurityKeys:0"] = "external-jwt-security-key-32-characters-long",

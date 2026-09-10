@@ -18,7 +18,7 @@ public class JwtSecurityKeyConfigurationTests
             () => services.AddCustomAuthentication(configuration));
 
         Assert.Contains(
-            "IdentityOptions:JwtBearerOption:SecurityKeys is required.",
+            "LabTokenIssuer:SigningKey must contain at least 32 ASCII characters.",
             exception.Failures);
     }
 
@@ -34,7 +34,7 @@ public class JwtSecurityKeyConfigurationTests
             () => services.AddCustomAuthentication(configuration));
 
         Assert.Contains(
-            "IdentityOptions:JwtBearerOption:SecurityKeys entries must contain at least 32 ASCII characters.",
+            "LabTokenIssuer:SigningKey must contain at least 32 ASCII characters.",
             exception.Failures);
     }
 
@@ -62,6 +62,9 @@ public class JwtSecurityKeyConfigurationTests
     {
         var values = new Dictionary<string, string?>
         {
+            ["LabTokenIssuer:Issuer"] = "http://lab.test",
+            ["LabTokenIssuer:Audience"] = "ms-lab",
+            ["LabTokenIssuer:SigningKey"] = securityKeys.FirstOrDefault(),
             ["IdentityOptions:JwtBearerOption:Audiences:0"] = "test-audience",
             ["IdentityOptions:JwtBearerOption:Issuers:0"] = "test-issuer",
             ["IdentityOptions:JwtBearerOption:Expires"] = "3600"
