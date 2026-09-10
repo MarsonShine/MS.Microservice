@@ -1,6 +1,6 @@
 # 组件源码复制与本地包消费
 
-所有可复用项目位于 src；samples 中的业务模型、Host 和适配示例不属于共享组件依赖闭包。
+可复用项目位于根 src 或各模块的 src；模块的 docs、src、test 与独立解决方案集中在同一目录。samples 中的业务模型、Host 和适配示例不属于共享组件依赖闭包。
 使用 .NET SDK（版本由 global.json 固定）、Git 和 PowerShell 7 执行以下命令。
 
 ## 导出源码

@@ -8,10 +8,10 @@
 | [六个递进 Lab](docs/labs/README.md) | 分层、事务、可靠消息、故障、诊断与组件替换。 |
 | [源码复制与包消费](docs/components/consumption.md) | 依赖闭包导出和仓库外接入验证。 |
 | [生产参考服务](samples/Reference/MS.Microservice.Reference.Web/README.md) | 外部 JWT/OIDC 身份、用户档案、业务角色、审计和可靠消息。 |
-| [消息契约](src/MS.Microservice.Messaging.Abstractions/README.md) | 业务层依赖的入队、工作单元、处理器和运维接口。 |
-| [默认 Inbox/Outbox](src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md) | 与业务 EF Core 事务共享的自研实现。 |
-| [RabbitMQ 传输](src/MS.Microservice.Messaging.RabbitMQ/README.md) | 持久消息、mandatory、publisher confirms、手动 ACK。 |
-| [Wolverine 替换实现](src/MS.Microservice.Messaging.Wolverine/README.md) | 业务契约不变，使用框架原生存储、事务与恢复。 |
+| [消息契约](MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/README.md) | 业务层依赖的入队、工作单元、处理器和运维接口。 |
+| [默认 Inbox/Outbox](MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md) | 与业务 EF Core 事务共享的自研实现。 |
+| [RabbitMQ 传输](MS.Microservice.Messaging/src/MS.Microservice.Messaging.RabbitMQ/README.md) | 持久消息、mandatory、publisher confirms、手动 ACK。 |
+| [Wolverine 替换实现](MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/README.md) | 业务契约不变，使用框架原生存储、事务与恢复。 |
 | [参考数据库迁移](samples/Reference/MS.Microservice.Reference.DatabaseMigrator/README.md) | 默认导出 SQL 和校验清单，显式选择应用迁移。 |
 | [理论与专题资料](docs/README.md) | DDD、消息、数据库、部署等资料。 |
 

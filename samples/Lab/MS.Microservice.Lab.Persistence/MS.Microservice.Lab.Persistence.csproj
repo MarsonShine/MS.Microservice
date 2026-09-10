@@ -27,7 +27,7 @@
   </ItemGroup>
     <ItemGroup>
     <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
     <ProjectReference Include="../MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
   </ItemGroup>
-<ItemGroup><ProjectReference Include="../../../src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" /></ItemGroup></Project>
+<ItemGroup><ProjectReference Include="../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" /></ItemGroup></Project>

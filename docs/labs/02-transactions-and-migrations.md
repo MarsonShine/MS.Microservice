@@ -13,7 +13,7 @@ SelfManaged 在同一个业务 DbContext 事务中提交档案与 Outbox；
 
     dotnet test test/MS.Microservice.Messaging.IntegrationTests -c Release --filter FullyQualifiedName~ProbeLocalTests
 
-检查 [ProbeHandler](../../test/MS.Microservice.Messaging.IntegrationTests/ProbeHost.cs)：
+检查 [ProbeHandler](../../MS.Microservice.Messaging/test/MS.Microservice.Messaging.IntegrationTests/ProbeHost.cs)：
 处理器只修改实体和入队，不自行 SaveChanges 或 Commit。
 失败分支已经执行过修改与 Enqueue，最终数据库仍不能留下这些部分结果。
 

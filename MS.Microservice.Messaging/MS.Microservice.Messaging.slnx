@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Messaging.Abstractions.Tests/MS.Microservice.Messaging.Abstractions.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.FaultWorker/MS.Microservice.Messaging.FaultWorker.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.RabbitMQ.Tests/MS.Microservice.Messaging.RabbitMQ.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.SelfManaged.Tests/MS.Microservice.Messaging.SelfManaged.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/">
+    <Project Path="../samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
+    <Project Path="../samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj" />
+    <Project Path="../samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />
+    <Project Path="../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <Project Path="../src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
+  </Folder>
+</Solution>

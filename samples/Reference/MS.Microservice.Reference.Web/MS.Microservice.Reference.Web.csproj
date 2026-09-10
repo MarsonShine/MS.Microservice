@@ -4,6 +4,6 @@
     <ProjectReference Include="../MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
   </ItemGroup>
 </Project>

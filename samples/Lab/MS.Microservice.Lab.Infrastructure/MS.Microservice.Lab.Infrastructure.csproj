@@ -28,6 +28,6 @@
     <ProjectReference Include="../../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <ProjectReference Include="../MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
   </ItemGroup>
 </Project>

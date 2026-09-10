@@ -17,7 +17,7 @@ internal sealed class WorkerProcess : IAsyncDisposable
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "MS.Microservice.slnx"))) root = root.Parent;
         if (root is null) throw new InvalidOperationException("Repository root not found.");
         var binary = new DirectoryInfo(AppContext.BaseDirectory);
-        var worker = Path.Combine(root.FullName, "test/MS.Microservice.Messaging.FaultWorker/bin",
+        var worker = Path.Combine(root.FullName, "MS.Microservice.Messaging/test/MS.Microservice.Messaging.FaultWorker/bin",
             binary.Parent!.Name, binary.Name, "MS.Microservice.Messaging.FaultWorker.dll");
         if (!File.Exists(worker)) throw new FileNotFoundException("Build the fault worker first.", worker);
         var start = new ProcessStartInfo("dotnet")

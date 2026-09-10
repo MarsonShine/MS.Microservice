@@ -10,6 +10,6 @@
     <PackageReference Include="SqlSugarCore" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
   </ItemGroup>
 </Project>

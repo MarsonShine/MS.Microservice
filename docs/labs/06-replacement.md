@@ -7,7 +7,7 @@
 
 记录以下文件和当前结果：
 
-- [公共消息契约](../../src/MS.Microservice.Messaging.Abstractions/Contracts.cs)
+- [公共消息契约](../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/Contracts.cs)
 - [ProfileService](../../samples/Reference/MS.Microservice.Reference.Application/ProfileService.cs)
 - [ProfileAuditHandler](../../samples/Reference/MS.Microservice.Reference.Application/ProfileMessages.cs)
 - 当前档案和审计结果、消息 Id、待发和处理中消息数量

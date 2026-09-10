@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'module-tools.ps1')
 $root = [IO.Path]::GetFullPath($RepositoryRoot)
-if (-not $Modules) { $Modules = @(Get-ChildItem (Join-Path $root 'src') -Directory | Where-Object { Test-Path (Join-Path $_.FullName ($_.Name + '.csproj')) } | ForEach-Object Name) }
+if (-not $Modules) { $Modules = @(Get-SharedProjects $root | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }) }
 $projects = @(Get-ModuleProjects $root $Modules)
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw 'Package output must be a new directory.' }

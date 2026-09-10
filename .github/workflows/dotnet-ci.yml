@@ -42,7 +42,7 @@ jobs:
       - name: Messaging crash recovery integration tests
         env:
           RUN_MESSAGING_INTEGRATION_TESTS: "true"
-        run: dotnet test test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj --no-build -c Release --verbosity normal
+        run: dotnet test MS.Microservice.Messaging/test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj --no-build -c Release --verbosity normal
 
       - name: Build and smoke test container
         shell: pwsh

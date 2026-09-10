@@ -15,7 +15,12 @@ foreach ($file in @('Directory.Build.props', 'Directory.Packages.props', 'global
 }
 foreach ($project in $projects) {
     $directory = [IO.Path]::GetRelativePath($root, (Split-Path $project -Parent)).Replace('\', '/')
-    $tracked = @(& git -C $root -c core.quotepath=false ls-files -- $directory)
+    $paths = @($directory)
+    $segments = $directory.Split('/')
+    if ($segments.Length -ge 3 -and $segments[0].StartsWith('MS.Microservice.') -and $segments[1] -eq 'src') {
+        $paths += @("$($segments[0])/README.md", "$($segments[0])/docs")
+    }
+    $tracked = @(& git -C $root -c core.quotepath=false ls-files -- @paths)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate tracked component files.' }
     foreach ($file in $tracked) {
         if (Test-Path -LiteralPath (Join-Path $root $file) -PathType Leaf) { [void]$files.Add($file) }

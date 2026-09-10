@@ -18,7 +18,7 @@ function Visit-Project([string]$project) {
     if (-not (Test-Path -LiteralPath $project)) { throw "Missing project: $project" }
     if (-not $copied.Contains($project)) { throw "Docker restore has no COPY for $project" }
     [xml]$document = Get-Content -LiteralPath $project -Raw
-    foreach ($reference in $document.Project.ItemGroup.ProjectReference) {
+    foreach ($reference in $document.SelectNodes('//ProjectReference')) {
         if ($reference.Include) {
             Visit-Project ([IO.Path]::GetFullPath((Join-Path (Split-Path $project -Parent) $reference.Include)))
         }

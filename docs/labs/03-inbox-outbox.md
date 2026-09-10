@@ -40,8 +40,8 @@
 
 发布使用持久消息、稳定 MessageId、mandatory 和确认跟踪；
 只有收到明确确认才进入 Published。消费提交后才返回手动 ACK 决策。
-完整实现见[默认组件](../../src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md)和
-[RabbitMQ 传输](../../src/MS.Microservice.Messaging.RabbitMQ/README.md)。
+完整实现见[默认组件](../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md)和
+[RabbitMQ 传输](../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.RabbitMQ/README.md)。
 
 ## 保留期与幂等边界
 

@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'module-tools.ps1')
 $root = Split-Path $PSScriptRoot -Parent
-if (-not $Modules) { $Modules = @(Get-ChildItem (Join-Path $root 'src') -Directory | Where-Object { Test-Path (Join-Path $_.FullName ($_.Name + '.csproj')) } | ForEach-Object Name) }
+if (-not $Modules) { $Modules = @(Get-SharedProjects $root | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }) }
 $working = Join-Path ([IO.Path]::GetTempPath()) ('ms-module-consumption-' + [Guid]::NewGuid().ToString('N'))
 $source = Join-Path $working 'source'
 $packages = Join-Path $working 'packages'

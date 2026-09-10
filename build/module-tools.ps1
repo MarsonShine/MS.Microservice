@@ -1,18 +1,36 @@
 Set-StrictMode -Version Latest
 
+# Shared projects may be small root components or members of an independently opened module family.
+# Classification depends on source roots, never on an assembly-name prefix or on the main solution.
+function Get-SharedProjects {
+    param([string]$RepositoryRoot)
+    $root = [IO.Path]::GetFullPath($RepositoryRoot)
+    $roots = @((Join-Path $root 'src')) + @(Get-ChildItem -LiteralPath $root -Directory -Filter 'MS.Microservice.*' |
+        ForEach-Object { Join-Path $_.FullName 'src' } | Where-Object { Test-Path -LiteralPath $_ -PathType Container })
+    foreach ($source in $roots) {
+        foreach ($directory in Get-ChildItem -LiteralPath $source -Directory) {
+            $project = Join-Path $directory.FullName ($directory.Name + '.csproj')
+            if (Test-Path -LiteralPath $project -PathType Leaf) { [IO.Path]::GetFullPath($project) }
+        }
+    }
+}
+
 function Get-ModuleProjects {
     param([string]$RepositoryRoot, [string[]]$Modules)
-    $root = [IO.Path]::GetFullPath($RepositoryRoot)
-    $source = Join-Path $root 'src'
+    $available = @{}
+    $allowed = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($project in @(Get-SharedProjects $RepositoryRoot)) {
+        $name = [IO.Path]::GetFileNameWithoutExtension($project)
+        if ($available.ContainsKey($name)) { throw "Ambiguous component name: $name" }
+        $available[$name] = $project
+        [void]$allowed.Add($project)
+    }
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     $ordered = [Collections.Generic.List[string]]::new()
     function Visit-ModuleProject([string]$project) {
         $project = [IO.Path]::GetFullPath($project)
-        if (-not $project.StartsWith($source + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "A reusable component references a project outside src: $project"
-        }
+        if (-not $allowed.Contains($project)) { throw "A component references a non-shared project: $project" }
         if (-not $seen.Add($project)) { return }
-        if (-not (Test-Path -LiteralPath $project -PathType Leaf)) { throw "Missing project: $project" }
         [xml]$document = Get-Content -LiteralPath $project -Raw
         foreach ($reference in $document.SelectNodes('//ProjectReference')) {
             Visit-ModuleProject (Join-Path (Split-Path $project -Parent) $reference.Include)
@@ -20,12 +38,11 @@ function Get-ModuleProjects {
         $ordered.Add($project)
     }
     foreach ($module in $Modules) {
-        if ($module -notmatch '^MS\.Microservice\.[A-Za-z0-9.]+$') { throw "Invalid module name: $module" }
-        Visit-ModuleProject (Join-Path $source "$module/$module.csproj")
+        if (-not $available.ContainsKey($module)) { throw "Unknown shared component: $module" }
+        Visit-ModuleProject $available[$module]
     }
     $ordered.ToArray()
 }
-
 function Invoke-CheckedDotnet {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
     & dotnet @Arguments

@@ -11,7 +11,7 @@
 
 ## 进程终止的四个窗口
 
-[进程恢复矩阵](../../test/MS.Microservice.Messaging.IntegrationTests/ProcessRecoveryTests.cs)
+[进程恢复矩阵](../../MS.Microservice.Messaging/test/MS.Microservice.Messaging.IntegrationTests/ProcessRecoveryTests.cs)
 使用独立子进程和 EF 屏障：
 
 1. 保存后、提交前：业务和出站一起回滚。

@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
-COPY src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj src/MS.Microservice.Logging.AspNetCore/
-COPY src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj src/MS.Microservice.Logging.Core/
+COPY MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/
+COPY MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.Core/
 COPY samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj samples/Reference/MS.Microservice.Reference.Application/
 COPY samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj samples/Reference/MS.Microservice.Reference.Domain/
 COPY samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj samples/Reference/MS.Microservice.Reference.Persistence/
@@ -10,10 +10,10 @@ COPY samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.W
 COPY src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj src/MS.Microservice.AspNetCore/
 COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Core/
 COPY src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj src/MS.Microservice.Domain.Primitives/
-COPY src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj src/MS.Microservice.Messaging.Abstractions/
-COPY src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj src/MS.Microservice.Messaging.RabbitMQ/
-COPY src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj src/MS.Microservice.Messaging.SelfManaged.EFCore/
-COPY src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj src/MS.Microservice.Messaging.Wolverine/
+COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/
+COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.RabbitMQ/
+COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/
+COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/
 COPY src/MS.Microservice.Observability/MS.Microservice.Observability.csproj src/MS.Microservice.Observability/
 RUN dotnet restore samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj
 COPY . .
