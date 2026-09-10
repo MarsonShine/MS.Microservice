@@ -31,11 +31,7 @@ namespace MS.Microservice.Web.Hosting;
 public static class PlatformWebHost
 {
     public static WebApplicationBuilder CreateBuilder(string[] args)
-        => WebApplication.CreateBuilder(new WebApplicationOptions
-        {
-            Args = args,
-            ContentRootPath = AppContext.BaseDirectory
-        });
+        => MS.Microservice.AspNetCore.ServiceHost.CreateBuilder(args);
 
     public static async Task RunAsync(string[] args, bool enableLabEndpoints)
     {

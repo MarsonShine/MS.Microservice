@@ -4,6 +4,7 @@ WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
 COPY MS.Microservice.slnx ./
 
+COPY src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj src/MS.Microservice.AspNetCore/
 COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Core/
 COPY src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj src/MS.Microservice.Domain.Primitives/
 COPY src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj src/MS.Microservice.EventSourcing/
