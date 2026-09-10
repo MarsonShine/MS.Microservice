@@ -14,7 +14,7 @@ public static class SelfManagedServiceCollectionExtensions
         var options = new SelfManagedOptions();
         configure?.Invoke(options);
         options.Validate();
-        services.AddSingleton(new MessagingProviderRegistration(MessagingProvider.SelfManaged));
+        services.AddSingleton(new MessagingProviderRegistration("SelfManaged"));
         services.AddSingleton(topology);
         services.AddSingleton(topology.Registry);
         services.AddSingleton(options);

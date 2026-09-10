@@ -39,7 +39,7 @@ public interface IIntegrationEventHandler<in T> where T : IIntegrationEvent
 public enum ReplayResult { Accepted, NotFound, InvalidState }
 
 public sealed record FailedMessage(string FailureId, Guid MessageId, string ContractName, int ContractVersion,
-    string? Consumer, DateTimeOffset FailedAtUtc, string ErrorCode);
+    string? Consumer, DateTimeOffset? FailedAtUtc, string ErrorCode);
 
 public interface IFailedMessageOperations
 {

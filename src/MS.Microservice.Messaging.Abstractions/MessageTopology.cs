@@ -24,4 +24,4 @@ public sealed class MessageTopology
         ?? throw new MessageContractException($"Unknown consumer: {consumer}.");
 }
 
-public sealed record MessagingProviderRegistration(MessagingProvider Provider);
+public sealed record MessagingProviderRegistration(string Name);

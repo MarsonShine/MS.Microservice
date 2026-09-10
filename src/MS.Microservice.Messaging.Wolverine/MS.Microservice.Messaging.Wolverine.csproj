@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="../MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
     <ProjectReference Include="../MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="WolverineFx" />
     <PackageReference Include="WolverineFx.RabbitMQ" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" />
