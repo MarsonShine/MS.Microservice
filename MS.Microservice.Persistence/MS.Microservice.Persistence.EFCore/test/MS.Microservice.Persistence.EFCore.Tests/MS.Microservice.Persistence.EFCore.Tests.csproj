@@ -19,6 +19,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MS.Microservice.Persistence.EFCore\MS.Microservice.Persistence.EFCore.csproj" />
+    <ProjectReference Include="../../../../samples/Lab/MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
   </ItemGroup>
 </Project>

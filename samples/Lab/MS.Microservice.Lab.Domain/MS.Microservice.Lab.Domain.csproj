@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType><IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="MS.Microservice.Persistence.EFCore.Tests" /></ItemGroup>
+</Project>
