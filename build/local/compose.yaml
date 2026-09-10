@@ -1,0 +1,52 @@
+name: ms-reference-lab
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ms_reference
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_DB: ms_reference_selfmanaged
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - reference_postgres:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/00-reference.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ms_reference -d ms_reference_selfmanaged"]
+      interval: 2s
+      timeout: 3s
+      retries: 40
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ms_reference
+      RABBITMQ_DEFAULT_PASS: $RABBITMQ_PASSWORD
+      RABBITMQ_DEFAULT_VHOST: ms-reference
+    ports:
+      - "127.0.0.1:55672:5672"
+      - "127.0.0.1:55673:15672"
+    volumes:
+      - reference_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.3
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: bootstrap-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: $KEYCLOAK_ADMIN_PASSWORD
+      KC_HOSTNAME: http://localhost:58080
+      MS_REFERENCE_OPS_SECRET: $MS_REFERENCE_OPS_SECRET
+      MS_REFERENCE_READER_SECRET: $MS_REFERENCE_READER_SECRET
+    ports:
+      - "127.0.0.1:58080:8080"
+    volumes:
+      - reference_identity:/opt/keycloak/data
+      - ./ms-reference-realm.json:/opt/keycloak/data/import/ms-reference-realm.json:ro
+volumes:
+  reference_postgres:
+  reference_rabbitmq:
+  reference_identity:
