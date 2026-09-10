@@ -20,4 +20,24 @@ public interface IMessageReceiver
         CancellationToken cancellationToken);
 }
 
-public sealed record MessageSubscription(Type MessageType, Type HandlerType, string Consumer);
+public sealed class MessageSubscription
+{
+    private readonly Func<IServiceProvider, IIntegrationEvent, MessageContext, CancellationToken, Task> _dispatch;
+    public Type MessageType { get; }
+    public Type HandlerType { get; }
+    public string Consumer { get; }
+
+    private MessageSubscription(Type messageType, Type handlerType, string consumer,
+        Func<IServiceProvider, IIntegrationEvent, MessageContext, CancellationToken, Task> dispatch)
+        => (MessageType, HandlerType, Consumer, _dispatch) = (messageType, handlerType, consumer, dispatch);
+
+    public static MessageSubscription For<TEvent, THandler>(string consumer)
+        where TEvent : IIntegrationEvent where THandler : class, IIntegrationEventHandler<TEvent>
+        => new(typeof(TEvent), typeof(THandler), consumer, (services, message, context, token) =>
+            ((THandler?)services.GetService(typeof(THandler))
+                ?? throw new InvalidOperationException($"Handler {typeof(THandler).Name} is not registered."))
+            .HandleAsync((TEvent)message, context, token));
+
+    public Task DispatchAsync(IServiceProvider services, IIntegrationEvent message, MessageContext context,
+        CancellationToken cancellationToken) => _dispatch(services, message, context, cancellationToken);
+}
