@@ -1,10 +1,15 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 
 COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
 COPY MS.Microservice.slnx ./
 
 COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Core/
+COPY src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj src/MS.Microservice.Domain.Primitives/
+COPY src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj src/MS.Microservice.EventSourcing/
+COPY src/MS.Microservice.Observability/MS.Microservice.Observability.csproj src/MS.Microservice.Observability/
+COPY src/MS.Microservice.Audio/MS.Microservice.Audio.csproj src/MS.Microservice.Audio/
+COPY src/MS.Microservice.Excel/MS.Microservice.Excel.csproj src/MS.Microservice.Excel/
 COPY src/MS.Microservice.Domain/MS.Microservice.Domain.csproj src/MS.Microservice.Domain/
 COPY src/MS.Microservice.Infrastructure/MS.Microservice.Infrastructure.csproj src/MS.Microservice.Infrastructure/
 COPY src/MS.Microservice.Web/MS.Microservice.Web.csproj src/MS.Microservice.Web/

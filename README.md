@@ -9,7 +9,7 @@ MS.Microservice 是一个面向 .NET 10 的微服务基础框架仓库，当前�
 | 项 | 当前值 |
 | --- | --- |
 | TargetFramework | `net10.0` |
-| SDK | `10.0.x`，见 `global.json` |
+| SDK | `10.0.401`，见 `global.json`；CI 与 Docker 使用同一基线 |
 | 主解决方案 | `MS.Microservice.slnx` |
 | Web Host | `src/MS.Microservice.Web` |
 | Docker Runtime | `mcr.microsoft.com/dotnet/aspnet:10.0` |
