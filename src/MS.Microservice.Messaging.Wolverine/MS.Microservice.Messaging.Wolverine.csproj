@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <PackageReference Include="WolverineFx" />
+    <PackageReference Include="WolverineFx.RabbitMQ" />
+    <PackageReference Include="WolverineFx.EntityFrameworkCore" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+  </ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="MS.Microservice.Messaging.Wolverine.Tests" /></ItemGroup>
+</Project>

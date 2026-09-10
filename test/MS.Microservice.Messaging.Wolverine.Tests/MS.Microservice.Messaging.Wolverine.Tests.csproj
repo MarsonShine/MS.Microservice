@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>false</IsPackable><IsTestProject>true</IsTestProject></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <ProjectReference Include="../../src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
+  </ItemGroup>
+</Project>

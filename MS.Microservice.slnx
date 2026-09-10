@@ -73,6 +73,7 @@
     <Project Path="src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
     <Project Path="src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
     <Project Path="src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
   </Folder>
@@ -83,6 +84,7 @@
     <Project Path="test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.RabbitMQ.Tests/MS.Microservice.Messaging.RabbitMQ.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.SelfManaged.Tests/MS.Microservice.Messaging.SelfManaged.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
