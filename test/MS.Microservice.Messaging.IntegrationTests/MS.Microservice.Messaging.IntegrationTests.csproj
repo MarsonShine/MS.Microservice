@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -21,7 +21,5 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />
-    <ProjectReference Include="../../samples/Lab/MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
   </ItemGroup>
-</Project>
+<ItemGroup><ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" /></ItemGroup></Project>

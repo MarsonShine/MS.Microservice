@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using MS.Microservice.Domain;
 using MS.Microservice.Domain.Aggregates.LogAggregate;
 using MS.Microservice.Domain.Events;
-using MS.Microservice.Persistence.EFCore.Outbox;
 using NSubstitute;
 
 namespace MS.Microservice.Persistence.EFCore.Tests;

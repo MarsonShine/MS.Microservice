@@ -8,8 +8,6 @@ using MS.Microservice.Domain.Aggregates.LogAggregate.Repository;
 using MS.Microservice.Domain.Events;
 using MS.Microservice.Persistence.EFCore.DbContext;
 using MS.Microservice.Persistence.EFCore.Repository;
-using MS.Microservice.Persistence.EFCore.Outbox;
-using MS.Microservice.Persistence.EFCore.Inbox;
 using System;
 using System.Diagnostics.CodeAnalysis;
 

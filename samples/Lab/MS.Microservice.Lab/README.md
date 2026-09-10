@@ -15,3 +15,8 @@ ConnectionStrings:LabMessagingDatabase 和 Messaging 配置；默认 SelfManaged
 旧 Activation 数据库、Inbox/Outbox 表及迁移历史保留。旧练习保存不再自动产生消息，
 旧待发送和死信数据不会自动迁移或派发；需要处置时先备份并人工核对。
 新的消息实验与旧练习数据库必须分离。领域事件的跨边界映射见 Reference.Application。
+
+旧实现已从可编译项目移除。早期状态机源码可在提交 2d2273c 查看；它不是当前接入示例。
+当前组件回归分别位于 Messaging.SelfManaged.EFCore.Tests、Messaging.RabbitMQ.Tests、
+Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相同业务断言；
+显式开启 RUN_MESSAGING_INTEGRATION_TESTS=true 时，缺少依赖会失败，不能以跳过代替验收。
