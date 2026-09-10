@@ -2,6 +2,7 @@
   <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="../MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
     <PackageReference Include="WolverineFx" />
     <PackageReference Include="WolverineFx.RabbitMQ" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" />

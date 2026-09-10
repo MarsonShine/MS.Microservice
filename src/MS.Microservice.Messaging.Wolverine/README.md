@@ -7,3 +7,5 @@ Each direct application operation uses a fresh native DbContextOutbox over the s
 The envelope rule maps the stable integration-event Id before persistence and uses registered contract aliases instead of CLR assembly-qualified names. The host must configure durable incoming/outgoing endpoints and IdAndDestination identity for independent subscriptions. Publisher confirmations and persistent storage are mandatory.
 
 Adapter unit tests exercise the common work boundary with SQLite and native interface substitutes. They are not a substitute for the PostgreSQL/RabbitMQ provider contract and crash-recovery tests.
+
+Wolverine 5.31.0's native RabbitMQ sender uses `mandatory=false`. This adapter registers a send-only `ms-rabbitmq` transport through Wolverine's public Endpoint/ISender extension points. It keeps Wolverine's durable sending agents and native envelope mapper, but sends through the shared confirmed RabbitMQ channel with `mandatory=true`. Native RabbitMQ listeners still own incoming durability. This adds no second Inbox/Outbox and does not register the self-managed worker.
