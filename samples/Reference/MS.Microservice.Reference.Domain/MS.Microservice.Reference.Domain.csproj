@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../../src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" /></ItemGroup>
+</Project>
