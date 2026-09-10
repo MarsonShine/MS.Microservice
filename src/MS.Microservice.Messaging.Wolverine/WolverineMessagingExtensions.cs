@@ -63,6 +63,10 @@ public static class WolverineMessagingExtensions
     public static void ConfigureWolverineMessaging<TContext>(WolverineOptions options,
         MessageTopology topology, WolverineMessagingOptions settings) where TContext : DbContext
     {
+        options.Discovery.CustomizeHandlerDiscovery(query => query.Excludes.WithCondition(
+            "Neutral integration handlers are invoked exclusively through the registered adapter bridge",
+            type => type.GetInterfaces().Any(contract => contract.IsGenericType
+                && contract.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>))));
         options.ServiceName = settings.ServiceName;
         options.AutoBuildMessageStorageOnStartup = AutoCreate.None;
         options.DefaultExecutionTimeout = settings.ProcessingTimeout;

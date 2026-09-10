@@ -13,3 +13,8 @@ Wolverine 5.31.0's native RabbitMQ sender uses `mandatory=false`. This adapter r
 Register the provider with `builder.Host.UseWolverineMessaging<TContext>(topology, options)`. It registers one business context and native transaction integration; native storage auto-DDL is disabled. Map native envelopes in the application's provider-specific context, and apply the application's migration plus the native message-store schema through the separate migrator.
 
 Native failure operations replay by logical message Id. If that Id failed at several destinations, native replay can restore all those failed deliveries. Already completed subscriptions remain protected by their native Inbox. The native API does not provide a reliable failure timestamp, so `FailedAtUtc` is null rather than a substituted send time. Outgoing transport failures remain owned by Wolverine's durable sending agents and recovery; native dead-letter operations describe its incoming failure store.
+
+The adapter excludes implementations of IIntegrationEventHandler<T> from Wolverine's conventional
+Handler/Consumer discovery. They are invoked only through the registered transactional bridge.
+Do not explicitly register those business types as native Wolverine handlers. Ordinary local commands
+continue to use Wolverine discovery, including in the Lab host.
