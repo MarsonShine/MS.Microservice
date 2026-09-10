@@ -20,6 +20,9 @@ public static class SelfManagedServiceCollectionExtensions
         services.AddSingleton(options);
         services.TryAddSingleton(TimeProvider.System);
         services.AddLogging();
+        services.TryAddSingleton<MessagingDiagnostics>();
+        services.AddScoped<SelfManagedPublisher<TContext>>();
+        services.AddHostedService<SelfManagedOutboxWorker<TContext>>();
         services.AddScoped<SelfManagedUnitOfWork<TContext>>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<SelfManagedUnitOfWork<TContext>>());
         services.AddScoped<IIntegrationEventPublisher>(provider => provider.GetRequiredService<SelfManagedUnitOfWork<TContext>>());
