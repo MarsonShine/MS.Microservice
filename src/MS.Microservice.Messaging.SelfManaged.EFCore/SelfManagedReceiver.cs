@@ -6,10 +6,9 @@ using Microsoft.Extensions.Logging;
 namespace MS.Microservice.Messaging.SelfManaged;
 
 internal sealed class SelfManagedReceiver<TContext>(IServiceScopeFactory scopeFactory, MessageTopology topology,
-    SelfManagedOptions options, TimeProvider clock, ILogger<SelfManagedReceiver<TContext>> logger) : IMessageReceiver
+    SelfManagedOptions options, TimeProvider clock, MessagingDiagnostics diagnostics, ILogger<SelfManagedReceiver<TContext>> logger) : IMessageReceiver
     where TContext : DbContext
 {
-    private static readonly ActivitySource Activities = new("MS.Microservice.Messaging");
 
     public async Task<DeliveryResult> ReceiveAsync(SerializedMessage message, string consumer,
         CancellationToken cancellationToken)
@@ -25,17 +24,17 @@ internal sealed class SelfManagedReceiver<TContext>(IServiceScopeFactory scopeFa
         {
             claim = await store.AcquireAsync(message, consumer, token, cancellationToken);
             if (claim.Result != InboxAcquisition.Busy) break;
-            if (clock.GetElapsedTime(started) >= options.BusyWaitLimit) return DeliveryResult.Requeue;
+            if (clock.GetElapsedTime(started) >= options.BusyWaitLimit) return Finish("busy", DeliveryResult.Requeue);
             await Task.Delay(options.BusyRecheckInterval, clock, cancellationToken);
         }
-        if (claim.Result == InboxAcquisition.AlreadyProcessed) return DeliveryResult.Acknowledge;
-        if (claim.Result == InboxAcquisition.DeadLettered) return DeliveryResult.Reject;
+        if (claim.Result == InboxAcquisition.AlreadyProcessed) return Finish("duplicate", DeliveryResult.Acknowledge);
+        if (claim.Result == InboxAcquisition.DeadLettered) return Finish("dead_letter", DeliveryResult.Reject);
 
-        using var activity = Activities.StartActivity("messaging.consume", ActivityKind.Consumer,
+        using var activity = diagnostics.Activities.StartActivity("messaging.consume", ActivityKind.Consumer,
             ActivityContext.TryParse(message.TraceParent, message.TraceState, out var parent) ? parent : default);
         using var logScope = logger.BeginScope(new Dictionary<string, object?>
         {
-            ["MessageId"] = message.Id, ["Consumer"] = consumer, ["CorrelationId"] = message.CorrelationId
+            ["MessageId"] = message.Id, ["MessageType"] = message.ContractName, ["Consumer"] = consumer, ["CorrelationId"] = message.CorrelationId
         });
         await using var guard = new LeaseGuard(async ct =>
         {
@@ -60,11 +59,11 @@ internal sealed class SelfManagedReceiver<TContext>(IServiceScopeFactory scopeFa
                     throw new OperationCanceledException("Inbox ownership was lost.", ct);
             }, guard.Token);
             logger.LogInformation("Message consumed");
-            return DeliveryResult.Acknowledge;
+            return Finish("consumed", DeliveryResult.Acknowledge);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || guard.Lost)
         {
-            return DeliveryResult.Requeue;
+            return Finish(guard.Lost ? "lease_lost" : "cancelled", DeliveryResult.Requeue);
         }
         catch (Exception exception)
         {
@@ -74,8 +73,15 @@ internal sealed class SelfManagedReceiver<TContext>(IServiceScopeFactory scopeFa
             activity?.SetStatus(ActivityStatusCode.Error, exception.GetType().Name);
             using var failureTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var changed = await store.FailAsync(claim.Entry, token, exception.GetType().Name, permanent, failureTimeout.Token);
-            return changed && (permanent || claim.Entry.AttemptCount + 1 > options.MaxRetryAttempts)
+            var result = changed && (permanent || claim.Entry.AttemptCount + 1 > options.MaxRetryAttempts)
                 ? DeliveryResult.Reject : DeliveryResult.Requeue;
+            return Finish(result == DeliveryResult.Reject ? "dead_letter" : "consume_failed", result);
+        }
+
+        DeliveryResult Finish(string outcome, DeliveryResult result)
+        {
+            diagnostics.Record("SelfManaged", outcome, clock.GetElapsedTime(started).TotalMilliseconds, consumer);
+            return result;
         }
     }
 }

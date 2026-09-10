@@ -4,6 +4,7 @@ public sealed class SelfManagedOptions
 {
     public int BatchSize { get; set; } = 50;
     public int MaxRetryAttempts { get; set; } = 10;
+    public TimeSpan DiagnosticsInterval { get; set; } = TimeSpan.FromSeconds(30);
     public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(5);
     public TimeSpan PublishingLease { get; set; } = TimeSpan.FromMinutes(1);
     public TimeSpan ProcessingLease { get; set; } = TimeSpan.FromMinutes(5);
@@ -20,7 +21,7 @@ public sealed class SelfManagedOptions
     {
         if (BatchSize is < 1 or > 1000 || MaxRetryAttempts is < 0 or > 100)
             throw new ArgumentException("BatchSize must be 1..1000 and MaxRetryAttempts 0..100.");
-        if (PollInterval <= TimeSpan.Zero || PublishingLease < TimeSpan.FromSeconds(1)
+        if (DiagnosticsInterval <= TimeSpan.Zero || PollInterval <= TimeSpan.Zero || PublishingLease < TimeSpan.FromSeconds(1)
             || ProcessingLease < TimeSpan.FromSeconds(1) || InitialRetryDelay <= TimeSpan.Zero
             || MaximumRetryDelay < InitialRetryDelay || BusyRecheckInterval <= TimeSpan.Zero
             || BusyWaitLimit < BusyRecheckInterval || ProcessingTimeout <= TimeSpan.Zero

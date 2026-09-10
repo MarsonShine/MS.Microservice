@@ -46,20 +46,20 @@ public static partial class OpenTelemetryExtensions
                 })
                 .WithTracing(configurationBuilder =>
                 {
-                    configurationBuilder.AddSource(resourceOptions.ActivitySourceName)
-                        .AddConsoleExporter()
+                    configurationBuilder.AddSource(resourceOptions.ActivitySourceName, "MS.Microservice.Messaging", "Wolverine", "MS.Microservice.AI")
                         .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddOtlpExporter();
+                        .AddHttpClientInstrumentation();
+                    if (resourceOptions.ConsoleExporterEnabled) configurationBuilder.AddConsoleExporter();
+                    if (resourceOptions.OtlpExporterEnabled) configurationBuilder.AddOtlpExporter();
                 })
                 .WithMetrics(configurationBuilder =>
                 {
-                    configurationBuilder.AddMeter(PlatformMetrics.MeterName)
+                    configurationBuilder.AddMeter(PlatformMetrics.MeterName, "MS.Microservice.Messaging", "Wolverine*")
                         .AddRuntimeInstrumentation()
                         .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddConsoleExporter()
-                        .AddOtlpExporter();
+                        .AddHttpClientInstrumentation();
+                    if (resourceOptions.ConsoleExporterEnabled) configurationBuilder.AddConsoleExporter();
+                    if (resourceOptions.OtlpExporterEnabled) configurationBuilder.AddOtlpExporter();
                 });
             services.TryAddSingleton<PlatformMetrics>();
             services.TryAddSingleton(new PlatformTracing(resourceOptions.ActivitySourceName));

@@ -7,12 +7,13 @@ using Microsoft.Extensions.Logging;
 namespace MS.Microservice.Messaging.SelfManaged;
 
 internal sealed class SelfManagedOutboxWorker<TContext>(IServiceScopeFactory scopeFactory,
-    SelfManagedOptions options, TimeProvider clock, ILogger<SelfManagedOutboxWorker<TContext>> logger)
+    SelfManagedOptions options, TimeProvider clock, MessagingDiagnostics diagnostics, ILogger<SelfManagedOutboxWorker<TContext>> logger)
     : BackgroundService where TContext : DbContext
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var failures = 0;
+        var nextSnapshot = DateTimeOffset.MinValue;
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -22,6 +23,11 @@ internal sealed class SelfManagedOutboxWorker<TContext>(IServiceScopeFactory sco
                     .PublishBatchAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<OutboxStore<TContext>>().CleanupAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<InboxStore<TContext>>().CleanupAsync(stoppingToken);
+                if (clock.GetUtcNow() >= nextSnapshot)
+                {
+                    await StorageMetrics.CaptureAsync(scope.ServiceProvider.GetRequiredService<TContext>(), diagnostics, stoppingToken);
+                    nextSnapshot = clock.GetUtcNow() + options.DiagnosticsInterval;
+                }
                 failures = 0;
                 if (count == 0) await Task.Delay(options.PollInterval, clock, stoppingToken);
             }

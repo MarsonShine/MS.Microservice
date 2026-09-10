@@ -15,7 +15,12 @@ public static class ServiceHost
     public static WebApplicationBuilder CreateBuilder(string[] args)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, ContentRootPath = AppContext.BaseDirectory });
-        builder.Logging.ClearProviders().AddSimpleConsole(options => options.SingleLine = true);
+        builder.Logging.ClearProviders().AddJsonConsole(options =>
+        {
+            options.IncludeScopes = true;
+            options.UseUtcTimestamp = true;
+            options.TimestampFormat = "O";
+        });
         return builder;
     }
 

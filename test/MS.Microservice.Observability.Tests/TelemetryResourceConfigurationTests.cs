@@ -51,6 +51,23 @@ public sealed class TelemetryResourceConfigurationTests
         Assert.Throws<OptionsValidationException>(action);
     }
 
+    [Theory]
+    [InlineData("MS.Microservice.Messaging")]
+    [InlineData("Wolverine")]
+    [InlineData("MS.Microservice.AI")]
+    public void DefaultPipelineCollectsComponentSourcesWithoutImplicitExporters(string source)
+    {
+        var services = new ServiceCollection();
+        services.AddMsOpenTelemetry(CreateConfiguration(ValidValues()));
+        using var provider = services.BuildServiceProvider();
+        using var tracer = provider.GetRequiredService<OpenTelemetry.Trace.TracerProvider>();
+        using var activitySource = new System.Diagnostics.ActivitySource(source);
+        using var activity = activitySource.StartActivity("component-operation");
+        Assert.NotNull(activity);
+        var options = provider.GetRequiredService<IOptions<TelemetryResourceOptions>>().Value;
+        Assert.False(options.ConsoleExporterEnabled);
+        Assert.False(options.OtlpExporterEnabled);
+    }
     private static Dictionary<string, string?> ValidValues() => new()
     {
         ["OpenTelemetry:ServiceName"] = "service",

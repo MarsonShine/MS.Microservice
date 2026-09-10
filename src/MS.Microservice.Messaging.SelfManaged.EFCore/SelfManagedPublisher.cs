@@ -25,7 +25,7 @@ internal sealed class SelfManagedPublisher<TContext>(OutboxStore<TContext> store
                 ActivityContext.TryParse(message.TraceParent, message.TraceState, out var parent) ? parent : default);
             using var logScope = logger.BeginScope(new Dictionary<string, object?>
             {
-                ["MessageId"] = message.Id, ["CorrelationId"] = message.CorrelationId
+                ["MessageId"] = message.Id, ["MessageType"] = message.ContractName, ["CorrelationId"] = message.CorrelationId
             });
             await using var guard = new LeaseGuard(async ct =>
             {
