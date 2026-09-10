@@ -7,7 +7,8 @@ namespace MS.Microservice.AI.Core.Images.Building;
 
 /// <summary>
 /// Builds a Qwen-safe positive-only image prompt.
-/// Contains zero negative language and zero sensitive words — designed to pass
+/// Preserves valid cues from the final plan; scene simplification belongs to the planning pipeline.
+/// Uses provider-oriented wording for
 /// DashScope/Qwen content filters that scan prompt text for keywords even in negation form.
 /// </summary>
 public static class QwenSafePromptBuilder

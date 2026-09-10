@@ -144,22 +144,26 @@ public sealed class QwenSafePromptBuilderTests
         prompt.Should().NotBeNullOrWhiteSpace();
     }
 
-    [Fact]
-    public void Build_ShouldLimitSettingCuesTo2_InSafePrompt()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void Build_ShouldPreserveValidSettingCues_FromTheFinalPlan(int count)
     {
         var input = new WordImageInput("Be careful!", "Be careful!", null, WordImageCardType.Sentence);
         var plan = new WordImagePromptPlan
         {
             MainSubject = "Safe play",
             SceneSetting = "a playground",
-            SettingCues = ["a slide", "a swing", "sandbox", "bench"]
+            SettingCues = new[] { "a slide", "a swing", "sandbox", "bench" }.Take(count).ToList()
         };
 
         var prompt = QwenSafePromptBuilder.Build(input, plan);
 
-        // Should only include at most 2 cues (the .Take(2) in the builder)
         var cueCount = System.Text.RegularExpressions.Regex.Matches(prompt, "slide|swing|sandbox|bench").Count;
-        cueCount.Should().BeLessThanOrEqualTo(2);
+        cueCount.Should().Be(count);
     }
 
     // ═══════════════════════════════════════════════════════════════
