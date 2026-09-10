@@ -20,3 +20,8 @@ ConnectionStrings:LabMessagingDatabase 和 Messaging 配置；默认 SelfManaged
 当前组件回归分别位于 Messaging.SelfManaged.EFCore.Tests、Messaging.RabbitMQ.Tests、
 Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相同业务断言；
 显式开启 RUN_MESSAGING_INTEGRATION_TESTS=true 时，缺少依赖会失败，不能以跳过代替验收。
+
+演练账号由 Lab.DatabaseMigrator 的 --seed-lab-users 显式创建，并且仅允许 ms_lab_ 前缀数据库。
+必须配置 LabBootstrap:OperatorPassword 和 ReaderPassword（至少 16 字符）。
+lab-operator 获得消息运维动作，lab-reader 没有此动作；密码使用 PasswordHasher 存储。
+重复执行不会覆盖已有账号的密码或权限。正式 Reference Host 没有此初始化入口。

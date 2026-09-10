@@ -7,5 +7,6 @@
 <PackageReference Include="xunit" />
 <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
 <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
 <ProjectReference Include="../../samples/Lab/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
 </ItemGroup></Project>
