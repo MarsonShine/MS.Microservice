@@ -62,6 +62,7 @@
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <Project Path="src/MS.Microservice.DatabaseMigrator/MS.Microservice.DatabaseMigrator.csproj" />
@@ -78,6 +79,7 @@
     <Project Path="src/MS.Microservice.Web/MS.Microservice.Web.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
     <Project Path="test/MS.Microservice.Infrastructure.Tests/MS.Microservice.Infrastructure.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.Abstractions.Tests/MS.Microservice.Messaging.Abstractions.Tests.csproj" />
