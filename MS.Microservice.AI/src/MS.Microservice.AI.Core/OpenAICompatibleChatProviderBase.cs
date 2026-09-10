@@ -85,8 +85,8 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         }
         catch (Exception exception)
         {
-            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-            _logger.LogWarning(exception, "AI provider {Provider} chat request failed for model {Model}.", Name, model.Model);
+            activity?.SetStatus(ActivityStatusCode.Error, exception.GetType().Name);
+            _logger.LogWarning("AI provider {Provider} chat request failed for model {Model}: {FailureType}.", Name, model.Model, exception.GetType().Name);
             throw;
         }
         finally
@@ -124,8 +124,8 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         }
         catch (Exception exception)
         {
-            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
-            _logger.LogWarning(exception, "AI provider {Provider} chat stream failed for model {Model}.", Name, model.Model);
+            activity?.SetStatus(ActivityStatusCode.Error, exception.GetType().Name);
+            _logger.LogWarning("AI provider {Provider} chat stream failed for model {Model}: {FailureType}.", Name, model.Model, exception.GetType().Name);
             ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
             activity?.Dispose();
             _concurrencyGate.Release();
@@ -184,79 +184,14 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         return activity;
     }
 
-    private async Task<TResult> SendWithRetryAsync<TResult>(
-        AIResolvedModel model,
-        AIChatRequest request,
-        bool isStreaming,
-        Func<HttpClient, HttpRequestMessage, CancellationToken, Task<TResult>> sendAsync,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(sendAsync);
-
-        var maxAttempts = model.MaxRetryAttempts + 1;
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    private Task<TResult> SendWithRetryAsync<TResult>(AIResolvedModel model, AIChatRequest request, bool isStreaming,
+        Func<HttpClient, HttpRequestMessage, CancellationToken, Task<TResult>> sendAsync, CancellationToken cancellationToken)
+        => AIHttpExecution.ExecuteAsync(Name, AICapability.Chat, model, request.RequestId, TimeProvider, async token =>
         {
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            linkedCts.CancelAfter(model.Timeout);
-
-            var httpClient = _httpClientFactory.CreateClient(HttpClientName);
-            using var httpRequest = CreateHttpRequestMessage(model, request, isStreaming);
-
-            try
-            {
-                return await sendAsync(httpClient, httpRequest, linkedCts.Token).ConfigureAwait(false);
-            }
-            catch (AIRateLimitException exception) when (attempt < maxAttempts)
-            {
-                await DelayForRetryAsync(attempt, exception.RetryAfter, cancellationToken).ConfigureAwait(false);
-            }
-            catch (AIProviderException exception) when (exception.IsTransient && attempt < maxAttempts)
-            {
-                await DelayForRetryAsync(attempt, exception.RetryAfter, cancellationToken).ConfigureAwait(false);
-            }
-            catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested && attempt < maxAttempts)
-            {
-                await DelayForRetryAsync(attempt, retryAfter: null, cancellationToken).ConfigureAwait(false);
-            }
-            catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
-            {
-                throw new AITimeoutException(
-                    $"AI provider '{Name}' timed out after {model.Timeout.TotalSeconds:0.##} seconds.",
-                    provider: Name,
-                    model: model.Model,
-                    scenario: model.Scenario,
-                    requestId: request.RequestId,
-                    innerException: exception);
-            }
-            catch (HttpRequestException) when (attempt < maxAttempts)
-            {
-                await DelayForRetryAsync(attempt, retryAfter: null, cancellationToken).ConfigureAwait(false);
-            }
-            catch (HttpRequestException exception)
-            {
-                throw new AIProviderException(
-                    $"AI provider '{Name}' request failed: {exception.Message}",
-                    AIErrorCodes.ProviderUnavailable,
-                    provider: Name,
-                    model: model.Model,
-                    scenario: model.Scenario,
-                    requestId: request.RequestId,
-                    isTransient: true,
-                    innerException: exception);
-            }
-        }
-
-        throw new AIProviderException(
-            $"AI provider '{Name}' request failed after retry attempts were exhausted.",
-            AIErrorCodes.ProviderUnavailable,
-            provider: Name,
-            model: model.Model,
-            scenario: model.Scenario,
-            requestId: request.RequestId,
-            isTransient: true);
-    }
-
+            var client = _httpClientFactory.CreateClient(HttpClientName);
+            using var message = CreateHttpRequestMessage(model, request, isStreaming);
+            return await sendAsync(client, message, token).ConfigureAwait(false);
+        }, cancellationToken);
     private HttpRequestMessage CreateHttpRequestMessage(AIResolvedModel model, AIChatRequest request, bool isStreaming)
     {
         var payload = new OpenAICompatibleChatCompletionRequest
@@ -447,71 +382,9 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         };
     }
 
-    private async Task<AIProviderException> CreateProviderExceptionAsync(
-        HttpResponseMessage httpResponse,
-        AIResolvedModel model,
-        AIChatRequest request,
-        CancellationToken cancellationToken)
-    {
-        var responseText = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        var envelope = TryDeserializeError(responseText);
-        var providerRequestId = GetProviderRequestId(httpResponse);
-        var retryAfter = GetRetryAfter(httpResponse.Headers.RetryAfter);
-        var message = envelope?.Error?.Message?.Trim();
-        var providerCode = envelope?.Error?.Code?.Trim() ?? envelope?.Error?.Type?.Trim();
-        var statusCode = (int)httpResponse.StatusCode;
-
-        if (IsContentSafetyError(providerCode, message))
-        {
-            return new AIContentSafetyException(
-                message ?? $"AI provider '{Name}' filtered the request or response content.",
-                provider: Name,
-                model: model.Model,
-                scenario: model.Scenario,
-                requestId: request.RequestId,
-                providerRequestId: providerRequestId,
-                statusCode: statusCode);
-        }
-
-        if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
-        {
-            return new AIRateLimitException(
-                message ?? $"AI provider '{Name}' rate limited the request.",
-                provider: Name,
-                model: model.Model,
-                scenario: model.Scenario,
-                requestId: request.RequestId,
-                providerRequestId: providerRequestId,
-                statusCode: statusCode,
-                retryAfter: retryAfter);
-        }
-
-        var errorCode = IsUnsupportedResponseFormat(httpResponse.StatusCode, providerCode, message)
-            ? AIErrorCodes.UnsupportedResponseFormat
-            : httpResponse.StatusCode switch
-            {
-                HttpStatusCode.BadRequest => AIErrorCodes.InvalidRequest,
-                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => AIErrorCodes.ProviderAuthenticationFailed,
-                HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => AIErrorCodes.ProviderTimeout,
-                _ => AIErrorCodes.ProviderUnavailable,
-            };
-
-        return new AIProviderException(
-            message ?? $"AI provider '{Name}' request failed with status code {(int)httpResponse.StatusCode}.",
-            errorCode,
-            provider: Name,
-            model: model.Model,
-            scenario: model.Scenario,
-            requestId: request.RequestId,
-            providerRequestId: providerRequestId,
-            statusCode: statusCode,
-            isTransient: IsTransient(httpResponse.StatusCode),
-            retryAfter: retryAfter,
-            innerException: string.IsNullOrWhiteSpace(providerCode)
-                ? null
-                : new InvalidOperationException($"Provider code: {providerCode}; body: {Truncate(responseText, 512)}"));
-    }
-
+    private Task<AIProviderException> CreateProviderExceptionAsync(HttpResponseMessage response, AIResolvedModel model,
+        AIChatRequest request, CancellationToken cancellationToken)
+        => AIProviderErrors.CreateAsync(Name, response, AICapability.Chat, model, request.RequestId, cancellationToken);
     private string GetBaseAddress()
     {
         var baseAddress = string.IsNullOrWhiteSpace(_providerOptions.BaseAddress)
@@ -519,23 +392,6 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             : _providerOptions.BaseAddress;
 
         return baseAddress.EndsWith('/') ? baseAddress : $"{baseAddress}/";
-    }
-
-    private static OpenAICompatibleErrorEnvelope? TryDeserializeError(string responseText)
-    {
-        if (string.IsNullOrWhiteSpace(responseText))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<OpenAICompatibleErrorEnvelope>(responseText, SerializerOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 
     private static AIUsage MapUsage(OpenAICompatibleUsage? usage)
@@ -550,90 +406,8 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             };
     }
 
-    private static bool IsContentSafetyError(string? providerCode, string? message)
-    {
-        var value = $"{providerCode} {message}";
-        return value.Contains("content_filter", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("content policy", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("safety", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsUnsupportedResponseFormat(
-        HttpStatusCode statusCode,
-        string? providerCode,
-        string? message)
-    {
-        if (statusCode != HttpStatusCode.BadRequest)
-        {
-            return false;
-        }
-
-        var value = $"{providerCode} {message}";
-        var mentionsFormat = value.Contains("response_format", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("json_schema", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("json object", StringComparison.OrdinalIgnoreCase);
-        var unsupported = value.Contains("unsupported", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("not support", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("unknown", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("invalid type", StringComparison.OrdinalIgnoreCase);
-        return mentionsFormat && unsupported;
-    }
-
-    private static bool IsTransient(HttpStatusCode statusCode)
-    {
-        return statusCode == HttpStatusCode.RequestTimeout
-            || statusCode == HttpStatusCode.TooManyRequests
-            || statusCode == HttpStatusCode.BadGateway
-            || statusCode == HttpStatusCode.ServiceUnavailable
-            || statusCode == HttpStatusCode.GatewayTimeout
-            || (int)statusCode >= 500;
-    }
-
-    private static TimeSpan? GetRetryAfter(RetryConditionHeaderValue? retryAfter)
-    {
-        if (retryAfter?.Delta is not null)
-        {
-            return retryAfter.Delta.Value;
-        }
-
-        if (retryAfter?.Date is not null)
-        {
-            var delay = retryAfter.Date.Value - DateTimeOffset.UtcNow;
-            return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
-        }
-
-        return null;
-    }
-
     private static string? GetProviderRequestId(HttpResponseMessage response)
-    {
-        return GetHeaderValue(response.Headers, "x-request-id")
-            ?? GetHeaderValue(response.Headers, "request-id")
-            ?? GetHeaderValue(response.Headers, "x-openai-request-id")
-            ?? GetHeaderValue(response.Headers, "x-dashscope-request-id");
-    }
-
-    private static string? GetHeaderValue(HttpHeaders headers, string name)
-    {
-        return headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
-    }
-
-    private async Task DelayForRetryAsync(int attempt, TimeSpan? retryAfter, CancellationToken cancellationToken)
-    {
-        var delay = retryAfter ?? TimeSpan.FromMilliseconds(Math.Min(500 * Math.Pow(2, attempt - 1), 2_000));
-        if (delay <= TimeSpan.Zero)
-        {
-            return;
-        }
-
-        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        return value.Length <= maxLength ? value : value[..maxLength];
-    }
-
+        => AIProviderErrors.GetProviderRequestId(response);
     private sealed record StreamingResponse(HttpResponseMessage Response, string? ProviderRequestId);
 
     protected sealed class OpenAICompatibleChatCompletionRequest
@@ -750,21 +524,4 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         public int TotalTokens { get; init; }
     }
 
-    private sealed class OpenAICompatibleErrorEnvelope
-    {
-        [JsonPropertyName("error")]
-        public OpenAICompatibleError? Error { get; init; }
-    }
-
-    private sealed class OpenAICompatibleError
-    {
-        [JsonPropertyName("message")]
-        public string? Message { get; init; }
-
-        [JsonPropertyName("type")]
-        public string? Type { get; init; }
-
-        [JsonPropertyName("code")]
-        public string? Code { get; init; }
-    }
 }
