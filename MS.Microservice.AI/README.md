@@ -1,3 +1,5 @@
+教育图像场景已迁至 samples/AI/MS.Microservice.Samples.EducationalImages。使用该场景时引用场景类库，调用 services.AddImagePromptPipeline()；Qwen 参考图适配还需 services.AddQwenEducationalImages()。通用 AddQwen() 不注册场景适配器。
+
 ## MS.Microservice.AI
 
 Independent AI module family for MS.Microservice. It provides provider-neutral Chat, structured JSON output, TTS, ASR, image generation, image edit, educational image prompt planning, and a bounded question-generation Harness with concrete providers for OpenAI, DeepSeek, and Qwen.
@@ -21,7 +23,7 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
     .AddOpenAI()
     .AddQwen()   // for reference-image editing
     .Services
-    .AddImagePromptPipeline(); // Registers IPlanGeneratorClient, SceneGroupingAgent, orchestrator, SentenceEditDeltaAgent
+    .AddImagePromptPipeline(); // Requires the samples/AI education scenario library
 
 // Usage: one-step text → image
 var orchestrator = provider.GetRequiredService<ImageGenerationOrchestrator>();
@@ -42,7 +44,7 @@ var batchOrchestrator = provider.GetRequiredService<SentenceImageBatchOrchestrat
 var results = await batchOrchestrator.GenerateBatchAsync(excelRows);
 ```
 
-> See `src/MS.Microservice.AI.Core/Images/README.md` for full documentation on the image prompt pipeline, scene grouping, structured edit delta, anti-clutter design, and dual-prompt architecture.
+> See `../samples/AI/MS.Microservice.Samples.EducationalImages/README.md` for full documentation on the image prompt pipeline, scene grouping, structured edit delta, anti-clutter design, and dual-prompt architecture.
 
 ### Quick Start — Question Generation Harness
 
@@ -83,7 +85,7 @@ The framework contains no fixed educational question codes or database projectio
 
 > **架构说明**：
 > - `OpenAICompatible*ProviderBase` 是 provider HTTP 复用层（chat/completions, images/generations 等），不是参考图编辑通道。
-> - 参考图编辑使用独立的 `IReferenceImageEditClient` (Core.Images) → `IQwenImageReferenceEditClient` (Qwen) → `QwenReferenceImageEditAdapter`。
+> - 参考图编辑使用独立的 `IReferenceImageEditClient` (Samples.EducationalImages) → `IQwenImageReferenceEditClient` (Qwen) → `QwenReferenceImageEditAdapter`。
 > - `AIImageEditRequest` 保持二进制编辑语义（inpainting / background removal），没有 `ReferenceImageUrl`。
 > - `MS.Microservice.Core` 是允许依赖的核心层。
 

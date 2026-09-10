@@ -58,6 +58,9 @@
   <Folder Name="/MS.Microservice.Swagger/test/">
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
   </Folder>
+  <Folder Name="/samples/AI/">
+    <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
+  </Folder>
   <Folder Name="/samples/Lab/">
     <Project Path="samples/Lab/MS.Microservice.Lab.DatabaseMigrator/MS.Microservice.Lab.DatabaseMigrator.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
@@ -100,6 +103,7 @@
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Persistence.Tests/MS.Microservice.Reference.Persistence.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Samples.EducationalImages.Tests/MS.Microservice.Samples.EducationalImages.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/" />
 </Solution>

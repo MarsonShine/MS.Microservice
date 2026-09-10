@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.AI.Core;
-using MS.Microservice.AI.Core.Images;
 using MS.Microservice.AI.Qwen;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -20,7 +19,6 @@ public static class QwenBuilderExtensions
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageGenerationProvider, QwenImageGenerationProvider>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageEditProvider, QwenImageEditProvider>());
         builder.Services.TryAddSingleton<IQwenImageReferenceEditClient, QwenImageReferenceEditClient>();
-        builder.Services.TryAddSingleton<IReferenceImageEditClient, QwenReferenceImageEditAdapter>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, QwenOptionsValidator>());
         return builder;
     }
