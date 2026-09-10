@@ -63,6 +63,7 @@
     <Project Path="test/MS.Microservice.Logging.NLog.Tests/MS.Microservice.Logging.NLog.Tests.csproj" />
     <Project Path="test/MS.Microservice.Logging.Serilog.Tests/MS.Microservice.Logging.Serilog.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.Abstractions.Tests/MS.Microservice.Messaging.Abstractions.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Messaging.FaultWorker/MS.Microservice.Messaging.FaultWorker.csproj" />
     <Project Path="test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.RabbitMQ.Tests/MS.Microservice.Messaging.RabbitMQ.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.SelfManaged.Tests/MS.Microservice.Messaging.SelfManaged.Tests.csproj" />

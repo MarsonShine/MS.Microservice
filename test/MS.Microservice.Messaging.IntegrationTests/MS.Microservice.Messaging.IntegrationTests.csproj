@@ -22,4 +22,4 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
-<ItemGroup><ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" /></ItemGroup></Project>
+<ItemGroup><ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" /></ItemGroup><ItemGroup><ProjectReference Include="../MS.Microservice.Messaging.FaultWorker/MS.Microservice.Messaging.FaultWorker.csproj" /></ItemGroup></Project>

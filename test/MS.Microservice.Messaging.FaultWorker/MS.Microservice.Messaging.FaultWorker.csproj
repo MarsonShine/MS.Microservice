@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />
+  </ItemGroup>
+</Project>
