@@ -8,7 +8,7 @@
     <DefineConstants>$(DefineConstants);MS_Microservice_DIAGNOSTICS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="MS.Microservice.Infrastructure.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.Excel.Tests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MiniExcel" />

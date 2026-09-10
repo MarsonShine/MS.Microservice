@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("MS.Microservice.Infrastructure.Tests")]
+[assembly: InternalsVisibleTo("MS.Microservice.Lab.Tests")]

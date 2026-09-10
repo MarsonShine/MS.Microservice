@@ -3,7 +3,7 @@
     <OutputType>Library</OutputType><IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="MS.Microservice.Persistence.EFCore.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.Lab.Tests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />

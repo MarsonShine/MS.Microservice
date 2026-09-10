@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
-[assembly: InternalsVisibleTo("MS.Microservice.Infrastructure.Tests")]
+[assembly: InternalsVisibleTo("MS.Microservice.Lab.Tests")]
 
 namespace MS.Microservice.Infrastructure.FileSystem;
 
