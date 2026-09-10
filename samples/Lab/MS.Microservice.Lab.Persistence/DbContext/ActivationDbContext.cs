@@ -109,25 +109,7 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            if (_platformDbContextOption.EnabledAutoTimeTracker())
-            {
-                var entries = ChangeTracker.Entries()
-                    .Where(e => e.Entity is ICreatedAt || e.Entity is IUpdatedAt)
-                    .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
-
-                foreach (var entityEntry in entries)
-                {
-                    if (entityEntry.Entity is IUpdatedAt updatedAt)
-                    {
-                        updatedAt.UpdatedAt = DateTime.Now;
-                    }
-
-                    if (entityEntry.State == EntityState.Added)
-                    {
-                        ((ICreatedAt)entityEntry.Entity).CreatedAt = DateTime.Now;
-                    }
-                }
-            }
+            if (_platformDbContextOption.EnabledAutoTimeTracker()) this.UpdateAuditTimestamps();
 
             // Legacy exercises keep their event list in memory. Reliable messaging lessons
             // use the shared component and an independent database; old rows remain untouched.
