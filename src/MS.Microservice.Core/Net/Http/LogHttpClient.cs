@@ -1,114 +1,109 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
+using System.Collections;
+using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
-namespace MS.Microservice.Core.Net.Http
+namespace MS.Microservice.Core.Net.Http;
+
+public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
 {
-    // TODO: 日志单独配置化，可以单独控制是否记录日志
-    public class LogHttpClient
+    public JsonSerializerOptions JsonSerializerOptions = new()
     {
-        private readonly ILogger<LogHttpClient> _logger;
-        private readonly HttpClient _httpClient;
+        PropertyNameCaseInsensitive = true,
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+    };
 
-        public JsonSerializerOptions JsonSerializerOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
-        };
+    public void Configure(string baseAddress, TimeSpan timeout)
+    {
+        httpClient.BaseAddress = new Uri(baseAddress);
+        httpClient.Timeout = timeout;
+    }
 
-        public LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
-        {
-            _logger = logger;
-            _httpClient = httpClient;
-        }
+    public ValueTask<T?> GetAsync<T>(string requestUrl, object? body, CancellationToken cancellationToken = default)
+        => SendAsync<T>(HttpMethod.Get, BuildUrl(requestUrl, body), null, null, cancellationToken);
 
-        public void Configure(string baseAddress, TimeSpan timeout)
-        {
-            _httpClient.BaseAddress = new Uri(baseAddress);
-            _httpClient.Timeout = timeout;
-        }
+    public ValueTask<T?> GetAsync<T>(string url, object? body, Dictionary<string, string> headers,
+        CancellationToken cancellationToken = default)
+        => SendAsync<T>(HttpMethod.Get, BuildUrl(url, body), null, headers, cancellationToken);
 
-        public async ValueTask<T?> GetAsync<T>(string requestUrl, object body, CancellationToken cancellationToken = default)
+    public ValueTask<T?> PostAsync<T>(string url, object? body, CancellationToken cancellationToken = default)
+        => SendAsync<T>(HttpMethod.Post, url, body, null, cancellationToken);
+
+    public Task<T?> PostAsync<T>(string url, object? body, Dictionary<string, string> headers,
+        CancellationToken cancellationToken = default)
+        => SendAsync<T>(HttpMethod.Post, url, body, headers, cancellationToken).AsTask();
+
+    private async ValueTask<T?> SendAsync<T>(HttpMethod method, string url, object? body,
+        Dictionary<string, string>? headers, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var request = new HttpRequestMessage(method, url);
+        if (method == HttpMethod.Post)
+            request.Content = new StringContent(JsonSerializer.Serialize(body, JsonSerializerOptions), Encoding.UTF8, "application/json");
+        if (headers is not null)
+            foreach (var (name, value) in headers) request.Headers.Add(name, value);
+
+        var id = Guid.NewGuid();
+        var started = Stopwatch.GetTimestamp();
+        logger.LogInformation("HTTP {RequestId} {Method} started", id, method.Method);
+        try
         {
-            string query = BuildQuery(body);
-            var guid = Guid.NewGuid();
-            _logger.LogInformation("【{Guid}】method:【GET】log request: 【{query}】", guid, $"{requestUrl}?{query}");
-            using var response = await _httpClient.GetAsync($"{requestUrl}?{query}", cancellationToken);
+            using var response = await httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
-            var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            try
-            {
-                var result = await JsonSerializer.DeserializeAsync<T>(contentStream, options: JsonSerializerOptions, cancellationToken);
-                _logger.LogInformation("【{Guid}】method:【GET】log response: 【{result}】", guid, result);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("【{Guid}】method:【GET】log request error: 【{error}】", guid, ex.Message + Environment.NewLine + ex.StackTrace);
-                throw new Exception("服务器数据解析异常", ex);
-            }
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var result = await JsonSerializer.DeserializeAsync<T>(stream, JsonSerializerOptions, cancellationToken);
+            logger.LogInformation("HTTP {RequestId} {Method} completed {StatusCode} in {ElapsedMs} ms",
+                id, method.Method, (int)response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            return result;
         }
-
-        public async ValueTask<T?> GetAsync<T>(string url, object body, Dictionary<string, string> headers, CancellationToken cancellationToken = default)
+        catch (Exception exception)
         {
-            SetHeaders(headers);
-            return await GetAsync<T>(url, body, cancellationToken);
+            // URLs, bodies and exception messages may contain credentials or personal data.
+            logger.LogInformation("HTTP {RequestId} {Method} ended {FailureType} in {ElapsedMs} ms",
+                id, method.Method, exception.GetType().Name, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            throw;
         }
+    }
 
-        private static string BuildQuery(object body)
+    private static string BuildUrl(string url, object? body)
+    {
+        if (body is null) return url;
+        IEnumerable<KeyValuePair<string, object?>> pairs = body is IDictionary dictionary
+            ? dictionary.Keys.Cast<object>().Select(key => new KeyValuePair<string, object?>(
+                Convert.ToString(key, CultureInfo.InvariantCulture) ?? "", dictionary[key]))
+            : body.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(property => property.CanRead && property.GetMethod?.IsPublic == true && property.GetIndexParameters().Length == 0)
+                .Select(property => new KeyValuePair<string, object?>(property.Name, property.GetValue(body)));
+        var parameters = new List<string>();
+        foreach (var (name, value) in pairs)
         {
-            var queryParameters = body.GetType().GetTypeInfo()
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Select(p => p.Name + "=" + p.GetValue(body))
-                .ToArray();
-
-            return string.Join('&', queryParameters);
+            if (value is IEnumerable values and not string)
+                foreach (var item in values) Add(name, item);
+            else Add(name, value);
         }
+        if (parameters.Count == 0) return url;
+        var fragmentIndex = url.IndexOf('#');
+        var path = fragmentIndex < 0 ? url : url[..fragmentIndex];
+        var fragment = fragmentIndex < 0 ? "" : url[fragmentIndex..];
+        var separator = path.Contains('?') ? (path.EndsWith('?') || path.EndsWith('&') ? "" : "&") : "?";
+        return path + separator + string.Join('&', parameters) + fragment;
 
-        public async ValueTask<T?> PostAsync<T>(string url, object body, CancellationToken cancellationToken = default)
+        void Add(string name, object? value)
         {
-            var guid = Guid.NewGuid();
-            _logger.LogInformation("【{Guid}】method:【POST】log request: 【{body}】", guid, body);
-            try
+            if (value is null) return;
+            var text = value switch
             {
-
-                using var response = await _httpClient.PostAsync(url, new StringContent(JsonSerializer.Serialize(body, JsonSerializerOptions)), cancellationToken);
-                response.EnsureSuccessStatusCode();
-                var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                var result = await JsonSerializer.DeserializeAsync<T>(contentStream, options: JsonSerializerOptions, cancellationToken);
-                _logger.LogInformation("【{Guid}】method:【POST】log response: 【{result}】", guid, result);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("【{Guid}】method:【POST】log request error: 【{error}】", guid, ex.Message + Environment.NewLine + ex.StackTrace);
-                throw new Exception("服务器数据解析异常", ex);
-            }
-        }
-
-        public async Task<T?> PostAsync<T>(string url, object body, Dictionary<string, string> headers, CancellationToken cancellationToken = default)
-        {
-            SetHeaders(headers);
-            return await PostAsync<T>(url, body, cancellationToken);
-        }
-
-        private void SetHeaders(Dictionary<string, string>? headers)
-        {
-            if (headers?.Count > 0)
-            {
-                foreach (var (key, value) in headers)
-                {
-                    _httpClient.DefaultRequestHeaders.Add(key, value);
-                }
-            }
+                DateTime date => date.ToString("O", CultureInfo.InvariantCulture),
+                DateTimeOffset date => date.ToString("O", CultureInfo.InvariantCulture),
+                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString()
+            };
+            parameters.Add(Uri.EscapeDataString(name) + "=" + Uri.EscapeDataString(text ?? ""));
         }
     }
 }
