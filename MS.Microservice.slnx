@@ -1,72 +1,31 @@
 <Solution>
-  <Folder Name="/build/">
-    <File Path="Directory.Build.props" />
-    <File Path="Directory.Packages.props" />
-  </Folder>
-  <Folder Name="/MS.Microservice.AI/" />
-  <Folder Name="/MS.Microservice.AI/src/">
-    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
-    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
-    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.DeepSeek/MS.Microservice.AI.DeepSeek.csproj" />
-    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.OpenAI/MS.Microservice.AI.OpenAI.csproj" />
-    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.QuestionGeneration/MS.Microservice.AI.QuestionGeneration.csproj" />
-    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.AI/test/">
-    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Core.Tests/MS.Microservice.AI.Core.Tests.csproj" />
-    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.DeepSeek.Tests/MS.Microservice.AI.DeepSeek.Tests.csproj" />
-    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.OpenAI.Tests/MS.Microservice.AI.OpenAI.Tests.csproj" />
-    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.QuestionGeneration.Tests/MS.Microservice.AI.QuestionGeneration.Tests.csproj" />
-    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.EventBus/" />
-  <Folder Name="/MS.Microservice.EventBus/src/">
-    <Project Path="MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.EventBus/test/">
-    <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Logging/" />
-  <Folder Name="/MS.Microservice.Logging/src/">
-    <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
-    <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj" />
-    <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />
-    <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.Serilog/MS.Microservice.Logging.Serilog.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Logging/test/">
-    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.AspNetCore.Tests/MS.Microservice.Logging.AspNetCore.Tests.csproj" />
-    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Core.Tests/MS.Microservice.Logging.Core.Tests.csproj" />
-    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.NLog.Tests/MS.Microservice.Logging.NLog.Tests.csproj" />
-    <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Serilog.Tests/MS.Microservice.Logging.Serilog.Tests.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Persistence/" />
-  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/" />
-  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/test/">
-    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.EFCore/test/MS.Microservice.Persistence.EFCore.Tests/MS.Microservice.Persistence.EFCore.Tests.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/" />
-  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/">
-    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/test/">
-    <Project Path="MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Swagger/" />
-  <Folder Name="/MS.Microservice.Swagger/src/">
-    <Project Path="MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
-  </Folder>
-  <Folder Name="/MS.Microservice.Swagger/test/">
-    <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
-  </Folder>
-  <Folder Name="/samples/AI/">
-    <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
-  </Folder>
-  <Folder Name="/samples/Lab/">
-    <Project Path="samples/Lab/MS.Microservice.Lab.DatabaseMigrator/MS.Microservice.Lab.DatabaseMigrator.csproj" />
-    <Project Path="samples/Lab/MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
-    <Project Path="samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />
-    <Project Path="samples/Lab/MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
-    <Project Path="samples/Lab/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
+  <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <Project Path="src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
+    <Project Path="src/MS.Microservice.AI.DeepSeek/MS.Microservice.AI.DeepSeek.csproj" />
+    <Project Path="src/MS.Microservice.AI.OpenAI/MS.Microservice.AI.OpenAI.csproj" />
+    <Project Path="src/MS.Microservice.AI.QuestionGeneration/MS.Microservice.AI.QuestionGeneration.csproj" />
+    <Project Path="src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
+    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
+    <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
+    <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
+    <Project Path="src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
+    <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
+    <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <Project Path="src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
+    <Project Path="src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj" />
+    <Project Path="src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />
+    <Project Path="src/MS.Microservice.Logging.Serilog/MS.Microservice.Logging.Serilog.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
+    <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
+    <Project Path="src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
+    <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
@@ -75,35 +34,43 @@
     <Project Path="samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj" />
   </Folder>
-  <Folder Name="/src/">
-    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
-    <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
-    <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
-    <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
-    <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
-    <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
-    <Project Path="src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
-    <Project Path="src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
-    <Project Path="src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
-    <Project Path="src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
-    <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
-    <Project Path="src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
+  <Folder Name="/samples/Lab/">
+    <Project Path="samples/Lab/MS.Microservice.Lab.DatabaseMigrator/MS.Microservice.Lab.DatabaseMigrator.csproj" />
+    <Project Path="samples/Lab/MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
+    <Project Path="samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />
+    <Project Path="samples/Lab/MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
+    <Project Path="samples/Lab/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
+  </Folder>
+  <Folder Name="/samples/AI/">
+    <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.AI.Core.Tests/MS.Microservice.AI.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.DeepSeek.Tests/MS.Microservice.AI.DeepSeek.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.OpenAI.Tests/MS.Microservice.AI.OpenAI.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.QuestionGeneration.Tests/MS.Microservice.AI.QuestionGeneration.Tests.csproj" />
+    <Project Path="test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
     <Project Path="test/MS.Microservice.Infrastructure.Tests/MS.Microservice.Infrastructure.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Logging.AspNetCore.Tests/MS.Microservice.Logging.AspNetCore.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Logging.Core.Tests/MS.Microservice.Logging.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Logging.NLog.Tests/MS.Microservice.Logging.NLog.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Logging.Serilog.Tests/MS.Microservice.Logging.Serilog.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.Abstractions.Tests/MS.Microservice.Messaging.Abstractions.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.IntegrationTests/MS.Microservice.Messaging.IntegrationTests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.RabbitMQ.Tests/MS.Microservice.Messaging.RabbitMQ.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.SelfManaged.Tests/MS.Microservice.Messaging.SelfManaged.Tests.csproj" />
     <Project Path="test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Persistence.EFCore.Tests/MS.Microservice.Persistence.EFCore.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.DatabaseMigrator.Tests/MS.Microservice.Reference.DatabaseMigrator.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Persistence.Tests/MS.Microservice.Reference.Persistence.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
     <Project Path="test/MS.Microservice.Samples.EducationalImages.Tests/MS.Microservice.Samples.EducationalImages.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
   </Folder>
-  <Folder Name="/samples/" />
 </Solution>

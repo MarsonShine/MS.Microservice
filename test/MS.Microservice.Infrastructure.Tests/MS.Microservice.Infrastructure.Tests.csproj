@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
 		<IsTestProject>true</IsTestProject>
@@ -18,9 +18,9 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\MS.Microservice.Core\MS.Microservice.Core.csproj" />
+		<ProjectReference Include="../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
 		<ProjectReference Include="../../samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />
 		<ProjectReference Include="../../samples/Lab/MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
-		<ProjectReference Include="..\..\MS.Microservice.Persistence\MS.Microservice.Persistence.SqlSugar\src\MS.Microservice.Persistence.SqlSugar\MS.Microservice.Persistence.SqlSugar.csproj" />
+		<ProjectReference Include="../../src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
 	</ItemGroup>
 </Project>

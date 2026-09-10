@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><IsPackable>false</IsPackable></PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../../MS.Microservice.AI/src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
-    <ProjectReference Include="../../../MS.Microservice.AI/src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <InternalsVisibleTo Include="MS.Microservice.Samples.EducationalImages.Tests" />
   </ItemGroup>

@@ -6,6 +6,7 @@
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -17,9 +18,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.AI.QuestionGeneration/MS.Microservice.AI.QuestionGeneration.csproj" />
   </ItemGroup>
 </Project>

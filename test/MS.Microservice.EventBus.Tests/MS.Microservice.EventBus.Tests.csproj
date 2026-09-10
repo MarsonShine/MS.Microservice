@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
 		<IsTestProject>true</IsTestProject>
@@ -17,6 +17,6 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\MS.Microservice.EventBus\MS.Microservice.EventBus.csproj" />
+		<ProjectReference Include="../../src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
 	</ItemGroup>
 </Project>

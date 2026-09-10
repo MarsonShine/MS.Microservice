@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
-COPY MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/
-COPY MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.Core/
+COPY src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj src/MS.Microservice.Logging.AspNetCore/
+COPY src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj src/MS.Microservice.Logging.Core/
 COPY samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj samples/Reference/MS.Microservice.Reference.Application/
 COPY samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj samples/Reference/MS.Microservice.Reference.Domain/
 COPY samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj samples/Reference/MS.Microservice.Reference.Persistence/

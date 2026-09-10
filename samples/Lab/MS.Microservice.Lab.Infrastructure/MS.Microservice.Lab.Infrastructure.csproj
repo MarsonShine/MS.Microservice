@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType><IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -28,6 +28,6 @@
     <ProjectReference Include="../../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <ProjectReference Include="../MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
-    <ProjectReference Include="../../../MS.Microservice.Persistence/MS.Microservice.Persistence.SqlSugar/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />
   </ItemGroup>
 </Project>

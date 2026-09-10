@@ -17,9 +17,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="../../src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj" />
   </ItemGroup>
 </Project>
