@@ -96,67 +96,59 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         }
     }
 
-    public async IAsyncEnumerable<AIChatStreamChunk> StreamAsync(
-        AIResolvedModel model,
-        AIChatRequest request,
+    public async IAsyncEnumerable<AIChatStreamChunk> StreamAsync(AIResolvedModel model, AIChatRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(request);
-
         await _concurrencyGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         var startedAt = TimeProvider.GetTimestamp();
-        var activity = StartActivity(model, request, isStreaming: true);
-        StreamingResponse stream;
-
-        try
-        {
-            stream = await SendWithRetryAsync(
-                model,
-                request,
-                isStreaming: true,
-                async (httpClient, httpRequest, requestCancellationToken) =>
-                {
-                    var httpResponse = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, requestCancellationToken).ConfigureAwait(false);
-                    return await EnsureStreamingResponseAsync(httpResponse, model, request, requestCancellationToken).ConfigureAwait(false);
-                },
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, exception.GetType().Name);
-            _logger.LogWarning("AI provider {Provider} chat stream failed for model {Model}: {FailureType}.", Name, model.Model, exception.GetType().Name);
-            ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
-            activity?.Dispose();
-            _concurrencyGate.Release();
-            throw;
-        }
-
+        using var activity = StartActivity(model, request, isStreaming: true);
+        using var timeout = new CancellationTokenSource(model.Timeout, TimeProvider);
+        using var streamCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        StreamingResponse? stream = null;
         var completed = false;
-
         try
         {
-            await foreach (var chunk in ParseStreamAsync(stream, model, request, cancellationToken).ConfigureAwait(false))
+            try
             {
-                yield return chunk;
+                stream = await SendWithRetryAsync(model, request, true, async (client, message, token) =>
+                {
+                    var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                    return await EnsureStreamingResponseAsync(response, model, request, token).ConfigureAwait(false);
+                }, streamCancellation.Token).ConfigureAwait(false);
             }
-
+            catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
+            {
+                throw StreamTimeout(model, request, exception);
+            }
+            await using var parser = ParseStreamAsync(stream, model, request, streamCancellation.Token).GetAsyncEnumerator();
+            while (true)
+            {
+                bool next;
+                try { next = await parser.MoveNextAsync().ConfigureAwait(false); }
+                catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
+                {
+                    throw StreamTimeout(model, request, exception);
+                }
+                if (!next) break;
+                yield return parser.Current;
+            }
             completed = true;
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         finally
         {
-            if (!completed)
-            {
-                activity?.SetStatus(ActivityStatusCode.Error);
-            }
-
+            stream?.Response.Dispose();
+            if (!completed) activity?.SetStatus(ActivityStatusCode.Error);
             ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
-            activity?.Dispose();
             _concurrencyGate.Release();
         }
     }
 
+    private AITimeoutException StreamTimeout(AIResolvedModel model, AIChatRequest request, Exception exception)
+        => new($"AI provider '{Name}' stream timed out.", provider: Name, model: model.Model,
+            scenario: model.Scenario, requestId: request.RequestId, innerException: exception);
     [LoggerMessage(
         EventId = 1001,
         Level = LogLevel.Information,
@@ -311,6 +303,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         await using var responseStream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var reader = new StreamReader(responseStream);
 
+        var sawDone = false;
         AIUsage? usage = null;
         string? finishReason = null;
         var providerRequestId = streamingResponse.ProviderRequestId;
@@ -332,6 +325,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             var payload = line[5..].Trim();
             if (string.Equals(payload, "[DONE]", StringComparison.Ordinal))
             {
+                sawDone = true;
                 break;
             }
 
@@ -370,6 +364,11 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
                 ProviderRequestId = providerRequestId,
             };
         }
+
+        if (!sawDone && string.IsNullOrWhiteSpace(finishReason))
+            throw new AIProviderException($"AI provider '{Name}' stream ended before a completion marker.",
+                AIErrorCodes.ResponseInvalid, provider: Name, model: model.Model, scenario: model.Scenario,
+                requestId: request.RequestId, providerRequestId: providerRequestId);
 
         yield return new AIChatStreamChunk
         {

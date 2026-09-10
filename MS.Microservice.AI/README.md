@@ -295,3 +295,7 @@ AIProductionPipeline 以模型调用和解析结果判断成功。调用方取�
 Chat 与 Media 共用 AIHttpExecution 的每次尝试超时、瞬时错误重试和取消分类，
 并共用 AIProviderErrors 解析 OpenAI 及顶层错误信封。每次重试重建请求和正文；
 调用方取消立即结束。流式数据开始返回后不自动重试，避免重复输出。
+
+流式 Chat 的 Timeout 覆盖请求建立及后续流读取。仅收到 [DONE] 或显式 finish_reason
+才产生最终成功块；提前断连返回 ResponseInvalid，已经交付的文本不会自动重试。
+调用方取消仍保留取消异常，超时返回 AITimeoutException。

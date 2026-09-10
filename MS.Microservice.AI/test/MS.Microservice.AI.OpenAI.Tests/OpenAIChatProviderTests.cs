@@ -289,6 +289,69 @@ public sealed class OpenAIChatProviderTests
         };
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(": keep-alive\n\n")]
+    [InlineData("data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n")]
+    public async Task StreamTruncationIsNotACompletedResponse(string body)
+    {
+        var handler = new SequenceHttpMessageHandler(_ => CreateSseResponse(body));
+        var provider = CreateProvider(handler);
+        var chunks = new List<AIChatStreamChunk>();
+        await Assert.ThrowsAsync<AIProviderException>(async () =>
+        {
+            await foreach (var chunk in provider.StreamAsync(CreateResolvedModel(), CreateRequest())) chunks.Add(chunk);
+        });
+        Assert.DoesNotContain(chunks, chunk => chunk.IsFinal);
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("data: [DONE]\n\n")]
+    [InlineData("data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n")]
+    public async Task ExplicitCompletionSignalsAreAccepted(string body)
+    {
+        var provider = CreateProvider(new SequenceHttpMessageHandler(_ => CreateSseResponse(body)));
+        var chunks = new List<AIChatStreamChunk>();
+        await foreach (var chunk in provider.StreamAsync(CreateResolvedModel(), CreateRequest())) chunks.Add(chunk);
+        Assert.True(chunks.Last().IsFinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StalledBodyHonorsTimeoutAndCallerCancellation(bool callerCancels)
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stalled = new StalledStream(started);
+        var handler = new SequenceHttpMessageHandler(_ => new(HttpStatusCode.OK) { Content = new StreamContent(stalled) });
+        var provider = CreateProvider(handler);
+        using var cancellation = new CancellationTokenSource();
+        var model = CreateResolvedModel() with { Timeout = TimeSpan.FromMilliseconds(callerCancels ? 10000 : 200) };
+        var enumeration = provider.StreamAsync(model, CreateRequest(), cancellation.Token).GetAsyncEnumerator();
+        await using (enumeration)
+        {
+            var call = enumeration.MoveNextAsync().AsTask();
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            if (callerCancels) cancellation.Cancel();
+            if (callerCancels) await Assert.ThrowsAnyAsync<OperationCanceledException>(() => call);
+            else await Assert.ThrowsAsync<AITimeoutException>(() => call);
+        }
+        Assert.True(stalled.Disposed);
+        Assert.Single(handler.Requests);
+    }
+
+    private sealed class StalledStream(TaskCompletionSource started) : MemoryStream
+    {
+        public bool Disposed { get; private set; }
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            started.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return 0;
+        }
+        protected override void Dispose(bool disposing) { Disposed = true; base.Dispose(disposing); }
+    }
     private static AIChatRequest CreateRequest()
     {
         return new AIChatRequest
