@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace MS.Microservice.Core.Net.Http;
 
+/// <summary>保持 HTTP 编码、请求头隔离及原始取消/失败语义的通用 JSON 请求辅助。</summary>
+/// <remarks>业务重试由调用方决定；默认诊断不记录 URL 参数或正文，避免把凭据和业务数据带进日志。</remarks>
 public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
 {
     public JsonSerializerOptions JsonSerializerOptions = new()

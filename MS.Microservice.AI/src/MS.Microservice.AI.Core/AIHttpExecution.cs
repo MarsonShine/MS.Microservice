@@ -2,6 +2,7 @@ using MS.Microservice.AI.Abstractions;
 
 namespace MS.Microservice.AI.Core;
 
+/// <summary>统一 Chat/Media 的每次尝试超时、瞬时失败重试和取消分类，不承担各能力的响应解析。</summary>
 internal static class AIHttpExecution
 {
     public static async Task<T> ExecuteAsync<T>(string provider, AICapability capability, AIResolvedModel model,
@@ -15,6 +16,7 @@ internal static class AIHttpExecution
             Exception failure;
             TimeSpan? retryAfter = null;
             try { return await send(linked.Token).ConfigureAwait(false); }
+            // 调用方主动结束请求不代表服务不可用，必须先于超时分类处理，且不能重试。
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (OperationCanceledException exception)
             {

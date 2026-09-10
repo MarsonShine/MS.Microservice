@@ -1,4 +1,5 @@
 <Solution>
+  <Folder Name="/docs/"><File Path="README.md" /><File Path="docs/design.md" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj" />

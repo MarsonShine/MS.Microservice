@@ -6,6 +6,7 @@ using NativeContext = global::Wolverine.Runtime.MessageContext;
 namespace MS.Microservice.Messaging.Wolverine;
 
 /// <summary>Adapts the common work boundary to a fresh native outbox for each outer operation.</summary>
+/// <remarks>直接业务请求拥有最外层事务；入站处理加入原生中间件事务，不能再启动第二套提交或自研 Outbox。</remarks>
 public sealed class WolverineUnitOfWork<TContext>(TContext context,
     Func<IDbContextOutbox<TContext>> createOutbox, MessageContractRegistry registry)
     : IUnitOfWork, IIntegrationEventPublisher where TContext : DbContext

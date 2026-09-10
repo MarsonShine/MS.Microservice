@@ -2,14 +2,17 @@
 
 你是本仓库的代码架构助手。生成/修改 C# 代码时，优先遵循：DDD、SOLID、Clean Architecture，并保持**高内聚低耦合**。但要**适度**：当逻辑简单时，不要为了“看起来像 DDD”而引入多余抽象/接口/层级。
 
-## 项目分层（以解决方案为准）
-- Fz.Dms.Domain：领域模型（实体、值对象、聚合、领域事件、领域服务、领域规则）
-- Fz.Dms.AppService：应用层（用例/命令查询、事务协调、调用领域模型，不写基础设施细节）
-- Fz.Dms.Infrastructure：基础设施（数据库/ORM、外部服务、消息、文件、第三方 SDK 实现；允许作为非 Core/Domain/Web 的第三方依赖封装承载层，先以文件夹分区，后续复杂度上来再拆分）
-- Fz.Dms.Web：表现层（HTTP API / MVC / Minimal API、DTO、鉴权、输入输出、异常到 HTTP 映射）
-- Fz.Dms.Core：核心抽象与契约（跨层的接口、领域/应用需要的抽象、通用基类/Result 等）
-- Fz.Dms.Common：通用工具（扩展方法、通用帮助类、常量等；避免塞业务逻辑）
+## 仓库结构与职责
 
+先阅读 [总体架构](../docs/Architecture-Overview.md)，不要从项目名称推断未定义的层级。
+- AI、Logging、Messaging、Persistence 是独立模块目录，各自包含 docs/src/test 和 slnx。
+- 小型独立组件暂留根 src/test；根解决方案用于全仓库开发。
+- 不要为了统一 src/test 的外观把多项目模块拆散；目录分组不改变实际依赖方向。
+- Core / Domain.Primitives 提供通用辅助与小契约，模块专用契约留在模块的 Abstractions 或合适位置。
+- samples/Reference 是完整组件接入示例，Domain / Application / Persistence / Web / DatabaseMigrator 各有职责；不是底层框架依赖。
+- samples/Lab 是独立教学 Host，具体业务、演示和旧练习数据模型不能回流共享模块。
+- 共享组件不得依赖 Reference、Lab 或具体 User/Order 模型。模块解决方案可以显式列出测试所需的依赖项目。
+- 公共契约注释说明行为和限制；非直观逻辑旁说明原因；跨文件取舍写入模块 docs。
 ## 适度原则（防止过度设计）
 在引入新抽象前，先判断复杂度：
 - ✅ 逻辑简单（1-2 个分支、无持久化策略差异、无跨聚合协作）：允许直接实现为清晰的方法/类，不强行引入 Repository/DomainService/Handler 套娃。
@@ -18,12 +21,14 @@
 
 默认偏好：**先简单、可测试、可演进**，不要一次性抽象到“未来可能需要”。
 
-## Clean Architecture 依赖方向（必须遵守）
-- Domain 不依赖任何其他项目（尤其不能依赖 Web/Infrastructure）
-- AppService 可以依赖 Domain、Core
-- Infrastructure 可以依赖 Core、AppService、Domain（实现接口），但不能把基础设施细节泄漏回 Domain
-- Web 可以依赖 AppService、Core（通过 DTO/Contracts 交互）
+## 依赖方向
 
+- 业务 Domain 可引用通用领域契约，不依赖 Host、ORM 或消息框架。
+- Application 依赖领域与中立端口；Persistence 实现应用端口并拥有业务模型映射和迁移。
+- Web 是组合根，可以选择具体适配器，但不能把业务规则写进端点。
+- Core → Domain.Primitives 保持不变；模块按实际需要依赖 Core，不强制所有模块经过 Core。
+- Reference 与 Lab Host 互不引用，Lab 可复用 Reference 的示例业务类库。
+- 架构检查以项目引用和源码根归属为依据，不要求所有共享代码都在根 src。
 ## SOLID & 代码风格
 - 单一职责：一个类/方法只做一件事；命名体现意图
 - 依赖倒置：上层依赖接口/抽象（放 Core 或 AppService/Domain 合适位置）
@@ -42,7 +47,7 @@
 3) 提供必要的单元测试建议（至少给出测试点/边界条件）
 
 ## 项目指南
-- For temporary data import endpoints in this repository, prefer using the built-in `ExcelHelper` to map uploaded files into classes, and perform direct database updates in the controller via `[FromServices]`-injected DbContext instead of adding repository methods.
+- For temporary data import endpoints in the Lab only, prefer using the built-in `ExcelHelper` to map uploaded files into classes, and perform direct database updates in the controller via `[FromServices]`-injected DbContext instead of adding repository methods.
 
 ## Git 操作指南
 

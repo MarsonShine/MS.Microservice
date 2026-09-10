@@ -1,4 +1,5 @@
 <Solution>
+  <Folder Name="/docs/"><File Path="README.md" /><File Path="docs/design.md" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
     <Project Path="src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />

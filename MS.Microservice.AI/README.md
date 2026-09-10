@@ -1,3 +1,22 @@
+# MS.Microservice.AI
+
+这个目录是完整的 AI 模块：通用契约、运行策略、Provider 适配、QuestionGeneration、测试和设计说明集中在一起。
+
+| 项目 | 用途 |
+|---|---|
+| AI.Abstractions | 请求、响应、能力和调用接口；业务按能力依赖它 |
+| AI.Core | 配置解析、路由、限流/熔断/报告管线和公共传输逻辑 |
+| AI.OpenAI / DeepSeek / Qwen | 各 Provider 的端点、能力差异与数据映射 |
+| AI.QuestionGeneration | 可单独使用的题目生成 Harness，不属于教育图像场景 |
+
+打开 [MS.Microservice.AI.slnx](MS.Microservice.AI.slnx) 即可集中开发这个模块。
+在本目录执行 dotnet build MS.Microservice.AI.slnx -c Release，或 dotnet test MS.Microservice.AI.slnx -c Release。
+
+先看[设计思路](docs/design.md)，再看 [AI.Core](src/MS.Microservice.AI.Core/README.md)。
+教育图像的编排和 Qwen 场景适配位于 samples/AI，不是这个模块的默认依赖。
+以下保留详细配置与能力说明。
+
+---
 教育图像场景已迁至 samples/AI/MS.Microservice.Samples.EducationalImages。使用该场景时引用场景类库，调用 services.AddImagePromptPipeline()；Qwen 参考图适配还需 services.AddQwenEducationalImages()。通用 AddQwen() 不注册场景适配器。
 
 ## MS.Microservice.AI

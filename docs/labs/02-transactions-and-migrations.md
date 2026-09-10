@@ -11,7 +11,7 @@ SelfManaged 在同一个业务 DbContext 事务中提交档案与 Outbox；
 
 以下本地测试在 SQLite 上验证“消费已暂存后续事件，但业务失败时全部回滚”：
 
-    dotnet test test/MS.Microservice.Messaging.IntegrationTests -c Release --filter FullyQualifiedName~ProbeLocalTests
+    dotnet test MS.Microservice.Messaging/test/MS.Microservice.Messaging.IntegrationTests -c Release --filter FullyQualifiedName~ProbeLocalTests
 
 检查 [ProbeHandler](../../MS.Microservice.Messaging/test/MS.Microservice.Messaging.IntegrationTests/ProbeHost.cs)：
 处理器只修改实体和入队，不自行 SaveChanges 或 Commit。

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MS.Microservice.Messaging.SelfManaged;
 
 /// <summary>One scoped context owns business data and messages. The instance must not be used concurrently.</summary>
+/// <remarks>复用业务 DbContext 是为了让业务与 Outbox 同事务；独立的消息 DbContext 无法保证这个不变量。</remarks>
 public sealed class SelfManagedUnitOfWork<TContext>(TContext context, MessageContractRegistry contracts,
     TimeProvider timeProvider) : IUnitOfWork, IIntegrationEventPublisher where TContext : DbContext
 {
@@ -16,6 +17,7 @@ public sealed class SelfManagedUnitOfWork<TContext>(TContext context, MessageCon
         cancellationToken.ThrowIfCancellationRequested();
         if (!_active) throw new InvalidOperationException("Enqueue requires an active unit of work.");
         var activity = Activity.Current;
+        // 入队时冻结快照，避免调用者后续修改对象而改变本次事务将提交的事实。
         var serialized = contracts.Serialize(message, new(message.Id, "",
             activity?.GetBaggageItem("correlationId"), activity?.Id, activity?.TraceStateString));
         if (_pending.TryGetValue(message.Id, out var existing) && existing != serialized)
@@ -32,6 +34,7 @@ public sealed class SelfManagedUnitOfWork<TContext>(TContext context, MessageCon
         if (_active)
         {
             try { return await operation(cancellationToken); }
+            // 内层失败即失去整体提交资格；即使外层捕获异常，也不能提交半个业务操作。
             catch { _rollbackOnly = true; throw; }
         }
         if (context.Database.CurrentTransaction is not null)

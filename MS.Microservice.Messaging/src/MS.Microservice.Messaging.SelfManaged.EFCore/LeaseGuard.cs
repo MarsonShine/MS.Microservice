@@ -1,6 +1,7 @@
 namespace MS.Microservice.Messaging.SelfManaged;
 
 /// <summary>Renews ownership separately from the business context and cancels work when ownership is lost.</summary>
+/// <remarks>续租回调必须使用独立短事务：业务 DbContext 不支持并发访问。取消只是停止工作，数据库更新仍需验证 token。</remarks>
 internal sealed class LeaseGuard : IAsyncDisposable
 {
     private readonly CancellationTokenSource _stop = new();

@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="README.md" />
+    <File Path="docs/Architecture-Overview.md" />
+    <File Path="samples/Reference/README.md" />
+    <File Path="docs/Getting-Started.md" />
+    <File Path="docs/labs/README.md" />
+  </Folder>
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />

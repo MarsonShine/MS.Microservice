@@ -4,6 +4,7 @@
 
 | 入口 | 用途 |
 | --- | --- |
+| [总体架构与设计理由](docs/Architecture-Overview.md) | 先理解 Core、模块、Reference 和 Lab 各自解决什么问题。 |
 | [快速启动](docs/Getting-Started.md) | 一个脚本准备 Reference 或 Lab，并演练消息恢复。 |
 | [六个递进 Lab](docs/labs/README.md) | 分层、事务、可靠消息、故障、诊断与组件替换。 |
 | [源码复制与包消费](docs/components/consumption.md) | 依赖闭包导出和仓库外接入验证。 |
@@ -15,6 +16,20 @@
 | [参考数据库迁移](samples/Reference/MS.Microservice.Reference.DatabaseMigrator/README.md) | 默认导出 SQL 和校验清单，显式选择应用迁移。 |
 | [理论与专题资料](docs/README.md) | DDD、消息、数据库、部署等资料。 |
 
+## 按模块独立开发
+
+多项目模块把 docs、src、test 和独立解决方案放在同一目录；小型独立组件暂留根 src/test。
+根解决方案覆盖全仓库，日常维护可以只打开对应模块：
+
+| 模块 | 独立解决方案 | 设计入口 |
+|---|---|---|
+| AI | [MS.Microservice.AI.slnx](MS.Microservice.AI/MS.Microservice.AI.slnx) | [说明](MS.Microservice.AI/docs/design.md) |
+| Logging | [MS.Microservice.Logging.slnx](MS.Microservice.Logging/MS.Microservice.Logging.slnx) | [说明](MS.Microservice.Logging/docs/design.md) |
+| Messaging | [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging/MS.Microservice.Messaging.slnx) | [说明](MS.Microservice.Messaging/docs/design.md) |
+| Persistence | [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence/MS.Microservice.Persistence.slnx) | [说明](MS.Microservice.Persistence/docs/design.md) |
+
+Reference 是完整接入的参考应用，不是新的底层框架；使用模块不需要引用或启动它。
+项目拆分理由和代价见[Reference 说明](samples/Reference/README.md)。
 ## 构建
 
 SDK 基线为 `10.0.401`，由 `global.json` 定义；包版本见 `Directory.Packages.props`。依赖安全维护见 [依赖基线](docs/Dependency-Baseline.md)。

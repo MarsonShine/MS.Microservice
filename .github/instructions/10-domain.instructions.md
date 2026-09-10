@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.Domain/**/*.cs"
+applyTo: "{samples/Reference/*.Domain/**/*.cs,samples/Lab/*.Domain/**/*.cs}"
 ---
 
 ## Domain Layer (DDD) Rules

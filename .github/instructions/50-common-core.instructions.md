@@ -1,5 +1,5 @@
 ---
-applyTo: "{**/*.Core/**/*.cs,**/*.Common/**/*.cs}"
+applyTo: "{src/MS.Microservice.Core/**/*.cs,src/MS.Microservice.Domain.Primitives/**/*.cs}"
 ---
 
 ## Core / Common Rules

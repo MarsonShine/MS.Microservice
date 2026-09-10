@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.Web or .Api/**/*.cs"
+applyTo: "{samples/Reference/*.Web/**/*.cs,samples/Lab/MS.Microservice.Lab/Controller/**/*.cs,samples/Lab/MS.Microservice.Lab/Hosting/**/*.cs}"
 ---
 
 ## Web Layer Rules (Presentation)

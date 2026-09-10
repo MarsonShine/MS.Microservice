@@ -1,3 +1,18 @@
+# MS.Microservice.Logging
+
+Logging 负责应用日志上下文与后端接入，不负责业务身份验证，也不替代 Trace/Metrics。
+
+打开 [MS.Microservice.Logging.slnx](MS.Microservice.Logging.slnx)：
+源码在 src、对应测试在 test，[设计说明](docs/design.md)在 docs。
+在本目录执行 dotnet test MS.Microservice.Logging.slnx -c Release。
+
+Core 不依赖 ASP.NET Core 或具体日志后端，AspNetCore 负责请求边界，
+NLog/Serilog 是可选后端。这样 Worker 可以只使用 Core，Web 可以按需选择中间件和后端，
+无需为切换日志后端修改业务代码。
+
+以下保留各包的详细注册和配置说明。
+
+---
 ## MS.Microservice.Logging
 
 Provider-agnostic structured request logging for .NET, with first-class NLog and Serilog support.
@@ -156,13 +171,13 @@ using (RequestLogScope.Push(new RequestLogContext
 }
 ```
 
-Test projects exist for all four packages under `test/`. Run with:
+From this module directory, test projects exist for all four packages under `test/`. Run with:
 
 ```bash
-dotnet test MS.Microservice.Logging/test/MS.Microservice.Logging.Core.Tests
-dotnet test MS.Microservice.Logging/test/MS.Microservice.Logging.AspNetCore.Tests
-dotnet test MS.Microservice.Logging/test/MS.Microservice.Logging.NLog.Tests
-dotnet test MS.Microservice.Logging/test/MS.Microservice.Logging.Serilog.Tests
+dotnet test test/MS.Microservice.Logging.Core.Tests
+dotnet test test/MS.Microservice.Logging.AspNetCore.Tests
+dotnet test test/MS.Microservice.Logging.NLog.Tests
+dotnet test test/MS.Microservice.Logging.Serilog.Tests
 ```
 
 ### Package Dependencies (Consumer View)

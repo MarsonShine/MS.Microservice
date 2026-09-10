@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.AppService/**/*.cs"
+applyTo: "{samples/Reference/*.Application/**/*.cs,samples/Lab/MS.Microservice.Lab/Application/**/*.cs}"
 ---
 
 ## Application Layer Rules (Use Cases)

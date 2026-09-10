@@ -1,4 +1,5 @@
 <Solution>
+  <Folder Name="/docs/"><File Path="README.md" /><File Path="docs/design.md" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
     <Project Path="src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />

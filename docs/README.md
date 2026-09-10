@@ -4,6 +4,8 @@
 
 ## 当前代码的实践入口
 
+先读[总体架构与阅读指南](Architecture-Overview.md)：它解释 Reference 的用途、模块分组、依赖边界和关键设计取舍。
+
 - [快速启动](Getting-Started.md)：Reference 与 Lab 的独立配置、初始化和恢复演练。
 - [六个递进 Lab](labs/README.md)：从请求分层到消息组件替换。
 - [组件复制与包消费](components/consumption.md)：源码导出、本地打包和仓库外验证。

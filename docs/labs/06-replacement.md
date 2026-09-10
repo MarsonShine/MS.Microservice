@@ -47,7 +47,7 @@ Wolverine 使用原生可靠存储、事务中间件和恢复机制；不是只�
 
 无需容器的配置与发现回归：
 
-    dotnet test test/MS.Microservice.Messaging.Wolverine.Tests -c Release
+    dotnet test MS.Microservice.Messaging/test/MS.Microservice.Messaging.Wolverine.Tests -c Release
     dotnet test test/MS.Microservice.Lab.Tests -c Release --filter FullyQualifiedName~LabMessagingConfigurationTests
 
 具备容器环境时，再运行两种 Provider 共用的 SharedContractMatrixTests。
