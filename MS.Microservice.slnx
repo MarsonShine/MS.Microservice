@@ -65,6 +65,7 @@
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />
+    <Project Path="samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
@@ -95,6 +96,7 @@
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Persistence.Tests/MS.Microservice.Reference.Persistence.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/MS.Microservice.Lab/MS.Microservice.Lab.csproj" />
