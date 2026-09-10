@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 namespace MS.Microservice.Persistence.SqlSugar.Tests;
 
 public class SqlSugarPersistenceServiceCollectionExtensionsTests
@@ -8,7 +10,7 @@ public class SqlSugarPersistenceServiceCollectionExtensionsTests
         var configuration = new ConfigurationBuilder().Build();
 
         var act = () => Microsoft.Extensions.DependencyInjection
-            .SqlSugarPersistenceServiceCollectionExtensions
+            .LabSqlSugarServices
             .AddMicroserviceSqlSugarPersistence(null!, configuration);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("services");
@@ -20,7 +22,7 @@ public class SqlSugarPersistenceServiceCollectionExtensionsTests
         var services = new ServiceCollection();
 
         var act = () => Microsoft.Extensions.DependencyInjection
-            .SqlSugarPersistenceServiceCollectionExtensions
+            .LabSqlSugarServices
             .AddMicroserviceSqlSugarPersistence(services, null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("configuration");
@@ -30,7 +32,7 @@ public class SqlSugarPersistenceServiceCollectionExtensionsTests
     public void AddSqlSugarRepository_ShouldThrow_WhenServicesIsNull()
     {
         var act = () => Microsoft.Extensions.DependencyInjection
-            .SqlSugarPersistenceServiceCollectionExtensions
+            .LabSqlSugarServices
             .AddSqlSugarRepository(null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("services");

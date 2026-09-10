@@ -59,8 +59,6 @@ namespace MS.Microservice.Persistence.SqlSugar.Advance.Sharding
                                 {
                                     Console.WriteLine(sql + "\r\n" + client.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
                                 };
-                            client.DbMaintenance.CreateDatabase();
-                            client.CodeFirst.InitTables(new[] { typeof(UserDemo) });
                             return client;
                         });
                     }

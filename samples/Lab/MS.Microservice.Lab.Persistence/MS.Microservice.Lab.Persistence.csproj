@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType><IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -30,4 +30,4 @@
     <ProjectReference Include="../../../src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
     <ProjectReference Include="../MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
   </ItemGroup>
-</Project>
+<ItemGroup><ProjectReference Include="../../../src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" /></ItemGroup></Project>
