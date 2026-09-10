@@ -284,3 +284,10 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
 - Current constraint: DeepSeek remains chat-only and is explicitly blocked for TTS, ASR, image generation, and image edit configuration.
 - QuestionGeneration deliberately excludes distributed Attempt storage, task scheduling, persistence, business question definitions, resources, and human-review APIs; application hosts own those responsibilities.
 - Planned next: distributed quota/circuit state, real cost sinks, richer observability, and optional host-side durable QuestionGeneration execution. See `../docs/framework-optimization-roadmap.md`.
+
+### 调用结果与成本报告
+
+AIProductionPipeline 以模型调用和解析结果判断成功。调用方取消、主动结束流不会增加
+熔断失败计数；已观察到的流用量仍交给成本报告器。报告器或熔断结果记录器失败只记录
+策略名称和异常类型，不覆盖模型结果或原始异常。准入检查失败仍会阻止调用。
+成本报告是尽力而为的观测接口，不能用作需要事务保证的计费账本。
