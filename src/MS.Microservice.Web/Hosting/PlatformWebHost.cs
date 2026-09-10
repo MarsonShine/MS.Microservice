@@ -30,9 +30,16 @@ namespace MS.Microservice.Web.Hosting;
 /// </summary>
 public static class PlatformWebHost
 {
+    public static WebApplicationBuilder CreateBuilder(string[] args)
+        => WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            Args = args,
+            ContentRootPath = AppContext.BaseDirectory
+        });
+
     public static async Task RunAsync(string[] args, bool enableLabEndpoints)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = CreateBuilder(args);
 
         builder.ConfigureMsNLog(options =>
         {

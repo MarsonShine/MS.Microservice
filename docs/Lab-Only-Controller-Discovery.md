@@ -341,3 +341,5 @@ Policy 解决“谁能访问”，不能解决“端点是否存在”，会留�
 - [ControllerActionDescriptorProvider 官方源码](https://github.com/dotnet/aspnetcore/blob/main/src/Mvc/Mvc.Core/src/ApplicationModels/ControllerActionDescriptorProvider.cs)
 - [Microsoft Learn：Application Parts 与 Feature Providers](https://learn.microsoft.com/aspnet/core/mvc/advanced/app-parts)
 - [IApplicationFeatureProvider&lt;TFeature&gt; API](https://learn.microsoft.com/dotnet/api/microsoft.aspnetcore.mvc.applicationparts.iapplicationfeatureprovider-1)
+
+共享启动入口从应用输出目录加载随程序集交付的配置，因此源码启动和发布目录启动使用相同配置来源；环境变量与命令行参数仍可覆盖 JSON。配置内容根不依赖启动命令所在的工作目录。
