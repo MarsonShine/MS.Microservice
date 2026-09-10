@@ -31,3 +31,19 @@ Wolverine 的 Broker 确认由原生持久 Inbox 管理；该屏障验证其原�
     dotnet test test/MS.Microservice.Messaging.IntegrationTests -c Release
 
 本地若按要求跳过 Docker，只能记录“编译通过，协议测试通过，真实依赖矩阵未执行”。
+
+SharedContractMatrixTests 使用同一个 ProbeEvent / ProbeHandler 覆盖两种 Provider：
+中文与空值、decimal/enum、嵌套和构造器属性、独立订阅、消费失败与后续事件回滚、
+原 Id 重放、毒消息隔离、瞬时重试以及并发物理重复投递。
+ProbeLocalTests 使用 SQLite 执行相同处理器的本地事务验证，不替代原生 Provider 验收。
+
+InvalidMessageTests 将不支持的版本、无效 JSON、信封/正文 Id 冲突投递到真实订阅队列，
+检查可诊断失败且没有业务效果。DependencyRecoveryTests 验证 Broker/数据库中断后同一宿主恢复。
+
+BrokerConfirmationTests 覆盖 mandatory return、满队列 reject-publish 产生的 nack，
+以及“Broker 已确认但客户端未收到”的不确定结果。ConfirmLossProxy 只存在于夹具中：
+它解析 AMQP 帧，观察到真实 basic.ack 后扣留该帧，测试收到信号后断开代理连接。
+测试会验证消息已到达 Broker，且发布任务不能报告成功；测试自身的等待超时不能当作传输失败。
+
+每个真实依赖用例有 180 秒上限；状态等待有 90 秒上限。CI 必须显式开启矩阵，
+并保留测试结果和失败进程输出。本地只运行指定的 ProbeLocalTests / FaultProtocolTests 时不启动容器。

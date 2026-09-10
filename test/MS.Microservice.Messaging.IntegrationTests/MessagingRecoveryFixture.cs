@@ -32,7 +32,7 @@ public sealed class MessagingRecoveryFixture : IAsyncLifetime
     public Task StopDatabaseAsync() => postgres.StopAsync();
     public Task StartDatabaseAsync() => postgres.StartAsync();
 
-    public async Task<FaultEnvironment> CreateEnvironmentAsync(string provider)
+    public async Task<FaultEnvironment> AllocateEnvironmentAsync(string provider)
     {
         var database = "ms_contract_" + Guid.NewGuid().ToString("N");
         await using (var admin = new Npgsql.NpgsqlConnection(postgres.GetConnectionString()))
@@ -44,6 +44,12 @@ public sealed class MessagingRecoveryFixture : IAsyncLifetime
         var environment = new FaultEnvironment(provider,
             new Npgsql.NpgsqlConnectionStringBuilder(postgres.GetConnectionString()) { Database = database }.ConnectionString,
             rabbit.GetConnectionString(), database);
+        return environment;
+    }
+
+    public async Task<FaultEnvironment> CreateEnvironmentAsync(string provider)
+    {
+        var environment = await AllocateEnvironmentAsync(provider);
         using var host = FaultHost.Build(environment);
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ReferenceDbContext>();
@@ -77,19 +83,23 @@ public sealed class MessagingRecoveryFixture : IAsyncLifetime
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
             Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes("test:test")));
-        var queueUrl = $"http://{rabbit.Hostname}:{rabbit.GetMappedPublicPort(15672)}/api/queues/%2F/{environment.Broker.Queue("profile-audit")}";
+        var queues = probe.Services.GetRequiredService<MessageTopology>().Subscriptions
+            .Select(subscription => environment.Broker.Queue(subscription.Consumer)).ToArray();
         await UntilAsync(async token =>
         {
-            HttpResponseMessage response;
-            try { response = await client.GetAsync(queueUrl, token); }
-            catch (HttpRequestException) { return false; }
-            catch (OperationCanceledException) when (!token.IsCancellationRequested) { return false; }
-            using var responseLifetime = response;
-            if (!response.IsSuccessStatusCode) return false;
-            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
-            if (!json.RootElement.TryGetProperty("messages", out var messages) || messages.GetInt32() != 0
-                || !json.RootElement.TryGetProperty("consumers", out var consumers) || consumers.GetInt32() < 1) return false;
-            if (environment.Provider == "Wolverine")
+            foreach (var queue in queues)
+            {
+                var queueUrl = $"http://{rabbit.Hostname}:{rabbit.GetMappedPublicPort(15672)}/api/queues/%2F/{queue}";
+                HttpResponseMessage response;
+                try { response = await client.GetAsync(queueUrl, token); }
+                catch (HttpRequestException) { return false; }
+                catch (OperationCanceledException) when (!token.IsCancellationRequested) { return false; }
+                using var responseLifetime = response;
+                if (!response.IsSuccessStatusCode) return false;
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+                if (!json.RootElement.TryGetProperty("messages", out var messages) || messages.GetInt32() != 0
+                    || !json.RootElement.TryGetProperty("consumers", out var consumers) || consumers.GetInt32() < 1) return false;
+            }            if (environment.Provider == "Wolverine")
             {
                 var counts = await probe.Services.GetRequiredService<IWolverineRuntime>().Storage.Admin.FetchCountsAsync();
                 return counts.Incoming == 0 && counts.Scheduled == 0 && counts.Outgoing == 0 && counts.DeadLetter == 0;
