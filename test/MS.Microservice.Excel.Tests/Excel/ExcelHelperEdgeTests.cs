@@ -233,5 +233,33 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
             rows[0].Id.Should().BeNull();
             rows[0].Name.Should().Be("name");
         }
+
+        private class NoDefaultConstructorRow(string seed)
+        {
+            [ExcelColumn(Name = "ID")]
+            public int Id { get; set; } = int.Parse(seed);
+        }
+
+        [Fact]
+        public void Import_ModelWithoutPublicParameterlessConstructor_ShouldFailWithClearMessage()
+        {
+            var wb = new XSSFWorkbook();
+            var sheet = wb.CreateSheet("S");
+            sheet.CreateRow(0).CreateCell(0).SetCellValue("ID");
+            sheet.CreateRow(1).CreateCell(0).SetCellValue(1);
+
+            using var ms = new MemoryStream();
+            wb.Write(ms, leaveOpen: true);
+            ms.Position = 0;
+
+            // 读取路径需要逐行 new T()：这里必须提前给出可诊断的失败，而不是稍后抛空引用。
+            var exception = Assert.Throws<InvalidOperationException>(() => new ExcelHelper()
+                .InitSheetName("S")
+                .InitStartReadRowIndex(0, 1)
+                .Import<NoDefaultConstructorRow>("nocctor.xlsx", ms));
+
+            exception.Message.Should().Contain(nameof(NoDefaultConstructorRow));
+            exception.Message.Should().Contain("无参构造函数");
+        }
     }
 }

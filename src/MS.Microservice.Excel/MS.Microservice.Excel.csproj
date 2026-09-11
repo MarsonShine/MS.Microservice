@@ -11,6 +11,9 @@
     <InternalsVisibleTo Include="MS.Microservice.Excel.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="MiniExcel" />
     <PackageReference Include="NPOI" />
   </ItemGroup>

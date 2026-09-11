@@ -7,6 +7,11 @@ namespace MS.Microservice.Infrastructure.Utils;
 /// Creates strongly-typed delegates for property getters, setters, and object factories,
 /// eliminating reflection overhead in hot paths.
 /// </summary>
+/// <remarks>
+/// 现在只服务于 <c>DynamicExcelBuilder&lt;T&gt;</c>：它按 <see cref="PropertyInfo" /> 惰性取 getter，
+/// 而按类型缓存的 <c>MS.Microservice.Core.Reflection.PropertyAccessors</c> 走的是另一条路径。
+/// 新代码请优先用 <c>PropertyAccessors</c>，Excel 读模型与查询字符串已共用同一份编译产物。
+/// </remarks>
 internal static class ReflectionDelegateFactory
 {
     /// <summary>

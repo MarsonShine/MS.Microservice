@@ -1,4 +1,5 @@
-﻿using MS.Microservice.Infrastructure.Utils.Diagnostics;
+using MS.Microservice.Core.Reflection;
+using MS.Microservice.Infrastructure.Utils.Diagnostics;
 using MS.Microservice.Infrastructure.Utils.Excel;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
@@ -521,24 +522,26 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
     {
         return TypeMetaCache.GetOrAdd(type, static currentType =>
         {
-            var properties = currentType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            var slots = properties
-                .Select(property => new
+            // 属性的元数据发现与读取委托统一由 PropertyAccessors 提供，本方法只负责列名与排序语义。
+            var slots = PropertyAccessors.Get(currentType)
+                .Select(accessor => new
                 {
-                    Property = property,
-                    Attribute = property.GetCustomAttribute<ExcelColumnAttribute>(inherit: false)
+                    Accessor = accessor,
+                    Attribute = accessor.Property.GetCustomAttribute<ExcelColumnAttribute>(inherit: false)
                 })
                 .Where(item => item.Attribute?.Ignore != true)
                 .OrderBy(item => item.Attribute?.Order ?? int.MaxValue)
-                .ThenBy(item => item.Property.MetadataToken)
+                .ThenBy(item => item.Accessor.Property.MetadataToken)
                 .Select(item =>
                 {
-                    var targetType = Nullable.GetUnderlyingType(item.Property.PropertyType) ?? item.Property.PropertyType;
-                    var columnName = item.Attribute?.Name?.Trim() ?? item.Property.Name;
-                    var getter = ReflectionDelegateFactory.CreateGetter(item.Property);
-                    var setter = ReflectionDelegateFactory.CreateSetter(item.Property);
-                    var typeCode = Type.GetTypeCode(targetType);
-                    return new ExcelPropertySlot(columnName, getter, setter, targetType, typeCode);
+                    var targetType = Nullable.GetUnderlyingType(item.Accessor.PropertyType) ?? item.Accessor.PropertyType;
+                    var columnName = item.Attribute?.Name?.Trim() ?? item.Accessor.Name;
+                    return new ExcelPropertySlot(
+                        columnName,
+                        item.Accessor.GetValue!,
+                        item.Accessor.SetValue ?? SkipWrite,
+                        targetType,
+                        Type.GetTypeCode(targetType));
                 })
                 .ToArray();
 
@@ -548,11 +551,16 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                 nameToSlotIndex[slots[i].ColumnName] = i;
             }
 
-            var factory = ReflectionDelegateFactory.CreateFactory(currentType);
+            // 读取路径需要逐行 new T()，没有公开无参构造函数的类型在这里就报错，而不是等 factory() 抛空引用。
+            var factory = PropertyAccessors.Factory(currentType)
+                ?? throw new InvalidOperationException($"{currentType.FullName} 没有公开无参构造函数，无法作为 Excel 读取模型。");
 
             return new ExcelTypeMeta(factory, slots, nameToSlotIndex);
         });
     }
+
+    /// <summary>属性不可写（如 <c>init</c> 或只读计算属性）时占位，保持写入路径无分支。</summary>
+    private static readonly Action<object, object?> SkipWrite = static (_, _) => { };
 
     private static void SetPropertyValue<T>(T target, ExcelPropertySlot slot, string value)
     {
