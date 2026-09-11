@@ -181,6 +181,85 @@ public sealed class LogHttpClientTests
         });
     }
 
+    [Fact]
+    public async Task CompiledPropertyAccessorsPreserveOrderFormattingAndFreshValues()
+    {
+        var timestamp = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var id = Guid.NewGuid();
+        var handler = new RecordingHandler(request =>
+        {
+            // 没有公开可读属性的类型不产生参数，URL 保持原样。
+            if (request.RequestUri!.Query.Length == 0)
+            {
+                Assert.Equal("https://example.test/orders", request.RequestUri.AbsoluteUri);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+            }
+
+            var query = request.RequestUri.Query;
+            // 属性名原样使用、声明顺序、string 不展开、DateTime 用往返格式、值类型走 IFormattable、计算属性同样写入。
+            Assert.True(query.StartsWith($"?Name=alice&Id={id:D}&Timestamp={Uri.EscapeDataString(timestamp.ToString("O", System.Globalization.CultureInfo.InvariantCulture))}&Amount=1.25", StringComparison.Ordinal),
+                $"unexpected query: {query}");
+            Assert.Contains("&Computed=computed", query, StringComparison.Ordinal);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http);
+
+        await client.GetAsync<object>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m });
+        // 第二次调用命中缓存的委托，必须重新读取属性而不是复用首次结果。
+        await client.GetAsync<object>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m });
+        await client.GetAsync<object>("orders", new IndexedQuery { [0] = "ignored" });
+    }
+
+    [Fact]
+    public async Task DictionaryBodiesKeepEnumerationOrderAndSkipNulls()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            // null 值按原语义跳过；可枚举值在同一参数名下展开。
+            Assert.Equal("https://example.test/orders?b=2&items=1&items=2&a=1", request.RequestUri!.AbsoluteUri);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
+            "orders", new Dictionary<string, object?> { ["b"] = 2, ["items"] = new[] { 1, 2 }, ["nil"] = null, ["a"] = 1 });
+    }
+
+    [Fact]
+    public async Task NullEnumerablePropertiesAreSkippedInsteadOfEnumerated()
+    {
+        var handler = new RecordingHandler(request =>
+        {
+            Assert.Equal("https://example.test/orders?Id=1", request.RequestUri!.AbsoluteUri);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
+            "orders", new EnumerablePayload { Id = 1, Tags = null });
+    }
+
+    private sealed class EnumerablePayload
+    {
+        public int Id { get; set; }
+        public string[]? Tags { get; set; }
+    }
+
+    private sealed class AccessorPayload
+    {
+        public string? Name { get; set; }
+        public Guid Id { get; set; }
+        public DateTime Timestamp { get; set; }
+        public decimal Amount { get; set; }
+        public string Computed => "computed";
+    }
+
+    private sealed class IndexedQuery
+    {
+        private readonly Dictionary<int, string> values = [];
+        private string Hidden { get; set; } = "hidden";
+        public string this[int index] { get => values[index]; set => values[index] = value; }
+    }
+
     private sealed class WaitingStream(TaskCompletionSource reading) : MemoryStream
     {
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)

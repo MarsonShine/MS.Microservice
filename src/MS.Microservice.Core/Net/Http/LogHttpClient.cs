@@ -1,7 +1,4 @@
-using System.Collections;
 using System.Diagnostics;
-using System.Globalization;
-using System.Reflection;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -75,37 +72,15 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
     private static string BuildUrl(string url, object? body)
     {
         if (body is null) return url;
-        IEnumerable<KeyValuePair<string, object?>> pairs = body is IDictionary dictionary
-            ? dictionary.Keys.Cast<object>().Select(key => new KeyValuePair<string, object?>(
-                Convert.ToString(key, CultureInfo.InvariantCulture) ?? "", dictionary[key]))
-            : body.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(property => property.CanRead && property.GetMethod?.IsPublic == true && property.GetIndexParameters().Length == 0)
-                .Select(property => new KeyValuePair<string, object?>(property.Name, property.GetValue(body)));
         var parameters = new List<string>();
-        foreach (var (name, value) in pairs)
-        {
-            if (value is IEnumerable values and not string)
-                foreach (var item in values) Add(name, item);
-            else Add(name, value);
-        }
-        if (parameters.Count == 0) return url;
+        // 参数写入统一交给 QueryStringParameters：字典与对象两条路径共用同一套值语义。
+        var before = parameters.Count;
+        if (QueryStringParameters.Dispatch(body, parameters) == before) return url;
+
         var fragmentIndex = url.IndexOf('#');
         var path = fragmentIndex < 0 ? url : url[..fragmentIndex];
         var fragment = fragmentIndex < 0 ? "" : url[fragmentIndex..];
         var separator = path.Contains('?') ? (path.EndsWith('?') || path.EndsWith('&') ? "" : "&") : "?";
-        return path + separator + string.Join('&', parameters) + fragment;
-
-        void Add(string name, object? value)
-        {
-            if (value is null) return;
-            var text = value switch
-            {
-                DateTime date => date.ToString("O", CultureInfo.InvariantCulture),
-                DateTimeOffset date => date.ToString("O", CultureInfo.InvariantCulture),
-                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
-                _ => value.ToString()
-            };
-            parameters.Add(Uri.EscapeDataString(name) + "=" + Uri.EscapeDataString(text ?? ""));
-        }
+        return string.Concat(path, separator, string.Join('&', parameters), fragment);
     }
 }

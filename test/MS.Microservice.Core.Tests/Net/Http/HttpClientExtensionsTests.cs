@@ -78,6 +78,31 @@ public sealed class HttpClientExtensionsTests
         Assert.Contains("Id=1", handler.LastRequest!.RequestUri!.Query);
     }
 
+    [Fact]
+    public async Task GetAsync_ShouldEscapeReservedCharactersInQueryValues()
+    {
+        var handler = new RecordingHandler(_ => Task.FromResult(
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new ResponsePayload { Message = "ok" }) }));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+
+        await client.GetAsync<ResponsePayload>("orders", new EscapingPayload
+        {
+            Keyword = "中文 空格&x=1",
+            Tags = ["a&b", "c d"]
+        });
+
+        // 未转义时 "&" 会把一个参数值切断成新的参数、空格与中文直接进 URL，这里锁定修复后的形状。
+        Assert.Equal(
+            "https://example.test/orders?Keyword=%E4%B8%AD%E6%96%87%20%E7%A9%BA%E6%A0%BC%26x%3D1&Tags=a%26b&Tags=c%20d",
+            handler.LastRequest!.RequestUri!.AbsoluteUri);
+    }
+
+    private sealed class EscapingPayload
+    {
+        public string? Keyword { get; set; }
+        public string[]? Tags { get; set; }
+    }
+
     private sealed class RecordingHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) : HttpMessageHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }

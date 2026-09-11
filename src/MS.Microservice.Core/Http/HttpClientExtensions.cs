@@ -1,8 +1,8 @@
-﻿using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Extension;
+using MS.Microservice.Core.Net.Http;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -39,41 +39,11 @@ namespace MS.WebHttpClient
 
         private static string BuildQueryString(object queryBody)
         {
-            var properties = queryBody.GetType().GetProperties();
-            if (!properties.Any()) return "";
-            string[] queryStringLocals = new string[properties.Length];
-
-            properties.ForEach((property, index) =>
-            {
-                var value = property.GetValue(queryBody);
-                if (value == null) return;
-                // 判断是否枚举
-                if (IsNullable(property.PropertyType))
-                {
-                    var enumType = Nullable.GetUnderlyingType(property.PropertyType)!;
-                    if (enumType.IsEnum)
-                    {
-                        var enumValue = Convert.ChangeType(value, Enum.GetUnderlyingType(enumType));
-                        value = enumValue;
-                    }
-                }
-                if (IsArray(property.PropertyType))
-                {
-                    var arrayObj = value as IEnumerable;
-                    var subQueryStrings = new Queue<string>();
-                    foreach (var item in arrayObj!)
-                    {
-                        subQueryStrings.Enqueue($"{property.Name}={item}");
-                    }
-                    queryStringLocals[index] = string.Join("&", subQueryStrings);
-                }
-                else
-                {
-                    queryStringLocals[index] = $"{property.Name}={value}";
-                }
-            });
-
-            return string.Join("&", queryStringLocals.Where(p => !string.IsNullOrEmpty(p)));
+            var parameters = new List<string>();
+            // 与 LogHttpClient 共用同一套参数写入：编译后的属性读取 + 保留字符转义。
+            var before = parameters.Count;
+            if (QueryStringParameters.Dispatch(queryBody, parameters) == before) return "";
+            return string.Join("&", parameters);
         }
 
         private static async Task<T> ReadAsObjectAsync<T>(HttpResponseMessage message)
@@ -103,8 +73,5 @@ namespace MS.WebHttpClient
             }
 
         }
-
-        static bool IsNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
-        static bool IsArray(Type type) => type.IsArray && typeof(IEnumerable).IsAssignableFrom(type);
     }
 }
