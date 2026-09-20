@@ -65,7 +65,7 @@ namespace MS.Microservice.Core.Extension
 				if (source == null) throw new ArgumentNullException(nameof(source));
 				if (conveter == null) throw new ArgumentNullException(nameof(conveter));
 
-				return ConvertInterator(source, conveter);
+				return source.Select(conveter).ToArray();
 			}
 		}
 
@@ -77,19 +77,6 @@ namespace MS.Microservice.Core.Extension
 				index = checked(index + 1);
 				dpActoin(item, index);
 			}
-		}
-
-		private static TResult[] ConvertInterator<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> conveter)
-		{
-			var sourceArray = source.ToArray();
-			TResult[] results = new TResult[sourceArray.Length];
-
-			ForEachInterator(source, (item, index) =>
-			{
-				results[index] = conveter(item);
-			});
-
-			return results;
 		}
 
 		private static IEnumerable<T> FlattenInternal<T>(IEnumerable<T> source, Func<T, IEnumerable<T>?> childrenSelector)

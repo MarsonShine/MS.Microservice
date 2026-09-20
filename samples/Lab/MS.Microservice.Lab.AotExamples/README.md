@@ -31,3 +31,14 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 
 该主题属于运行时性能修复，旧算法本身没有反射或动态代码生成问题。
 示例的单元测试不构成 NativeAOT 发布验证。
+
+## 集合转换
+
+| 实现 | 行为与成本 |
+|---|---|
+| `Legacy/ArrayConversionExample.cs` | 先复制源数组取得长度，再枚举原输入转换。延迟计算执行两次，一次性序列失败，还分配完整的中间源数组。 |
+| `Static/ArrayConversionExample.cs` | 使用官方 `Select(conveter).ToArray()`，一次读取、一项一次转换，直接物化结果。 |
+
+生产入口仍为 `source.ToArray(conveter)`，无需迁移；参数名和空参数验证保持不变。
+新实现边读取边转换。任一阶段失败即停止并释放枚举器，之前已经完成的转换不回滚。
+对照测试检查相同结果、实际枚举/读取次数及一次性序列；该优化属于运行时性能，不涉及 AOT 兼容性。
