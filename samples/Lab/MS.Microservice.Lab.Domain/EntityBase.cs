@@ -1,4 +1,4 @@
-﻿using MS.Microservice.Core.Reflection;
+using MS.Microservice.Core.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -9,7 +9,7 @@ namespace MS.Microservice.Domain
     {
         public virtual bool IsTransient()
         {
-            return Id is null || TypeHelper.IsDefaultValue(Id);
+            return Id is null || TypeHelper.IsDefaultBoxedValue(Id);
         }
 
         public override bool Equals([AllowNull] object obj)

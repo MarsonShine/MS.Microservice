@@ -1,4 +1,4 @@
-﻿using MS.Microservice.Core.Reflection;
+using MS.Microservice.Core.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -62,7 +62,7 @@ namespace MS.Microservice.Core.Domain.Entity
                     return false;
                 }
 
-                if (TypeHelper.IsDefaultValue(entity1Key) && TypeHelper.IsDefaultValue(entity2Key))
+                if (TypeHelper.IsDefaultBoxedValue(entity1Key) && TypeHelper.IsDefaultBoxedValue(entity2Key))
                 {
                     return false;
                 }
@@ -111,7 +111,7 @@ namespace MS.Microservice.Core.Domain.Entity
                 return Convert.ToInt64(value) <= 0;
             }
 
-            return TypeHelper.IsDefaultValue(value);
+            return TypeHelper.IsDefaultBoxedValue(value);
         }
 
 

@@ -8,20 +8,20 @@ namespace MS.Microservice.Core.Tests.Reflection
         [Fact]
         public void GetDefaultValue_ValueType_ReturnsDefault()
         {
-            TypeHelper.GetDefaultValue(typeof(int)).Should().Be(0);
-            TypeHelper.GetDefaultValue(typeof(bool)).Should().Be(false);
-            TypeHelper.GetDefaultValue(typeof(double)).Should().Be(0.0);
+            TypeHelper.GetDefaultValue<int>().Should().Be(0);
+            TypeHelper.GetDefaultValue<bool>().Should().Be(false);
+            TypeHelper.GetDefaultValue<double>().Should().Be(0.0);
         }
 
         [Fact]
         public void GetDefaultValue_ReferenceType_ReturnsNull()
         {
-            TypeHelper.GetDefaultValue(typeof(string)).Should().BeNull();
-            TypeHelper.GetDefaultValue(typeof(object)).Should().BeNull();
+            TypeHelper.GetDefaultValue<string>().Should().BeNull();
+            TypeHelper.GetDefaultValue<object>().Should().BeNull();
         }        [Fact]
         public void IsDefaultValue_Null_ReturnsTrue()
         {
-            TypeHelper.IsDefaultValue(null!).Should().BeTrue();
+            TypeHelper.IsDefaultValue<object?>(null).Should().BeTrue();
         }
 
         [Fact]
@@ -61,8 +61,8 @@ namespace MS.Microservice.Core.Tests.Reflection
         [Fact]
         public void GetFullMethodName_ReturnsCorrectFullName()
         {
-            var helper = new SampleClass();
-            var name = TypeHelper.GetFullMethodName(helper, "DoWork");
+
+            var name = TypeHelper.GetFullMethodName<SampleClass>(nameof(SampleClass.DoWork));
             name.Should().Contain("SampleClass").And.Contain("DoWork");
         }
 
