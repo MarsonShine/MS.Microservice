@@ -248,7 +248,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
     // INJECTED into ExcelHelper.DiagnosticProbe for phase-level data.
     // ═══════════════════════════════════════════════════════════════════
 
-    private static PerformanceReport ExportCore<T>(int rowCount) where T : IBenchmarkDto, new()
+    private static PerformanceReport ExportCore<T>(int rowCount) where T : class, IBenchmarkDto<T>, new()
     {
         // Data prep (outside measurement)
         var data = GenerateExportDtos<T>(rowCount);
@@ -256,7 +256,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
         // Measurement
         var probe = new PerformanceProbe().Start();
         var helper = new ExcelHelper { DiagnosticProbe = probe };
-        byte[] result = helper.Export(data, "Sheet1");
+        byte[] result = helper.Export(data, "Sheet1", T.Map);
         Assert.True(result.Length > 0);
         return probe.Stop();
     }
@@ -272,7 +272,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
         return probe.Stop();
     }
 
-    private static PerformanceReport ImportCore<T>(int rowCount) where T : IBenchmarkDto, new()
+    private static PerformanceReport ImportCore<T>(int rowCount) where T : class, IBenchmarkDto<T>, new()
     {
         // Data prep (outside measurement — workbook bytes generated once, measured import only)
         byte[] workbookBytes = GenerateImportWorkbookBytes(rowCount, colCountForImport<T>());
@@ -281,7 +281,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
         var helper = new ExcelHelper { DiagnosticProbe = probe }
             .InitSheetIndex(0)
             .InitStartReadRowIndex(0, 1);
-        var result = helper.Import<T>("test.xlsx", workbookBytes);
+        var result = helper.Import<T>("test.xlsx", workbookBytes, T.Map);
         Assert.Equal(rowCount, result.Count);
         return probe.Stop();
     }
@@ -300,7 +300,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
         var helper = new ExcelHelper { DiagnosticProbe = probe }
             .InitSheetIndex(0)
             .InitStartReadRowIndex(0, 1);
-        var result = await helper.ImportAsync<ImportDto5>("test.xlsx", pipe.Reader);
+        var result = await helper.ImportAsync<ImportDto5>("test.xlsx", pipe.Reader, ImportDto5.Map);
         Assert.Equal(rowCount, result.Count);
         return probe.Stop();
     }
@@ -315,7 +315,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
         var helper = new ExcelHelper { DiagnosticProbe = probe }
             .InitSheetIndex(0)
             .InitStartReadRowIndex(0, 1);
-        var result = helper.Import<ImportDto5>("test.xlsx", nonSeekable);
+        var result = helper.Import<ImportDto5>("test.xlsx", nonSeekable, ImportDto5.Map);
         Assert.Equal(rowCount, result.Count);
         return probe.Stop();
     }
@@ -326,7 +326,7 @@ public class PerformanceBaselineTests : IClassFixture<PerformanceReportFixture>
     // Data generators (outside measurement)
     // ═══════════════════════════════════════════════════════════════════
 
-    private static List<T> GenerateExportDtos<T>(int rows) where T : IBenchmarkDto, new()
+    private static List<T> GenerateExportDtos<T>(int rows) where T : class, IBenchmarkDto<T>, new()
     {
         var list = new List<T>(rows);
         for (int i = 0; i < rows; i++) { var d = new T(); d.Fill(i); list.Add(d); }
@@ -449,54 +449,99 @@ public sealed record PhaseSummary(
 // Benchmark DTO interface
 // ═══════════════════════════════════════════════════════════════════════
 
-public interface IBenchmarkDto { void Fill(int rowIndex); }
+public interface IBenchmarkDto<T> where T : class
+{
+    static abstract ExcelModelMap<T> Map { get; }
+    void Fill(int rowIndex);
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // Export DTOs — exactly 5 or 30 ExcelColumn attributes
 // ═══════════════════════════════════════════════════════════════════════
 
-public class ExportDto5 : IBenchmarkDto
+public class ExportDto5 : IBenchmarkDto<ExportDto5>
 {
-    [ExcelColumn("Col0", Order = 0)] public string Col0 { get; set; } = "";
-    [ExcelColumn("Col1", Order = 1)] public string Col1 { get; set; } = "";
-    [ExcelColumn("Col2", Order = 2)] public string Col2 { get; set; } = "";
-    [ExcelColumn("Col3", Order = 3)] public string Col3 { get; set; } = "";
-    [ExcelColumn("Col4", Order = 4)] public string Col4 { get; set; } = "";
+        public static ExcelModelMap<ExportDto5> Map { get; } = new(static () => new ExportDto5(),
+            ExcelColumn<ExportDto5>.Create("Col0", static r => r.Col0, static (r, v) => r.Col0 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto5>.Create("Col1", static r => r.Col1, static (r, v) => r.Col1 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto5>.Create("Col2", static r => r.Col2, static (r, v) => r.Col2 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto5>.Create("Col3", static r => r.Col3, static (r, v) => r.Col3 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto5>.Create("Col4", static r => r.Col4, static (r, v) => r.Col4 = v!, ExcelValueConverters.String));
+
+
+    public string Col0 { get; set; } = "";
+    public string Col1 { get; set; } = "";
+    public string Col2 { get; set; } = "";
+    public string Col3 { get; set; } = "";
+    public string Col4 { get; set; } = "";
     public void Fill(int r) { Col0 = $"R{r}C0"; Col1 = $"R{r}C1"; Col2 = $"R{r}C2"; Col3 = $"R{r}C3"; Col4 = $"R{r}C4"; }
 }
 
-public class ExportDto30 : IBenchmarkDto
+public class ExportDto30 : IBenchmarkDto<ExportDto30>
 {
-    [ExcelColumn("Col0", Order = 0)] public string Col0 { get; set; } = "";
-    [ExcelColumn("Col1", Order = 1)] public string Col1 { get; set; } = "";
-    [ExcelColumn("Col2", Order = 2)] public string Col2 { get; set; } = "";
-    [ExcelColumn("Col3", Order = 3)] public string Col3 { get; set; } = "";
-    [ExcelColumn("Col4", Order = 4)] public string Col4 { get; set; } = "";
-    [ExcelColumn("Col5", Order = 5)] public string Col5 { get; set; } = "";
-    [ExcelColumn("Col6", Order = 6)] public string Col6 { get; set; } = "";
-    [ExcelColumn("Col7", Order = 7)] public string Col7 { get; set; } = "";
-    [ExcelColumn("Col8", Order = 8)] public string Col8 { get; set; } = "";
-    [ExcelColumn("Col9", Order = 9)] public string Col9 { get; set; } = "";
-    [ExcelColumn("Col10", Order = 10)] public string Col10 { get; set; } = "";
-    [ExcelColumn("Col11", Order = 11)] public string Col11 { get; set; } = "";
-    [ExcelColumn("Col12", Order = 12)] public string Col12 { get; set; } = "";
-    [ExcelColumn("Col13", Order = 13)] public string Col13 { get; set; } = "";
-    [ExcelColumn("Col14", Order = 14)] public string Col14 { get; set; } = "";
-    [ExcelColumn("Col15", Order = 15)] public string Col15 { get; set; } = "";
-    [ExcelColumn("Col16", Order = 16)] public string Col16 { get; set; } = "";
-    [ExcelColumn("Col17", Order = 17)] public string Col17 { get; set; } = "";
-    [ExcelColumn("Col18", Order = 18)] public string Col18 { get; set; } = "";
-    [ExcelColumn("Col19", Order = 19)] public string Col19 { get; set; } = "";
-    [ExcelColumn("Col20", Order = 20)] public string Col20 { get; set; } = "";
-    [ExcelColumn("Col21", Order = 21)] public string Col21 { get; set; } = "";
-    [ExcelColumn("Col22", Order = 22)] public string Col22 { get; set; } = "";
-    [ExcelColumn("Col23", Order = 23)] public string Col23 { get; set; } = "";
-    [ExcelColumn("Col24", Order = 24)] public string Col24 { get; set; } = "";
-    [ExcelColumn("Col25", Order = 25)] public string Col25 { get; set; } = "";
-    [ExcelColumn("Col26", Order = 26)] public string Col26 { get; set; } = "";
-    [ExcelColumn("Col27", Order = 27)] public string Col27 { get; set; } = "";
-    [ExcelColumn("Col28", Order = 28)] public string Col28 { get; set; } = "";
-    [ExcelColumn("Col29", Order = 29)] public string Col29 { get; set; } = "";
+        public static ExcelModelMap<ExportDto30> Map { get; } = new(static () => new ExportDto30(),
+            ExcelColumn<ExportDto30>.Create("Col0", static r => r.Col0, static (r, v) => r.Col0 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col1", static r => r.Col1, static (r, v) => r.Col1 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col2", static r => r.Col2, static (r, v) => r.Col2 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col3", static r => r.Col3, static (r, v) => r.Col3 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col4", static r => r.Col4, static (r, v) => r.Col4 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col5", static r => r.Col5, static (r, v) => r.Col5 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col6", static r => r.Col6, static (r, v) => r.Col6 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col7", static r => r.Col7, static (r, v) => r.Col7 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col8", static r => r.Col8, static (r, v) => r.Col8 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col9", static r => r.Col9, static (r, v) => r.Col9 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col10", static r => r.Col10, static (r, v) => r.Col10 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col11", static r => r.Col11, static (r, v) => r.Col11 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col12", static r => r.Col12, static (r, v) => r.Col12 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col13", static r => r.Col13, static (r, v) => r.Col13 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col14", static r => r.Col14, static (r, v) => r.Col14 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col15", static r => r.Col15, static (r, v) => r.Col15 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col16", static r => r.Col16, static (r, v) => r.Col16 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col17", static r => r.Col17, static (r, v) => r.Col17 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col18", static r => r.Col18, static (r, v) => r.Col18 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col19", static r => r.Col19, static (r, v) => r.Col19 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col20", static r => r.Col20, static (r, v) => r.Col20 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col21", static r => r.Col21, static (r, v) => r.Col21 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col22", static r => r.Col22, static (r, v) => r.Col22 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col23", static r => r.Col23, static (r, v) => r.Col23 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col24", static r => r.Col24, static (r, v) => r.Col24 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col25", static r => r.Col25, static (r, v) => r.Col25 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col26", static r => r.Col26, static (r, v) => r.Col26 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col27", static r => r.Col27, static (r, v) => r.Col27 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col28", static r => r.Col28, static (r, v) => r.Col28 = v!, ExcelValueConverters.String),
+            ExcelColumn<ExportDto30>.Create("Col29", static r => r.Col29, static (r, v) => r.Col29 = v!, ExcelValueConverters.String));
+
+
+    public string Col0 { get; set; } = "";
+    public string Col1 { get; set; } = "";
+    public string Col2 { get; set; } = "";
+    public string Col3 { get; set; } = "";
+    public string Col4 { get; set; } = "";
+    public string Col5 { get; set; } = "";
+    public string Col6 { get; set; } = "";
+    public string Col7 { get; set; } = "";
+    public string Col8 { get; set; } = "";
+    public string Col9 { get; set; } = "";
+    public string Col10 { get; set; } = "";
+    public string Col11 { get; set; } = "";
+    public string Col12 { get; set; } = "";
+    public string Col13 { get; set; } = "";
+    public string Col14 { get; set; } = "";
+    public string Col15 { get; set; } = "";
+    public string Col16 { get; set; } = "";
+    public string Col17 { get; set; } = "";
+    public string Col18 { get; set; } = "";
+    public string Col19 { get; set; } = "";
+    public string Col20 { get; set; } = "";
+    public string Col21 { get; set; } = "";
+    public string Col22 { get; set; } = "";
+    public string Col23 { get; set; } = "";
+    public string Col24 { get; set; } = "";
+    public string Col25 { get; set; } = "";
+    public string Col26 { get; set; } = "";
+    public string Col27 { get; set; } = "";
+    public string Col28 { get; set; } = "";
+    public string Col29 { get; set; } = "";
     public void Fill(int r)
     {
         Col0 = $"R{r}C0"; Col1 = $"R{r}C1"; Col2 = $"R{r}C2"; Col3 = $"R{r}C3"; Col4 = $"R{r}C4";
@@ -512,48 +557,89 @@ public class ExportDto30 : IBenchmarkDto
 // Import DTOs — Col0=string, rest=int
 // ═══════════════════════════════════════════════════════════════════════
 
-public class ImportDto5 : IBenchmarkDto
+public class ImportDto5 : IBenchmarkDto<ImportDto5>
 {
-    [ExcelColumn("Col0", Order = 0)] public string Col0 { get; set; } = "";
-    [ExcelColumn("Col1", Order = 1)] public int Col1 { get; set; }
-    [ExcelColumn("Col2", Order = 2)] public int Col2 { get; set; }
-    [ExcelColumn("Col3", Order = 3)] public int Col3 { get; set; }
-    [ExcelColumn("Col4", Order = 4)] public int Col4 { get; set; }
+        public static ExcelModelMap<ImportDto5> Map { get; } = new(static () => new ImportDto5(),
+            ExcelColumn<ImportDto5>.Create("Col0", static r => r.Col0, static (r, v) => r.Col0 = v!, ExcelValueConverters.String),
+            ExcelColumn<ImportDto5>.Create("Col1", static r => r.Col1, static (r, v) => r.Col1 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto5>.Create("Col2", static r => r.Col2, static (r, v) => r.Col2 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto5>.Create("Col3", static r => r.Col3, static (r, v) => r.Col3 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto5>.Create("Col4", static r => r.Col4, static (r, v) => r.Col4 = v, ExcelValueConverters.Int32));
+
+
+    public string Col0 { get; set; } = "";
+    public int Col1 { get; set; }
+    public int Col2 { get; set; }
+    public int Col3 { get; set; }
+    public int Col4 { get; set; }
     public void Fill(int r) { }
 }
 
-public class ImportDto30 : IBenchmarkDto
+public class ImportDto30 : IBenchmarkDto<ImportDto30>
 {
-    [ExcelColumn("Col0", Order = 0)] public string Col0 { get; set; } = "";
-    [ExcelColumn("Col1", Order = 1)] public int Col1 { get; set; }
-    [ExcelColumn("Col2", Order = 2)] public int Col2 { get; set; }
-    [ExcelColumn("Col3", Order = 3)] public int Col3 { get; set; }
-    [ExcelColumn("Col4", Order = 4)] public int Col4 { get; set; }
-    [ExcelColumn("Col5", Order = 5)] public int Col5 { get; set; }
-    [ExcelColumn("Col6", Order = 6)] public int Col6 { get; set; }
-    [ExcelColumn("Col7", Order = 7)] public int Col7 { get; set; }
-    [ExcelColumn("Col8", Order = 8)] public int Col8 { get; set; }
-    [ExcelColumn("Col9", Order = 9)] public int Col9 { get; set; }
-    [ExcelColumn("Col10", Order = 10)] public int Col10 { get; set; }
-    [ExcelColumn("Col11", Order = 11)] public int Col11 { get; set; }
-    [ExcelColumn("Col12", Order = 12)] public int Col12 { get; set; }
-    [ExcelColumn("Col13", Order = 13)] public int Col13 { get; set; }
-    [ExcelColumn("Col14", Order = 14)] public int Col14 { get; set; }
-    [ExcelColumn("Col15", Order = 15)] public int Col15 { get; set; }
-    [ExcelColumn("Col16", Order = 16)] public int Col16 { get; set; }
-    [ExcelColumn("Col17", Order = 17)] public int Col17 { get; set; }
-    [ExcelColumn("Col18", Order = 18)] public int Col18 { get; set; }
-    [ExcelColumn("Col19", Order = 19)] public int Col19 { get; set; }
-    [ExcelColumn("Col20", Order = 20)] public int Col20 { get; set; }
-    [ExcelColumn("Col21", Order = 21)] public int Col21 { get; set; }
-    [ExcelColumn("Col22", Order = 22)] public int Col22 { get; set; }
-    [ExcelColumn("Col23", Order = 23)] public int Col23 { get; set; }
-    [ExcelColumn("Col24", Order = 24)] public int Col24 { get; set; }
-    [ExcelColumn("Col25", Order = 25)] public int Col25 { get; set; }
-    [ExcelColumn("Col26", Order = 26)] public int Col26 { get; set; }
-    [ExcelColumn("Col27", Order = 27)] public int Col27 { get; set; }
-    [ExcelColumn("Col28", Order = 28)] public int Col28 { get; set; }
-    [ExcelColumn("Col29", Order = 29)] public int Col29 { get; set; }
+        public static ExcelModelMap<ImportDto30> Map { get; } = new(static () => new ImportDto30(),
+            ExcelColumn<ImportDto30>.Create("Col0", static r => r.Col0, static (r, v) => r.Col0 = v!, ExcelValueConverters.String),
+            ExcelColumn<ImportDto30>.Create("Col1", static r => r.Col1, static (r, v) => r.Col1 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col2", static r => r.Col2, static (r, v) => r.Col2 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col3", static r => r.Col3, static (r, v) => r.Col3 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col4", static r => r.Col4, static (r, v) => r.Col4 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col5", static r => r.Col5, static (r, v) => r.Col5 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col6", static r => r.Col6, static (r, v) => r.Col6 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col7", static r => r.Col7, static (r, v) => r.Col7 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col8", static r => r.Col8, static (r, v) => r.Col8 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col9", static r => r.Col9, static (r, v) => r.Col9 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col10", static r => r.Col10, static (r, v) => r.Col10 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col11", static r => r.Col11, static (r, v) => r.Col11 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col12", static r => r.Col12, static (r, v) => r.Col12 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col13", static r => r.Col13, static (r, v) => r.Col13 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col14", static r => r.Col14, static (r, v) => r.Col14 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col15", static r => r.Col15, static (r, v) => r.Col15 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col16", static r => r.Col16, static (r, v) => r.Col16 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col17", static r => r.Col17, static (r, v) => r.Col17 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col18", static r => r.Col18, static (r, v) => r.Col18 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col19", static r => r.Col19, static (r, v) => r.Col19 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col20", static r => r.Col20, static (r, v) => r.Col20 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col21", static r => r.Col21, static (r, v) => r.Col21 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col22", static r => r.Col22, static (r, v) => r.Col22 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col23", static r => r.Col23, static (r, v) => r.Col23 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col24", static r => r.Col24, static (r, v) => r.Col24 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col25", static r => r.Col25, static (r, v) => r.Col25 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col26", static r => r.Col26, static (r, v) => r.Col26 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col27", static r => r.Col27, static (r, v) => r.Col27 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col28", static r => r.Col28, static (r, v) => r.Col28 = v, ExcelValueConverters.Int32),
+            ExcelColumn<ImportDto30>.Create("Col29", static r => r.Col29, static (r, v) => r.Col29 = v, ExcelValueConverters.Int32));
+
+
+    public string Col0 { get; set; } = "";
+    public int Col1 { get; set; }
+    public int Col2 { get; set; }
+    public int Col3 { get; set; }
+    public int Col4 { get; set; }
+    public int Col5 { get; set; }
+    public int Col6 { get; set; }
+    public int Col7 { get; set; }
+    public int Col8 { get; set; }
+    public int Col9 { get; set; }
+    public int Col10 { get; set; }
+    public int Col11 { get; set; }
+    public int Col12 { get; set; }
+    public int Col13 { get; set; }
+    public int Col14 { get; set; }
+    public int Col15 { get; set; }
+    public int Col16 { get; set; }
+    public int Col17 { get; set; }
+    public int Col18 { get; set; }
+    public int Col19 { get; set; }
+    public int Col20 { get; set; }
+    public int Col21 { get; set; }
+    public int Col22 { get; set; }
+    public int Col23 { get; set; }
+    public int Col24 { get; set; }
+    public int Col25 { get; set; }
+    public int Col26 { get; set; }
+    public int Col27 { get; set; }
+    public int Col28 { get; set; }
+    public int Col29 { get; set; }
     public void Fill(int r) { }
 }
 

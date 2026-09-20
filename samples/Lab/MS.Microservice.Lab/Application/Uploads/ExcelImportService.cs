@@ -15,6 +15,10 @@ public interface IExcelImportService
 
 public sealed class ExcelImportService : IExcelImportService
 {
+    private static readonly ExcelModelMap<ExcelBookClassificationRow> ExcelBookClassificationRowMap = new(static () => new ExcelBookClassificationRow(),
+        ExcelColumn<ExcelBookClassificationRow>.Create("BOOKID", static r => r.BookId, static (r, v) => r.BookId = v, ExcelValueConverters.Int32),
+        ExcelColumn<ExcelBookClassificationRow>.Create("分类", static r => r.Classification, static (r, v) => r.Classification = v, ExcelValueConverters.String));
+
     public async Task<string> BuildBookClassificationSqlAsync(
         string fileName,
         Stream content,
@@ -37,7 +41,7 @@ public sealed class ExcelImportService : IExcelImportService
         List<ExcelBookClassificationRow> rows;
         try
         {
-            rows = excelHelper.Import<ExcelBookClassificationRow>(Path.GetFileName(fileName), buffered);
+            rows = excelHelper.Import<ExcelBookClassificationRow>(Path.GetFileName(fileName), buffered, ExcelBookClassificationRowMap);
         }
         finally
         {
@@ -64,10 +68,7 @@ public sealed class ExcelImportService : IExcelImportService
 
     private sealed class ExcelBookClassificationRow
     {
-        [ExcelColumn("BOOKID")]
         public int BookId { get; set; }
-
-        [ExcelColumn("分类")]
         public string? Classification { get; set; }
     }
 }
