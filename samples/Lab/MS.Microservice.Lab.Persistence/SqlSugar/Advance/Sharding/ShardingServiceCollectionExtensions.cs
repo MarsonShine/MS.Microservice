@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using MS.Microservice.Core.Serialization;
 using MS.Microservice.Domain.SqlSugar.Repository;
 using MS.Microservice.Persistence.SqlSugar.DbContext;
 using SqlSugar;
@@ -50,7 +49,7 @@ namespace MS.Microservice.Persistence.SqlSugar.Advance.Sharding
                                             entity.IsIdentity = true;
                                         }
                                     },
-                                    SerializeService = new SqlSugarSerializeService(DefaultSerializeSetting.Default),
+                                    SerializeService = LabSqlSugarJson.Service,
                                 },
                             };
                             UserSharingDemoDbContext client = new(connectionConfig);

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using MS.Microservice.Core.Serialization;
 using MS.Microservice.Domain.SqlSugar.Repository;
 using MS.Microservice.Persistence.SqlSugar;
 using MS.Microservice.Persistence.SqlSugar.Advance.Sharding;
@@ -64,7 +63,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             entity.IsIdentity = true;
                         }
                     },
-                    SerializeService = new SqlSugarSerializeService(DefaultSerializeSetting.Default),
+                    SerializeService = LabSqlSugarJson.Service,
                 },
             }, dbConfig => new UserDemoDbContext(dbConfig));
 

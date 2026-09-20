@@ -1,27 +1,35 @@
 using SqlSugar;
-using System;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
-namespace MS.Microservice.Persistence.SqlSugar
+namespace MS.Microservice.Persistence.SqlSugar;
+
+/// <summary>SqlSugar JSON contracts are registered explicitly; unknown types never fall back to reflection.</summary>
+public sealed class SqlSugarSerializeService : ISerializeService
 {
-    /// <summary>
-    /// 替换默认SqlSugar序列化服务
-    /// </summary>
-    public class SqlSugarSerializeService(JsonSerializerOptions options) : ISerializeService
+    private readonly Dictionary<Type, JsonTypeInfo> contracts;
+
+    public SqlSugarSerializeService(params JsonTypeInfo[] contracts)
     {
-        public T DeserializeObject<T>(string value)
+        ArgumentNullException.ThrowIfNull(contracts);
+        this.contracts = new(contracts.Length);
+        foreach (var contract in contracts)
         {
-            return JsonSerializer.Deserialize<T>(value, options)!;
-        }
-
-        public string SerializeObject(object value)
-        {
-            return JsonSerializer.Serialize(value, options);
-        }
-
-        public string SugarSerializeObject(object value)
-        {
-            return JsonSerializer.Serialize(value, options);
+            ArgumentNullException.ThrowIfNull(contract);
+            this.contracts.Add(contract.Type, contract);
         }
     }
+
+    public T DeserializeObject<T>(string value) =>
+        JsonSerializer.Deserialize(value, (JsonTypeInfo<T>)GetContract(typeof(T)))!;
+
+    public string SerializeObject(object value) => value is null
+        ? "null"
+        : JsonSerializer.Serialize(value, GetContract(value.GetType()));
+
+    public string SugarSerializeObject(object value) => SerializeObject(value);
+
+    private JsonTypeInfo GetContract(Type type) => contracts.TryGetValue(type, out var contract)
+        ? contract
+        : throw new NotSupportedException($"SqlSugar JSON type '{type}' has no registered JsonTypeInfo contract.");
 }
