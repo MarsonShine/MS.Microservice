@@ -13,10 +13,10 @@ namespace MS.Microservice.AI.Core;
 
 internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvider
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonSerializable(typeof(OpenAICompatibleChatCompletionRequest))]
+    [JsonSerializable(typeof(OpenAICompatibleChatCompletionEnvelope))]
+    private partial class ChatJsonContext : JsonSerializerContext;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
@@ -213,7 +213,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             requestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        requestMessage.Content = JsonContent.Create(payload, options: SerializerOptions);
+        requestMessage.Content = JsonContent.Create(payload, ChatJsonContext.Default.OpenAICompatibleChatCompletionRequest);
         return requestMessage;
     }
 
@@ -251,7 +251,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             throw await CreateProviderExceptionAsync(httpResponse, model, request, cancellationToken).ConfigureAwait(false);
         }
 
-        var envelope = await httpResponse.Content.ReadFromJsonAsync<OpenAICompatibleChatCompletionEnvelope>(SerializerOptions, cancellationToken).ConfigureAwait(false);
+        var envelope = await httpResponse.Content.ReadFromJsonAsync(ChatJsonContext.Default.OpenAICompatibleChatCompletionEnvelope, cancellationToken).ConfigureAwait(false);
         if (envelope is null || envelope.Choices.Count == 0)
         {
             throw new AIProviderException(
@@ -329,7 +329,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
                 break;
             }
 
-            var envelope = JsonSerializer.Deserialize<OpenAICompatibleChatCompletionEnvelope>(payload, SerializerOptions)
+            var envelope = JsonSerializer.Deserialize(payload, ChatJsonContext.Default.OpenAICompatibleChatCompletionEnvelope)
                 ?? throw new AIProviderException(
                     $"AI provider '{Name}' returned an invalid streaming payload.",
                     AIErrorCodes.ResponseInvalid,

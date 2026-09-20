@@ -6,9 +6,12 @@ using MS.Microservice.AI.Abstractions;
 
 namespace MS.Microservice.AI.Core;
 
-internal static class AIProviderErrors
+internal static partial class AIProviderErrors
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+    [JsonSerializable(typeof(OpenAICompatibleErrorEnvelope))]
+    [JsonSerializable(typeof(TopLevelProviderError))]
+    private partial class ErrorJsonContext : JsonSerializerContext;
     internal static async Task<AIProviderException> CreateAsync(string name,
         HttpResponseMessage httpResponse,
         AICapability capability,
@@ -128,7 +131,7 @@ internal static class AIProviderErrors
 
         try
         {
-            return JsonSerializer.Deserialize<OpenAICompatibleErrorEnvelope>(responseText, SerializerOptions);
+            return JsonSerializer.Deserialize(responseText, ErrorJsonContext.Default.OpenAICompatibleErrorEnvelope);
         }
         catch (JsonException)
         {
@@ -145,7 +148,7 @@ internal static class AIProviderErrors
 
         try
         {
-            return JsonSerializer.Deserialize<TopLevelProviderError>(responseText, SerializerOptions);
+            return JsonSerializer.Deserialize(responseText, ErrorJsonContext.Default.TopLevelProviderError);
         }
         catch (JsonException)
         {
