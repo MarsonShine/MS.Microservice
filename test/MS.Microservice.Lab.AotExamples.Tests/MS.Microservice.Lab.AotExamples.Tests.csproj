@@ -10,4 +10,7 @@
     <ProjectReference Include="../../samples/Lab/MS.Microservice.Lab.AotExamples/MS.Microservice.Lab.AotExamples.csproj" />
     <ProjectReference Include="../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../MS.Microservice.Core.Tests/Net/Http/HttpLoggingTestSupport.cs" Link="Support/HttpLoggingTestSupport.cs" />
+  </ItemGroup>
 </Project>

@@ -1,151 +1,57 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MS.Microservice.Core.Net.Http
 {
-    /// <summary>
-    /// 通过 IHttpClientFactory 注入 LoggingHttpClientHandler
-    /// 解决调用段重复读取 HttpContent 的问题
-    /// </summary>
+    /// <summary>异步读取启用的正文日志；日志关闭时保持原始内容的流式传输。</summary>
     public class LoggingHttpClientHandler(ILogger<LoggingHttpClientHandler> logger) : DelegatingHandler
     {
-        private readonly ILogger<LoggingHttpClientHandler> _logger = logger;
-
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (!logger.IsEnabled(LogLevel.Information))
+                return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
             var guid = Guid.NewGuid();
-
-            // 包装请求内容
-            if (request.Content != null && !IsLoggableContent(request.Content))
-            {
-                request.Content = new LoggableHttpContent(request.Content);
-            }
-
-            _logger.LogInformation(
+            // 正文 IO 留在异步发送流程；日志参数只保存字符串，避免格式化时同步等待读取。
+            var payload = await ReadContentForLogAsync(request.Content, cancellationToken).ConfigureAwait(false);
+            logger.LogInformation(
                 "【{Guid}】method:【{Method}】log request: 【{RequestUri}】 payload: 【{@Payload}】",
-                guid,
-                request.Method.Method,
-                request.RequestUri,
-                new LazyContentLogger(request.Content, cancellationToken)
-            );
+                guid, request.Method.Method, request.RequestUri, payload);
 
-            var response = await base.SendAsync(request, cancellationToken);
-
-            // 包装响应内容
-            if (response.Content != null && !IsLoggableContent(response.Content))
+            var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            try
             {
-                response.Content = new LoggableHttpContent(response.Content);
+                var responseBody = await ReadContentForLogAsync(response.Content, cancellationToken).ConfigureAwait(false);
+                logger.LogInformation(
+                    "【{Guid}】method:【{Method}】log response: 【{@Response}】",
+                    guid, request.Method.Method, responseBody);
+                return response;
             }
-
-            _logger.LogInformation(
-                "【{Guid}】method:【{Method}】log response: 【{@Response}】",
-                guid,
-                request.Method.Method,
-                new LazyContentLogger(response.Content, cancellationToken)
-            );
-
-            return response;
-        }
-
-        private static bool IsLoggableContent(HttpContent content) => content is LoggableHttpContent;
-
-        public sealed class LazyContentLogger(HttpContent? httpContent, CancellationToken cancellationToken)
-        {
-            public override string ToString()
+            catch
             {
-                if (httpContent == null)
-                    return "null";
-
-                if (httpContent is LoggableHttpContent loggable)
-                {
-                    try
-                    {
-                        return loggable.GetCachedContentAsync(cancellationToken)
-                            .ConfigureAwait(false)
-                            .GetAwaiter()
-                            .GetResult();
-                    }
-                    catch (Exception ex)
-                    {
-                        return $"Error reading content: {ex.Message}";
-                    }
-                }
-
-                return "[Non-loggable content]";
+                // 调用方尚未取得响应；日志读取取消或日志提供器失败时由这里释放。
+                response.Dispose();
+                throw;
             }
         }
 
-        public class LoggableHttpContent : HttpContent
+        private static async Task<string> ReadContentForLogAsync(HttpContent? content, CancellationToken cancellationToken)
         {
-            private readonly HttpContent _originalContent;
-            private byte[]? _cachedBytes;
-            private readonly SemaphoreSlim _cacheLock = new(1, 1);
-
-            public LoggableHttpContent(HttpContent originalContent)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (content is null) return "null";
+            try
             {
-                _originalContent = originalContent;
-
-                // 复制所有 headers
-                foreach (var header in originalContent.Headers)
-                {
-                    Headers.TryAddWithoutValidation(header.Key, header.Value);
-                }
+                // 原 HttpContent 内部缓冲字节供后续发送/复制复用，因此无需额外内容包装器。
+                var text = await content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                return text;
             }
-
-            public async Task<string> GetCachedContentAsync(CancellationToken cancellationToken = default)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                var bytes = await GetCachedBytesAsync(cancellationToken);
-                return Encoding.UTF8.GetString(bytes);
+                throw;
             }
-
-            private async Task<byte[]> GetCachedBytesAsync(CancellationToken cancellationToken = default)
+            catch (Exception exception)
             {
-                if (_cachedBytes != null)
-                    return _cachedBytes;
-
-                await _cacheLock.WaitAsync(cancellationToken);
-                try
-                {
-                    _cachedBytes ??= await _originalContent.ReadAsByteArrayAsync(cancellationToken);
-                    return _cachedBytes;
-                }
-                finally
-                {
-                    _cacheLock.Release();
-                }
-            }
-
-            protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context)
-            {
-                var bytes = await GetCachedBytesAsync();
-                await stream.WriteAsync(bytes.AsMemory(), CancellationToken.None);
-            }
-
-            protected override bool TryComputeLength(out long length)
-            {
-                if (_cachedBytes != null)
-                {
-                    length = _cachedBytes.Length;
-                    return true;
-                }
-                length = -1;
-                return false;
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                {
-                    _originalContent?.Dispose();
-                    _cacheLock?.Dispose();
-                }
-                base.Dispose(disposing);
+                return $"Error reading content: {exception.Message}";
             }
         }
     }
