@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -11,6 +12,43 @@ namespace MS.Microservice.AI.OpenAI.Tests;
 
 public sealed class OpenAIMediaProviderTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(1.25)]
+    public async Task SpeechPayloadKeepsNullOmissionAndNumericSpeedWithoutReflection(double? speed)
+    {
+        Assert.False(JsonSerializer.IsReflectionEnabledByDefault);
+        var handler = new SequenceHttpMessageHandler(_ => new(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([1, 2]),
+        });
+        await CreateTtsProvider(handler).SynthesizeAsync(
+            CreateTtsModel() with { Speed = speed, ResponseFormat = null }, new AITtsRequest { Input = "你好" });
+        using var payload = JsonDocument.Parse(await handler.Requests[0].Content!.ReadAsStringAsync());
+        Assert.Equal("你好", payload.RootElement.GetProperty("input").GetString());
+        Assert.Equal("mp3", payload.RootElement.GetProperty("response_format").GetString());
+        Assert.Equal(speed.HasValue, payload.RootElement.TryGetProperty("speed", out var value));
+        if (speed.HasValue) Assert.Equal(speed.Value, value.GetDouble());
+    }
+
+    [Fact]
+    public async Task ImagePayloadKeepsDefaultsAndOmitsOptionalFieldsWithoutReflection()
+    {
+        Assert.False(JsonSerializer.IsReflectionEnabledByDefault);
+        var handler = new SequenceHttpMessageHandler(_ => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"data":[{"url":"https://example.test/image"}]}"""),
+        });
+        await CreateImageGenerationProvider(handler).GenerateAsync(
+            CreateImageModel(AICapability.ImageGeneration) with { Count = null, Size = null, Quality = null, ResponseFormat = null },
+            new AIImageGenerationRequest { Prompt = "test" });
+        using var payload = JsonDocument.Parse(await handler.Requests[0].Content!.ReadAsStringAsync());
+        Assert.Equal(1, payload.RootElement.GetProperty("n").GetInt32());
+        Assert.Equal("b64_json", payload.RootElement.GetProperty("response_format").GetString());
+        Assert.False(payload.RootElement.TryGetProperty("size", out _));
+        Assert.False(payload.RootElement.TryGetProperty("quality", out _));
+    }
+
     [Fact]
     public async Task SynthesizeAsync_ShouldSendSpeechRequest_AndReturnBinaryAudio()
     {

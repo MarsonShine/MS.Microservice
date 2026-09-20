@@ -192,9 +192,12 @@ public sealed class QwenMediaProviderTests
         using var doc = JsonDocument.Parse(capturedBody!);
         var root = doc.RootElement;
 
+        Assert.False(JsonSerializer.IsReflectionEnabledByDefault);
         root.GetProperty("model").GetString().Should().Be("qwen-image");
         var content = root.GetProperty("input").GetProperty("messages")[0].GetProperty("content");
         content[0].GetProperty("image").GetString().Should().Be("https://cdn.example.com/source.png");
+        Assert.False(content[0].TryGetProperty("text", out _));
+        Assert.False(content[1].TryGetProperty("image", out _));
         var text = content[1].GetProperty("text").GetString();
         text.Should().Contain("Use the SOURCE IMAGE as the base canvas");
         text.Should().Contain("change the weather");

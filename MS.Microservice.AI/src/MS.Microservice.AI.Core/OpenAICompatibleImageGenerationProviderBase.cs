@@ -26,15 +26,10 @@ internal abstract class OpenAICompatibleImageGenerationProviderBase : OpenAIComp
             "image_generation",
             model,
             request.RequestId,
-            () => CreateJsonRequest(RelativeImageGenerationPath, new
-            {
-                model = model.Model,
-                prompt = request.Prompt,
-                n = model.Count ?? 1,
-                size = model.Size,
-                quality = model.Quality,
-                response_format = model.ResponseFormat ?? "b64_json",
-            }),
+            () => CreateJsonRequest(RelativeImageGenerationPath,
+                new ImageGenerationPayload(model.Model, request.Prompt, model.Count ?? 1,
+                    model.Size, model.Quality, model.ResponseFormat ?? "b64_json"),
+                MediaJsonContext.Default.ImageGenerationPayload),
             (httpResponse, requestCancellationToken) => ParseImageResponseAsync(httpResponse, AICapability.ImageGeneration, model, request.RequestId, requestCancellationToken),
             cancellationToken));
     }

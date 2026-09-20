@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
@@ -12,11 +12,6 @@ namespace MS.Microservice.AI.Core;
 
 internal abstract class OpenAICompatibleMediaProviderBase
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
     private readonly AIProviderRegistrationOptions _providerOptions;
@@ -71,10 +66,10 @@ internal abstract class OpenAICompatibleMediaProviderBase
         return ExecuteCoreAsync(capability, operationName, model, requestId, createRequest, parseResponseAsync, cancellationToken);
     }
 
-    protected HttpRequestMessage CreateJsonRequest(string relativePath, object payload, string? accept = null)
+    protected HttpRequestMessage CreateJsonRequest<T>(string relativePath, T payload, JsonTypeInfo<T> typeInfo, string? accept = null)
     {
         var request = CreateRequest(relativePath, accept);
-        request.Content = JsonContent.Create(payload, options: SerializerOptions);
+        request.Content = JsonContent.Create(payload, typeInfo);
         return request;
     }
 
@@ -82,7 +77,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
     /// Creates a JSON POST request to an absolute endpoint URI (bypassing <see cref="BaseAddress"/>).
     /// Used for provider-specific endpoints that require a different base URL.
     /// </summary>
-    protected HttpRequestMessage CreateJsonRequest(Uri endpoint, object payload, string? accept = null)
+    protected HttpRequestMessage CreateJsonRequest<T>(Uri endpoint, T payload, JsonTypeInfo<T> typeInfo, string? accept = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _providerOptions.ApiKey);
@@ -97,7 +92,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
             request.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        request.Content = JsonContent.Create(payload, options: SerializerOptions);
+        request.Content = JsonContent.Create(payload, typeInfo);
         return request;
     }
 

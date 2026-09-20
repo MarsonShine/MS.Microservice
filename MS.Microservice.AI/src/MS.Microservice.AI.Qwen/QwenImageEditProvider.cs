@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
@@ -6,7 +7,7 @@ using MS.Microservice.AI.Core;
 
 namespace MS.Microservice.AI.Qwen;
 
-internal sealed class QwenImageEditProvider(
+internal sealed partial class QwenImageEditProvider(
     IHttpClientFactory httpClientFactory,
     IOptions<AIOptions> options,
     TimeProvider timeProvider,
@@ -39,40 +40,17 @@ internal sealed class QwenImageEditProvider(
         var negativePrompt = string.IsNullOrWhiteSpace(request.NegativePrompt) ? " " : request.NegativePrompt;
         var prompt = QwenImageEditHelper.WrapEditPromptWithSourceProtection(request.Prompt);
 
-        var payload = new
-        {
-            model = model.Model,
-            input = new
-            {
-                messages = new[]
-                {
-                    new
-                    {
-                        role = "user",
-                        content = new object[]
-                        {
-                            new { image = request.ReferenceImageUrl },
-                            new { text = prompt }
-                        }
-                    }
-                }
-            },
-            parameters = new
-            {
-                n = request.Count ?? model.Count ?? 1,
-                negative_prompt = negativePrompt,
-                prompt_extend = false,
-                watermark = false,
-                size
-            }
-        };
+        var payload = new MultimodalPayload(model.Model,
+            new MultimodalInput([new MultimodalMessage("user",
+                [new MultimodalContent(request.ReferenceImageUrl, null), new MultimodalContent(null, prompt)])]),
+            new MultimodalParameters(request.Count ?? model.Count ?? 1, negativePrompt, false, false, size));
 
         return await ExecuteAsync(
             AICapability.ImageEdit,
             "image_edit",
             model,
             request.RequestId,
-            () => CreateJsonRequest(endpoint, payload),
+            () => CreateJsonRequest(endpoint, payload, MultimodalJsonContext.Default.MultimodalPayload),
             (httpResponse, requestCancellationToken) =>
                 ParseMultimodalResponseAsync(httpResponse, AICapability.ImageEdit, model, request.RequestId, requestCancellationToken),
             cancellationToken).ConfigureAwait(false);
@@ -162,4 +140,16 @@ internal sealed class QwenImageEditProvider(
             ProviderRequestId = GetProviderRequestId(httpResponse),
         };
     }
+    private sealed record MultimodalPayload(string Model, MultimodalInput Input, MultimodalParameters Parameters);
+    private sealed record MultimodalInput(MultimodalMessage[] Messages);
+    private sealed record MultimodalMessage(string Role, MultimodalContent[] Content);
+    private sealed record MultimodalContent(string? Image, string? Text);
+    private sealed record MultimodalParameters(int N,
+        [property: JsonPropertyName("negative_prompt")] string NegativePrompt,
+        [property: JsonPropertyName("prompt_extend")] bool PromptExtend, bool Watermark, string Size);
+
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonSerializable(typeof(MultimodalPayload))]
+    private partial class MultimodalJsonContext : JsonSerializerContext;
+
 }
