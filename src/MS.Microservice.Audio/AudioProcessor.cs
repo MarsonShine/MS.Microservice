@@ -14,6 +14,9 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
     /// </summary>
     public class AudioProcessor : IAudioProcessor
     {
+        // 只作为写入器的只读输入；不暴露，也不与音频读取缓冲混用。
+        private static readonly byte[] SilenceBuffer = new byte[4096];
+
         /// <summary>
         /// 合并多个音频文件为一个文件
         /// </summary>
@@ -356,7 +359,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
                     if (options.SilenceDuration > 0)
                     {
-                        WriteSilenceToMp3(mp3Writer, targetFormat, options.SilenceDuration);
+                        WriteSilence(mp3Writer, targetFormat, options.SilenceDuration);
                     }
                 }
                 finally
@@ -393,7 +396,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
                     if (options.SilenceDuration > 0)
                     {
-                        WriteSilenceToWav(waveWriter, targetFormat, options.SilenceDuration);
+                        WriteSilence(waveWriter, targetFormat, options.SilenceDuration);
                     }
                 }
                 finally
@@ -706,25 +709,23 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             }
         }
 
-        // 修正后的静音写入方法
-        private static void WriteSilenceToWav(WaveFileWriter output, WaveFormat format, float durationSeconds)
+        // 共享零块没有读写游标；每次调用独立计算长度并写入自己的输出流。
+        internal static void WriteSilence(Stream output, WaveFormat format, float durationSeconds)
         {
             int bytesPerSample = format.BitsPerSample / 8;
-            int samplesPerSecond = format.SampleRate * format.Channels;
-            int totalSamples = (int)(samplesPerSecond * durationSeconds);
-            var silenceBuffer = new byte[totalSamples * bytesPerSample];
+            int samplesPerSecond = checked(format.SampleRate * format.Channels);
+            // 沿用 float 乘法和按样本取整的顺序；检查溢出，避免循环静默少写。
+            int totalSamples = checked((int)(samplesPerSecond * durationSeconds));
+            int remaining = checked(totalSamples * bytesPerSample);
+            ArgumentOutOfRangeException.ThrowIfNegative(remaining, nameof(durationSeconds));
+            if (remaining == 0) return;
 
-            output.Write(silenceBuffer, 0, silenceBuffer.Length);
-        }
-
-        private static void WriteSilenceToMp3(LameMP3FileWriter output, WaveFormat format, float durationSeconds)
-        {
-            int bytesPerSample = format.BitsPerSample / 8;
-            int samplesPerSecond = format.SampleRate * format.Channels;
-            int totalSamples = (int)(samplesPerSecond * durationSeconds);
-            var silenceBuffer = new byte[totalSamples * bytesPerSample];
-
-            output.Write(silenceBuffer, 0, silenceBuffer.Length);
+            while (remaining > 0)
+            {
+                int count = Math.Min(remaining, SilenceBuffer.Length);
+                output.Write(SilenceBuffer, 0, count);
+                remaining -= count;
+            }
         }
 
         private static IWaveProvider CreateAudioReaderFromStream(Stream stream)

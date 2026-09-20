@@ -3,6 +3,7 @@
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Audio.Tests" />
     <PackageReference Include="NAudio" />
     <PackageReference Include="NAudio.Lame" />
   </ItemGroup>

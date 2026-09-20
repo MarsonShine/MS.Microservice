@@ -64,3 +64,8 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 旧、新实现见 `Legacy/JsonConfigurationExample.cs` 与 `Static/JsonConfigurationExample.cs`。
 [教学说明](JsonConfigurationReuse.md)解释配置为什么可以共享、缓存与 HTTP 的规则为什么不能合并，以及直接解析字节时如何保留取消和 BOM 行为，并给出实际分配对照。
 生产入口保持不变；本主题优化运行时分配，尚未迁移为 AOT 静态 JSON 元数据。
+
+## 静音工作缓冲复用
+
+旧、新写法分别位于 `Legacy/SilenceWritingExample.cs` 与 `Static/SilenceWritingExample.cs`。
+[教学说明](SilenceBufferReuse.md)解释为什么长静音无需整段零数组、为什么共享私有零块而不共享流对象，以及如何保持尾块、时长、插入位置和编码器输入不变。
