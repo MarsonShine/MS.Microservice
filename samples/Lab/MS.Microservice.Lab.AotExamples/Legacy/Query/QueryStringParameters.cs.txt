@@ -1,28 +1,43 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Globalization;
+using MS.Microservice.Core.Reflection;
 
 namespace MS.Microservice.Core.Net.Http;
 
-/// <summary>通过显式字段映射或字典写入 <c>name=value</c> 参数集合。</summary>
+/// <summary>把查询对象按属性写入 <c>name=value</c> 参数集合，元数据只解释一次。</summary>
 /// <remarks>
-/// 字段读取委托由调用方在编译期声明。值语义：<c>null</c> 跳过；
+/// 属性读取委托由 <see cref="PropertyAccessors" /> 按类型编译并缓存，热路径上不再有属性枚举、
+/// LINQ 管线与 <c>PropertyInfo.GetValue</c> 装箱。值语义：<c>null</c> 跳过；
 /// <see cref="DateTime" /> / <see cref="DateTimeOffset" /> 用往返格式，其余 <see cref="IFormattable" />
 /// 走不变文化；非 <see cref="string" /> 的 <see cref="System.Collections.IEnumerable" /> 展开为重复参数名。
 /// </remarks>
 public static class QueryStringParameters
 {
-    /// <summary>按显式映射追加字段，返回追加后的元素个数。</summary>
-    public static int Dispatch<T>(T? body, ICollection<string> destination, QueryParameterMap<T> map)
-    {
-        ArgumentNullException.ThrowIfNull(map);
-        return map.Append(body, destination);
-    }
+    private static readonly ConcurrentDictionary<Type, Func<object, ICollection<string>, int>> Populators = new();
 
-    /// <summary>追加字典项；字典枚举顺序和值格式规则保持不变。</summary>
-    public static int Dispatch(IDictionary? body, ICollection<string> destination)
+    /// <summary>把查询对象追加到 <paramref name="destination" />，返回追加后的元素个数。</summary>
+    public static int Dispatch(object? body, ICollection<string> destination)
     {
         ArgumentNullException.ThrowIfNull(destination);
-        return body is null ? destination.Count : AppendDictionary(body, destination);
+        switch (body)
+        {
+            case null:
+                return destination.Count;
+            case IDictionary dictionary:
+                return AppendDictionary(dictionary, destination);
+            case string text:
+                // 刻意不解释字符串体：它既不是查询对象也不是字典，静默展成空参数会掩盖调用错误。
+                return destination.Count;
+            default:
+                return Populator(body.GetType())(body, destination);
+        }
+    }
+
+    private static Func<object, ICollection<string>, int> Populator(Type type)
+    {
+        if (Populators.TryGetValue(type, out var populator)) return populator;
+        return Populators.GetOrAdd(type, PropertyAccessors.Materializer(type));
     }
 
     private static int AppendDictionary(IDictionary dictionary, ICollection<string> destination)

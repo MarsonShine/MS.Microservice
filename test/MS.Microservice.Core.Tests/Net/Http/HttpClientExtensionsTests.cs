@@ -1,3 +1,4 @@
+using MS.Microservice.Core.Net.Http;
 using System;
 using System.Linq;
 using System.Net;
@@ -23,18 +24,18 @@ public sealed class HttpClientExtensionsTests
             }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
-        ResponsePayload? result = await client.GetAsync<ResponsePayload>("orders", new QueryPayload
+        ResponsePayload? result = await client.GetAsync<ResponsePayload, QueryPayload>("orders", new QueryPayload
         {
             Id = 42,
             Status = QueryStatus.Ready,
             Tags = ["alpha", "beta"]
-        });
+        }, QueryMap);
 
         HttpResponseMessage response = await client.GetAsync("orders", new QueryPayload
         {
             Id = 7,
             Tags = ["solo"]
-        });
+        }, QueryMap);
 
         Assert.NotNull(result);
         Assert.Equal("ok", result!.Message);
@@ -72,7 +73,7 @@ public sealed class HttpClientExtensionsTests
             }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
-        ResponsePayload? result = await client.GetAsync<ResponsePayload>("broken", new QueryPayload { Id = 1 });
+        ResponsePayload? result = await client.GetAsync<ResponsePayload, QueryPayload>("broken", new QueryPayload { Id = 1 }, QueryMap);
 
         Assert.Null(result);
         Assert.Contains("Id=1", handler.LastRequest!.RequestUri!.Query);
@@ -85,11 +86,11 @@ public sealed class HttpClientExtensionsTests
             new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new ResponsePayload { Message = "ok" }) }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
-        await client.GetAsync<ResponsePayload>("orders", new EscapingPayload
+        await client.GetAsync<ResponsePayload, EscapingPayload>("orders", new EscapingPayload
         {
             Keyword = "中文 空格&x=1",
             Tags = ["a&b", "c d"]
-        });
+        }, EscapingMap);
 
         // 未转义时 "&" 会把一个参数值切断成新的参数、空格与中文直接进 URL，这里锁定修复后的形状。
         Assert.Equal(
@@ -97,6 +98,10 @@ public sealed class HttpClientExtensionsTests
             handler.LastRequest!.RequestUri!.AbsoluteUri);
     }
 
+    private static readonly QueryParameterMap<QueryPayload> QueryMap = new(
+        ("Id", static value => value.Id), ("Status", static value => value.Status), ("Tags", static value => value.Tags));
+    private static readonly QueryParameterMap<EscapingPayload> EscapingMap = new(
+        ("Keyword", static value => value.Keyword), ("Tags", static value => value.Tags));
     private sealed class EscapingPayload
     {
         public string? Keyword { get; set; }
@@ -132,3 +137,4 @@ public sealed class HttpClientExtensionsTests
         Ready = 1
     }
 }
+

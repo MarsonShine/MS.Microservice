@@ -27,7 +27,7 @@ public sealed class LogHttpClientTests
         var client = new LogHttpClient(logger, httpClient);
 
         client.Configure("https://example.test/", TimeSpan.FromSeconds(5));
-        ResponsePayload? result = await client.GetAsync<ResponsePayload>("orders", new QueryPayload { Id = 1, Name = "alice" });
+        ResponsePayload? result = await client.GetAsync<ResponsePayload, QueryPayload>("orders", new QueryPayload { Id = 1, Name = "alice" }, QueryMap);
 
         Assert.NotNull(result);
         Assert.Equal("ok", result!.Message);
@@ -77,7 +77,7 @@ public sealed class LogHttpClientTests
         var client = new LogHttpClient(logger, httpClient);
 
         System.Text.Json.JsonException exception = await Assert.ThrowsAsync<System.Text.Json.JsonException>(() =>
-            client.GetAsync<ResponsePayload>("orders", new QueryPayload { Id = 3, Name = "broken" }).AsTask());
+            client.GetAsync<ResponsePayload, QueryPayload>("orders", new QueryPayload { Id = 3, Name = "broken" }, QueryMap).AsTask());
 
         Assert.NotEmpty(exception.Message);
         Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains("broken"));
@@ -98,7 +98,7 @@ public sealed class LogHttpClientTests
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
         await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
-            "orders?fixed=1#anchor", new { Name = value });
+            "orders?fixed=1#anchor", new Dictionary<string, object?> { ["Name"] = value });
     }
 
     [Fact]
@@ -153,13 +153,13 @@ public sealed class LogHttpClientTests
             { BaseAddress = new Uri("https://example.test/") };
         var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http);
         var exception = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            post ? client.PostAsync<object>("orders", new { }).AsTask() : client.GetAsync<object>("orders", new { }).AsTask());
+            post ? client.PostAsync<object>("orders", new { }).AsTask() : client.GetAsync<object>("orders", null).AsTask());
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             post ? client.PostAsync<object>("orders", new { }, cancelled.Token).AsTask()
-                : client.GetAsync<object>("orders", new { }, cancelled.Token).AsTask());
+                : client.GetAsync<object>("orders", null, cancelled.Token).AsTask());
     }
     [Fact]
     public async Task CancellationWhileReadingBodyIsNotTranslatedOrLoggedWithBody()
@@ -182,7 +182,7 @@ public sealed class LogHttpClientTests
     }
 
     [Fact]
-    public async Task CompiledPropertyAccessorsPreserveOrderFormattingAndFreshValues()
+    public async Task ExplicitMapsPreserveOrderFormattingAndFreshValues()
     {
         var timestamp = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc);
         var id = Guid.NewGuid();
@@ -205,10 +205,10 @@ public sealed class LogHttpClientTests
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
         var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http);
 
-        await client.GetAsync<object>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m });
+        await client.GetAsync<object, AccessorPayload>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m }, AccessorMap);
         // 第二次调用命中缓存的委托，必须重新读取属性而不是复用首次结果。
-        await client.GetAsync<object>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m });
-        await client.GetAsync<object>("orders", new IndexedQuery { [0] = "ignored" });
+        await client.GetAsync<object, AccessorPayload>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m }, AccessorMap);
+        await client.GetAsync<object, IndexedQuery>("orders", new IndexedQuery { [0] = "ignored" }, new QueryParameterMap<IndexedQuery>());
     }
 
     [Fact]
@@ -234,10 +234,18 @@ public sealed class LogHttpClientTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
-            "orders", new EnumerablePayload { Id = 1, Tags = null });
+        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object, EnumerablePayload>(
+            "orders", new EnumerablePayload { Id = 1, Tags = null }, EnumerableMap);
     }
 
+    private static readonly QueryParameterMap<QueryPayload> QueryMap = new(
+        ("Id", static value => value.Id), ("Name", static value => value.Name));
+    private static readonly QueryParameterMap<AccessorPayload> AccessorMap = new(
+        ("Name", static value => value.Name), ("Id", static value => value.Id),
+        ("Timestamp", static value => value.Timestamp), ("Amount", static value => value.Amount),
+        ("Computed", static value => value.Computed));
+    private static readonly QueryParameterMap<EnumerablePayload> EnumerableMap = new(
+        ("Id", static value => value.Id), ("Tags", static value => value.Tags));
     private sealed class EnumerablePayload
     {
         public int Id { get; set; }
@@ -325,3 +333,4 @@ public sealed class LogHttpClientTests
         public string? Name { get; set; }
     }
 }
+

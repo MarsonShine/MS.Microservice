@@ -24,31 +24,17 @@ namespace MS.WebHttpClient
 
         extension(HttpClient client)
         {
-            public async Task<T> GetAsync<T>(string api, IDictionary? body)
+            public async Task<T> GetAsync<T>(string api, object body)
             {
                 var message = await GetAsyncCore(client, api, body);
                 return await ReadAsObjectAsync<T>(message);
             }
 
-            public Task<HttpResponseMessage> GetAsync(string api, IDictionary? body)
+            public Task<HttpResponseMessage> GetAsync(string api, object body)
                 => GetAsyncCore(client, api, body);
-
-            public async Task<T> GetAsync<T, TQuery>(string api, TQuery? body, QueryParameterMap<TQuery> map)
-            {
-                var message = await GetAsync(client, api, body, map);
-                return await ReadAsObjectAsync<T>(message);
-            }
-
-            public Task<HttpResponseMessage> GetAsync<TQuery>(string api, TQuery? body, QueryParameterMap<TQuery> map)
-            {
-                ArgumentNullException.ThrowIfNull(client);
-                var parameters = new List<string>();
-                QueryStringParameters.Dispatch(body, parameters, map);
-                return client.GetAsync(body is null ? api : api + "?" + string.Join("&", parameters));
-            }
         }
 
-        private static async Task<HttpResponseMessage> GetAsyncCore(HttpClient client, string api, IDictionary? body)
+        private static async Task<HttpResponseMessage> GetAsyncCore(HttpClient client, string api, object body)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
             string queryString = "";
@@ -59,10 +45,10 @@ namespace MS.WebHttpClient
             return await client.GetAsync(api + queryString);
         }
 
-        private static string BuildQueryString(IDictionary queryBody)
+        private static string BuildQueryString(object queryBody)
         {
             var parameters = new List<string>();
-            // 与 LogHttpClient 共用同一套参数写入和保留字符转义。
+            // 与 LogHttpClient 共用同一套参数写入：编译后的属性读取 + 保留字符转义。
             var before = parameters.Count;
             if (QueryStringParameters.Dispatch(queryBody, parameters) == before) return "";
             return string.Join("&", parameters);

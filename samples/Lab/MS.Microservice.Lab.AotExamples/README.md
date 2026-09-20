@@ -69,3 +69,7 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 
 旧、新写法分别位于 `Legacy/SilenceWritingExample.cs` 与 `Static/SilenceWritingExample.cs`。
 [教学说明](SilenceBufferReuse.md)解释为什么长静音无需整段零数组、为什么共享私有零块而不共享流对象，以及如何保持尾块、时长、插入位置和编码器输入不变。
+
+## 查询参数静态映射
+
+[教学说明](QueryParameterMappings.md)解释缓存访问器与 AOT 兼容性的区别，以及如何用 `QueryParameterMap<T>` 保留查询协议并移除自动类型发现。旧源码与运行时访问器示例位于 `Legacy/Query`，独立静态实现位于 `Static/Query`。

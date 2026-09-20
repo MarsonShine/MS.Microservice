@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Collections;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -24,20 +23,12 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
         httpClient.Timeout = timeout;
     }
 
-    public ValueTask<T?> GetAsync<T>(string requestUrl, IDictionary? body, CancellationToken cancellationToken = default)
+    public ValueTask<T?> GetAsync<T>(string requestUrl, object? body, CancellationToken cancellationToken = default)
         => SendAsync<T>(HttpMethod.Get, BuildUrl(requestUrl, body), null, null, cancellationToken);
 
-    public ValueTask<T?> GetAsync<T>(string url, IDictionary? body, Dictionary<string, string> headers,
+    public ValueTask<T?> GetAsync<T>(string url, object? body, Dictionary<string, string> headers,
         CancellationToken cancellationToken = default)
         => SendAsync<T>(HttpMethod.Get, BuildUrl(url, body), null, headers, cancellationToken);
-
-    public ValueTask<T?> GetAsync<T, TQuery>(string url, TQuery? body, QueryParameterMap<TQuery> map,
-        CancellationToken cancellationToken = default)
-        => SendAsync<T>(HttpMethod.Get, BuildUrl(url, body, map), null, null, cancellationToken);
-
-    public ValueTask<T?> GetAsync<T, TQuery>(string url, TQuery? body, QueryParameterMap<TQuery> map,
-        Dictionary<string, string> headers, CancellationToken cancellationToken = default)
-        => SendAsync<T>(HttpMethod.Get, BuildUrl(url, body, map), null, headers, cancellationToken);
 
     public ValueTask<T?> PostAsync<T>(string url, object? body, CancellationToken cancellationToken = default)
         => SendAsync<T>(HttpMethod.Post, url, body, null, cancellationToken);
@@ -78,26 +69,14 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
         }
     }
 
-    private static string BuildUrl(string url, IDictionary? body)
+    private static string BuildUrl(string url, object? body)
     {
         if (body is null) return url;
         var parameters = new List<string>();
-        // 字典与显式映射共用同一套值语义。
+        // 参数写入统一交给 QueryStringParameters：字典与对象两条路径共用同一套值语义。
         var before = parameters.Count;
         if (QueryStringParameters.Dispatch(body, parameters) == before) return url;
 
-        return AppendQuery(url, parameters);
-    }
-
-    private static string BuildUrl<TQuery>(string url, TQuery? body, QueryParameterMap<TQuery> map)
-    {
-        var parameters = new List<string>();
-        if (QueryStringParameters.Dispatch(body, parameters, map) == 0) return url;
-        return AppendQuery(url, parameters);
-    }
-
-    private static string AppendQuery(string url, List<string> parameters)
-    {
         var fragmentIndex = url.IndexOf('#');
         var path = fragmentIndex < 0 ? url : url[..fragmentIndex];
         var fragment = fragmentIndex < 0 ? "" : url[fragmentIndex..];

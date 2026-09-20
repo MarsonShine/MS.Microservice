@@ -95,13 +95,11 @@ public sealed class QueryStringStrategyParityTests
 
     private static async Task<string> SendAsync(object body)
     {
-        var handler = new RecordingHandler();
-        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        await new LogHttpClient(global::Microsoft.Extensions.Logging.Abstractions.NullLogger<LogHttpClient>.Instance, http)
-            .GetAsync<object>("orders", body);
-        return handler.Uri!;
+        var parameters = new List<string>();
+        PropertyAccessors.Materializer(body.GetType())(body, parameters);
+        await Task.CompletedTask;
+        return "https://example.test/orders" + (parameters.Count == 0 ? "" : "?" + string.Join('&', parameters));
     }
-
     private sealed class RecordingHandler : HttpMessageHandler
     {
         public string? Uri { get; private set; }
@@ -163,3 +161,4 @@ public sealed class QueryStringStrategyParityTests
         Ready = 1
     }
 }
+
