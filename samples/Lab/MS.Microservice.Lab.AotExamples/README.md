@@ -58,3 +58,9 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 开启完整正文日志仍需缓冲整段正文；此模式不保证首块立即交付。
 测试用受控分块内容检查首块转发和异步返回，用超时仅防止旧实现阻塞测试，不比较执行耗时。保留的旧接口另有对照用例。
 本主题是阻塞和分配修复，不构成 AOT 发布验证。
+
+## JSON 配置复用
+
+旧、新实现见 `Legacy/JsonConfigurationExample.cs` 与 `Static/JsonConfigurationExample.cs`。
+[教学说明](JsonConfigurationReuse.md)解释配置为什么可以共享、缓存与 HTTP 的规则为什么不能合并，以及直接解析字节时如何保留取消和 BOM 行为，并给出实际分配对照。
+生产入口保持不变；本主题优化运行时分配，尚未迁移为 AOT 静态 JSON 元数据。
