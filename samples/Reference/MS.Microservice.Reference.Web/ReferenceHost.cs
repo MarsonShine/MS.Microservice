@@ -39,7 +39,8 @@ public static class ReferenceHost
                 ConnectionString = connection, BrokerConnectionString = broker.ConnectionString,
                 Exchange = broker.Exchange, QueuePrefix = broker.QueuePrefix
             };
-            builder.Host.UseWolverineMessaging<WolverineReferenceDbContext>(topology, settings);
+            builder.Host.UseWolverineMessaging<WolverineReferenceDbContext>(topology, settings,
+                [WolverineMessageRegistration<WolverineReferenceDbContext>.For<UserProfileChangedV1>()]);
             builder.Services.AddReferenceRepositories<WolverineReferenceDbContext>();
         }
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");

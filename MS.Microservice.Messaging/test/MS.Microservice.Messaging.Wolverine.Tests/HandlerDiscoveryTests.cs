@@ -28,7 +28,8 @@ public sealed class HandlerDiscoveryTests
         var settings = Options();
         var options = new WolverineOptions();
         options.Discovery.IncludeAssembly(typeof(HandlerDiscoveryTests).Assembly);
-        WolverineMessagingExtensions.ConfigureWolverineMessaging<TestContext>(options, topology, settings);
+        WolverineMessagingExtensions.ConfigureWolverineMessaging<TestContext>(options, topology, settings,
+            [WolverineMessageRegistration<TestContext>.For<Changed>()]);
         // Fixed-version discovery seam: exercise the real scanner without starting any transports.
         var discover = typeof(global::Wolverine.Configuration.HandlerDiscovery).GetMethod("FindCalls",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;

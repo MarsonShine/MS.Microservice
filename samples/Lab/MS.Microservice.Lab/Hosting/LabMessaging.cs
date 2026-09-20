@@ -55,7 +55,8 @@ public static class LabMessaging
             builder.Host.UseWolverine(options =>
             {
                 configureLocal(options);
-                WolverineMessagingExtensions.ConfigureWolverineMessaging<WolverineReferenceDbContext>(options, topology, settings);
+                WolverineMessagingExtensions.ConfigureWolverineMessaging<WolverineReferenceDbContext>(options, topology, settings,
+                    [WolverineMessageRegistration<WolverineReferenceDbContext>.For<UserProfileChangedV1>()]);
             });
         }
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");

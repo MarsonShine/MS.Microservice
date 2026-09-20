@@ -1,3 +1,4 @@
+using System.Reflection;
 using JasperFx;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,12 +18,11 @@ namespace MS.Microservice.Messaging.Wolverine;
 public static class WolverineMessagingExtensions
 {
     public static IHostBuilder UseWolverineMessaging<TContext>(this IHostBuilder host,
-        MessageTopology topology, WolverineMessagingOptions settings,
-        IReadOnlyList<WolverineMessageRegistration<TContext>> registrations) where TContext : DbContext
+        MessageTopology topology, WolverineMessagingOptions settings) where TContext : DbContext
     {
         settings.Validate();
         host.ConfigureServices(services => services.AddWolverineMessaging<TContext>(topology, settings));
-        return host.UseWolverine(options => ConfigureWolverineMessaging(options, topology, settings, registrations));
+        return host.UseWolverine(options => ConfigureWolverineMessaging<TContext>(options, topology, settings));
     }
 
     public static IServiceCollection AddWolverineMessaging<TContext>(this IServiceCollection services,
@@ -61,24 +61,12 @@ public static class WolverineMessagingExtensions
     }
 
     public static void ConfigureWolverineMessaging<TContext>(WolverineOptions options,
-        MessageTopology topology, WolverineMessagingOptions settings,
-        IReadOnlyList<WolverineMessageRegistration<TContext>> registrations) where TContext : DbContext
+        MessageTopology topology, WolverineMessagingOptions settings) where TContext : DbContext
     {
-        ArgumentNullException.ThrowIfNull(registrations);
-        var registered = new HashSet<Type>();
-        foreach (var registration in registrations)
-        {
-            ArgumentNullException.ThrowIfNull(registration);
-            topology.Registry.Get(registration.MessageType);
-            if (!registered.Add(registration.MessageType))
-                throw new ArgumentException("Duplicate Wolverine message registration.", nameof(registrations));
-        }
-        if (registered.Count != topology.Registry.Contracts.Count)
-            throw new ArgumentException("Every message contract requires a typed Wolverine registration.", nameof(registrations));
-
         options.Discovery.CustomizeHandlerDiscovery(query => query.Excludes.WithCondition(
             "Neutral integration handlers are invoked exclusively through the registered adapter bridge",
-            type => typeof(IIntegrationEventHandler).IsAssignableFrom(type)));
+            type => type.GetInterfaces().Any(contract => contract.IsGenericType
+                && contract.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>))));
         options.ServiceName = settings.ServiceName;
         options.AutoBuildMessageStorageOnStartup = AutoCreate.None;
         options.DefaultExecutionTimeout = settings.ProcessingTimeout;
@@ -103,9 +91,10 @@ public static class WolverineMessagingExtensions
         if (settings.MaxRetryAttempts == 0) retry.MoveToErrorQueue();
         else retry.RetryWithCooldown(Enumerable.Range(0, settings.MaxRetryAttempts)
             .Select(index => TimeSpan.FromSeconds(Math.Min(900, 5 * Math.Pow(2, index)))).ToArray()).Then.MoveToErrorQueue();
-        foreach (var registration in registrations)
+        foreach (var contract in topology.Registry.Contracts)
         {
-            registration.Configure(options, topology.Registry.Get(registration.MessageType));
+            typeof(WolverineMessagingExtensions).GetMethod(nameof(ConfigureContract), BindingFlags.NonPublic | BindingFlags.Static)!
+                .MakeGenericMethod(contract.MessageType, typeof(TContext)).Invoke(null, [options, contract]);
         }
         foreach (var subscription in topology.Subscriptions)
         {
@@ -114,4 +103,13 @@ public static class WolverineMessagingExtensions
         }
     }
 
+    private static void ConfigureContract<TEvent, TContext>(WolverineOptions options, MessageContract contract)
+        where TEvent : IIntegrationEvent where TContext : DbContext
+    {
+        var alias = $"{contract.Name}.v{contract.Version}";
+        options.RegisterMessageType(typeof(TEvent), alias);
+        options.Discovery.IncludeType(typeof(WolverineIntegrationEventHandler<TEvent, TContext>));
+        options.PublishMessage<TEvent>().To(new Uri($"{ConfirmedRabbitMqTransport.Scheme}://exchange/{Uri.EscapeDataString(alias)}"))
+            .UseDurableOutbox();
+    }
 }

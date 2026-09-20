@@ -57,7 +57,8 @@ public static class FaultHost
             });
             builder.UseWolverine(options =>
             {
-                WolverineMessagingExtensions.ConfigureWolverineMessaging<WolverineReferenceDbContext>(options, topology, settings);
+                WolverineMessagingExtensions.ConfigureWolverineMessaging<WolverineReferenceDbContext>(options, topology, settings,
+                    [WolverineMessageRegistration<WolverineReferenceDbContext>.For<UserProfileChangedV1>()]);
                 options.Durability.HealthCheckPollingTime = TimeSpan.FromSeconds(1);
                 options.Durability.FirstHealthCheckExecution = TimeSpan.FromSeconds(1);
                 options.Durability.NodeReassignmentPollingTime = TimeSpan.FromSeconds(1);

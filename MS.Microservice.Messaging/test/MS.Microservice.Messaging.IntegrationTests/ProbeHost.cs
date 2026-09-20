@@ -95,7 +95,7 @@ internal static class ProbeHost
             {
                 ConnectionString = environment.ConnectionString, BrokerConnectionString = environment.BrokerConnectionString,
                 Exchange = environment.Prefix, QueuePrefix = environment.Prefix, MaxRetryAttempts = 2
-            });
+            }, [WolverineMessageRegistration<NativeProbeContext>.For<ProbeEvent>()]);
             builder.ConfigureServices(services => services.AddScoped<ProbeContext>(provider => provider.GetRequiredService<NativeProbeContext>()));
         }
         var host = builder.Build();

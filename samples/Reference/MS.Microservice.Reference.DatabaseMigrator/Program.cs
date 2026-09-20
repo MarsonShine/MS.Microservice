@@ -74,7 +74,8 @@ public static class Program
                     })
                     .UseWolverine(options =>
                     {
-                        WolverineMessagingExtensions.ConfigureWolverineMessaging<WolverineReferenceDbContext>(options, ReferenceMessages.Topology(), settings);
+                        WolverineMessagingExtensions.ConfigureWolverineMessaging<WolverineReferenceDbContext>(options, ReferenceMessages.Topology(), settings,
+                            [WolverineMessageRegistration<WolverineReferenceDbContext>.For<UserProfileChangedV1>()]);
                         if (command.Apply) options.AutoBuildMessageStorageOnStartup = AutoCreate.CreateOrUpdate;
                     }).Build();
                 var runtime = nativeHost.Services.GetRequiredService<IWolverineRuntime>();

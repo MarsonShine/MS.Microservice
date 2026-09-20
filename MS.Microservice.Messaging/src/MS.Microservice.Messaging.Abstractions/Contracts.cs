@@ -36,7 +36,9 @@ public sealed record MessageContext(Guid MessageId, string Consumer, string? Cor
     string? TraceParent = null, string? TraceState = null);
 
 /// <summary>业务消费契约；适配器提供上下文与事务，业务不依赖原生信封或消息表。</summary>
-public interface IIntegrationEventHandler<in T> where T : IIntegrationEvent
+public interface IIntegrationEventHandler;
+
+public interface IIntegrationEventHandler<in T> : IIntegrationEventHandler where T : IIntegrationEvent
 {
     Task HandleAsync(T message, MessageContext context, CancellationToken cancellationToken);
 }
