@@ -205,11 +205,13 @@ OpenAI-compatible Provider 将它映射为标准 `response_format`。结构化�
 
 ### 7.2 Schema
 
-`SystemTextJsonQuestionContract` 使用 .NET 10 `GetJsonSchemaAsNode`，然后递归：
+`SystemTextJsonQuestionContract` 从显式登记的 `JsonTypeInfo` 使用 .NET 10 `GetJsonSchemaAsNode`，然后递归：
 
 - 为 object 设置 `additionalProperties: false`。
 - 将所有声明属性写入 `required`。
 - 缓存每个 Response Type 的 Schema。
+
+候选元数据由宿主的 JSON Source Generator 提供；内置 envelope 和评价类型由组件生成。未知类型明确失败，不回退反射。Harness 的修复字段比较及进度签名也通过同一 contract，避免另建序列化规则。
 
 ### 7.3 能力降级
 

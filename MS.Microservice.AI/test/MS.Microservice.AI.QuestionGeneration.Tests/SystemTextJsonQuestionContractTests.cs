@@ -6,7 +6,50 @@ namespace MS.Microservice.AI.QuestionGeneration.Tests;
 
 public sealed class SystemTextJsonQuestionContractTests
 {
-    private readonly SystemTextJsonQuestionContract contract = new();
+    private readonly SystemTextJsonQuestionContract contract = TestData.JsonContract();
+
+    [Fact]
+    public void GeneratedMetadataSupportsNestedHostTypesWithoutReflection()
+    {
+        Assert.False(JsonSerializer.IsReflectionEnabledByDefault);
+        var value = new NestedAnswer(new("解释", AnswerLevel.Advanced), 2);
+        var json = contract.Serialize(value);
+        Assert.Contains("\"level\":\"advanced\"", json);
+        Assert.Equal(value, contract.Deserialize(json, typeof(NestedAnswer)));
+        var schema = contract.GetStrictSchema(typeof(NestedAnswer));
+        var nested = schema.GetProperty("properties").GetProperty("details");
+        Assert.False(nested.GetProperty("additionalProperties").GetBoolean());
+        Assert.Contains("advanced", nested.GetProperty("properties").GetProperty("level").GetProperty("enum")
+            .EnumerateArray().Select(item => item.GetString()));
+    }
+
+    [Theory]
+    [InlineData("{\"details\":{\"explanation\":\"ok\",\"level\":1},\"count\":2}")]
+    [InlineData("{\"details\":{\"explanation\":\"ok\",\"level\":\"advanced\"},\"count\":\"2\"}")]
+    [InlineData("{\"details\":{\"explanation\":\"ok\",\"level\":\"advanced\",\"extra\":1},\"count\":2}")]
+    [InlineData("{\"details\":{\"explanation\":\"ok\",\"level\":\"advanced\"},\"Count\":2}")]
+    [InlineData("null")]
+    [InlineData("{} {}")]
+    [InlineData("{\"count\":2,}")]
+    public void StrictMetadataRejectsNumericEnumsUnknownNestedFieldsAndPermissiveJson(string json) =>
+        Assert.ThrowsAny<JsonException>(() => contract.Deserialize(json, typeof(NestedAnswer)));
+
+    [Fact]
+    public void UnknownTypesNeverFallBackToReflection()
+    {
+        Assert.Throws<NotSupportedException>(() => contract.Serialize(new Version(1, 2)));
+        Assert.Throws<NotSupportedException>(() => contract.SerializeToElement(new Version(1, 2)));
+        Assert.Throws<NotSupportedException>(() => contract.GetStrictSchema(typeof(Version)));
+        Assert.Throws<NotSupportedException>(() => contract.Deserialize("{}", typeof(Version)));
+    }
+
+    [Fact]
+    public void RegistrationRejectsPermissiveOrDuplicateMetadata()
+    {
+        Assert.Throws<ArgumentException>(() => new SystemTextJsonQuestionContract([HostQuestionJsonContext.Default.NestedAnswer]));
+        Assert.Throws<ArgumentException>(() => new SystemTextJsonQuestionContract([
+            TestData.JsonContext.NestedAnswer, TestData.JsonContext.NestedAnswer]));
+    }
 
     [Fact]
     public void Deserialize_ShouldRoundTripHostCandidate()

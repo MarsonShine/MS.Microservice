@@ -74,6 +74,8 @@ builder.Services
     .AddMicroserviceAI(builder.Configuration)
     .AddOpenAI();
 
+var questionJson = new HostQuestionJsonContext(SystemTextJsonQuestionContract.CreateOptions());
+
 builder.Services
     .AddQuestionGeneration(options =>
     {
@@ -81,10 +83,27 @@ builder.Services
         options.ReviewScenario = "QuestionGenerationReview";
         options.RepairScenario = "QuestionGenerationRepair";
     })
+    .AddJsonTypeInfo(questionJson.ShortAnswerCandidate)
     .AddDefinition<ShortAnswerDefinition>();
 ```
 
 三个场景仍配置在框架统一的 `AI:Models:Chat` 下。QuestionGeneration 不配置 Provider 地址或密钥。
+
+宿主使用内置 JSON Source Generator 提供题型元数据，不再依靠程序集或属性发现：
+
+```csharp
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(ShortAnswerCandidate))]
+[JsonSerializable(typeof(QuestionConstraints))]
+[JsonSerializable(typeof(HostQuestionData))]
+internal partial class HostQuestionJsonContext : JsonSerializerContext;
+
+public sealed record QuestionConstraints(int MaxWords);
+public sealed record HostQuestionData(string Topic, string[] SourceTexts, string[] LearningObjectives);
+```
+
+为候选类型创建 context 时使用 `SystemTextJsonQuestionContract.CreateOptions()`，保留严格数字、大小写与未知字段规则。若候选含宿主枚举，将 `new JsonStringEnumConverter<MyEnum>(JsonNamingPolicy.CamelCase, false)` 传入 `CreateOptions`；禁止整数枚举值。所有候选根类型均须显式 `AddJsonTypeInfo`，未知类型不会回退到反射。schema、修复字段比较和进度签名复用同一注册元数据。
+
 
 ## 一个完整的自定义题型
 
@@ -166,7 +185,7 @@ public sealed class ShortAnswerPlanner : IQuestionBlueprintPlanner
             ContextVersion = context.Version,
             ContextHash = context.Hash,
             SpecificationVersion = "short-answer-v1",
-            Constraints = JsonSerializer.SerializeToElement(new { maxWords = 20 }),
+            Constraints = JsonSerializer.SerializeToElement(new QuestionConstraints(20), HostQuestionJsonContext.Default.QuestionConstraints),
         };
 
         return ValueTask.FromResult(new QuestionBlueprintPlan([blueprint], []));
@@ -206,12 +225,8 @@ var context = new QuestionContextSnapshot
     ContextId = "unit-100",
     Version = "snapshot-v1",
     Hash = computedStableHash,
-    Data = JsonSerializer.SerializeToElement(new
-    {
-        topic = "fractions",
-        sourceTexts = sourceTexts,
-        learningObjectives = objectives,
-    }),
+    Data = JsonSerializer.SerializeToElement(
+        new HostQuestionData("fractions", sourceTexts, objectives), HostQuestionJsonContext.Default.HostQuestionData),
     ExistingQuestions = existingQuestionReferences,
 };
 
@@ -345,7 +360,7 @@ AI__PROVIDERS__Qwen__ApiKey
 4. 指定不可变字段和 Review Rubric。
 5. 在 Planner 中构建确定性 Blueprint。
 6. 提供版本化 Draft、Review、Repair Prompt。
-7. 通过 `AddDefinition<T>()` 注册。
+7. 通过 `AddDefinition<T>()` 注册，并用 `AddJsonTypeInfo(context.MyCandidate)` 登记生成的候选元数据。
 8. 增加资格、验证、Repair allowlist、Schema、Review 和去重测试。
 9. 修改契约时升级 Schema/Specification/RuleSet/Rubric 版本。
 10. 使用冻结评测集比较新旧版本，不直接全量切换。

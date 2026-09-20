@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using MS.Microservice.AI.QuestionGeneration.Serialization;
 using MS.Microservice.AI.QuestionGeneration.Contracts;
 
 namespace MS.Microservice.AI.QuestionGeneration.Tests;
@@ -55,8 +57,26 @@ internal sealed class ShortAnswerDefinition : IQuestionDefinition
     }
 }
 
+[JsonSerializable(typeof(ShortAnswerCandidate))]
+[JsonSerializable(typeof(NestedAnswer))]
+internal partial class HostQuestionJsonContext : JsonSerializerContext;
+
+internal enum AnswerLevel { Basic, Advanced }
+internal sealed record AnswerDetail(string Explanation, AnswerLevel Level);
+internal sealed record NestedAnswer(AnswerDetail Details, int Count);
+
 internal static class TestData
 {
+    public static HostQuestionJsonContext JsonContext { get; } = new(SystemTextJsonQuestionContract.CreateOptions(
+        new JsonStringEnumConverter<AnswerLevel>(JsonNamingPolicy.CamelCase, allowIntegerValues: false)));
+    public static SystemTextJsonQuestionContract JsonContract() => new([JsonContext.ShortAnswerCandidate, JsonContext.NestedAnswer]);
+
+    private static JsonElement Parse(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.Clone();
+    }
+
     public static QuestionContextSnapshot Context(
         IReadOnlyList<QuestionReference>? existing = null) =>
         new()
@@ -64,7 +84,7 @@ internal static class TestData
             ContextId = "context-1",
             Version = "v1",
             Hash = "hash-1",
-            Data = JsonSerializer.SerializeToElement(new { topic = "general" }),
+            Data = Parse("""{"topic":"general"}"""),
             ExistingQuestions = existing ?? [],
         };
 
@@ -77,7 +97,7 @@ internal static class TestData
             ContextVersion = "v1",
             ContextHash = "hash-1",
             SpecificationVersion = "spec-v1",
-            Constraints = JsonSerializer.SerializeToElement(new { maxWords = 20 }),
+            Constraints = Parse("""{"maxWords":20}"""),
         };
 
     public static ShortAnswerCandidate Candidate(

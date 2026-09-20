@@ -8,5 +8,7 @@ public interface IQuestionJsonContract
 
     string Serialize(object value);
 
+    JsonElement SerializeToElement(object value);
+
     object Deserialize(string response, Type responseType);
 }

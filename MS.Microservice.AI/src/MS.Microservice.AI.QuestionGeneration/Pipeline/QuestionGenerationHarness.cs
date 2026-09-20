@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MS.Microservice.AI.QuestionGeneration.Serialization;
 using MS.Microservice.AI.QuestionGeneration.Contracts;
 
 namespace MS.Microservice.AI.QuestionGeneration.Pipeline;
@@ -7,9 +8,9 @@ public sealed class QuestionGenerationHarness(
     IQuestionModelClient modelClient,
     QuestionDefinitionRegistry definitions,
     IQuestionPromptProvider prompts,
-    IQuestionDuplicateDetector duplicateDetector) : IQuestionGenerationHarness
+    IQuestionDuplicateDetector duplicateDetector,
+    IQuestionJsonContract jsonContract) : IQuestionGenerationHarness
 {
-    private static readonly JsonSerializerOptions ComparisonOptions = new(JsonSerializerDefaults.Web);
     private readonly object batchGate = new();
     private readonly List<QuestionReference> acceptedInBatch = [];
 
@@ -499,7 +500,7 @@ public sealed class QuestionGenerationHarness(
         return result!;
     }
 
-    private static QuestionValidationIssue? FindRepairScopeViolation(
+    private QuestionValidationIssue? FindRepairScopeViolation(
         QuestionCandidate before,
         QuestionCandidate after,
         IQuestionDefinition definition,
@@ -515,8 +516,8 @@ public sealed class QuestionGenerationHarness(
                 Repairable: false);
         }
 
-        var beforeJson = JsonSerializer.SerializeToElement(before, before.GetType(), ComparisonOptions);
-        var afterJson = JsonSerializer.SerializeToElement(after, after.GetType(), ComparisonOptions);
+        var beforeJson = jsonContract.SerializeToElement(before);
+        var afterJson = jsonContract.SerializeToElement(after);
         var beforeProperties = beforeJson.EnumerateObject()
             .ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
         var afterProperties = afterJson.EnumerateObject()
@@ -553,11 +554,11 @@ public sealed class QuestionGenerationHarness(
         return separator < 0 ? field : field[..separator];
     }
 
-    private static string CreateProgressSignature(
+    private string CreateProgressSignature(
         QuestionCandidate candidate,
         IEnumerable<QuestionValidationIssue> issues)
     {
-        var candidateJson = JsonSerializer.Serialize(candidate, candidate.GetType(), ComparisonOptions);
+        var candidateJson = jsonContract.Serialize(candidate);
         var issueCodes = string.Join(
             '|',
             issues.Select(issue => $"{issue.Code}:{issue.Field}").Order(StringComparer.Ordinal));

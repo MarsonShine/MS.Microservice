@@ -19,7 +19,9 @@ public sealed class QuestionGenerationDependencyInjectionTests
         services.AddSingleton<IAIModelResolver>(new ThrowingResolver());
         services.AddSingleton<ILogger<AIChatQuestionModelClient>>(
             NullLogger<AIChatQuestionModelClient>.Instance);
-        services.AddQuestionGeneration().AddDefinition<ShortAnswerDefinition>();
+        services.AddQuestionGeneration()
+            .AddJsonTypeInfo(TestData.JsonContext.ShortAnswerCandidate)
+            .AddDefinition<ShortAnswerDefinition>();
 
         using var provider = services.BuildServiceProvider();
 

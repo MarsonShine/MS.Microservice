@@ -5,29 +5,64 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using MS.Microservice.AI.QuestionGeneration.Contracts;
 
 namespace MS.Microservice.AI.QuestionGeneration.Serialization;
 
 public sealed class SystemTextJsonQuestionContract : IQuestionJsonContract
 {
     private readonly ConcurrentDictionary<Type, JsonElement> schemas = new();
-    private readonly JsonSerializerOptions serializerOptions;
+    private readonly IReadOnlyDictionary<Type, JsonTypeInfo> typeInfos;
 
-    public SystemTextJsonQuestionContract()
+    public SystemTextJsonQuestionContract(IEnumerable<JsonTypeInfo> typeInfos)
     {
-        serializerOptions = new(JsonSerializerDefaults.Web)
+        ArgumentNullException.ThrowIfNull(typeInfos);
+        var context = new QuestionJsonContext(CreateOptions());
+        var registered = new Dictionary<Type, JsonTypeInfo>
+        {
+            [typeof(QuestionDraftEnvelope)] = context.QuestionDraftEnvelope,
+            [typeof(QuestionReviewEnvelope)] = context.QuestionReviewEnvelope,
+            [typeof(QuestionRepairEnvelope)] = context.QuestionRepairEnvelope,
+            [typeof(QuestionEvaluation)] = context.QuestionEvaluation,
+        };
+        foreach (var typeInfo in typeInfos)
+        {
+            ArgumentNullException.ThrowIfNull(typeInfo);
+            var options = typeInfo.Options;
+            if (options.AllowTrailingCommas || options.PropertyNameCaseInsensitive ||
+                options.NumberHandling != JsonNumberHandling.Strict ||
+                options.ReadCommentHandling != JsonCommentHandling.Disallow ||
+                options.UnmappedMemberHandling != JsonUnmappedMemberHandling.Disallow)
+            {
+                throw new ArgumentException("Question metadata must use strict JSON options. Create the generated context with CreateOptions().", nameof(typeInfos));
+            }
+            typeInfo.MakeReadOnly();
+            if (!registered.TryAdd(typeInfo.Type, typeInfo))
+                throw new ArgumentException($"Question JSON metadata for '{typeInfo.Type}' is already registered.", nameof(typeInfos));
+        }
+        this.typeInfos = registered;
+    }
+
+    /// <summary>Creates strict options for a host's generated context. Register host enums with generic string enum converters.</summary>
+    public static JsonSerializerOptions CreateOptions(params JsonConverter[] converters)
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             AllowTrailingCommas = false,
             NumberHandling = JsonNumberHandling.Strict,
             PropertyNameCaseInsensitive = false,
             ReadCommentHandling = JsonCommentHandling.Disallow,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         };
-        serializerOptions.Converters.Add(
-            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
-        serializerOptions.MakeReadOnly();
+        options.Converters.Add(new JsonStringEnumConverter<QuestionIssueSeverity>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        options.Converters.Add(new JsonStringEnumConverter<QuestionEvaluationDecision>(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+        foreach (var converter in converters) options.Converters.Add(converter);
+        return options;
     }
+
+    private JsonTypeInfo GetTypeInfo(Type type) => typeInfos.TryGetValue(type, out var typeInfo)
+        ? typeInfo
+        : throw new NotSupportedException($"No question JSON metadata is registered for '{type}'.");
 
     public JsonElement GetStrictSchema(Type responseType)
     {
@@ -38,7 +73,13 @@ public sealed class SystemTextJsonQuestionContract : IQuestionJsonContract
     public string Serialize(object value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        return JsonSerializer.Serialize(value, value.GetType(), serializerOptions);
+        return JsonSerializer.Serialize(value, GetTypeInfo(value.GetType()));
+    }
+
+    public JsonElement SerializeToElement(object value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return JsonSerializer.SerializeToElement(value, GetTypeInfo(value.GetType()));
     }
 
     public object Deserialize(string response, Type responseType)
@@ -66,14 +107,13 @@ public sealed class SystemTextJsonQuestionContract : IQuestionJsonContract
             throw new JsonException("Structured output contains content after the root JSON value.");
         }
 
-        return document.RootElement.Deserialize(responseType, serializerOptions)
+        return document.RootElement.Deserialize(GetTypeInfo(responseType))
             ?? throw new JsonException("Structured output deserialized to null.");
     }
 
     private JsonElement CreateStrictSchema(Type responseType)
     {
-        var schema = serializerOptions.GetJsonSchemaAsNode(
-            responseType,
+        var schema = GetTypeInfo(responseType).GetJsonSchemaAsNode(
             new JsonSchemaExporterOptions
             {
                 TreatNullObliviousAsNonNullable = true,
@@ -93,7 +133,7 @@ public sealed class SystemTextJsonQuestionContract : IQuestionJsonContract
                 var required = new JsonArray();
                 foreach (var property in properties)
                 {
-                    required.Add(property.Key);
+                    required.Add(JsonValue.Create(property.Key));
                 }
 
                 jsonObject["required"] = required;

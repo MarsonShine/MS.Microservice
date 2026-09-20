@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.QuestionGeneration.AIChat;
@@ -43,6 +44,14 @@ public static class QuestionGenerationServiceCollectionExtensions
 public sealed class QuestionGenerationBuilder(IServiceCollection services)
 {
     public IServiceCollection Services { get; } = services;
+
+    /// <summary>Registers generated metadata for a host-owned response type.</summary>
+    public QuestionGenerationBuilder AddJsonTypeInfo<T>(JsonTypeInfo<T> typeInfo)
+    {
+        ArgumentNullException.ThrowIfNull(typeInfo);
+        Services.AddSingleton<JsonTypeInfo>(typeInfo);
+        return this;
+    }
 
     public QuestionGenerationBuilder AddDefinition<TDefinition>()
         where TDefinition : class, IQuestionDefinition

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -14,7 +15,7 @@ public sealed class AIChatQuestionModelClientTests
     [Fact]
     public async Task DraftAsync_ShouldDowngradeAndCacheUnsupportedSchema()
     {
-        var contract = new SystemTextJsonQuestionContract();
+        var contract = TestData.JsonContract();
         var responseJson = contract.Serialize(TestData.Candidate());
         var chat = new FakeChatClient(
             request => throw UnsupportedFormat(),
@@ -44,7 +45,7 @@ public sealed class AIChatQuestionModelClientTests
                 provider: "fake",
                 model: "fake",
                 statusCode: 401));
-        var client = CreateClient(chat, new SystemTextJsonQuestionContract());
+        var client = CreateClient(chat, TestData.JsonContract());
 
         var result = await client.DraftAsync(CreateDraftRequest(), CancellationToken.None);
 
@@ -57,11 +58,42 @@ public sealed class AIChatQuestionModelClientTests
     public async Task DraftAsync_ShouldReportInvalidStructuredOutput()
     {
         var chat = new FakeChatClient(request => Success("```json\n{}\n```"));
-        var client = CreateClient(chat, new SystemTextJsonQuestionContract());
+        var client = CreateClient(chat, TestData.JsonContract());
 
         var result = await client.DraftAsync(CreateDraftRequest(), CancellationToken.None);
 
         result.Failure!.Kind.Should().Be(QuestionModelFailureKind.InvalidStructuredOutput);
+    }
+
+    [Fact]
+    public async Task ReviewAndRepairEnvelopesKeepHostCandidateAndStringEnums()
+    {
+        var contract = TestData.JsonContract();
+        var chat = new FakeChatClient(_ => Success(contract.Serialize(TestData.AcceptEvaluation())),
+            _ => Success(contract.Serialize(TestData.Candidate())));
+        var client = CreateClient(chat, contract);
+        var draft = CreateDraftRequest();
+        var issue = new QuestionValidationIssue("fix", QuestionIssueSeverity.Error, "stem", "fix it", true);
+        var reviewed = await client.ReviewAsync(new()
+        {
+            Blueprint = draft.Blueprint, Context = draft.Context, Prompt = draft.Prompt,
+            ResponseType = typeof(QuestionEvaluation), Candidate = TestData.Candidate(),
+            Validation = new([issue]), Rubric = new ShortAnswerDefinition().Rubric,
+        }, CancellationToken.None);
+        var repaired = await client.RepairAsync(new()
+        {
+            Blueprint = draft.Blueprint, Context = draft.Context, Prompt = draft.Prompt,
+            ResponseType = typeof(ShortAnswerCandidate), Candidate = TestData.Candidate(),
+            Issues = [issue], Evaluation = null, RepairAttempt = 1, AllowedFields = ["stem"],
+        }, CancellationToken.None);
+        Assert.True(reviewed.IsSuccess);
+        Assert.True(repaired.IsSuccess);
+        using var review = JsonDocument.Parse(chat.Requests[0].Messages[1].Content);
+        using var repair = JsonDocument.Parse(chat.Requests[1].Messages[1].Content);
+        Assert.Equal("four", review.RootElement.GetProperty("candidate").GetProperty("answer").GetString());
+        Assert.Equal("error", review.RootElement.GetProperty("validation").GetProperty("issues")[0].GetProperty("severity").GetString());
+        Assert.Equal(JsonValueKind.Null, repair.RootElement.GetProperty("review").ValueKind);
+        Assert.Equal("stem", repair.RootElement.GetProperty("allowedFields")[0].GetString());
     }
 
     private static AIChatQuestionModelClient CreateClient(

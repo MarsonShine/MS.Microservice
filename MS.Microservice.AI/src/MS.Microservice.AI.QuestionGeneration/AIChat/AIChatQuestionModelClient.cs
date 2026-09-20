@@ -26,11 +26,7 @@ public sealed class AIChatQuestionModelClient(
         CompleteAsync<QuestionCandidate>(
             request,
             options.Value.DraftScenario,
-            new
-            {
-                blueprint = request.Blueprint,
-                context = request.Context,
-            },
+            new QuestionDraftEnvelope(request.Blueprint, request.Context),
             cancellationToken);
 
     public Task<QuestionModelResult<QuestionEvaluation>> ReviewAsync(
@@ -39,14 +35,8 @@ public sealed class AIChatQuestionModelClient(
         CompleteAsync<QuestionEvaluation>(
             request,
             options.Value.ReviewScenario,
-            new
-            {
-                blueprint = request.Blueprint,
-                context = request.Context,
-                candidate = request.Candidate,
-                validation = request.Validation,
-                rubric = request.Rubric,
-            },
+            new QuestionReviewEnvelope(request.Blueprint, request.Context,
+                jsonContract.SerializeToElement(request.Candidate), request.Validation, request.Rubric),
             cancellationToken);
 
     public Task<QuestionModelResult<QuestionCandidate>> RepairAsync(
@@ -55,16 +45,9 @@ public sealed class AIChatQuestionModelClient(
         CompleteAsync<QuestionCandidate>(
             request,
             options.Value.RepairScenario,
-            new
-            {
-                blueprint = request.Blueprint,
-                context = request.Context,
-                candidate = request.Candidate,
-                issues = request.Issues,
-                review = request.Evaluation,
-                repairAttempt = request.RepairAttempt,
-                allowedFields = request.AllowedFields,
-            },
+            new QuestionRepairEnvelope(request.Blueprint, request.Context,
+                jsonContract.SerializeToElement(request.Candidate), request.Issues, request.Evaluation,
+                request.RepairAttempt, request.AllowedFields),
             cancellationToken);
 
     private async Task<QuestionModelResult<T>> CompleteAsync<T>(

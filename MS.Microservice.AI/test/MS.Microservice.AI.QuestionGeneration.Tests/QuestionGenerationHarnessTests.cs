@@ -212,7 +212,8 @@ public sealed class QuestionGenerationHarnessTests
             model,
             new QuestionDefinitionRegistry([new ShortAnswerDefinition()]),
             new DefaultQuestionPromptProvider(),
-            new ExactQuestionDuplicateDetector());
+            new ExactQuestionDuplicateDetector(),
+            TestData.JsonContract());
 
     private sealed class RecordingObserver : IGenerationAttemptObserver
     {
