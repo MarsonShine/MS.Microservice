@@ -20,4 +20,4 @@ helper.Import("books.xlsx", stream, BookMap);
 
 转换行为仍在原来的 Excel 层完成：数字单元格直接读取，整数不截断小数；日期保留 Excel 日期序列转换；公式先求值；空白或解析失败保留工厂默认值。枚举用 `ExcelValueConverters.Enum<TEnum>()`，可空值用 `Nullable(...)`，自定义类型显式提供 `ExcelValueConverter<TValue>`，不会退回反射转换。DataTable 导出不需要模型映射。
 
-验证包括旧有工作簿与流测试，以及显式顺序、未声明的异常 getter、只读列、带参工厂、公式、日期、可空数值、Guid、枚举、自定义转换和无效整数。这里只验证自有映射层；NPOI 和整个应用的 NativeAOT 发布兼容性不在这次验证结论中。模板填充仍在后续 A03 迁移。
+验证包括旧有工作簿与流测试，以及显式顺序、未声明的异常 getter、只读列、带参工厂、公式、日期、可空数值、Guid、枚举、自定义转换和无效整数。这里只验证自有映射层；NPOI 和整个应用的 NativeAOT 发布兼容性不在这次验证结论中。模板填充同样接收该映射，见 [模板与颜色说明](ExcelTemplates.md)。

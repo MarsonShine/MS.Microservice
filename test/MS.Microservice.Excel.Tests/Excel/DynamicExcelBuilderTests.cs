@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using MS.Microservice.Infrastructure.Utils;
 using MS.Microservice.Infrastructure.Utils.Excel;
 using Xunit;
 
@@ -13,6 +14,14 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel;
 
 public sealed class DynamicExcelBuilderTests
 {
+    private static readonly ExcelModelMap<TemplateRow> Map = new(static () => new TemplateRow(),
+        ExcelColumn<TemplateRow>.Create("编号", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32),
+        ExcelColumn<TemplateRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, ExcelValueConverters.String),
+        ExcelColumn<TemplateRow>.Create("启用", static r => r.Enabled, static (r, v) => r.Enabled = v, ExcelValueConverters.Boolean),
+        ExcelColumn<TemplateRow>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, ExcelValueConverters.Decimal),
+        ExcelColumn<TemplateRow>.Create("日期", static r => r.Date, static (r, v) => r.Date = v, ExcelValueConverters.DateTime),
+        ExcelColumn<TemplateRow>.Create("状态", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<RowStatus>()));
+
     [Fact]
     public async Task DynamicExcelBuilder_ShouldCopyStyles_WriteValues_AndWriteToPipe()
     {
@@ -35,7 +44,7 @@ public sealed class DynamicExcelBuilderTests
             new() { Id = 1, Name = "Alice", Enabled = true, Amount = 12.34m, Date = new DateTime(2024, 1, 2), Status = RowStatus.Ready }
         };
 
-        var builder = new DynamicExcelBuilder<TemplateRow>(workbook, sheet, items)
+        var builder = new DynamicExcelBuilder<TemplateRow>(workbook, sheet, items, Map)
             .InitInsertRow(0, 1)
             .InsertCellValue(1);
 
@@ -67,7 +76,7 @@ public sealed class DynamicExcelBuilderTests
     }
 
     [Fact]
-    public void DynamicExcelBuilder_ShouldMapByAttributeOrder_WhenTitleRowHasNoCells()
+    public void DynamicExcelBuilder_ShouldMapByDeclaredOrder_WhenTitleRowHasNoCells()
     {
         using var workbook = new XSSFWorkbook();
         var sheet = workbook.CreateSheet("S");
@@ -76,7 +85,7 @@ public sealed class DynamicExcelBuilderTests
         var builder = new DynamicExcelBuilder<TemplateRow>(workbook, sheet, new[]
         {
             new TemplateRow { Id = 2, Name = "Bob", Enabled = false, Amount = 88.5m, Status = RowStatus.None }
-        });
+        }, Map);
 
         builder.InitInsertRow(0, 1)
             .InsertCellValue(1);
@@ -96,24 +105,66 @@ public sealed class DynamicExcelBuilderTests
         cell.CellStyle = style;
     }
 
+    [Fact]
+    public void Template_UsesActualSparseHeaderIndexes_PreservesFooterAndReadsUpdatedValues()
+    {
+        using var workbook = new XSSFWorkbook();
+        var sheet = workbook.CreateSheet("S");
+        var title = sheet.CreateRow(0);
+        title.CreateCell(2).SetCellValue("名称");
+        title.CreateCell(5).SetCellValue("编号");
+        title.CreateCell(7).SetCellValue("Unknown");
+        sheet.CreateRow(1).CreateCell(0).SetCellValue("footer");
+        var item = new TemplateRow { Id = 17, Name = "before" };
+        var builder = new DynamicExcelBuilder<TemplateRow>(workbook, sheet, [item], Map).InitInsertRow(0, 1);
+        item.Name = "after";
+        builder.InsertCellValue(1);
+        Assert.Equal("after", sheet.GetRow(1).GetCell(2).StringCellValue);
+        Assert.Equal(17, sheet.GetRow(1).GetCell(5).NumericCellValue);
+        Assert.Equal(CellType.Blank, sheet.GetRow(1).GetCell(7).CellType);
+        Assert.Equal("footer", sheet.GetRow(2).GetCell(0).StringCellValue);
+    }
+
+    [Fact]
+    public void EmptyTemplateSource_DoesNotInsertOrMoveRows()
+    {
+        using var workbook = new XSSFWorkbook();
+        var sheet = workbook.CreateSheet("S");
+        sheet.CreateRow(0).CreateCell(0).SetCellValue("编号");
+        sheet.CreateRow(1).CreateCell(0).SetCellValue("footer");
+        new DynamicExcelBuilder<TemplateRow>(workbook, sheet, [], Map).InitInsertRow(0, 1).InsertCellValue(1);
+        Assert.Equal(1, sheet.LastRowNum);
+        Assert.Equal("footer", sheet.GetRow(1).GetCell(0).StringCellValue);
+    }
+
+    [Fact]
+    public async Task OpenExcelAsync_PropagatesExplicitMapThroughPipeReader()
+    {
+        using var workbook = new XSSFWorkbook();
+        var sheet = workbook.CreateSheet("S");
+        sheet.CreateRow(0).CreateCell(0).SetCellValue("名称");
+        using var input = new MemoryStream();
+        workbook.Write(input, leaveOpen: true);
+        var pipe = new Pipe();
+        await pipe.Writer.WriteAsync(input.ToArray());
+        await pipe.Writer.CompleteAsync();
+        var builder = await new ExcelHelper().OpenExcelAsync(pipe.Reader,
+            new[] { new TemplateRow { Name = "mapped" } }, Map);
+        using (builder.Workbook)
+        {
+            builder.InitInsertRow(0, 1).InsertCellValue(1);
+            Assert.Equal("mapped", builder.Workbook.GetSheetAt(0).GetRow(1).GetCell(0).StringCellValue);
+        }
+        await pipe.Reader.CompleteAsync();
+    }
+
     private sealed class TemplateRow
     {
-        [ExcelColumn(Name = "编号")]
         public int Id { get; set; }
-
-        [ExcelColumn(Name = "名称")]
         public string? Name { get; set; }
-
-        [ExcelColumn(Name = "启用")]
         public bool Enabled { get; set; }
-
-        [ExcelColumn(Name = "金额")]
         public decimal Amount { get; set; }
-
-        [ExcelColumn(Name = "日期")]
         public DateTime Date { get; set; }
-
-        [ExcelColumn(Name = "状态")]
         public RowStatus Status { get; set; }
     }
 

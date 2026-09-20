@@ -448,30 +448,31 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return currentWorkbook.GetSheetAt(resolvedSheetIndex);
     }
 
-    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, List<T> source)
+    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, List<T> source, ExcelModelMap<T> map) where T : class
     {
-        return OpenExcel(fileStream, (IReadOnlyList<T>)source);
+        return OpenExcel(fileStream, (IReadOnlyList<T>)source, map);
     }
 
-    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, IReadOnlyList<T> source)
+    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, IReadOnlyList<T> source, ExcelModelMap<T> map) where T : class
     {
         ArgumentNullException.ThrowIfNull(fileStream);
         ArgumentNullException.ThrowIfNull(source);
 
+        ArgumentNullException.ThrowIfNull(map);
         PrepareStreamForRead(fileStream);
 
         IWorkbook currentWorkbook = WorkbookFactory.Create(fileStream);
         ISheet sheetAt = ResolveSheet(currentWorkbook);
-        return new DynamicExcelBuilder<T>(currentWorkbook, sheetAt, source);
+        return new DynamicExcelBuilder<T>(currentWorkbook, sheetAt, source, map);
     }
 
-    public ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(Stream fileStream, IReadOnlyList<T> source, CancellationToken cancellationToken = default)
+    public ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(Stream fileStream, IReadOnlyList<T> source, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return ValueTask.FromResult(OpenExcel(fileStream, source));
+        return ValueTask.FromResult(OpenExcel(fileStream, source, map));
     }
 
-    public async ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(PipeReader reader, IReadOnlyList<T> source, CancellationToken cancellationToken = default)
+    public async ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(PipeReader reader, IReadOnlyList<T> source, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(source);
@@ -482,13 +483,13 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         using Stream readerStream = reader.AsStream(leaveOpen: true);
         await readerStream.CopyToAsync(bufferedStream, cancellationToken).ConfigureAwait(false);
         bufferedStream.Position = 0;
-        return OpenExcel(bufferedStream, source);
+        return OpenExcel(bufferedStream, source, map);
     }
 
-    public DynamicExcelBuilder<T> OpenExcel<T>(string filePath, List<T> source)
+    public DynamicExcelBuilder<T> OpenExcel<T>(string filePath, List<T> source, ExcelModelMap<T> map) where T : class
     {
         using Stream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return OpenExcel(fileStream, source);
+        return OpenExcel(fileStream, source, map);
     }
 
     private static void PrepareStreamForRead(Stream stream)
