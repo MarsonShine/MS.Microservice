@@ -23,7 +23,7 @@ public sealed class WorkerRecoveryTests
         services.AddScoped(_ => new WorkerContext(connectionString));
         services.AddSingleton<ILogger<SelfManagedOutboxWorker<WorkerContext>>>(unavailable);
         services.AddSingleton<IMessageTransport>(new PublisherTests.Transport("confirmed", () => delivered.TrySetResult()));
-        services.AddSelfManagedMessaging<WorkerContext>(new([MessageContract.For<Changed>("profile.changed")], []), options =>
+        services.AddSelfManagedMessaging<WorkerContext>(new([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.Changed)], []), options =>
         {
             options.InitialRetryDelay = TimeSpan.FromMilliseconds(50);
             options.PollInterval = TimeSpan.FromMilliseconds(20);

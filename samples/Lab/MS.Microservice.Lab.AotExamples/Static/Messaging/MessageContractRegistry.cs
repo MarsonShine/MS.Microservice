@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-namespace MS.Microservice.Messaging;
+using MS.Microservice.Messaging;
+
+namespace MS.Microservice.Lab.AotExamples.Static.Messaging;
 
 public sealed class MessageContract
 {

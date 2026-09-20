@@ -88,7 +88,7 @@ public sealed class ReceiverTests
             options => options.ProcessingTimeout = options.BrokerAcknowledgementTimeout));
     }
 
-    internal static MessageTopology Topology() => new([MessageContract.For<Changed>("profile.changed")],
+    internal static MessageTopology Topology() => new([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.Changed)],
         [MessageSubscription.For<Changed, Handler>("audit")]);
     internal sealed class Handler(BusinessContext context) : IIntegrationEventHandler<Changed>
     {

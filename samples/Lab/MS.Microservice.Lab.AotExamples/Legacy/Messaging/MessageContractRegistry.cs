@@ -1,29 +1,13 @@
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
-namespace MS.Microservice.Messaging;
+using MS.Microservice.Messaging;
 
-public sealed class MessageContract
+namespace MS.Microservice.Lab.AotExamples.Legacy.Messaging;
+
+public sealed record MessageContract(Type MessageType, string Name, int Version)
 {
-    private MessageContract(Type messageType, string name, int version,
-        Func<IIntegrationEvent, string> serialize, Func<string, IIntegrationEvent?> deserialize)
-        => (MessageType, Name, Version, Serialize, Deserialize) = (messageType, name, version, serialize, deserialize);
-
-    public Type MessageType { get; }
-    public string Name { get; }
-    public int Version { get; }
-    internal Func<IIntegrationEvent, string> Serialize { get; }
-    internal Func<string, IIntegrationEvent?> Deserialize { get; }
-
-    /// <summary>Registers a contract with explicit metadata, normally supplied by a generated JSON context.</summary>
-    public static MessageContract For<T>(string name, JsonTypeInfo<T> typeInfo, int version = 1)
-        where T : IIntegrationEvent
-    {
-        ArgumentNullException.ThrowIfNull(typeInfo);
-        return new(typeof(T), name, version,
-            message => JsonSerializer.Serialize((T)message, typeInfo),
-            payload => JsonSerializer.Deserialize(payload, typeInfo));
-    }
+    public static MessageContract For<T>(string name, int version = 1) where T : IIntegrationEvent
+        => new(typeof(T), name, version);
 }
 
 /// <summary>Immutable allowlist used by both persistence writers and transport readers.</summary>
@@ -31,6 +15,7 @@ public sealed class MessageContractRegistry
 {
     private readonly Dictionary<Type, MessageContract> _byType = [];
     private readonly Dictionary<(string Name, int Version), MessageContract> _byName = [];
+    private readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web);
 
     public MessageContractRegistry(IEnumerable<MessageContract> contracts)
     {
@@ -62,7 +47,7 @@ public sealed class MessageContractRegistry
         ValidateIdentity(message.Id, message.OccurredAtUtc);
         var contract = Get(message.GetType());
         return new(message.Id, contract.Name, contract.Version, message.OccurredAtUtc,
-            contract.Serialize(message), context?.CorrelationId,
+            JsonSerializer.Serialize(message, contract.MessageType, _json), context?.CorrelationId,
             context?.TraceParent, context?.TraceState);
     }
 
@@ -73,7 +58,7 @@ public sealed class MessageContractRegistry
         var contract = Get(message.ContractName, message.ContractVersion);
         try
         {
-            var value = contract.Deserialize(message.Payload)
+            var value = (IIntegrationEvent?)JsonSerializer.Deserialize(message.Payload, contract.MessageType, _json)
                 ?? throw new MessageContractException("Event payload is null.");
             if (value.Id != message.Id || value.OccurredAtUtc != message.OccurredAtUtc)
                 throw new MessageContractException("Event identity does not match its envelope.");

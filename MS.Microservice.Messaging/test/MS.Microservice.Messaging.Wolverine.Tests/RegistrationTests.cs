@@ -52,7 +52,7 @@ public sealed class RegistrationTests
         Assert.Throws<ArgumentException>(() => options.Validate());
     }
 
-    public static MessageTopology Topology() => new([MessageContract.For<Changed>("profile.changed")],
+    public static MessageTopology Topology() => new([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.RegisteredChanged)],
         [MessageSubscription.For<Changed, Handler>("audit")]);
     public static WolverineMessagingOptions Options() => new()
     {

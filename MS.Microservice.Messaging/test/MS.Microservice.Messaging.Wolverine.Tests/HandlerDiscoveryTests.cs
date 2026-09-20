@@ -24,7 +24,7 @@ public sealed class HandlerDiscoveryTests
             2 => MessageSubscription.For<Changed, DeferredHandler>("audit"),
             _ => MessageSubscription.For<Changed, InheritedConsumer>("audit")
         };
-        var topology = new MessageTopology([MessageContract.For<Changed>("profile.changed")], [subscriptions]);
+        var topology = new MessageTopology([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.RegisteredChanged)], [subscriptions]);
         var settings = Options();
         var options = new WolverineOptions();
         options.Discovery.IncludeAssembly(typeof(HandlerDiscoveryTests).Assembly);

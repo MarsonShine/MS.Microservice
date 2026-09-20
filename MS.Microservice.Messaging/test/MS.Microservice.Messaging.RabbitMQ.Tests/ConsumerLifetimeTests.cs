@@ -34,7 +34,7 @@ public sealed class ConsumerLifetimeTests
                 return DeliveryResult.Acknowledge;
             });
         var options = new RabbitMqOptions();
-        var topology = new MessageTopology([MessageContract.For<Changed>("profile.changed")],
+        var topology = new MessageTopology([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.Changed)],
             [MessageSubscription.For<Changed, Handler>("audit")]);
         using var service = new RabbitMqConsumerService(options, topology, factory,
             new(receiver, options, NullLogger<RabbitMqDeliveryHandler>.Instance), NullLogger<RabbitMqConsumerService>.Instance);
@@ -59,7 +59,7 @@ public sealed class ConsumerLifetimeTests
         await channel.DidNotReceive().BasicAckAsync(Arg.Any<ulong>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
     }
 
-    private sealed record Changed(Guid Id, DateTimeOffset OccurredAtUtc) : IIntegrationEvent;
+    internal sealed record Changed(Guid Id, DateTimeOffset OccurredAtUtc) : IIntegrationEvent;
     private sealed class Handler : IIntegrationEventHandler<Changed>
     {
         public Task HandleAsync(Changed message, MessageContext context, CancellationToken cancellationToken) => Task.CompletedTask;

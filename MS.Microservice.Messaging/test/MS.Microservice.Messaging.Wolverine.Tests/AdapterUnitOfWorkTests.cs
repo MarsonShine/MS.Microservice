@@ -125,7 +125,7 @@ public sealed class AdapterUnitOfWorkTests
         await native.DidNotReceive().SaveChangesAndFlushMessagesAsync(Arg.Any<CancellationToken>());
     }
 
-    private static MessageContractRegistry Registry() => new([MessageContract.For<Changed>("profile.changed")]);
+    private static MessageContractRegistry Registry() => new([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.AdapterChanged)]);
     private static Changed Event() => new(Guid.NewGuid(), DateTimeOffset.UtcNow, "value");
     private static async Task<SqliteConnection> OpenAsync()
     {

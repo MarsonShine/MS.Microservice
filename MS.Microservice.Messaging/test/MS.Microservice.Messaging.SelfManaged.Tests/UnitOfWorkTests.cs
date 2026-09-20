@@ -104,7 +104,7 @@ public sealed class UnitOfWorkTests
         Assert.Empty(await context.Set<OutboxEntry>().ToListAsync());
     }
 
-    internal static MessageContractRegistry Registry() => new([MessageContract.For<Changed>("profile.changed")]);
+    internal static MessageContractRegistry Registry() => new([MessageContract.For<Changed>("profile.changed", TestMessageJsonContext.Default.Changed)]);
     internal static Changed NewEvent() => new(Guid.NewGuid(), DateTimeOffset.UtcNow, "created");
     private static SelfManagedUnitOfWork<DbContext> Create(DbContext context) => new(context, Registry(), TimeProvider.System);
     internal static async Task<SqliteConnection> OpenAsync()

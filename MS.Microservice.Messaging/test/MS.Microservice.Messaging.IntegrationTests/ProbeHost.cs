@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -64,7 +65,7 @@ public sealed class ProbeHandler(ProbeContext context, MessageContractRegistry r
 
 internal static class ProbeHost
 {
-    public static MessageTopology Topology(bool twoConsumers = false) => new([MessageContract.For<ProbeEvent>("probe.changed")],
+    public static MessageTopology Topology(bool twoConsumers = false) => new([MessageContract.For<ProbeEvent>("probe.changed", ProbeJsonContext.Default.ProbeEvent)],
         twoConsumers ? [MessageSubscription.For<ProbeEvent, ProbeHandler>("primary"), MessageSubscription.For<ProbeEvent, ProbeHandler>("secondary")]
             : [MessageSubscription.For<ProbeEvent, ProbeHandler>("primary")]);
 
@@ -144,3 +145,7 @@ internal static class ProbeHost
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 }
+
+[JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(ProbeEvent))]
+internal partial class ProbeJsonContext : JsonSerializerContext;
