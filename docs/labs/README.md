@@ -31,6 +31,7 @@
 没有观察到目标状态时先检查配置和依赖，不以固定等待时间认定实验成功。
 
 独立源码/包接入见[组件消费配方](../components/consumption.md)。
+[性能与 AOT 写法对照](../../samples/Lab/MS.Microservice.Lab.AotExamples/README.md)提供独立的新旧实现与回归用例，无需启动宿主。
 SqlSugar、Audio、Excel、AI、订单事件溯源和函数式实现是专项对照材料，
 不需要为它们额外创建完整宿主。
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace MS.Microservice.Core.Extension
 {
@@ -339,7 +340,7 @@ namespace MS.Microservice.Core.Extension
 		extension<T>(List<T> list) where T : IEquatable<T>
 		{
 			/// <summary>
-			/// 带验证的洗牌算法，确保打破原有顺序
+			/// 原地洗牌；元素数量至少为二且值互不相等时保证全部错位，重复值尽力错位且始终有限结束。
 			/// </summary>
 			public void ValidatedShuffle()
 			{
@@ -355,18 +356,17 @@ namespace MS.Microservice.Core.Extension
 					PerformAdvancedShuffle(list);
 				}
 				while (HasSignificantOrderPreservation(originalOrder, list) && attempt < maxAttempts);
-				// 如果多次尝试仍然失败，使用强制错位
-				ApplyGuaranteedDerangement(list, originalOrder);
+				RepairFixedPositions(list, originalOrder);
 			}
 		}
 
-		private static void PerformAdvancedShuffle<T>(List<T> list)
+		internal static void PerformAdvancedShuffle<T>(List<T> list)
 		{
 			var random = Random.Shared;
 			for (int phase = 0; phase < 3; phase++)
 			{
-				// 阶段1：标准 Fisher-Yates
-				list.Shuffle();
+				// 阶段1：官方原地洗牌；Span 使用期间不增删元素。
+				random.Shuffle(CollectionsMarshal.AsSpan(list));
 
 				// 阶段2：随机交换
 				int swaps = list.Count * 2;
@@ -390,7 +390,7 @@ namespace MS.Microservice.Core.Extension
 
 			for (int i = 0; i < Math.Min(original.Count, shuffled.Count); i++)
 			{
-				if (original[i].Equals(shuffled[i]))
+				if (EqualityComparer<T>.Default.Equals(original[i], shuffled[i]))
 				{
 					preservedCount++;
 					consecutivePreserved++;
@@ -408,26 +408,36 @@ namespace MS.Microservice.Core.Extension
 		}
 
 		/// <summary>
-		/// 强制错位，确保没有元素在原位置
+		/// 轮换固定位置；重复值不一定能完全错位，不通过随机重试寻找不存在的候选。
 		/// </summary>
-		private static void ApplyGuaranteedDerangement<T>(List<T> list, List<T> originalOrder)
+		internal static void RepairFixedPositions<T>(List<T> list, IReadOnlyList<T> originalOrder)
 		{
-			var random = Random.Shared;
-
+			var comparer = EqualityComparer<T>.Default;
+			int firstFixed = -1;
+			int previousFixed = -1;
 			for (int i = 0; i < list.Count; i++)
 			{
-				// 如果当前位置的元素与原位置相同，找一个不同的位置交换
-				if (list[i]!.Equals(originalOrder[i]))
+				if (!comparer.Equals(list[i], originalOrder[i])) continue;
+				if (previousFixed >= 0)
 				{
-					// 找到一个不是原位置的位置进行交换
-					int swapIndex;
-					do
-					{
-						swapIndex = random.Next(list.Count);
-					} while (swapIndex == i ||
-							 (list[swapIndex]!.Equals(originalOrder[swapIndex]) && swapIndex != i));
+					(list[previousFixed], list[i]) = (list[i], list[previousFixed]);
+				}
+				else
+				{
+					firstFixed = i;
+				}
+				previousFixed = i;
+			}
 
-					(list[i], list[swapIndex]) = (list[swapIndex], list[i]);
+			if (firstFixed < 0 || firstFixed != previousFixed) return;
+			for (int i = 0; i < list.Count; i++)
+			{
+				if (i != firstFixed &&
+					!comparer.Equals(list[i], originalOrder[firstFixed]) &&
+					!comparer.Equals(list[firstFixed], originalOrder[i]))
+				{
+					(list[firstFixed], list[i]) = (list[i], list[firstFixed]);
+					return;
 				}
 			}
 		}

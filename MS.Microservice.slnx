@@ -26,6 +26,7 @@
     <Project Path="samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj" />
   </Folder>
   <Folder Name="/samples/Lab/">
+    <Project Path="samples/Lab/MS.Microservice.Lab.AotExamples/MS.Microservice.Lab.AotExamples.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.DatabaseMigrator/MS.Microservice.Lab.DatabaseMigrator.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />
@@ -45,6 +46,7 @@
     <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Lab.AotExamples.Tests/MS.Microservice.Lab.AotExamples.Tests.csproj" />
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />
