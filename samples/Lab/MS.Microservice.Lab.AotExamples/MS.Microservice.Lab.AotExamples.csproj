@@ -6,6 +6,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
   </ItemGroup>

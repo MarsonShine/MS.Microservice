@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using MS.Microservice.Core.Reflection;
+using MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 using Xunit;
 
-namespace MS.Microservice.Core.Tests.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Tests.Reflection;
 
 /// <summary>
 /// 属性访问器的编译契约：顺序、过滤、装箱与读写委托在两个实现下必须一致。
 /// 这边只锁定访问器本身；查询字符串的端到端同源对比见
-/// <c>MS.Microservice.Core.Tests.Net.Http.QueryStringStrategyParityTests</c>。
+/// <c>MS.Microservice.Lab.AotExamples.Tests.Reflection.QueryStringStrategyParityTests</c>。
 /// </summary>
 public sealed class PropertyAccessorsTests
 {

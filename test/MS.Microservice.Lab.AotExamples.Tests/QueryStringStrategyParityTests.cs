@@ -5,10 +5,10 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using MS.Microservice.Core.Net.Http;
-using MS.Microservice.Core.Reflection;
+using MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 using Xunit;
 
-namespace MS.Microservice.Core.Tests.Net.Http;
+namespace MS.Microservice.Lab.AotExamples.Tests.Reflection;
 
 /// <summary>
 /// IL 与表达树两个实现必须逐字节同源：同一批查询对象、同一组断言，切换策略各跑一遍。

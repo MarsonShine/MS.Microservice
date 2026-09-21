@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace MS.Microservice.Core.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 
 /// <summary>某种编译实现的静态开关，类型对象恒为单例，比较引用即可。</summary>
 public interface IPropertyAccessorStrategy

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MS.Microservice.Core.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 
 /// <summary>两种编译实现共享的类型过滤与顺序契约。</summary>
 public abstract class PropertyAccessorStrategy : IPropertyAccessorStrategy

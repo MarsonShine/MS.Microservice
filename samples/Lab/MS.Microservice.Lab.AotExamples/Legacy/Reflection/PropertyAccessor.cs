@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace MS.Microservice.Core.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 
 /// <summary>某个类型上一个属性的编译访问器：元数据只读取一次，读取值不再经过反射。</summary>
 /// <param name="Property">原始反射元数据，供需要特性、<see cref="MemberInfo.MetadataToken" /> 等信息的调用方使用。</param>

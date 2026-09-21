@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using MS.Microservice.Core.Net.Http;
 
-namespace MS.Microservice.Core.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 
 /// <summary>用表达树编译的对照实现，语义与 <see cref="IlPropertyAccessorStrategy" /> 完全一致。</summary>
 /// <remarks>

@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using MS.Microservice.Core.Net.Http;
 
-namespace MS.Microservice.Core.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Reflection;
 
 /// <summary>用 <c>DynamicMethod</c> + <c>ILGenerator</c> 直接发射 MSIL 的编译实现。</summary>
 /// <remarks>
