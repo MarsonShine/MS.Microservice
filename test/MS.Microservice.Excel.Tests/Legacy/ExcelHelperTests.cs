@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using MS.Microservice.Excel.Aot;
+using MS.Microservice.Infrastructure.Utils;
+using MS.Microservice.Infrastructure.Utils.Excel;
 using Xunit;
 
-namespace MS.Microservice.Excel.Tests.Aot
+namespace MS.Microservice.Excel.Tests.Legacy
 {
     public class ExcelHelperTests
     {
@@ -23,11 +24,22 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class SampleRow
         {
+            [ExcelColumn(Name = "ID", Order = 0)]
             public int Id { get; set; }
+
+            [ExcelColumn(Name = "名称", Order = 1)]
             public string? Name { get; set; }
+
+            [ExcelColumn(Name = "金额", Order = 2)]
             public decimal Amount { get; set; }
+
+            [ExcelColumn(Name = "日期", Order = 3)]
             public DateTime Date { get; set; }
+
+            [ExcelColumn(Name = "启用", Order = 4)]
             public bool Enabled { get; set; }
+
+            [ExcelColumn(Name = "状态", Order = 5)]
             public MyEnum Status { get; set; }
         }
 
@@ -38,26 +50,8 @@ namespace MS.Microservice.Excel.Tests.Aot
             public DateTime C { get; set; }
         }
 
-        private static readonly ExcelModelMap<SampleRow> SampleRowMap = new(static () => new SampleRow(),
-            ExcelColumn<SampleRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32),
-            ExcelColumn<SampleRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v!, ExcelValueConverters.String),
-            ExcelColumn<SampleRow>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, ExcelValueConverters.Decimal),
-            ExcelColumn<SampleRow>.Create("日期", static r => r.Date, static (r, v) => r.Date = v, ExcelValueConverters.DateTime),
-            ExcelColumn<SampleRow>.Create("启用", static r => r.Enabled, static (r, v) => r.Enabled = v, ExcelValueConverters.Boolean),
-            ExcelColumn<SampleRow>.Create("状态", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<MyEnum>()));
-
-        private static readonly ExcelModelMap<PlainRow> PlainRowMap = new(static () => new PlainRow(),
-            ExcelColumn<PlainRow>.Create("A", static r => r.A, static (r, v) => r.A = v, ExcelValueConverters.Int32),
-            ExcelColumn<PlainRow>.Create("B", static r => r.B, static (r, v) => r.B = v!, ExcelValueConverters.String),
-            ExcelColumn<PlainRow>.Create("C", static r => r.C, static (r, v) => r.C = v, ExcelValueConverters.DateTime));
-
-        private static readonly ExcelModelMap<MixedRow> MixedRowMap = new(static () => new MixedRow(),
-            ExcelColumn<MixedRow>.Create("显示名", static r => r.Display, static (r, v) => r.Display = v!, ExcelValueConverters.String),
-            ExcelColumn<MixedRow>.Create("Keep", static r => r.Keep, static (r, v) => r.Keep = v, ExcelValueConverters.Int32),
-            ExcelColumn<MixedRow>.Create("Tail", static r => r.Tail, static (r, v) => r.Tail = v, ExcelValueConverters.DateTime));
-
         [Fact]
-        public void Export_ExplicitMap_ShouldUseDeclaredHeaders()
+        public void Export_WithoutAttributes_ShouldUsePropertyNamesAsHeaders()
         {
             var helper = new ExcelHelper();
             var data = new List<PlainRow>
@@ -65,7 +59,7 @@ namespace MS.Microservice.Excel.Tests.Aot
                 new PlainRow { A = 1, B = "x", C = new DateTime(2024, 1, 1) }
             };
 
-            var bytes = helper.Export(data, "S", PlainRowMap);
+            var bytes = helper.Export(data, "S");
             using var ms = new MemoryStream(bytes);
             using var wb = new XSSFWorkbook(ms);
             var sheet = wb.GetSheet("S");
@@ -77,7 +71,7 @@ namespace MS.Microservice.Excel.Tests.Aot
         }
 
         [Fact]
-        public void Import_ExplicitMap_ShouldMatchDeclaredHeaders()
+        public void Import_WithoutAttributes_ShouldMapByPropertyNames()
         {
             var wb = new XSSFWorkbook();
             var s = wb.CreateSheet("S");
@@ -98,7 +92,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<PlainRow>("t.xlsx", ms, PlainRowMap);
+                .Import<PlainRow>("t.xlsx", ms);
 
             rows.Should().HaveCount(1);
             rows[0].A.Should().Be(10);
@@ -107,14 +101,14 @@ namespace MS.Microservice.Excel.Tests.Aot
         }
 
         [Fact]
-        public void Export_ExplicitMap_ShouldOmitUndeclaredProperties()
+        public void MixedAttributes_ShouldHonorIgnore_And_DefaultToPropertyName()
         {
             var helper = new ExcelHelper();
             var data = new List<MixedRow>
             {
                 new MixedRow { Skip = "S", Keep = 2, Display = "D", Tail = new DateTime(2024, 3, 3) }
             };
-            var bytes = helper.Export(data, "S", MixedRowMap);
+            var bytes = helper.Export(data, "S");
 
             using var ms = new MemoryStream(bytes);
             using var wb = new XSSFWorkbook(ms);
@@ -135,9 +129,12 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class MixedRow
         {
+            [ExcelColumn(Ignore = true)]
             public string Skip { get; set; } = string.Empty;
 
             public int Keep { get; set; }
+
+            [ExcelColumn(Name = "显示名", Order = 1)]
             public string Display { get; set; } = string.Empty;
 
             public DateTime Tail { get; set; }
@@ -160,7 +157,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             };
 
             var helper = new ExcelHelper();
-            var bytes = helper.Export(data, "Sheet1", SampleRowMap);
+            var bytes = helper.Export(data, "Sheet1");
 
             using var ms = new MemoryStream(bytes);
             using var wb = new XSSFWorkbook(ms);
@@ -222,7 +219,7 @@ namespace MS.Microservice.Excel.Tests.Aot
                 .InitSheetName("SheetA")
                 .InitStartReadRowIndex(0, 1);
 
-            var rows = helper.Import<SampleRow>("test.xlsx", ms, SampleRowMap);
+            var rows = helper.Import<SampleRow>("test.xlsx", ms);
 
             rows.Should().HaveCount(1);
             var row = rows[0];
@@ -261,7 +258,7 @@ namespace MS.Microservice.Excel.Tests.Aot
                 .InitSheetIndex(0)
                 .InitStartReadRowIndex(0, 1);
 
-            var rows = helper.Import<SampleRow>("missing.xlsx", ms, SampleRowMap);
+            var rows = helper.Import<SampleRow>("missing.xlsx", ms);
 
             rows.Should().HaveCount(1);
             var row = rows[0];
@@ -291,7 +288,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             };
 
             await using var ms = new MemoryStream();
-            await helper.ExportAsync(data, "AsyncSheet", ms, SampleRowMap);
+            await helper.ExportAsync(data, "AsyncSheet", ms);
             ms.Position = 0;
 
             using var wb = new XSSFWorkbook(ms);
@@ -331,7 +328,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = await new ExcelHelper()
                 .InitSheetName("AsyncImport")
                 .InitStartReadRowIndex(0, 1)
-                .ImportAsync<SampleRow>("async.xlsx", ms, SampleRowMap);
+                .ImportAsync<SampleRow>("async.xlsx", ms);
 
             rows.Should().HaveCount(1);
             rows[0].Id.Should().Be(8);
@@ -379,7 +376,7 @@ namespace MS.Microservice.Excel.Tests.Aot
                 }
             };
 
-            await helper.ExportAsync(data, "PipeSheet", pipe.Writer, SampleRowMap);
+            await helper.ExportAsync(data, "PipeSheet", pipe.Writer);
             await pipe.Writer.CompleteAsync();
 
             await using var ms = new MemoryStream();
@@ -424,7 +421,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = await new ExcelHelper()
                 .InitSheetIndex(0)
                 .InitStartReadRowIndex(0, 1)
-                .ImportAsync<SampleRow>("pipe.xlsx", pipe.Reader, SampleRowMap);
+                .ImportAsync<SampleRow>("pipe.xlsx", pipe.Reader);
 
             rows.Should().HaveCount(1);
             rows[0].Id.Should().Be(11);
@@ -460,7 +457,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("NonSeekable")
                 .InitStartReadRowIndex(0, 1)
-                .Import<SampleRow>("non-seekable.xlsx", nonSeekable, SampleRowMap);
+                .Import<SampleRow>("non-seekable.xlsx", nonSeekable);
 
             rows.Should().HaveCount(1);
             rows[0].Id.Should().Be(12);
@@ -480,7 +477,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var action = () => new ExcelHelper()
                 .InitSheetName("Missing")
                 .InitStartReadRowIndex(0, 1)
-                .Import<SampleRow>("missing.xlsx", stream, SampleRowMap);
+                .Import<SampleRow>("missing.xlsx", stream);
 
             action.Should().Throw<InvalidOperationException>()
                 .WithMessage("*未找到名称为 Missing 的工作表*");

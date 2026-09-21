@@ -1,5 +1,7 @@
 # Excel 模型映射：把运行时发现移到调用方声明
 
+当前静态实现位于 `src/MS.Microservice.Excel.Aot`，使用 `MS.Microservice.Excel.Aot` 命名空间；原命名空间下的旧接口已恢复并独立保留。两套实现由同一项目分别打包，见 [目录与打包说明](../../../src/MS.Microservice.Excel.Aot/README.md)。
+
 旧实现先扫描属性和 `ExcelColumnAttribute`，再从 `PropertyAccessors` 获取动态生成的 getter、setter 和构造器；结果按类型缓存。缓存已经避免逐行反射，因此这次主要解决 **AOT compatibility**，没有声称每一行都会省掉一次反射。完整旧实现保存在 `Legacy/Excel/ExcelHelper.cs.txt`，可运行的最小机制在 `Legacy/Excel/ColumnDiscovery.cs`。
 
 新实现要求调用方提供 `ExcelModelMap<T>`：工厂决定如何创建每一行对象，列数组决定顺序与列名，普通泛型委托负责读写，转换器负责文本解析。编译器能看到具体构造器和属性访问，不需要运行时寻找成员或生成 IL。`Static/Excel/ColumnMapping.cs` 独立展示了声明列与执行委托的核心过程。

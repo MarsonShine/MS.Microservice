@@ -1,6 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <!-- Set paths before SDK imports so restore/build outputs of each variant remain independent. -->
+  <PropertyGroup>
+    <ExcelVariant Condition="'$(ExcelVariant)' == ''">All</ExcelVariant>
+    <BaseIntermediateOutputPath>obj/$(ExcelVariant)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/$(ExcelVariant)/</BaseOutputPath>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj/**;bin/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <OutputType>Library</OutputType>
+    <AssemblyName Condition="'$(ExcelVariant)' == 'Aot'">MS.Microservice.Excel.Aot</AssemblyName>
+    <PackageId Condition="'$(ExcelVariant)' == 'Aot'">MS.Microservice.Excel.Aot</PackageId>
     <EnableOfficeDiagnostics Condition="'$(EnableOfficeDiagnostics)' == ''">false</EnableOfficeDiagnostics>
     <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
   </PropertyGroup>
@@ -11,6 +21,19 @@
     <InternalsVisibleTo Include="MS.Microservice.Excel.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="**/*.cs" Condition="'$(ExcelVariant)' == 'Aot'" />
+    <Compile Include="../MS.Microservice.Excel.Aot/**/*.cs" Condition="'$(ExcelVariant)' != 'Legacy'" Link="MS.Microservice.Excel.Aot/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MiniExcel" Condition="'$(ExcelVariant)' != 'Aot'" />
     <PackageReference Include="NPOI" />
   </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <Target Name="ValidateExcelVariant" BeforeTargets="PrepareForBuild;CollectPackageReferences">
+    <Error Condition="'$(ExcelVariant)' != 'All' and '$(ExcelVariant)' != 'Legacy' and '$(ExcelVariant)' != 'Aot'"
+           Text="ExcelVariant must be All, Legacy or Aot." />
+  </Target>
+  <Target Name="RequireExcelPackageVariant" BeforeTargets="GenerateNuspec" Condition="'$(ExcelVariant)' == 'All'">
+    <Error Text="Choose -p:ExcelVariant=Legacy or -p:ExcelVariant=Aot when packing Excel." />
+  </Target>
 </Project>

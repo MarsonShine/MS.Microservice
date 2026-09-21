@@ -7,3 +7,5 @@
 迁移：`PropertyAccessors.Materializer(typeof(Request))(request, destination)` 改为 `QueryStringParameters.Dispatch(request, destination, RequestMap)`；`RequestMap` 逐项声明名称与读取委托。Excel 的 factory、getter、setter 和值转换使用显式列定义，详见 [ExcelModelMappings.md](ExcelModelMappings.md)。
 
 完整旧实现放在 `Legacy/Reflection`，改用学习区命名空间，原访问器/查询策略对照测试也移到学习测试项目。静态对照实现和同输入测试已在 `Static/Query` 与 `Static/Excel` 中；学习类库不打包，生产组件不引用它。旧测试仍验证顺序、空集合、值类型、工厂和 setter，保留用于理解历史机制，不意味着这些实现适合 AOT。
+
+Excel 兼容性修正恢复了旧 Excel 接口，但未恢复 Core 的通用 PropertyAccessors。旧 Excel 的成员发现与编译封装在其内部，只进入 Legacy/All 构建；Aot 构建不包含它。

@@ -1,22 +1,18 @@
-using MS.Microservice.Infrastructure.Utils.Diagnostics;
-using MS.Microservice.Infrastructure.Utils.Excel;
+using MS.Microservice.Excel.Aot.Diagnostics;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MS.Microservice.Infrastructure.Utils;
+namespace MS.Microservice.Excel.Aot;
 
 public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsyncExcelExport
 {
-    private static readonly ConcurrentDictionary<Type, ExcelTypeMeta> TypeMetaCache = new();
     [ThreadStatic]
     private static DataFormatter? threadDataFormatter;
     private IWorkbook? workbook;
@@ -33,45 +29,45 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
 
     public IWorkbook? Workbook => workbook;
 
-    public byte[] Export<T>(List<T> source, string sheetName)
+    public byte[] Export<T>(List<T> source, string sheetName, ExcelModelMap<T> map) where T : class
     {
         using MemoryStream buffer = new();
-        Export((IReadOnlyList<T>)source, sheetName, buffer);
+        Export((IReadOnlyList<T>)source, sheetName, buffer, map);
         return buffer.ToArray();
     }
 
-    public void Export<T>(IReadOnlyList<T> source, string sheetName, Stream destination)
+    public void Export<T>(IReadOnlyList<T> source, string sheetName, Stream destination, ExcelModelMap<T> map) where T : class
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(destination);
 
         BeginDiagnosticPhase("export-workbook-create");
-        using IWorkbook currentWorkbook = CreateWorkbook(source, sheetName);
+        using IWorkbook currentWorkbook = CreateWorkbook(source, sheetName, map);
         BeginDiagnosticPhase("export-workbook-write");
         currentWorkbook.Write(destination, leaveOpen: true);
         EndDiagnosticPhase();
     }
 
-    public async ValueTask ExportAsync<T>(IReadOnlyList<T> source, string sheetName, Stream destination, CancellationToken cancellationToken = default)
+    public async ValueTask ExportAsync<T>(IReadOnlyList<T> source, string sheetName, Stream destination, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(destination);
         cancellationToken.ThrowIfCancellationRequested();
 
         BeginDiagnosticPhase("export-workbook-create");
-        using IWorkbook currentWorkbook = CreateWorkbook(source, sheetName);
+        using IWorkbook currentWorkbook = CreateWorkbook(source, sheetName, map);
         BeginDiagnosticPhase("export-workbook-write");
         await WriteWorkbookAsync(currentWorkbook, destination, cancellationToken).ConfigureAwait(false);
     }
 
-    public async ValueTask ExportAsync<T>(IReadOnlyList<T> source, string sheetName, PipeWriter destination, CancellationToken cancellationToken = default)
+    public async ValueTask ExportAsync<T>(IReadOnlyList<T> source, string sheetName, PipeWriter destination, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(destination);
         cancellationToken.ThrowIfCancellationRequested();
 
         BeginDiagnosticPhase("export-workbook-create");
-        using IWorkbook currentWorkbook = CreateWorkbook(source, sheetName);
+        using IWorkbook currentWorkbook = CreateWorkbook(source, sheetName, map);
         BeginDiagnosticPhase("export-workbook-write");
         await WriteWorkbookAsync(currentWorkbook, destination, cancellationToken).ConfigureAwait(false);
     }
@@ -116,11 +112,12 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         await WriteWorkbookAsync(currentWorkbook, destination, cancellationToken).ConfigureAwait(false);
     }
 
-    private static IWorkbook CreateWorkbook<T>(IReadOnlyList<T> source, string sheetName)
+    private static IWorkbook CreateWorkbook<T>(IReadOnlyList<T> source, string sheetName, ExcelModelMap<T> map) where T : class
     {
+        ArgumentNullException.ThrowIfNull(map);
         var currentWorkbook = new XSSFWorkbook();
         var currentSheet = currentWorkbook.CreateSheet(sheetName);
-        var meta = GetOrCreateTypeMeta(typeof(T));
+        var meta = map;
         var dateStyle = CreateDateCellStyle(currentWorkbook);
         SetExcelTitle(currentSheet, meta);
         SetExcelBody(currentSheet, source, meta, dateStyle);
@@ -158,7 +155,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return currentWorkbook;
     }
 
-    private static void SetExcelTitle(ISheet sheet, ExcelTypeMeta meta)
+    private static void SetExcelTitle<T>(ISheet sheet, ExcelModelMap<T> meta) where T : class
     {
         var slots = meta.Slots;
         IRow title = sheet.CreateRow(0);
@@ -168,7 +165,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    private static void SetExcelBody<T>(ISheet sheet, IReadOnlyList<T> source, ExcelTypeMeta meta, ICellStyle dateStyle)
+    private static void SetExcelBody<T>(ISheet sheet, IReadOnlyList<T> source, ExcelModelMap<T> meta, ICellStyle dateStyle) where T : class
     {
         if (source.Count == 0)
         {
@@ -193,18 +190,18 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    public List<T> Import<T>(byte[] data)
+    public List<T> Import<T>(byte[] data, ExcelModelMap<T> map) where T : class
     {
         using MemoryStream ms = new(data, writable: false);
-        return Import<T>("unknown.xlsx", ms);
+        return Import<T>("unknown.xlsx", ms, map);
     }
 
-    public ValueTask<List<T>> ImportAsync<T>(byte[] data, CancellationToken cancellationToken = default)
+    public ValueTask<List<T>> ImportAsync<T>(byte[] data, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
-        return ImportAsync<T>("unknown.xlsx", data, cancellationToken);
+        return ImportAsync<T>("unknown.xlsx", data, map, cancellationToken);
     }
 
-    private int[] RentColumnIndexMap(ExcelTypeMeta meta, out int columnCount)
+    private int[] RentColumnIndexMap<T>(ExcelModelMap<T> meta, out int columnCount) where T : class
     {
         var titleRow = sheet?.GetRow(titleRowIndex) ?? throw new InvalidOperationException("未找到标题行");
         columnCount = titleRow.LastCellNum;
@@ -238,7 +235,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return columnIndexMap;
     }
 
-    private List<T> ReadBody<T>(ExcelTypeMeta meta, int[] columnIndexMap, int columnCount, DataFormatter formatter, IFormulaEvaluator evaluator)
+    private List<T> ReadBody<T>(ExcelModelMap<T> meta, int[] columnIndexMap, int columnCount, DataFormatter formatter, IFormulaEvaluator evaluator) where T : class
     {
         var targetSheet = sheet ?? throw new InvalidOperationException("未找到工作表");
         var slots = meta.Slots;
@@ -252,7 +249,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                 continue;
             }
 
-            T obj = (T)factory();
+            T obj = factory();
             for (int j = 0; j < columnCount; j++)
             {
                 var propertyLocation = columnIndexMap[j];
@@ -270,7 +267,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                 var slot = slots[propertyLocation];
 
                 // Fast path: try direct cell-type-based reading (avoids string allocation)
-                if (TryReadCellDirectly(cell, slot.TargetTypeCode, slot.TargetType, evaluator, out object? directValue))
+                if (TryReadCellDirectly(cell, slot.TargetTypeCode, slot.Parse, evaluator, out object? directValue))
                 {
                     slot.Setter(obj!, directValue);
                     continue;
@@ -283,7 +280,10 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     continue;
                 }
 
-                SetPropertyValue(obj!, slot, value);
+                if (slot.Parse(value, out object? parsed))
+                {
+                    slot.Setter(obj, parsed);
+                }
             }
 
             list.Add(obj);
@@ -292,21 +292,22 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return list;
     }
 
-    public List<T> Import<T>(string fileName, byte[] data)
+    public List<T> Import<T>(string fileName, byte[] data, ExcelModelMap<T> map) where T : class
     {
         using MemoryStream ms = new(data, writable: false);
-        return Import<T>(fileName, ms);
+        return Import<T>(fileName, ms, map);
     }
 
-    public async ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, CancellationToken cancellationToken = default)
+    public async ValueTask<List<T>> ImportAsync<T>(string fileName, byte[] data, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
         using MemoryStream ms = new(data, writable: false);
-        return await ImportAsync<T>(fileName, ms, cancellationToken).ConfigureAwait(false);
+        return await ImportAsync<T>(fileName, ms, map, cancellationToken).ConfigureAwait(false);
     }
 
-    public List<T> Import<T>(string fileName, Stream stream)
+    public List<T> Import<T>(string fileName, Stream stream, ExcelModelMap<T> map) where T : class
     {
+        ArgumentNullException.ThrowIfNull(map);
         int[]? columnIndexMap = null;
         try
         {
@@ -325,7 +326,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             sheet = ResolveSheet(workbook);
 
             BeginDiagnosticPhase("import-meta-cache");
-            var meta = GetOrCreateTypeMeta(typeof(T));
+            var meta = map;
 
             var formatter = GetThreadDataFormatter();
             var evaluator = workbook.GetCreationHelper().CreateFormulaEvaluator();
@@ -351,24 +352,24 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    public async ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, CancellationToken cancellationToken = default)
+    public async ValueTask<List<T>> ImportAsync<T>(string fileName, Stream stream, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(stream);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (stream.CanSeek)
         {
-            return Import<T>(fileName, stream);
+            return Import<T>(fileName, stream, map);
         }
 
         BeginDiagnosticPhase("import-stream-buffer-copy");
         using MemoryStream bufferedStream = new();
         await stream.CopyToAsync(bufferedStream, cancellationToken).ConfigureAwait(false);
         bufferedStream.Position = 0;
-        return Import<T>(fileName, bufferedStream);
+        return Import<T>(fileName, bufferedStream, map);
     }
 
-    public async ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, CancellationToken cancellationToken = default)
+    public async ValueTask<List<T>> ImportAsync<T>(string fileName, PipeReader reader, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(reader);
         cancellationToken.ThrowIfCancellationRequested();
@@ -378,7 +379,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         using Stream readerStream = reader.AsStream(leaveOpen: true);
         await readerStream.CopyToAsync(bufferedStream, cancellationToken).ConfigureAwait(false);
         bufferedStream.Position = 0;
-        return Import<T>(fileName, bufferedStream);
+        return Import<T>(fileName, bufferedStream, map);
     }
 
     public ExcelHelper InitSheetIndex(int sheetIndex)
@@ -446,30 +447,31 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return currentWorkbook.GetSheetAt(resolvedSheetIndex);
     }
 
-    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, List<T> source)
+    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, List<T> source, ExcelModelMap<T> map) where T : class
     {
-        return OpenExcel(fileStream, (IReadOnlyList<T>)source);
+        return OpenExcel(fileStream, (IReadOnlyList<T>)source, map);
     }
 
-    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, IReadOnlyList<T> source)
+    public DynamicExcelBuilder<T> OpenExcel<T>(Stream fileStream, IReadOnlyList<T> source, ExcelModelMap<T> map) where T : class
     {
         ArgumentNullException.ThrowIfNull(fileStream);
         ArgumentNullException.ThrowIfNull(source);
 
+        ArgumentNullException.ThrowIfNull(map);
         PrepareStreamForRead(fileStream);
 
         IWorkbook currentWorkbook = WorkbookFactory.Create(fileStream);
         ISheet sheetAt = ResolveSheet(currentWorkbook);
-        return new DynamicExcelBuilder<T>(currentWorkbook, sheetAt, source);
+        return new DynamicExcelBuilder<T>(currentWorkbook, sheetAt, source, map);
     }
 
-    public ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(Stream fileStream, IReadOnlyList<T> source, CancellationToken cancellationToken = default)
+    public ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(Stream fileStream, IReadOnlyList<T> source, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return ValueTask.FromResult(OpenExcel(fileStream, source));
+        return ValueTask.FromResult(OpenExcel(fileStream, source, map));
     }
 
-    public async ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(PipeReader reader, IReadOnlyList<T> source, CancellationToken cancellationToken = default)
+    public async ValueTask<DynamicExcelBuilder<T>> OpenExcelAsync<T>(PipeReader reader, IReadOnlyList<T> source, ExcelModelMap<T> map, CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(reader);
         ArgumentNullException.ThrowIfNull(source);
@@ -480,13 +482,13 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         using Stream readerStream = reader.AsStream(leaveOpen: true);
         await readerStream.CopyToAsync(bufferedStream, cancellationToken).ConfigureAwait(false);
         bufferedStream.Position = 0;
-        return OpenExcel(bufferedStream, source);
+        return OpenExcel(bufferedStream, source, map);
     }
 
-    public DynamicExcelBuilder<T> OpenExcel<T>(string filePath, List<T> source)
+    public DynamicExcelBuilder<T> OpenExcel<T>(string filePath, List<T> source, ExcelModelMap<T> map) where T : class
     {
         using Stream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        return OpenExcel(fileStream, source);
+        return OpenExcel(fileStream, source, map);
     }
 
     private static void PrepareStreamForRead(Stream stream)
@@ -517,60 +519,6 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         await writerStream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static ExcelTypeMeta GetOrCreateTypeMeta(Type type)
-    {
-        return TypeMetaCache.GetOrAdd(type, static currentType =>
-        {
-            // 属性的元数据发现与读取委托统一由 ExcelPropertyAccessors 提供，本方法只负责列名与排序语义。
-            var slots = ExcelPropertyAccessors.Get(currentType)
-                .Select(accessor => new
-                {
-                    Accessor = accessor,
-                    Attribute = accessor.Property.GetCustomAttribute<ExcelColumnAttribute>(inherit: false)
-                })
-                .Where(item => item.Attribute?.Ignore != true)
-                .OrderBy(item => item.Attribute?.Order ?? int.MaxValue)
-                .ThenBy(item => item.Accessor.Property.MetadataToken)
-                .Select(item =>
-                {
-                    var targetType = Nullable.GetUnderlyingType(item.Accessor.PropertyType) ?? item.Accessor.PropertyType;
-                    var columnName = item.Attribute?.Name?.Trim() ?? item.Accessor.Name;
-                    return new ExcelPropertySlot(
-                        columnName,
-                        item.Accessor.GetValue!,
-                        item.Accessor.SetValue ?? SkipWrite,
-                        targetType,
-                        Type.GetTypeCode(targetType));
-                })
-                .ToArray();
-
-            var nameToSlotIndex = new Dictionary<string, int>(slots.Length, StringComparer.Ordinal);
-            for (int i = 0; i < slots.Length; i++)
-            {
-                nameToSlotIndex[slots[i].ColumnName] = i;
-            }
-
-            // 读取路径需要逐行 new T()，没有公开无参构造函数的类型在这里就报错，而不是等 factory() 抛空引用。
-            var factory = ExcelPropertyAccessors.Factory(currentType)
-                ?? throw new InvalidOperationException($"{currentType.FullName} 没有公开无参构造函数，无法作为 Excel 读取模型。");
-
-            return new ExcelTypeMeta(factory, slots, nameToSlotIndex);
-        });
-    }
-
-    /// <summary>属性不可写（如 <c>init</c> 或只读计算属性）时占位，保持写入路径无分支。</summary>
-    private static readonly Action<object, object?> SkipWrite = static (_, _) => { };
-
-    private static void SetPropertyValue<T>(T target, ExcelPropertySlot slot, string value)
-    {
-        if (!TryConvertValue(value, slot.TargetTypeCode, slot.TargetType, out object? convertedValue))
-        {
-            return;
-        }
-
-        slot.Setter(target!, convertedValue);
-    }
-
     [Conditional("MS_Microservice_DIAGNOSTICS")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void BeginDiagnosticPhase(string phaseName)
@@ -594,7 +542,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
     /// Try to read a cell value directly by <see cref="ICell.CellType"/>, avoiding the
     /// <see cref="DataFormatter"/> string round-trip for numeric and boolean cells.
     /// </summary>
-    private static bool TryReadCellDirectly(ICell cell, TypeCode targetTypeCode, Type targetType, IFormulaEvaluator evaluator, out object? value)
+    private static bool TryReadCellDirectly(ICell cell, TypeCode targetTypeCode, ExcelTryParse<object?> parse, IFormulaEvaluator evaluator, out object? value)
     {
         value = null;
         var cellType = cell.CellType;
@@ -606,7 +554,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             {
                 var evaluated = evaluator.Evaluate(cell);
                 if (evaluated == null) return false;
-                return TryReadEvaluatedCellValue(evaluated, targetTypeCode, targetType, out value);
+                return TryReadEvaluatedCellValue(evaluated, targetTypeCode, parse, out value);
             }
             catch
             {
@@ -615,13 +563,13 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
 
         // Non-formula cells: read directly from cell
-        return TryReadNonFormulaCellValue(cell, cellType, targetTypeCode, targetType, out value);
+        return TryReadNonFormulaCellValue(cell, cellType, targetTypeCode, parse, out value);
     }
 
     /// <summary>
     /// Read value from a non-formula cell directly by its <see cref="CellType"/>.
     /// </summary>
-    private static bool TryReadNonFormulaCellValue(ICell cell, CellType cellType, TypeCode targetTypeCode, Type targetType, out object? value)
+    private static bool TryReadNonFormulaCellValue(ICell cell, CellType cellType, TypeCode targetTypeCode, ExcelTryParse<object?> parse, out object? value)
     {
         value = null;
 
@@ -630,7 +578,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             case CellType.Numeric:
                 double numericValue = cell.NumericCellValue;
                 // DateTime: use NPOI's DateUtil for direct date extraction
-                if (targetTypeCode == TypeCode.DateTime || targetType == typeof(DateTime))
+                if (targetTypeCode == TypeCode.DateTime)
                 {
                     if (DateUtil.IsCellDateFormatted(cell))
                     {
@@ -661,7 +609,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     value = strValue;
                     return true;
                 }
-                return TryConvertValue(strValue, targetTypeCode, targetType, out value);
+                return parse(strValue, out value);
 
             case CellType.Boolean:
                 bool boolValue = cell.BooleanCellValue;
@@ -670,7 +618,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     value = boolValue;
                     return true;
                 }
-                return TryConvertValue(boolValue.ToString(), targetTypeCode, targetType, out value);
+                return parse(boolValue.ToString(), out value);
 
             case CellType.Blank:
                 return false;
@@ -684,7 +632,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
     /// Read value from an evaluated formula result (<see cref="NPOI.SS.UserModel.CellValue"/>).
     /// This avoids the inconsistency of checking type from evaluated result but reading from raw cell.
     /// </summary>
-    private static bool TryReadEvaluatedCellValue(NPOI.SS.UserModel.CellValue evaluated, TypeCode targetTypeCode, Type targetType, out object? value)
+    private static bool TryReadEvaluatedCellValue(NPOI.SS.UserModel.CellValue evaluated, TypeCode targetTypeCode, ExcelTryParse<object?> parse, out object? value)
     {
         value = null;
 
@@ -692,7 +640,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         {
             case CellType.Numeric:
                 double numericValue = evaluated.NumberValue;
-                if (targetTypeCode == TypeCode.DateTime || targetType == typeof(DateTime))
+                if (targetTypeCode == TypeCode.DateTime)
                 {
                     // For formula-evaluated dates, we lack cell format info — fall back
                     return false;
@@ -710,7 +658,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     value = strValue;
                     return true;
                 }
-                return TryConvertValue(strValue, targetTypeCode, targetType, out value);
+                return parse(strValue, out value);
 
             case CellType.Boolean:
                 bool boolValue = evaluated.BooleanValue;
@@ -719,7 +667,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                     value = boolValue;
                     return true;
                 }
-                return TryConvertValue(boolValue.ToString(), targetTypeCode, targetType, out value);
+                return parse(boolValue.ToString(), out value);
 
             case CellType.Blank:
             default:
@@ -801,84 +749,6 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return false;
     }
 
-    private static bool TryConvertValue(string value, TypeCode typeCode, Type targetType, out object? convertedValue)
-    {
-        if (typeCode == TypeCode.String)
-        {
-            convertedValue = value;
-            return true;
-        }
-
-        if (typeCode == TypeCode.DateTime)
-        {
-            var parsed = DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime)
-                || DateTime.TryParse(value, out dateTime);
-            convertedValue = parsed ? dateTime : null;
-            return parsed;
-        }
-
-        // Guid reports TypeCode.Object, handle it before the general switch
-        if (targetType == typeof(Guid))
-        {
-            var parsed = Guid.TryParse(value, out Guid guid);
-            convertedValue = parsed ? guid : null;
-            return parsed;
-        }
-
-        if (targetType.IsEnum)
-        {
-            try
-            {
-                convertedValue = Enum.Parse(targetType, value, ignoreCase: true);
-                return true;
-            }
-            catch
-            {
-                convertedValue = null;
-                return false;
-            }
-        }
-
-        switch (typeCode)
-        {
-            case TypeCode.Boolean:
-                var parsedBoolean = bool.TryParse(value, out bool booleanValue);
-                convertedValue = parsedBoolean ? booleanValue : null;
-                return parsedBoolean;
-            case TypeCode.Byte:
-                var parsedByte = byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out byte byteValue);
-                convertedValue = parsedByte ? byteValue : null;
-                return parsedByte;
-            case TypeCode.Decimal:
-                var parsedDecimal = decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal decimalValue);
-                convertedValue = parsedDecimal ? decimalValue : null;
-                return parsedDecimal;
-            case TypeCode.Double:
-                var parsedDouble = double.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double doubleValue);
-                convertedValue = parsedDouble ? doubleValue : null;
-                return parsedDouble;
-            case TypeCode.Int16:
-                var parsedInt16 = short.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out short int16Value);
-                convertedValue = parsedInt16 ? int16Value : null;
-                return parsedInt16;
-            case TypeCode.Int32:
-                var parsedInt32 = int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int int32Value);
-                convertedValue = parsedInt32 ? int32Value : null;
-                return parsedInt32;
-            case TypeCode.Int64:
-                var parsedInt64 = long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long int64Value);
-                convertedValue = parsedInt64 ? int64Value : null;
-                return parsedInt64;
-            case TypeCode.Single:
-                var parsedSingle = float.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out float singleValue);
-                convertedValue = parsedSingle ? singleValue : null;
-                return parsedSingle;
-            default:
-                convertedValue = null;
-                return false;
-        }
-    }
-
     private static ICellStyle CreateDateCellStyle(IWorkbook workbook)
     {
         var style = workbook.CreateCellStyle();
@@ -928,10 +798,4 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    private sealed record ExcelPropertySlot(string ColumnName, Func<object, object?> Getter, Action<object, object?> Setter, Type TargetType, TypeCode TargetTypeCode);
-
-    private sealed record ExcelTypeMeta(
-        Func<object> Factory,
-        ExcelPropertySlot[] Slots,
-        Dictionary<string, int> NameToSlotIndex);
 }

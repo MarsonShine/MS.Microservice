@@ -61,3 +61,13 @@ module-manifest.json 记录源提交、文件 SHA-256 和项目闭包。
 
 教育图像场景的源码复制需包含 samples/AI 中的场景类库及其共享依赖；
 它不是 AI.Core 的默认功能。QuestionGeneration Harness 可以单独引用。
+
+## Excel 的兼容包和 AOT 包
+
+Excel 保留唯一项目，`src/MS.Microservice.Excel.Aot` 是同项目编译的独立源码目录。源码导出会同时携带两个目录；通用 pack-modules 脚本继续打兼容包。单独的 AOT 包使用：
+
+```powershell
+dotnet pack src/MS.Microservice.Excel/MS.Microservice.Excel.csproj -c Release -p:ExcelVariant=Aot -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
+```
+
+需要原包时将 ExcelVariant 改为 Legacy。两种包的程序集和命名空间不同，可以同时引用；默认 All 构建只用于开发和测试，打包时必须明确选择。完整调用和验证边界见 [Excel AOT 说明](../../src/MS.Microservice.Excel.Aot/README.md)。

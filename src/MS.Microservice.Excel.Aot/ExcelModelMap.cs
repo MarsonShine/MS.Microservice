@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace MS.Microservice.Infrastructure.Utils.Excel;
+namespace MS.Microservice.Excel.Aot;
 
 /// <summary>Reusable, ordered model mapping. Only explicitly declared columns participate.</summary>
 public sealed class ExcelModelMap<T> where T : class

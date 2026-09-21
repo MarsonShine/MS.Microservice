@@ -1,19 +1,14 @@
-using MS.Microservice.Infrastructure.Utils;
 using NPOI.SS.UserModel;
-using System.Collections.Concurrent;
 using System.IO.Pipelines;
-using System.Reflection;
 
-namespace MS.Microservice.Infrastructure.Utils.Excel
+namespace MS.Microservice.Excel.Aot
 {
-    public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source)
+    public class DynamicExcelBuilder<T>(IWorkbook workbook, ISheet sheetAt, IReadOnlyList<T> source, ExcelModelMap<T> map) where T : class
     {
-        private static readonly ConcurrentDictionary<PropertyInfo, Func<object, object?>> GetterCache = new();
-
         private readonly IWorkbook _workbook = workbook;
         private readonly ISheet _sheet = sheetAt;
         private readonly IReadOnlyList<T> _items = source;
-        private readonly PropertyInfo[] _properties = typeof(T).GetTypeInfo().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        private readonly ExcelModelMap<T> _map = map ?? throw new ArgumentNullException(nameof(map));
         private readonly Dictionary<string, int> _columnMapping = [];
         private ColumnBinding[] _bindings = [];
 
@@ -48,13 +43,9 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
             var titles = titleRow.Cells;
             if (titles.Count == 0)
             {
-                for (int columnIndex = 0; columnIndex < _properties.Length; columnIndex++)
+                for (int columnIndex = 0; columnIndex < _map.Slots.Length; columnIndex++)
                 {
-                    ExcelColumnAttribute? attribute = _properties[columnIndex].GetCustomAttribute<ExcelColumnAttribute>();
-                    if (attribute != null)
-                    {
-                        _columnMapping[attribute.Name ?? _properties[columnIndex].Name] = columnIndex;
-                    }
+                    _columnMapping[_map.Slots[columnIndex].ColumnName] = columnIndex;
                 }
             }
             else
@@ -69,23 +60,15 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
                 }
             }
 
-            _bindings = _properties
-                .Select(property => new { Property = property, Attribute = property.GetCustomAttribute<ExcelColumnAttribute>() })
-                .Where(item => item.Attribute != null)
-                .Select(item =>
+            var bindings = new List<ColumnBinding>(_map.Slots.Length);
+            foreach (var column in _map.Slots)
+            {
+                if (_columnMapping.TryGetValue(column.ColumnName, out int columnIndex))
                 {
-                    string key = item.Attribute!.Name ?? item.Property.Name;
-                    if (!_columnMapping.TryGetValue(key, out int columnIndex))
-                    {
-                        return (ColumnBinding?)null;
-                    }
-
-                    var getter = GetterCache.GetOrAdd(item.Property, static p => ReflectionDelegateFactory.CreateGetter(p));
-                    return new ColumnBinding(getter, columnIndex);
-                })
-                .Where(binding => binding.HasValue)
-                .Select(binding => binding!.Value)
-                .ToArray();
+                    bindings.Add(new ColumnBinding(column.Getter, columnIndex));
+                }
+            }
+            _bindings = bindings.ToArray();
         }
 
         public DynamicExcelBuilder<T> InsertCellValue(int contentRowIndex)
@@ -194,6 +177,6 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
             }
         }
 
-        private readonly record struct ColumnBinding(Func<object, object?> Getter, int ColumnIndex);
+        private readonly record struct ColumnBinding(Func<T, object?> Getter, int ColumnIndex);
     }
 }

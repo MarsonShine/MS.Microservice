@@ -1,6 +1,6 @@
 using System;
 using FluentAssertions;
-using MS.Microservice.Infrastructure.Utils.Diagnostics;
+using MS.Microservice.Excel.Aot.Diagnostics;
 using Xunit;
 
 namespace MS.Microservice.Infrastructure.Tests.Utils.Diagnostics;

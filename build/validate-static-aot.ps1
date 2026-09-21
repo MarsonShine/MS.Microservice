@@ -33,11 +33,16 @@ $projects = @('src', 'MS.Microservice.AI/src', 'MS.Microservice.Messaging/src', 
 $results = @()
 foreach ($project in $projects) {
     $name = $project.BaseName
+    $projectProperties = @($properties)
+    if ($name -eq 'MS.Microservice.Excel') {
+        $projectProperties += '-p:ExcelVariant=Aot'
+        $name = 'MS.Microservice.Excel.Aot'
+    }
     $restoreLog = Join-Path $output "$name.restore.log"
-    & dotnet restore $project.FullName @restoreOptions @properties --verbosity quiet *> $restoreLog
+    & dotnet restore $project.FullName @restoreOptions @projectProperties --verbosity quiet *> $restoreLog
     if ($LASTEXITCODE -ne 0) { Get-Content $restoreLog; throw "Restore failed: $name" }
     $buildLog = Join-Path $output "$name.build.log"
-    & dotnet build $project.FullName --no-restore -t:Rebuild @properties --verbosity normal *> $buildLog
+    & dotnet build $project.FullName --no-restore -t:Rebuild @projectProperties --verbosity normal *> $buildLog
     if ($LASTEXITCODE -ne 0) { Get-Content $buildLog -Tail 60; throw "Analyzer build failed: $name" }
     $log = Get-Content $buildLog -Raw
     if ($log -notmatch '/analyzer:[^\r\n]*ILLink\.RoslynAnalyzer\.dll') {

@@ -20,7 +20,12 @@ try {
     $manifest = Get-Content module-manifest.json -Raw | ConvertFrom-Json
     New-Item -ItemType Directory $packages | Out-Null
     foreach ($project in $manifest.projects) {
-        Invoke-CheckedDotnet pack $project -c Release --no-build --no-restore --output $packages "-p:PackageVersion=$version" --verbosity quiet
+        if ([IO.Path]::GetFileNameWithoutExtension($project) -eq 'MS.Microservice.Excel') {
+            Invoke-CheckedDotnet pack $project -c Release -p:ExcelVariant=Legacy --output $packages "-p:PackageVersion=$version" --verbosity quiet
+        }
+        else {
+            Invoke-CheckedDotnet pack $project -c Release --no-build --no-restore --output $packages "-p:PackageVersion=$version" --verbosity quiet
+        }
     }
 }
 finally { Pop-Location }

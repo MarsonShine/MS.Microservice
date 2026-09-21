@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using MS.Microservice.Excel.Aot;
+using MS.Microservice.Infrastructure.Utils;
+using MS.Microservice.Infrastructure.Utils.Excel;
 using Xunit;
 
-namespace MS.Microservice.Excel.Tests.Aot
+namespace MS.Microservice.Excel.Tests.Legacy
 {
     /// <summary>
     /// Edge case tests for ExcelHelper import/export covering null cells,
@@ -21,29 +22,30 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class EdgeRow
         {
+            [ExcelColumn(Name = "ID", Order = 0)]
             public int Id { get; set; }
+
+            [ExcelColumn(Name = "名称", Order = 1)]
             public string? Name { get; set; }
+
+            [ExcelColumn(Name = "金额", Order = 2)]
             public decimal Amount { get; set; }
+
+            [ExcelColumn(Name = "启用", Order = 3)]
             public bool Enabled { get; set; }
+
+            [ExcelColumn(Name = "状态", Order = 4)]
             public MyEnum Status { get; set; }
         }
 
         private class NullableRow
         {
+            [ExcelColumn(Name = "ID")]
             public int? Id { get; set; }
+
+            [ExcelColumn(Name = "名称")]
             public string? Name { get; set; }
         }
-
-        private static readonly ExcelModelMap<EdgeRow> EdgeRowMap = new(static () => new EdgeRow(),
-            ExcelColumn<EdgeRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32),
-            ExcelColumn<EdgeRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, ExcelValueConverters.String),
-            ExcelColumn<EdgeRow>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, ExcelValueConverters.Decimal),
-            ExcelColumn<EdgeRow>.Create("启用", static r => r.Enabled, static (r, v) => r.Enabled = v, ExcelValueConverters.Boolean),
-            ExcelColumn<EdgeRow>.Create("状态", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<MyEnum>()));
-
-        private static readonly ExcelModelMap<NullableRow> NullableRowMap = new(static () => new NullableRow(),
-            ExcelColumn<NullableRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Nullable(ExcelValueConverters.Int32)),
-            ExcelColumn<NullableRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, ExcelValueConverters.String));
 
         [Fact]
         public void Import_NullCell_ShouldUseDefault()
@@ -69,7 +71,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<EdgeRow>("nulls.xlsx", ms, EdgeRowMap);
+                .Import<EdgeRow>("nulls.xlsx", ms);
 
             rows.Should().HaveCount(1);
             rows[0].Id.Should().Be(5);
@@ -105,7 +107,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<EdgeRow>("enumint.xlsx", ms, EdgeRowMap);
+                .Import<EdgeRow>("enumint.xlsx", ms);
 
             rows.Should().HaveCount(1);
             rows[0].Status.Should().Be(MyEnum.B);
@@ -137,7 +139,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<EdgeRow>("blank.xlsx", ms, EdgeRowMap);
+                .Import<EdgeRow>("blank.xlsx", ms);
 
             rows.Should().HaveCount(1);
             rows[0].Name.Should().BeNull();
@@ -172,7 +174,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<EdgeRow>("multi.xlsx", ms, EdgeRowMap);
+                .Import<EdgeRow>("multi.xlsx", ms);
 
             rows.Should().HaveCount(5);
             rows[0].Id.Should().Be(1);
@@ -182,7 +184,7 @@ namespace MS.Microservice.Excel.Tests.Aot
         [Fact]
         public void Export_EmptyList_ShouldStillCreateWorkbook()
         {
-            var bytes = new ExcelHelper().Export(new List<EdgeRow>(), "Empty", EdgeRowMap);
+            var bytes = new ExcelHelper().Export(new List<EdgeRow>(), "Empty");
             bytes.Should().NotBeNullOrEmpty();
             using var ms = new MemoryStream(bytes);
             using var wb = new XSSFWorkbook(ms);
@@ -225,7 +227,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<NullableRow>("nullable.xlsx", ms, NullableRowMap);
+                .Import<NullableRow>("nullable.xlsx", ms);
 
             rows.Should().HaveCount(1);
             rows[0].Id.Should().BeNull();
@@ -234,11 +236,12 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class NoDefaultConstructorRow(string seed)
         {
+            [ExcelColumn(Name = "ID")]
             public int Id { get; set; } = int.Parse(seed);
         }
 
         [Fact]
-        public void Import_ModelWithoutParameterlessConstructor_ShouldUseExplicitFactory()
+        public void Import_ModelWithoutPublicParameterlessConstructor_ShouldFailWithClearMessage()
         {
             var wb = new XSSFWorkbook();
             var sheet = wb.CreateSheet("S");
@@ -249,15 +252,14 @@ namespace MS.Microservice.Excel.Tests.Aot
             wb.Write(ms, leaveOpen: true);
             ms.Position = 0;
 
-            var NoDefaultConstructorRowMap = new ExcelModelMap<NoDefaultConstructorRow>(
-                static () => new NoDefaultConstructorRow("23"),
-                ExcelColumn<NoDefaultConstructorRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32));
-            var rows = new ExcelHelper()
+            // 读取路径需要逐行 new T()：这里必须提前给出可诊断的失败，而不是稍后抛空引用。
+            var exception = Assert.Throws<InvalidOperationException>(() => new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
-                .Import<NoDefaultConstructorRow>("nocctor.xlsx", ms, NoDefaultConstructorRowMap);
+                .Import<NoDefaultConstructorRow>("nocctor.xlsx", ms));
 
-            rows.Should().ContainSingle().Which.Id.Should().Be(1);
+            exception.Message.Should().Contain(nameof(NoDefaultConstructorRow));
+            exception.Message.Should().Contain("无参构造函数");
         }
     }
 }

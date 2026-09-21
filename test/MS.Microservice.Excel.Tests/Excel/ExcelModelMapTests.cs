@@ -1,5 +1,4 @@
-using MS.Microservice.Infrastructure.Utils;
-using MS.Microservice.Infrastructure.Utils.Excel;
+using MS.Microservice.Excel.Aot;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using Xunit;

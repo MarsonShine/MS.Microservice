@@ -1,12 +1,12 @@
-using MS.Microservice.Infrastructure.Utils;
-using MS.Microservice.Infrastructure.Utils.Diagnostics;
-using MS.Microservice.Infrastructure.Utils.Excel;
+using MS.Microservice.Excel.Tests.Support;
+using MS.Microservice.Excel.Aot.Diagnostics;
+using MS.Microservice.Excel.Aot;
 using NPOI.XSSF.UserModel;
 using System.Data;
 using System.IO.Pipelines;
 using Xunit;
 
-namespace MS.Microservice.Infrastructure.Tests.Utils.Excel;
+namespace MS.Microservice.Excel.Tests.Aot;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Collection: disables parallelization to prevent GC/allocation cross-contamination.
@@ -641,23 +641,4 @@ public class ImportDto30 : IBenchmarkDto<ImportDto30>
     public int Col28 { get; set; }
     public int Col29 { get; set; }
     public void Fill(int r) { }
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// Non-seekable stream wrapper
-// ═══════════════════════════════════════════════════════════════════════
-
-public class NonSeekableStream(Stream inner) : Stream
-{
-    private readonly Stream _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-    public override bool CanRead => _inner.CanRead;
-    public override bool CanSeek => false;
-    public override bool CanWrite => false;
-    public override long Length => throw new NotSupportedException();
-    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-    public override void Flush() { }
-    public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-    public override void SetLength(long value) => throw new NotSupportedException();
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

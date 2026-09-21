@@ -91,6 +91,6 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 | 平台配置 | 运行时模型绑定 → 编译期绑定 / 标量解析 | [配置绑定](ConfigurationBindingGeneration.md) |
 | 旧属性访问器退出 | 动态访问器及测试只保留在学习区 | [访问器退役](DynamicAccessorsRetirement.md) |
 | 内存筛选 | 隐式 Compile → 普通 Func 委托 | [表达式与委托](ExpressionCompilation.md) |
-| 旧 Excel 入口退出 | 删除 MiniExcel 动态包装与属性注解 | [Excel 退役](ExcelDynamicRetirement.md) |
+| Excel 兼容与独立 AOT 包 | 保留旧接口，新实现迁到独立目录，同项目分别打包 | [Excel 新旧并存](ExcelDynamicRetirement.md) |
 
 完整 API 迁移表、提交切片及实际验证边界见 [性能与 AOT 迁移记录](../../../docs/Performance-Aot-Migration.md)。Legacy 中 `.cs.txt` 是完整历史快照，不参与编译；可运行的旧机制和独立静态示例由学习测试对照。生产项目不引用本类库，Legacy 的动态代码不进入生产包。

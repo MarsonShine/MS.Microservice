@@ -15,7 +15,11 @@ New-Item -ItemType Directory $output | Out-Null
 Push-Location $root
 try {
     foreach ($project in $projects) {
-        Invoke-CheckedDotnet pack $project -c Release --output $output "-p:PackageVersion=$Version" --verbosity quiet
+        $variant = @()
+        if ([IO.Path]::GetFileNameWithoutExtension($project) -eq 'MS.Microservice.Excel') {
+            $variant = @('-p:ExcelVariant=Legacy')
+        }
+        Invoke-CheckedDotnet pack $project -c Release --output $output "-p:PackageVersion=$Version" @variant --verbosity quiet
     }
 }
 finally { Pop-Location }

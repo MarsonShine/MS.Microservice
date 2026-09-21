@@ -1,5 +1,5 @@
 using System.Reflection;
-using MS.Microservice.Infrastructure.Utils.Excel;
+using MS.Microservice.Excel.Aot;
 using NPOI.HSSF.Util;
 using Xunit;
 
