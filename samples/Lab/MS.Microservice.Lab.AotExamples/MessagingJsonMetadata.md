@@ -32,3 +32,5 @@ var contract = MessageContract.For<ProfileChanged>(
 示例测试比较新旧 JSON 和跨版本读写结果，覆盖空值、Unicode、转义字符及整数边界；消息组件测试关闭默认反射序列化，执行包含嵌套对象和枚举的真实往返，并验证未知类型、版本、无效 JSON 和信封不一致。
 
 这些检查证明自有注册表不再需要默认 JSON 反射。它们不代表 Wolverine、数据库驱动或整个宿主已通过 NativeAOT 发布验证，也没有将初始化方式的变化宣称为业务吞吐量提升。
+
+源码消费探针 `build/consumers/MessagingConsumer.cs` 同样登记生成的消息契约，并使用同一契约读取真实 SQLite Outbox。该文件直接链接进 SelfManaged 测试，验证两个独立 DbContext 的提交、回滚和重复消费；这样组件 API 变更时会立即编译检查外部消费示例。本轮只运行源码消费测试，不运行打包或发布流程。

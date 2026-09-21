@@ -7,4 +7,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <ProjectReference Include="../../src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../../build/consumers/MessagingConsumer.cs" Link="Consumer/MessagingConsumer.cs" />
+  </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ public static class MessagingConsumer
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
-        var topology = new MessageTopology([MessageContract.For<ProfileChanged>("consumer.profile.changed", 1)],
+        var topology = new MessageTopology([MessageContract.For<ProfileChanged>("consumer.profile.changed", ConsumerJsonContext.Default.ProfileChanged, 1)],
             [MessageSubscription.For<ProfileChanged, AuditHandler<TContext>>("audit")]);
         var services = new ServiceCollection();
         services.AddDbContext<TContext>(options => options.UseSqlite(connection));
@@ -53,7 +54,7 @@ public static class MessagingConsumer
             command.CommandText = "SELECT Payload FROM Outbox";
             var payload = (string)(await command.ExecuteScalarAsync())!;
             var persisted = System.Text.Json.JsonSerializer.Deserialize<ProfileChanged>(payload,
-                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+                ConsumerJsonContext.Default.ProfileChanged)!;
             if (persisted != message) throw new Exception("Persisted message identity or data changed.");
             command.CommandText = "SELECT COUNT(*) FROM Outbox";
             if (Convert.ToInt64(await command.ExecuteScalarAsync()) != 1) throw new Exception("Outgoing rollback failed.");
@@ -91,3 +92,7 @@ public sealed class AuditHandler<TContext>(TContext context) : IIntegrationEvent
         return Task.CompletedTask;
     }
 }
+
+[JsonSourceGenerationOptions(System.Text.Json.JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(ProfileChanged))]
+internal partial class ConsumerJsonContext : JsonSerializerContext;

@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace MS.Microservice.Messaging;
 
 /// <summary>Immutable serialized event; identity and type metadata are independent of CLR assembly names.</summary>
@@ -24,14 +26,21 @@ public sealed class MessageSubscription
 {
     private readonly Func<IServiceProvider, IIntegrationEvent, MessageContext, CancellationToken, Task> _dispatch;
     public Type MessageType { get; }
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
     public Type HandlerType { get; }
     public string Consumer { get; }
 
-    private MessageSubscription(Type messageType, Type handlerType, string consumer,
+    private MessageSubscription(Type messageType,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type handlerType, string consumer,
         Func<IServiceProvider, IIntegrationEvent, MessageContext, CancellationToken, Task> dispatch)
-        => (MessageType, HandlerType, Consumer, _dispatch) = (messageType, handlerType, consumer, dispatch);
+    {
+        MessageType = messageType;
+        HandlerType = handlerType;
+        Consumer = consumer;
+        _dispatch = dispatch;
+    }
 
-    public static MessageSubscription For<TEvent, THandler>(string consumer)
+    public static MessageSubscription For<TEvent, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] THandler>(string consumer)
         where TEvent : IIntegrationEvent where THandler : class, IIntegrationEventHandler<TEvent>
         => new(typeof(TEvent), typeof(THandler), consumer, (services, message, context, token) =>
             ((THandler?)services.GetService(typeof(THandler))

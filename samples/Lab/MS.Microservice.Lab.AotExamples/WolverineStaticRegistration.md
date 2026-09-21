@@ -28,3 +28,7 @@ builder.Host.UseWolverineMessaging<AppDbContext>(topology, settings,
 [`Legacy/Messaging/WolverineBridgeExample.cs`](Legacy/Messaging/WolverineBridgeExample.cs) 提取原来的反射注册核心；[`Static/Messaging/WolverineBridgeExample.cs`](Static/Messaging/WolverineBridgeExample.cs) 独立实现对应的直接泛型调用。测试检查实际创建的发布端点、订阅、持久化模式和真实桥接发现结果，不启动数据库或消息代理。
 
 生产组件测试还验证缺失、重复、额外和多事件登记，并保留四种中立处理器形态与普通本地命令的发现测试。这里移除的是自有代码的动态泛型装配；Wolverine 自身的发现与生成机制仍属于第三方实现，整个宿主的 NativeAOT 发布兼容性没有在这一步得到证明。
+
+## DI 构造函数的裁剪契约
+
+`MessageSubscription.For<TEvent,THandler>` 保留闭合处理器类型；两个消息实现仍交给 .NET DI 构造处理器。为避免 Type 经过登记对象后丢失裁剪信息，泛型参数、构造参数和 HandlerType 属性都声明 `PublicConstructors` 保留需求。这样 ILLink 能从具体处理器一路验证到 `TryAddScoped(Type)`，无需扫描构造函数或抑制 IL2072。实际裁剪/AOT 分析覆盖这条链，原有处理器分发测试覆盖正常行为；第三方消息运行时的内部动态生成不在该 Roslyn 检查证明范围内。
