@@ -71,7 +71,7 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
 
             if (_platformDbContextOption.EnabledSoftDeleted)
             {
-                EnableSoftDeletedQueryFilter(modelBuilder);
+                modelBuilder.Entity<User>().AddSoftDeletedQueryFilter();
             }
 
             modelBuilder.ApplyConfiguration(new LogEntityTypeConfiguration());
@@ -93,17 +93,6 @@ namespace MS.Microservice.Persistence.EFCore.DbContext
                 .Where(p => p.ClrType == typeof(DateTime) || p.ClrType == typeof(DateTime?)))
             {
                 property.SetPrecision(0);
-            }
-        }
-
-        private static void EnableSoftDeletedQueryFilter(ModelBuilder modelBuilder)
-        {
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                if (typeof(ISoftDeleted).IsAssignableFrom(entityType.ClrType))
-                {
-                    entityType.AddSoftDeletedQueryFilter();
-                }
             }
         }
 

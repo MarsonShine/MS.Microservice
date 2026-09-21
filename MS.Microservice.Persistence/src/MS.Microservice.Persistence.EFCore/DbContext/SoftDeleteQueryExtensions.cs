@@ -1,35 +1,16 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MS.Microservice.Core.Domain.Entity;
-using System;
-using System.Linq.Expressions;
-using System.Reflection;
 
-namespace MS.Microservice.Persistence.EFCore.DbContext
+namespace MS.Microservice.Persistence.EFCore.DbContext;
+
+public static class SoftDeletedQueryExtensions
 {
-    public static partial class SoftDeletedQueryExtensions
+    public static EntityTypeBuilder<TEntity> AddSoftDeletedQueryFilter<TEntity>(
+        this EntityTypeBuilder<TEntity> entity) where TEntity : class, ISoftDeleted
     {
-        extension(IMutableEntityType entityData)
-        {
-            public void AddSoftDeletedQueryFilter()
-            {
-                var methodToCall = typeof(SoftDeletedQueryExtensions)?
-                    .GetMethod(nameof(GetSoftDeleteFilter),
-                        BindingFlags.NonPublic | BindingFlags.Static)?
-                    .MakeGenericMethod(entityData.ClrType);
-                var filter = methodToCall?.Invoke(null, Array.Empty<object>());
-
-                entityData.SetQueryFilter((LambdaExpression)filter!);
-                entityData.AddIndex(entityData.
-                     FindProperty(nameof(ISoftDeleted.DeletedAt))!);
-            }
-        }
-
-        private static LambdaExpression GetSoftDeleteFilter<TEntity>()
-            where TEntity : class, ISoftDeleted
-        {
-            Expression<Func<TEntity, bool>> filter = x => x.DeletedAt == null;
-            return filter;
-        }
+        ArgumentNullException.ThrowIfNull(entity);
+        entity.HasQueryFilter(row => row.DeletedAt == null);
+        entity.HasIndex(row => row.DeletedAt);
+        return entity;
     }
 }
