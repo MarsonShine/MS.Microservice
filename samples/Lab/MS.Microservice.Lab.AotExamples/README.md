@@ -63,7 +63,7 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 
 旧、新实现见 `Legacy/JsonConfigurationExample.cs` 与 `Static/JsonConfigurationExample.cs`。
 [教学说明](JsonConfigurationReuse.md)解释配置为什么可以共享、缓存与 HTTP 的规则为什么不能合并，以及直接解析字节时如何保留取消和 BOM 行为，并给出实际分配对照。
-生产入口保持不变；本主题优化运行时分配，尚未迁移为 AOT 静态 JSON 元数据。
+本主题说明配置复用带来的运行时分配变化；最终 HTTP/缓存入口已进一步要求静态 JSON 元数据，迁移方式见 [Core JSON 元数据](CoreJsonMetadata.md)。
 
 ## 静音工作缓冲复用
 
@@ -73,3 +73,24 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 ## 查询参数静态映射
 
 [教学说明](QueryParameterMappings.md)解释缓存访问器与 AOT 兼容性的区别，以及如何用 `QueryParameterMap<T>` 保留查询协议并移除自动类型发现。旧源码与运行时访问器示例位于 `Legacy/Query`，独立静态实现位于 `Static/Query`。
+
+## 静态迁移主题索引
+
+| 主题 | 旧机制与替代方式 | 说明 |
+|---|---|---|
+| Excel 常规导入导出 | 运行时属性扫描 → 显式工厂和类型化列 | [模型映射](ExcelModelMappings.md) |
+| Excel 模板与颜色 | getter 编译、颜色反射 → 共用映射与静态颜色表 | [模板填充](ExcelTemplates.md) |
+| 默认值与实体键 | Activator → 泛型 default 与登记的比较委托 | [默认值](DefaultValueComparisons.md) |
+| HTTP 与缓存 JSON | 任意类型发现 → JsonTypeInfo / 封闭登记表 | [Core JSON](CoreJsonMetadata.md) |
+| 消息 JSON | 裸 Type 序列化 → 生成契约 | [消息元数据](MessagingJsonMetadata.md) |
+| AI 聊天、媒体、题目 | 匿名对象、默认解析器 → 命名协议与生成上下文 | [AI JSON](AiJsonMetadata.md) |
+| SqlSugar JSON | 动态 JSON 转换 → 登记元数据 | [持久化 JSON](PersistenceJsonMetadata.md) |
+| EF 软删除 | 反射闭合泛型 → 显式实体注册 | [软删除注册](SoftDeleteRegistration.md) |
+| Wolverine 桥接 | 动态泛型桥接 → 闭合泛型登记 | [消息桥接](WolverineStaticRegistration.md) |
+| AI 配置 | Provider 属性反射 → 静态选择器、生成绑定 | [AI 配置](AiConfiguration.md) |
+| 平台配置 | 运行时模型绑定 → 编译期绑定 / 标量解析 | [配置绑定](ConfigurationBindingGeneration.md) |
+| 旧属性访问器退出 | 动态访问器及测试只保留在学习区 | [访问器退役](DynamicAccessorsRetirement.md) |
+| 内存筛选 | 隐式 Compile → 普通 Func 委托 | [表达式与委托](ExpressionCompilation.md) |
+| 旧 Excel 入口退出 | 删除 MiniExcel 动态包装与属性注解 | [Excel 退役](ExcelDynamicRetirement.md) |
+
+完整 API 迁移表、提交切片及实际验证边界见 [性能与 AOT 迁移记录](../../../docs/Performance-Aot-Migration.md)。Legacy 中 `.cs.txt` 是完整历史快照，不参与编译；可运行的旧机制和独立静态示例由学习测试对照。生产项目不引用本类库，Legacy 的动态代码不进入生产包。

@@ -3,8 +3,8 @@
 在仓库根目录执行任一组件的常规构建，并输出生成文件到该项目的 `obj` 下：
 
 ```powershell
-dotnet build src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj --no-restore -p:EmitCompilerGeneratedFiles=true -p:CompilerGeneratedFilesOutputPath=obj/GeneratedConfiguration
-dotnet build src/MS.Microservice.Observability/MS.Microservice.Observability.csproj --no-restore -p:EmitCompilerGeneratedFiles=true -p:CompilerGeneratedFilesOutputPath=obj/GeneratedConfiguration
+dotnet build src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj --no-restore -t:Rebuild -p:EmitCompilerGeneratedFiles=true -p:CompilerGeneratedFilesOutputPath=obj/GeneratedConfiguration
+dotnet build src/MS.Microservice.Observability/MS.Microservice.Observability.csproj --no-restore -t:Rebuild -p:EmitCompilerGeneratedFiles=true -p:CompilerGeneratedFilesOutputPath=obj/GeneratedConfiguration
 ```
 
 在 `obj/GeneratedConfiguration` 中查看 `BindingExtensions.g.cs`：配置键对应具体的属性赋值，不再循环查找 `PropertyInfo`。文件中的拦截位置指回生产调用点；这是判断生成器是否覆盖调用的依据，不能仅凭项目设置为 `true` 就宣称迁移完成。

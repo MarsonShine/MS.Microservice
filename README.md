@@ -8,6 +8,7 @@
 | [快速启动](docs/Getting-Started.md) | 一个脚本准备 Reference 或 Lab，并演练消息恢复。 |
 | [六个递进 Lab](docs/labs/README.md) | 分层、事务、可靠消息、故障、诊断与组件替换。 |
 | [源码复制与包消费](docs/components/consumption.md) | 依赖闭包导出和仓库外接入验证。 |
+| [性能与 AOT 迁移](docs/Performance-Aot-Migration.md) | 静态接口迁移表、独立提交和实际验证边界。 |
 | [生产参考服务](samples/Reference/MS.Microservice.Reference.Web/README.md) | 外部 JWT/OIDC 身份、用户档案、业务角色、审计和可靠消息。 |
 | [消息契约](MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/README.md) | 业务层依赖的入队、工作单元、处理器和运维接口。 |
 | [默认 Inbox/Outbox](MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/README.md) | 与业务 EF Core 事务共享的自研实现。 |
