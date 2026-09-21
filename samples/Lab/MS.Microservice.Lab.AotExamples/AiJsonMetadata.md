@@ -40,4 +40,4 @@ Draft/Review/Repair 使用具名 envelope。候选先按自身注册的元数据
 
 即使 `JsonValue.Create(string)` 已选用标量重载，`JsonArray.Add(JsonValue)` 仍可能优先绑定泛型 `Add<T>`。使用 `Add((JsonNode?)JsonValue.Create(name))` 明确选择节点重载，避免其带运行时序列化要求的泛型入口。真实 ILLink 分析器验证该调用不再报 IL2026/IL3050；原严格 schema 测试继续验证 required 内容。
 
-DI 的泛型入口还需要表达构造函数保留需求：验证器/题目定义保留公开构造函数，启动选项保留公开无参构造函数。`DynamicallyAccessedMembers` 是把框架已有的契约向调用方传递，不是隐藏警告，也没有回到动态成员发现。闭合调用的类型可由分析器检查。
+DI 的泛型入口还需要声明构造函数的保留需求：验证器和题目定义保留公开构造函数，Options 保留公开无参构造函数。`DynamicallyAccessedMembers` 让裁剪器保留框架创建对象时需要的成员，不会生成代码，也不表示 DI 内部已经消除了构造函数发现。标记为什么要沿泛型参数传递，以及它与 Source Generator 的区别，见 [DynamicallyAccessedMembers 入门](DynamicallyAccessedMembers.md)。
