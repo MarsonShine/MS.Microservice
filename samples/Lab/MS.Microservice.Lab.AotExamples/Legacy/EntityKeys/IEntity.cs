@@ -1,4 +1,4 @@
-﻿namespace MS.Microservice.Core.Domain.Entity
+namespace MS.Microservice.Lab.AotExamples.Legacy.EntityKeys
 {
     public interface IEntity<TId> : IEntity
     {
@@ -7,5 +7,6 @@
 
     public interface IEntity
     {
+        object[] GetKeys();
     }
 }

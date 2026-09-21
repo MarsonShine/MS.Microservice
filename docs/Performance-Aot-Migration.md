@@ -11,7 +11,7 @@ Excel 后续调整：旧命名空间和接口已恢复，静态实现迁入 `src
 | 自动读取查询对象属性 | `QueryParameterMap<T>` 显式列出有序名称与 getter | 字典入口保留；读取最新值，null 跳过，集合展开、不变文化及 URI 转义保持 |
 | Excel 根据属性和注解发现模型 | 旧接口保留；新 `MS.Microservice.Excel.Aot` 使用 `ExcelModelMap<T>` | 两套命名空间隔离，同一项目按 ExcelVariant 分别出包 |
 | `Activator` 求默认值 | `TypeHelper.IsDefaultValue<T>` / `GetDefaultValue<T>` | 按 default 语义，不执行自定义结构体构造函数 |
-| 装箱实体键默认值 | `IsDefaultBoxedValue`；自定义键先 `RegisterDefaultValue<T>()` | 保留 int/long 非正临时键语义；未知值类型明确失败 |
+| 装箱实体键默认值 | `IEntity<TKey>.Id` 与泛型 EntityHelper；无须登记 | 删除 object[]/BoxedDefaults 路径；可空键采用声明类型 default；非可空 int/long 保留临时键规则 |
 | `LogHttpClient(logger, http)` | 构造时加 `JsonTypeRegistry` | 请求/响应根类型显式登记；未知类型失败；匿名请求改为命名 DTO |
 | JSON HTTP 扩展与缓存 | 调用时传 `JsonTypeInfo<T>` | 上下文决定大小写、命名、枚举、null、编码；没有默认解析器兜底 |
 | `MessageContract.For<T>(name, version)` | `For<T>(name, generated.T, version)` | 合同名、版本和信封身份校验保持；原线协议使用 Web options |
@@ -98,3 +98,11 @@ NPOI、EF、Wolverine、SqlSugar 及 Web 宿主的完整 NativeAOT 兼容性未�
 恢复旧接口并隔离 AOT 源码后，运行 Excel 测试 67 项、Lab 测试 284 项、架构边界测试 39 项，全部通过；Excel 原有 19 项 opt-in 性能基准仍跳过。旧测试现在运行真实旧实现，新旧实现直接交叉读取工作簿。
 
 已分别生成 Legacy 与 Aot 两个本地 NuGet 包，检查程序集命名空间和 nuspec 依赖：Aot 包没有旧类型或 MiniExcel。All 模式直接打包会被拒绝。源码导出包含两个目录，导出后的单项目解决方案独立 restore/build 成功。21 个静态分析目标重新验证通过，其中 Excel 明确选择 Aot 构建。没有新增项目，没有向远程源发布包，没有执行 NativeAOT publish。
+
+## 实体键后续调整
+
+A04 最初使用 BoxedDefaults 的过渡版本已退出生产路径，完整实现和原测试保存在可编译的 `Legacy/EntityKeys`。正式 IEntity 不再提供 object[] GetKeys，EntityHelper 只接收 IEntity<TKey>，Lab 的泛型实体也直接传递类型化 Id。调用方需迁移非泛型比较入口，复合键改用类型化值。
+
+可空零值现在视为已赋值；复合键整体按其声明类型的 default 和相等性判断。这是明确采用的新规则，不保留 boxed 兼容回退。详见 [默认值与实体键说明](../samples/Lab/MS.Microservice.Lab.AotExamples/DefaultValueComparisons.md)。
+
+本次后续回归：完整解决方案 33 个测试项目，2158 项通过、0 项失败、31 项既有 opt-in 测试跳过。Core 与 Domain.Primitives 实际加载 ILLink 10.0.11，裁剪/AOT 静态分析零诊断；未执行 NativeAOT publish。

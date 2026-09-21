@@ -75,12 +75,11 @@ namespace MS.Microservice.Core.Tests.Domain
         }
 
         [Fact]
-        public void GetKeys_ReturnsIdArray()
+        public void Id_RetainsDeclaredType()
         {
             var entity = new ConcreteEntity(42);
-            var keys = entity.GetKeys();
-            Assert.Single(keys);
-            Assert.Equal(42, keys[0]);
+            int id = entity.Id;
+            Assert.Equal(42, id);
         }
 
         [Fact]

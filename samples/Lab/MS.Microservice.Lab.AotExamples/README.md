@@ -80,7 +80,7 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 |---|---|---|
 | Excel 常规导入导出 | 运行时属性扫描 → 显式工厂和类型化列 | [模型映射](ExcelModelMappings.md) |
 | Excel 模板与颜色 | getter 编译、颜色反射 → 共用映射与静态颜色表 | [模板填充](ExcelTemplates.md) |
-| 默认值与实体键 | Activator → 泛型 default 与登记的比较委托 | [默认值](DefaultValueComparisons.md) |
+| 默认值与实体键 | Activator / boxed 登记 → 类型化 Id 与泛型比较 | [默认值](DefaultValueComparisons.md) |
 | HTTP 与缓存 JSON | 任意类型发现 → JsonTypeInfo / 封闭登记表 | [Core JSON](CoreJsonMetadata.md) |
 | 消息 JSON | 裸 Type 序列化 → 生成契约 | [消息元数据](MessagingJsonMetadata.md) |
 | AI 聊天、媒体、题目 | 匿名对象、默认解析器 → 命名协议与生成上下文 | [AI JSON](AiJsonMetadata.md) |

@@ -9,7 +9,7 @@ namespace MS.Microservice.Domain
     {
         public virtual bool IsTransient()
         {
-            return Id is null || TypeHelper.IsDefaultBoxedValue(Id);
+            return TypeHelper.IsDefaultValue<TId>(Id);
         }
 
         public override bool Equals([AllowNull] object obj)

@@ -1,7 +1,7 @@
-using MS.Microservice.Core.Domain.Entity;
-using MS.Microservice.Core.Reflection;
+using MS.Microservice.Lab.AotExamples.Legacy.EntityKeys;
+using Xunit;
 
-namespace MS.Microservice.Core.Tests.Reflection;
+namespace MS.Microservice.Lab.AotExamples.Tests.EntityKeyHistory;
 
 public sealed class DefaultValueComparisonTests
 {

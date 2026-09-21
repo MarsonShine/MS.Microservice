@@ -67,7 +67,6 @@ namespace MS.Microservice.Core.Tests.Coverage
             public int Age { get; set; }
             public System.Collections.Generic.List<string> Tags { get; set; } = new();
             public System.Collections.Generic.ICollection<string> TagsAsCollection { get; set; } = new System.Collections.Generic.List<string>();
-            public object[] GetKeys() => new object[] { Name };
         }
     }
 

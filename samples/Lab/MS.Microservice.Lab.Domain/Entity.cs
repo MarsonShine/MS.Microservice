@@ -14,12 +14,6 @@ namespace MS.Microservice.Domain
     [Serializable]
     public abstract class Entity : IEntity, IHasDomainEvents
     {
-        public abstract object[] GetKeys();
-        public bool EntityEquals(IEntity other)
-        {
-            return EntityHelper.EntityEquals(this, other);
-        }
-
         private readonly List<IDomainEvent> _domainEvents = [];
 
         [JsonIgnore]
@@ -48,6 +42,8 @@ namespace MS.Microservice.Domain
     {
         private TId _id = default!;
 
+        public bool EntityEquals(IEntity<TId> other) => EntityHelper.EntityEquals<TId>(this, other);
+
         [AllowNull]
         public virtual TId Id
         {
@@ -59,11 +55,6 @@ namespace MS.Microservice.Domain
             {
                 _id = value!;
             }
-        }
-
-        public override object[] GetKeys()
-        {
-            return new object[] { Id! };
         }
     }
 }
