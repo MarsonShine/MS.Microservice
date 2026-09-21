@@ -8,6 +8,31 @@ namespace MS.Microservice.AI.DeepSeek.Tests;
 
 public sealed class DeepSeekCapabilitySupportTests
 {
+    [Theory]
+    [InlineData("DeepSeek", false)]
+    [InlineData("deepseek", false)]
+    [InlineData("OpenAI", true)]
+    public void StaticSelectorsValidateEveryNonChatCapability(string provider, bool valid)
+    {
+        var options = new AIOptions();
+        options.Providers.Add("DeepSeek", new() { ApiKey = "key" });
+        options.Models.Tts.Add("speech", new() { Provider = provider });
+        options.Models.Asr.Add("transcribe", new() { Provider = provider });
+        options.Models.ImageGeneration.Add("generate", new() { Provider = provider });
+        options.Models.ImageEdit.Add("edit", new() { Provider = provider });
+        var result = new DeepSeekOptionsValidator().Validate(null, options);
+        Assert.Equal(valid, result.Succeeded);
+        if (!valid)
+        {
+            var failures = Assert.IsAssignableFrom<IEnumerable<string>>(result.Failures);
+            Assert.Equal(4, failures.Count());
+            Assert.Contains(failures, failure => failure.Contains("Tts:speech"));
+            Assert.Contains(failures, failure => failure.Contains("Asr:transcribe"));
+            Assert.Contains(failures, failure => failure.Contains("ImageGeneration:generate"));
+            Assert.Contains(failures, failure => failure.Contains("ImageEdit:edit"));
+        }
+    }
+
     [Fact]
     public void Validate_ShouldFail_WhenDeepSeekIsConfiguredForTts()
     {

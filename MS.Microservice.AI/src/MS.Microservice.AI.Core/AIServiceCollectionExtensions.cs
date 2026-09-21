@@ -65,7 +65,8 @@ public static class AIServiceCollectionExtensions
     /// <summary>Registers the AI rate limiter abstraction and built-in fixed-window implementation.</summary>
     public static IServiceCollection AddAIRateLimiter(this IServiceCollection services, IConfigurationSection? section = null)
     {
-        ConfigureValidatedOptions<AIRateLimitingOptions, AIRateLimitingOptionsValidator>(services, section);
+        var options = ConfigureValidatedOptions<AIRateLimitingOptions, AIRateLimitingOptionsValidator>(services);
+        if (section is not null) options.Bind(section);
         services.TryAddSingleton<IAIRateLimiter, DefaultAIRateLimiter>();
         return services;
     }
@@ -73,7 +74,8 @@ public static class AIServiceCollectionExtensions
     /// <summary>Registers the AI circuit breaker abstraction and built-in in-memory implementation.</summary>
     public static IServiceCollection AddAICircuitBreaker(this IServiceCollection services, IConfigurationSection? section = null)
     {
-        ConfigureValidatedOptions<AICircuitBreakerOptions, AICircuitBreakerOptionsValidator>(services, section);
+        var options = ConfigureValidatedOptions<AICircuitBreakerOptions, AICircuitBreakerOptionsValidator>(services);
+        if (section is not null) options.Bind(section);
         services.TryAddSingleton<IAICircuitBreaker, DefaultAICircuitBreaker>();
         return services;
     }
@@ -81,7 +83,8 @@ public static class AIServiceCollectionExtensions
     /// <summary>Registers the AI log sanitizer abstraction and default sensitive-field redactor.</summary>
     public static IServiceCollection AddAILogSanitizer(this IServiceCollection services, IConfigurationSection? section = null)
     {
-        ConfigureValidatedOptions<AILogSanitizerOptions, AILogSanitizerOptionsValidator>(services, section);
+        var options = ConfigureValidatedOptions<AILogSanitizerOptions, AILogSanitizerOptionsValidator>(services);
+        if (section is not null) options.Bind(section);
         services.TryAddSingleton<IAILogSanitizer, DefaultAILogSanitizer>();
         return services;
     }
@@ -89,7 +92,8 @@ public static class AIServiceCollectionExtensions
     /// <summary>Registers provider-neutral AI secret providers and post-configures provider API keys.</summary>
     public static IServiceCollection AddAISecretProvider(this IServiceCollection services, IConfigurationSection? section = null)
     {
-        ConfigureValidatedOptions<AISecretProviderOptions, AISecretProviderOptionsValidator>(services, section);
+        var options = ConfigureValidatedOptions<AISecretProviderOptions, AISecretProviderOptionsValidator>(services);
+        if (section is not null) options.Bind(section);
         services.TryAddSingleton<EnvironmentAISecretProvider>();
         services.TryAddSingleton<ConfigurationAISecretProvider>();
         services.TryAddSingleton<IAISecretProvider, CompositeAISecretProvider>();
@@ -100,30 +104,28 @@ public static class AIServiceCollectionExtensions
     /// <summary>Registers AI payload limit options used by routing clients.</summary>
     public static IServiceCollection AddAIPayloadLimits(this IServiceCollection services, IConfigurationSection? section = null)
     {
-        ConfigureValidatedOptions<AIPayloadLimitOptions, AIPayloadLimitOptionsValidator>(services, section);
+        var options = ConfigureValidatedOptions<AIPayloadLimitOptions, AIPayloadLimitOptionsValidator>(services);
+        if (section is not null) options.Bind(section);
         return services;
     }
 
     /// <summary>Registers AI cost accounting options and a no-op default reporter.</summary>
     public static IServiceCollection AddAICostAccounting(this IServiceCollection services, IConfigurationSection? section = null)
     {
-        ConfigureValidatedOptions<AICostAccountingOptions, NoopValidator<AICostAccountingOptions>>(services, section);
+        var options = ConfigureValidatedOptions<AICostAccountingOptions, NoopValidator<AICostAccountingOptions>>(services);
+        if (section is not null) options.Bind(section);
         services.TryAddSingleton<IAICostReporter, NullAICostReporter>();
         return services;
     }
 
-    private static void ConfigureValidatedOptions<TOptions, TValidator>(IServiceCollection services, IConfigurationSection? section)
+    private static OptionsBuilder<TOptions> ConfigureValidatedOptions<TOptions, TValidator>(IServiceCollection services)
         where TOptions : class
         where TValidator : class, IValidateOptions<TOptions>
     {
         var builder = services.AddOptions<TOptions>();
-        if (section is not null)
-        {
-            builder.Bind(section);
-        }
-
         builder.ValidateOnStart();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<TOptions>, TValidator>());
+        return builder;
     }
 
     private sealed class NoopValidator<TOptions> : IValidateOptions<TOptions>

@@ -14,24 +14,24 @@ public sealed class DeepSeekOptionsValidator : IValidateOptions<AIOptions>
         }
 
         var failures = new List<string>();
-        AddUnsupportedCapabilityFailures(options.Models.Tts, failures, "Tts");
-        AddUnsupportedCapabilityFailures(options.Models.Asr, failures, "Asr");
-        AddUnsupportedCapabilityFailures(options.Models.ImageGeneration, failures, "ImageGeneration");
-        AddUnsupportedCapabilityFailures(options.Models.ImageEdit, failures, "ImageEdit");
+        AddUnsupportedCapabilityFailures(options.Models.Tts, static model => model.Provider, failures, "Tts");
+        AddUnsupportedCapabilityFailures(options.Models.Asr, static model => model.Provider, failures, "Asr");
+        AddUnsupportedCapabilityFailures(options.Models.ImageGeneration, static model => model.Provider, failures, "ImageGeneration");
+        AddUnsupportedCapabilityFailures(options.Models.ImageEdit, static model => model.Provider, failures, "ImageEdit");
 
         return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
 
     private static void AddUnsupportedCapabilityFailures<TModelOptions>(
         IDictionary<string, TModelOptions> models,
+        Func<TModelOptions, string?> getProvider,
         ICollection<string> failures,
         string capabilitySection)
         where TModelOptions : class
     {
         foreach (var model in models)
         {
-            var providerProperty = typeof(TModelOptions).GetProperty("Provider");
-            var provider = providerProperty?.GetValue(model.Value) as string;
+            var provider = getProvider(model.Value);
             if (string.Equals(provider, DeepSeekProviderDefaults.ProviderName, StringComparison.OrdinalIgnoreCase))
             {
                 failures.Add($"AI:Models:{capabilitySection}:{model.Key} cannot use provider '{DeepSeekProviderDefaults.ProviderName}' because it currently supports chat only.");

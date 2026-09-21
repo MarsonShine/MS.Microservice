@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>true</IsPackable>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
     <PackageId>MS.Microservice.AI.Core</PackageId>
     <Title>MS.Microservice AI Core</Title>
     <Description>Routing, options, dependency injection, and provider orchestration for MS.Microservice AI.</Description>
