@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -53,7 +54,7 @@ public sealed class QuestionGenerationBuilder(IServiceCollection services)
         return this;
     }
 
-    public QuestionGenerationBuilder AddDefinition<TDefinition>()
+    public QuestionGenerationBuilder AddDefinition<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDefinition>()
         where TDefinition : class, IQuestionDefinition
     {
         Services.TryAddEnumerable(

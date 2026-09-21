@@ -35,3 +35,9 @@ Draft/Review/Repair 使用具名 envelope。候选先按自身注册的元数据
 `Legacy/AI/QuestionJson.cs` 保留原 contract 实现；`Static/AI/QuestionJson.cs` 独立提取显式注册和派生类型分派的核心。生产测试关闭默认反射，覆盖嵌套类型、枚举/schema、一致的 envelope、非法 JSON、未知类型、修复越界和无进展。扩展点变更要求宿主在 `AddDefinition<T>()` 旁调用 `AddJsonTypeInfo(context.MyCandidate)`；它不自动发现程序集。
 
 关闭默认反射还暴露了一个容易遗漏的重载：`JsonArray.Add(propertyName)` 选择泛型 `Add<string>`，仍会请求默认 string 元数据。schema 的 required 列表现在用 `JsonValue.Create(propertyName)` 创建内置字符串节点，再添加节点；此处应选择直接的 DOM 操作，而非为它开启反射回退。
+
+## 静态分析补充
+
+即使 `JsonValue.Create(string)` 已选用标量重载，`JsonArray.Add(JsonValue)` 仍可能优先绑定泛型 `Add<T>`。使用 `Add((JsonNode?)JsonValue.Create(name))` 明确选择节点重载，避免其带运行时序列化要求的泛型入口。真实 ILLink 分析器验证该调用不再报 IL2026/IL3050；原严格 schema 测试继续验证 required 内容。
+
+DI 的泛型入口还需要表达构造函数保留需求：验证器/题目定义保留公开构造函数，启动选项保留公开无参构造函数。`DynamicallyAccessedMembers` 是把框架已有的契约向调用方传递，不是隐藏警告，也没有回到动态成员发现。闭合调用的类型可由分析器检查。

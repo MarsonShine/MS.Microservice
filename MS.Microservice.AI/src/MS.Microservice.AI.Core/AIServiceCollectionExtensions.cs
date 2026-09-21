@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -118,7 +119,9 @@ public static class AIServiceCollectionExtensions
         return services;
     }
 
-    private static OptionsBuilder<TOptions> ConfigureValidatedOptions<TOptions, TValidator>(IServiceCollection services)
+    private static OptionsBuilder<TOptions> ConfigureValidatedOptions<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TOptions,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TValidator>(IServiceCollection services)
         where TOptions : class
         where TValidator : class, IValidateOptions<TOptions>
     {

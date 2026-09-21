@@ -133,7 +133,7 @@ public sealed class SystemTextJsonQuestionContract : IQuestionJsonContract
                 var required = new JsonArray();
                 foreach (var property in properties)
                 {
-                    required.Add(JsonValue.Create(property.Key));
+                    required.Add((JsonNode?)JsonValue.Create(property.Key));
                 }
 
                 jsonObject["required"] = required;
