@@ -1,5 +1,4 @@
 using MS.Microservice.Core.Extension;
-using MS.Microservice.Infrastructure.Utils.Excel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,9 +7,7 @@ namespace MS.Microservice.Lab.Application.Models
 {
     public class ExcelDemoRequest
     {
-        [ExcelColumn("BOOKID")]
         public int BookId { get; set; }
-        [ExcelColumn("分类")]
         public string? Classify { get; set; }
 
         public BookClassifyEnum[] BookClassify => Classify.IsNullOrEmpty() ? Array.Empty<BookClassifyEnum>() : Classify!.Split('、')
