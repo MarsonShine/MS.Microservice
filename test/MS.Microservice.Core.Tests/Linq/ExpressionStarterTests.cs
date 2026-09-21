@@ -15,8 +15,8 @@ public sealed class ExpressionStarterTests
         Expression<Func<int, bool>> expression = starter.Start(x => x > 5);
 
         Assert.True(starter.IsStarted);
-        Assert.True(expression.Compile()(6));
-        Assert.False(expression.Compile()(4));
+        Assert.True(expression.Compile(preferInterpretation: true)(6));
+        Assert.False(expression.Compile(preferInterpretation: true)(4));
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class ExpressionStarterTests
 
         starter.Or(x => x > 10);
         starter.And(x => x < 20);
-        Func<int, bool> predicate = starter.Compile();
+        Func<int, bool> predicate = ((Expression<Func<int, bool>>)starter).Compile(preferInterpretation: true);
 
         Assert.True(predicate(15));
         Assert.False(predicate(9));
@@ -45,7 +45,8 @@ public sealed class ExpressionStarterTests
     [Fact]
     public void New_WithDefaultTrue_ShouldCompileToTrueBeforeStart()
     {
-        Func<int, bool> predicate = PredicateBuilder.New<int>(true);
+        Expression<Func<int, bool>> expression = PredicateBuilder.New<int>(true);
+        Func<int, bool> predicate = expression.Compile(preferInterpretation: true);
 
         Assert.True(predicate(0));
         Assert.True(predicate(100));
@@ -58,7 +59,7 @@ public sealed class ExpressionStarterTests
         Expression<Func<int, bool>> expression = starter;
 
         Assert.True(starter.IsStarted);
-        Assert.True(expression.Compile()(2));
-        Assert.False(expression.Compile()(3));
+        Assert.True(expression.Compile(preferInterpretation: true)(2));
+        Assert.False(expression.Compile(preferInterpretation: true)(3));
     }
 }

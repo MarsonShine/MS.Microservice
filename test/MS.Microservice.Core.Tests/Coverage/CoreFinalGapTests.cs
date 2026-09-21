@@ -46,10 +46,10 @@ namespace MS.Microservice.Core.Tests.Coverage
         [Fact] public void And_NotStarted() { var s = new ExpressionStarter<int>(); s.And(x => x > 0); Assert.True(s.IsStarted); }
 
         [Fact] public void ImplicitOperator_Expression() { ExpressionStarter<int> s = new(true); Expression<Func<int, bool>> e = s; Assert.NotNull(e); }
-        [Fact] public void ImplicitOperator_Func() { ExpressionStarter<int> s = new(true); Func<int, bool> f = s; Assert.NotNull(f); Assert.True(f(1)); }
+        [Fact] public void DefaultPredicate_CanBeInterpreted() { ExpressionStarter<int> s = new(true); Expression<Func<int, bool>> e = s; var f = e.Compile(preferInterpretation: true); Assert.NotNull(f); Assert.True(f(1)); }
         [Fact] public void ImplicitOperator_FromExpression() { Expression<Func<int, bool>> e = x => x > 0; ExpressionStarter<int> s = e; Assert.True(s.IsStarted); }
 
-        [Fact] public void Compile() { var s = new ExpressionStarter<int>(true); var f = s.Compile(); Assert.True(f(5)); }
+        [Fact] public void TrueExpression() { var s = new ExpressionStarter<int>(true); var f = ((Expression<Func<int, bool>>)s).Compile(preferInterpretation: true); Assert.True(f(5)); }
 
         [Fact] public void Properties() { var s = new ExpressionStarter<int>(x => x > 0); Assert.NotNull(s.Body); Assert.NotNull(s.Parameters); Assert.NotNull(s.ToString()); }
 

@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 
 namespace System.Linq
 {
@@ -89,16 +88,6 @@ namespace System.Linq
         /// Allows this object to be implicitely converted to an Expression{Func{T, bool}}.
         /// </summary>
         /// <param name="right"></param>
-        public static implicit operator Func<T, bool>([AllowNull]ExpressionStarter<T> right)
-        {
-            return right == null! ? null! :
-                (right.IsStarted || right.UseDefaultExpression) ? right.Predicate.Compile() : null!;
-        }
-
-        /// <summary>
-        /// Allows this object to be implicitely converted to an Expression{Func{T, bool}}.
-        /// </summary>
-        /// <param name="right"></param>
         public static implicit operator ExpressionStarter<T>([AllowNull]Expression<Func<T, bool>> right)
         {
             return right == null! ? null! : new ExpressionStarter<T>(right);
@@ -108,22 +97,8 @@ namespace System.Linq
 
         #region Implement Expression<TDelagate> methods and properties
 
-#if !(NET35)
-
-        /// <summary></summary>
-        public Func<T, bool> Compile()
-        {
-            return Predicate.Compile();
-        }
-#endif
-
-#if !(NET35 || WINDOWS_APP || NETSTANDARD || PORTABLE || PORTABLE40 || UAP)
-        /// <summary></summary>
-        public Func<T, bool> Compile(DebugInfoGenerator debugInfoGenerator) { return Predicate.Compile(debugInfoGenerator); }
-
         /// <summary></summary>
         public Expression<Func<T, bool>> Update(Expression body, IEnumerable<ParameterExpression> parameters) { return Predicate.Update(body, parameters)!; }
-#endif
 
         #endregion
 
