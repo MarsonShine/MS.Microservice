@@ -1,5 +1,5 @@
 using LegacyExample = MS.Microservice.Lab.AotExamples.Legacy.Excel.ColumnDiscovery;
-using MS.Microservice.Lab.AotExamples.Static.Excel;
+using MS.Microservice.Lab.AotExamples.Legacy.Excel.ManualMapping;
 using Xunit;
 
 namespace MS.Microservice.Lab.AotExamples.Tests;

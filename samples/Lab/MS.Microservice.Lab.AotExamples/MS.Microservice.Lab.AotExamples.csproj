@@ -3,11 +3,14 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Lab.AotExamples.Tests" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
   </ItemGroup>
+  <Import Project="../../../src/MS.Microservice.Excel.Aot/ExcelGenerator.props" />
 </Project>

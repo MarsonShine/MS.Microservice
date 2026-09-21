@@ -6,12 +6,9 @@ using Xunit;
 
 namespace MS.Microservice.Excel.Tests;
 
-public sealed class ExcelCompatibilityTests
+public sealed partial class ExcelCompatibilityTests
 {
-    private static readonly AotApi.ExcelModelMap<Row> Map = new(static () => new Row(),
-        AotApi.ExcelColumn<Row>.Create("编号", static r => r.Id, static (r, v) => r.Id = v, AotApi.ExcelValueConverters.Int32),
-        AotApi.ExcelColumn<Row>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, AotApi.ExcelValueConverters.String),
-        AotApi.ExcelColumn<Row>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, AotApi.ExcelValueConverters.Nullable(AotApi.ExcelValueConverters.Decimal)));
+    private static readonly AotApi.ExcelModelMap<Row> Map = Maps.Row;
 
     [Theory]
     [InlineData(0)]
@@ -84,12 +81,16 @@ public sealed class ExcelCompatibilityTests
     public sealed class Row
     {
         [ExcelColumn("名称", Order = 1)]
+        [AotApi.ExcelColumn("名称", Order = 1)]
         public string? Name { get; set; }
         [ExcelColumn("金额", Order = 2)]
+        [AotApi.ExcelColumn("金额", Order = 2)]
         public decimal? Amount { get; set; }
         [ExcelColumn("编号", Order = 0)]
+        [AotApi.ExcelColumn("编号", Order = 0)]
         public int Id { get; set; }
         [ExcelColumn(Ignore = true)]
+        [AotApi.ExcelColumn(Ignore = true)]
         public string Ignored => throw new InvalidOperationException("An ignored getter must not run.");
     }
 
@@ -113,4 +114,6 @@ public sealed class ExcelCompatibilityTests
             set => throw new InvalidOperationException("Indexer must not be written.");
         }
     }
+    [AotApi.ExcelSerializable(typeof(Row))]
+    private static partial class Maps;
 }

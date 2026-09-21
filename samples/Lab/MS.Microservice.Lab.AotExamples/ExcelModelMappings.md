@@ -1,25 +1,29 @@
-# Excel 模型映射：把运行时发现移到调用方声明
+# Excel：把机械映射交给 Source Generator
 
-当前静态实现位于 `src/MS.Microservice.Excel.Aot`，使用 `MS.Microservice.Excel.Aot` 命名空间；原命名空间下的旧接口已恢复并独立保留。两套实现由同一项目分别打包，见 [目录与打包说明](../../../src/MS.Microservice.Excel.Aot/README.md)。
+最初的 ExcelHelper 在运行时扫描属性并生成访问器。第一版 AOT 实现把这些信息改为调用方手写的 ExcelModelMap；它去掉了动态发现，却要求每个调用方重复写字段名、getter、setter、转换器。内部 Func<T, object?> 也仍会装箱值类型。
 
-旧实现先扫描属性和 `ExcelColumnAttribute`，再从 `PropertyAccessors` 获取动态生成的 getter、setter 和构造器；结果按类型缓存。缓存已经避免逐行反射，因此这次主要解决 **AOT compatibility**，没有声称每一行都会省掉一次反射。完整旧实现保存在 `Legacy/Excel/ExcelHelper.cs.txt`，可运行的最小机制在 `Legacy/Excel/ColumnDiscovery.cs`。
-
-新实现要求调用方提供 `ExcelModelMap<T>`：工厂决定如何创建每一行对象，列数组决定顺序与列名，普通泛型委托负责读写，转换器负责文本解析。编译器能看到具体构造器和属性访问，不需要运行时寻找成员或生成 IL。`Static/Excel/ColumnMapping.cs` 独立展示了声明列与执行委托的核心过程。
+现在使用增量 Source Generator 读取编译期类型符号。调用方只声明模型、可选列注解和生成上下文，自动得到静态映射：
 
 ```csharp
-static readonly ExcelModelMap<Book> BookMap = new(
-    static () => new Book(),
-    ExcelColumn<Book>.Create("编号", static b => b.Id,
-        static (b, id) => b.Id = id, ExcelValueConverters.Int32),
-    ExcelColumn<Book>.Create("名称", static b => b.Name,
-        static (b, name) => b.Name = name, ExcelValueConverters.String));
+[ExcelSerializable(typeof(Book))]
+internal static partial class Books;
 
-helper.Export(books, "Books", BookMap);
-helper.Import("books.xlsx", stream, BookMap);
+helper.Export(rows, "Books", Books.Book);
+helper.Import("books.xlsx", stream, Books.Book);
 ```
 
-映射适合存为 `static readonly` 并复用；它缓存的是访问方式，读取的仍是对象当前值。旧特性的 `Order` 改为数组顺序，`Ignore` 改为不声明该列，只读列传 `null` setter。映射支持类模型；按值传递的结构体无法通过 `Action<T, TValue>` 写回，因此接口直接限制为 `class`。带参数构造器可以由工厂显式调用，已不要求公共无参构造器。
+生成器为每列产生直接访问属性的读写操作，例如 `cell.SetCellValue((double)model.Id)` 和 `reader.TryReadNumber<int>(..., out var value)` 后赋给 `model.Id`。不同类型的值不再先装箱成 object，枚举底层转换也在生成代码中以具体类型完成。ExcelModelMap 只保存这些生成操作和列名；表头绑定属于工作簿数据处理，仍在运行时一次完成。
 
-转换行为仍在原来的 Excel 层完成：数字单元格直接读取，整数不截断小数；日期保留 Excel 日期序列转换；公式先求值；空白或解析失败保留工厂默认值。枚举用 `ExcelValueConverters.Enum<TEnum>()`，可空值用 `Nullable(...)`，自定义类型显式提供 `ExcelValueConverter<TValue>`，不会退回反射转换。DataTable 导出不需要模型映射。
+特殊构造使用上下文的静态 Factory；特殊转换使用 IExcelCellConverter<T>。除此之外不要求调用方提供逐字段委托。列名、顺序、忽略属性和只读规则均由声明决定，缺失工厂、重复/空列名或不支持类型在编译时报 EXCEL001。
 
-验证包括旧有工作簿与流测试，以及显式顺序、未声明的异常 getter、只读列、带参工厂、公式、日期、可空数值、Guid、枚举、自定义转换和无效整数。这里只验证自有映射层；NPOI 和整个应用的 NativeAOT 发布兼容性不在这次验证结论中。模板填充同样接收该映射，见 [模板与颜色说明](ExcelTemplates.md)。
+[运行时目录说明](../../../src/MS.Microservice.Excel.Aot/README.md)给出完整声明、构建和包消费方式。生成器使用原 Excel.csproj 的 Generator 构建模式，没有新增项目；生成器随 AOT 包作为 analyzer 交付，不成为运行时依赖。手写 getter/setter API 已删除，不保留兼容回退。
+
+## 学习区里的三个阶段
+
+- `Legacy/Excel/ColumnDiscovery.cs`：最初反射发现的机制例子，完整旧 ExcelHelper 历史快照仍保留。
+- `Legacy/Excel/ManualMapping/ExcelModelMap.cs`：本次被替换的完整手写映射实现，可编译；同目录的 ColumnMapping、TemplateMapping 是先前阶段的简化例子。
+- `Static/Excel/GeneratedBook.cs`：模型与生成上下文。编译时在学习程序集内生成真正的属性访问代码，不是用一个手写例子冒充 SG。
+
+ExcelGeneratedMappingExampleTests 使用相同输入检查旧映射读取值和新映射实际写出的工作簿。生成器专门测试会编译生成代码，也验证单列、多列、多个 partial 声明、继承、闭合泛型、required 工厂、非法声明和同名上下文。实际工作簿矩阵覆盖原有日期、公式、枚举、可空值、只读列、特殊转换、流、模板及颜色规则。
+
+本机预热后，一万次旧 object 数值 getter 分配 240,000 字节；生成列的一万次写入加读取分配 0 字节。测试使用已创建的 HSSF 数值单元格，专门观察列访问，不把结果描述成完整 Excel 文件零分配或整体吞吐量提升。自有运行时与生成代码做裁剪/AOT 静态分析，不执行 NPOI 或应用的 NativeAOT 发布验证。

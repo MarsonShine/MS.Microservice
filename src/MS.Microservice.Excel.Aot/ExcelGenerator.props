@@ -1,0 +1,6 @@
+<Project>
+  <!-- The runtime ProjectReference builds this compiler-only assembly first. NuGet consumers get it from analyzers/. -->
+  <ItemGroup>
+    <Analyzer Include="$(MSBuildThisFileDirectory)../MS.Microservice.Excel/bin/Generator/$(Configuration)/netstandard2.0/MS.Microservice.Excel.Generator.dll" />
+  </ItemGroup>
+</Project>

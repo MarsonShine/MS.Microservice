@@ -65,7 +65,7 @@ namespace MS.Microservice.Excel.Aot
             {
                 if (_columnMapping.TryGetValue(column.ColumnName, out int columnIndex))
                 {
-                    bindings.Add(new ColumnBinding(column.Getter, columnIndex));
+                    bindings.Add(new ColumnBinding(column.Write, columnIndex));
                 }
             }
             _bindings = bindings.ToArray();
@@ -85,12 +85,7 @@ namespace MS.Microservice.Excel.Aot
                 T obj = Items[i];
                 foreach (ColumnBinding binding in _bindings)
                 {
-                    ICell cell = row.GetCell(binding.ColumnIndex) ?? row.CreateCell(binding.ColumnIndex);
-                    object? value = binding.Getter(obj!);
-                    if (value != null)
-                    {
-                        SetCellValue(cell, value);
-                    }
+                    binding.Write(obj, row, binding.ColumnIndex, null);
                 }
             }
             return this;
@@ -140,43 +135,6 @@ namespace MS.Microservice.Excel.Aot
 
         public IReadOnlyList<T> Items { get { return _items; } }
 
-        private static void SetCellValue(ICell cell, object value)
-        {
-            switch (value)
-            {
-                case string stringValue:
-                    cell.SetCellValue(stringValue);
-                    break;
-                case DateTime dateTimeValue:
-                    cell.SetCellValue(dateTimeValue);
-                    break;
-                case bool boolValue:
-                    cell.SetCellValue(boolValue);
-                    break;
-                case short shortValue:
-                    cell.SetCellValue(shortValue);
-                    break;
-                case int intValue:
-                    cell.SetCellValue(intValue);
-                    break;
-                case long longValue:
-                    cell.SetCellValue(longValue);
-                    break;
-                case float floatValue:
-                    cell.SetCellValue(floatValue);
-                    break;
-                case double doubleValue:
-                    cell.SetCellValue(doubleValue);
-                    break;
-                case decimal decimalValue:
-                    cell.SetCellValue((double)decimalValue);
-                    break;
-                default:
-                    cell.SetCellValue(value.ToString());
-                    break;
-            }
-        }
-
-        private readonly record struct ColumnBinding(Func<T, object?> Getter, int ColumnIndex);
+        private readonly record struct ColumnBinding(ExcelColumnWriter<T> Write, int ColumnIndex);
     }
 }

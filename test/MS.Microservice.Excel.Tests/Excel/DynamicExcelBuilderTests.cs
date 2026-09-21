@@ -11,15 +11,9 @@ using Xunit;
 
 namespace MS.Microservice.Excel.Tests.Aot;
 
-public sealed class DynamicExcelBuilderTests
+public sealed partial class DynamicExcelBuilderTests
 {
-    private static readonly ExcelModelMap<TemplateRow> Map = new(static () => new TemplateRow(),
-        ExcelColumn<TemplateRow>.Create("编号", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32),
-        ExcelColumn<TemplateRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, ExcelValueConverters.String),
-        ExcelColumn<TemplateRow>.Create("启用", static r => r.Enabled, static (r, v) => r.Enabled = v, ExcelValueConverters.Boolean),
-        ExcelColumn<TemplateRow>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, ExcelValueConverters.Decimal),
-        ExcelColumn<TemplateRow>.Create("日期", static r => r.Date, static (r, v) => r.Date = v, ExcelValueConverters.DateTime),
-        ExcelColumn<TemplateRow>.Create("状态", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<RowStatus>()));
+    private static readonly ExcelModelMap<TemplateRow> Map = Maps.TemplateRow;
 
     [Fact]
     public async Task DynamicExcelBuilder_ShouldCopyStyles_WriteValues_AndWriteToPipe()
@@ -159,11 +153,17 @@ public sealed class DynamicExcelBuilderTests
 
     private sealed class TemplateRow
     {
+        [ExcelColumn("编号")]
         public int Id { get; set; }
+        [ExcelColumn("名称")]
         public string? Name { get; set; }
+        [ExcelColumn("启用")]
         public bool Enabled { get; set; }
+        [ExcelColumn("金额")]
         public decimal Amount { get; set; }
+        [ExcelColumn("日期")]
         public DateTime Date { get; set; }
+        [ExcelColumn("状态")]
         public RowStatus Status { get; set; }
     }
 
@@ -172,4 +172,6 @@ public sealed class DynamicExcelBuilderTests
         None = 0,
         Ready = 1
     }
+    [ExcelSerializable(typeof(TemplateRow))]
+    private static partial class Maps;
 }

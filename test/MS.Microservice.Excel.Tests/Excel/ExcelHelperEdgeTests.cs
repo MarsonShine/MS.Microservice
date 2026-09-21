@@ -15,35 +15,35 @@ namespace MS.Microservice.Excel.Tests.Aot
     /// Edge case tests for ExcelHelper import/export covering null cells,
     /// formula cells, empty rows, blank strings, different enum formats.
     /// </summary>
-    public class ExcelHelperEdgeTests
+    public partial class ExcelHelperEdgeTests
     {
         private enum MyEnum { None = 0, A = 1, B = 2 }
 
         private class EdgeRow
         {
+            [ExcelColumn("ID")]
             public int Id { get; set; }
+            [ExcelColumn("名称")]
             public string? Name { get; set; }
+            [ExcelColumn("金额")]
             public decimal Amount { get; set; }
+            [ExcelColumn("启用")]
             public bool Enabled { get; set; }
+            [ExcelColumn("状态")]
             public MyEnum Status { get; set; }
         }
 
         private class NullableRow
         {
+            [ExcelColumn("ID")]
             public int? Id { get; set; }
+            [ExcelColumn("名称")]
             public string? Name { get; set; }
         }
 
-        private static readonly ExcelModelMap<EdgeRow> EdgeRowMap = new(static () => new EdgeRow(),
-            ExcelColumn<EdgeRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32),
-            ExcelColumn<EdgeRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, ExcelValueConverters.String),
-            ExcelColumn<EdgeRow>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, ExcelValueConverters.Decimal),
-            ExcelColumn<EdgeRow>.Create("启用", static r => r.Enabled, static (r, v) => r.Enabled = v, ExcelValueConverters.Boolean),
-            ExcelColumn<EdgeRow>.Create("状态", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<MyEnum>()));
+        private static readonly ExcelModelMap<EdgeRow> EdgeRowMap = Maps.EdgeRow;
 
-        private static readonly ExcelModelMap<NullableRow> NullableRowMap = new(static () => new NullableRow(),
-            ExcelColumn<NullableRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Nullable(ExcelValueConverters.Int32)),
-            ExcelColumn<NullableRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v, ExcelValueConverters.String));
+        private static readonly ExcelModelMap<NullableRow> NullableRowMap = Maps.NullableRow;
 
         [Fact]
         public void Import_NullCell_ShouldUseDefault()
@@ -234,6 +234,7 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class NoDefaultConstructorRow(string seed)
         {
+            [ExcelColumn("ID")]
             public int Id { get; set; } = int.Parse(seed);
         }
 
@@ -249,9 +250,7 @@ namespace MS.Microservice.Excel.Tests.Aot
             wb.Write(ms, leaveOpen: true);
             ms.Position = 0;
 
-            var NoDefaultConstructorRowMap = new ExcelModelMap<NoDefaultConstructorRow>(
-                static () => new NoDefaultConstructorRow("23"),
-                ExcelColumn<NoDefaultConstructorRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32));
+            var NoDefaultConstructorRowMap = Maps.NoDefaultConstructorRow;
             var rows = new ExcelHelper()
                 .InitSheetName("S")
                 .InitStartReadRowIndex(0, 1)
@@ -259,5 +258,10 @@ namespace MS.Microservice.Excel.Tests.Aot
 
             rows.Should().ContainSingle().Which.Id.Should().Be(1);
         }
-    }
+        [ExcelSerializable(typeof(EdgeRow))]
+    [ExcelSerializable(typeof(NullableRow))]
+    [ExcelSerializable(typeof(NoDefaultConstructorRow), Factory = "CreateRow")]
+    private static partial class Maps
+    { private static NoDefaultConstructorRow CreateRow() => new("23"); }
+}
 }

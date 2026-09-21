@@ -12,11 +12,9 @@ public interface IExcelImportService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class ExcelImportService : IExcelImportService
+public sealed partial class ExcelImportService : IExcelImportService
 {
-    private static readonly ExcelModelMap<ExcelBookClassificationRow> ExcelBookClassificationRowMap = new(static () => new ExcelBookClassificationRow(),
-        ExcelColumn<ExcelBookClassificationRow>.Create("BOOKID", static r => r.BookId, static (r, v) => r.BookId = v, ExcelValueConverters.Int32),
-        ExcelColumn<ExcelBookClassificationRow>.Create("分类", static r => r.Classification, static (r, v) => r.Classification = v, ExcelValueConverters.String));
+    private static readonly ExcelModelMap<ExcelBookClassificationRow> ExcelBookClassificationRowMap = Maps.ExcelBookClassificationRow;
 
     public async Task<string> BuildBookClassificationSqlAsync(
         string fileName,
@@ -67,7 +65,11 @@ public sealed class ExcelImportService : IExcelImportService
 
     private sealed class ExcelBookClassificationRow
     {
+        [ExcelColumn("BOOKID")]
         public int BookId { get; set; }
+        [ExcelColumn("分类")]
         public string? Classification { get; set; }
     }
+    [ExcelSerializable(typeof(ExcelBookClassificationRow))]
+    private static partial class Maps;
 }

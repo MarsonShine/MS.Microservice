@@ -78,8 +78,8 @@ dotnet test test/MS.Microservice.Lab.AotExamples.Tests
 
 | 主题 | 旧机制与替代方式 | 说明 |
 |---|---|---|
-| Excel 常规导入导出 | 运行时属性扫描 → 显式工厂和类型化列 | [模型映射](ExcelModelMappings.md) |
-| Excel 模板与颜色 | getter 编译、颜色反射 → 共用映射与静态颜色表 | [模板填充](ExcelTemplates.md) |
+| Excel 常规导入导出 | 运行时扫描／手写字段映射 → SG 自动生成类型化列 | [模型映射](ExcelModelMappings.md) |
+| Excel 模板与颜色 | getter 编译、颜色反射 → 共用生成映射与静态颜色表 | [模板填充](ExcelTemplates.md) |
 | 默认值与实体键 | Activator / boxed 登记 → 类型化 Id 与泛型比较 | [默认值](DefaultValueComparisons.md) |
 | HTTP 与缓存 JSON | 任意类型发现 → JsonTypeInfo / 封闭登记表 | [Core JSON](CoreJsonMetadata.md) |
 | 消息 JSON | 裸 Type 序列化 → 生成契约 | [消息元数据](MessagingJsonMetadata.md) |

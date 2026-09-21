@@ -5,7 +5,7 @@ using Xunit;
 
 namespace MS.Microservice.Excel.Tests.Excel;
 
-public sealed class ExcelModelMapTests
+public sealed partial class ExcelModelMapTests
 {
     private enum Status { None, Ready }
     private enum ByteStatus : byte { Maximum = 255 }
@@ -22,29 +22,34 @@ public sealed class ExcelModelMapTests
 
     private sealed class Row(string seed)
     {
+        [ExcelColumn(Order = 6)]
         public string ReadOnly => seed;
+        [ExcelColumn(Order = 1)]
         public int Number { get; set; } = 41;
+        [ExcelColumn(Order = 2)]
         public int? Optional { get; set; }
+        [ExcelColumn(Order = 3)]
         public DateTime Date { get; set; }
+        [ExcelColumn(Order = 4)]
         public Guid Id { get; set; }
+        [ExcelColumn(Order = 5)]
         public Status Status { get; set; }
+        [ExcelColumn(Converter = typeof(UppercaseConverter), Order = 0)]
         public string? Label { get; set; }
+        [ExcelColumn(Ignore = true)]
         public string Undeclared => throw new InvalidOperationException("Must not discover this property.");
     }
 
-    private static readonly ExcelModelMap<Row> Map = new(static () => new Row("factory"),
-        ExcelColumn<Row>.Create("Label", static r => r.Label, static (r, v) => r.Label = v, new ExcelValueConverter<string?>(Uppercase)),
-        ExcelColumn<Row>.Create(" Number ", static r => r.Number, static (r, v) => r.Number = v, ExcelValueConverters.Int32),
-        ExcelColumn<Row>.Create("Optional", static r => r.Optional, static (r, v) => r.Optional = v, ExcelValueConverters.Nullable(ExcelValueConverters.Int32)),
-        ExcelColumn<Row>.Create("Date", static r => r.Date, static (r, v) => r.Date = v, ExcelValueConverters.DateTime),
-        ExcelColumn<Row>.Create("Id", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Guid),
-        ExcelColumn<Row>.Create("Status", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<Status>()),
-        ExcelColumn<Row>.Create("ReadOnly", static r => r.ReadOnly, null, ExcelValueConverters.String));
-
-    private static bool Uppercase(string text, out string? value)
+    private static ExcelModelMap<Row> Map => Maps.Row;
+    private sealed class UppercaseConverter : IExcelCellConverter<string?>
     {
-        value = text.ToUpperInvariant();
-        return true;
+        static bool IExcelCellConverter<string?>.TryRead(ExcelCellReader reader, out string? value)
+        {
+            if (!reader.TryReadString(out var text)) { value = null; return false; }
+            value = text.ToUpperInvariant();
+            return true;
+        }
+        static void IExcelCellConverter<string?>.Write(ICell cell, string? value, ICellStyle? dateStyle) => cell.SetCellValue(value ?? "");
     }
 
     [Fact]
@@ -118,24 +123,9 @@ public sealed class ExcelModelMapTests
     }
 
     [Fact]
-    public void MappingCopiesColumnArray_AndExportsOnlyDeclaredColumns()
-    {
-        ExcelColumn<Row>[] columns = [ExcelColumn<Row>.Create("Number", static r => r.Number, null, ExcelValueConverters.Int32)];
-        var map = new ExcelModelMap<Row>(static () => new Row("seed"), columns);
-        columns[0] = ExcelColumn<Row>.Create("Label", static r => r.Label, null, ExcelValueConverters.String);
-        using var data = new MemoryStream(new ExcelHelper().Export([new Row("seed")], "Rows", map));
-        using var workbook = new XSSFWorkbook(data);
-        Assert.Equal("Number", Assert.Single(workbook.GetSheetAt(0).GetRow(0).Cells).StringCellValue);
-    }
-
-    [Fact]
     public void Import_EnumUnderlyingTypesAndNullableEnums_KeepDirectNumericAndFormulaPath()
     {
-        var map = new ExcelModelMap<EnumRow>(static () => new EnumRow(),
-            ExcelColumn<EnumRow>.Create("Byte", static r => r.Byte, static (r, v) => r.Byte = v, ExcelValueConverters.Enum<ByteStatus>()),
-            ExcelColumn<EnumRow>.Create("Short", static r => r.Short, static (r, v) => r.Short = v, ExcelValueConverters.Enum<ShortStatus>()),
-            ExcelColumn<EnumRow>.Create("Long", static r => r.Long, static (r, v) => r.Long = v, ExcelValueConverters.Enum<LongStatus>()),
-            ExcelColumn<EnumRow>.Create("Optional", static r => r.Optional, static (r, v) => r.Optional = v, ExcelValueConverters.Nullable(ExcelValueConverters.Enum<Status>())));
+        var map = Maps.EnumRow;
         using var source = new XSSFWorkbook();
         var sheet = source.CreateSheet("Enums");
         string[] headers = ["Byte", "Short", "Long", "Optional"];
@@ -158,5 +148,11 @@ public sealed class ExcelModelMapTests
             Assert.Equal(Status.Ready, result.Optional);
         }
         finally { helper.Workbook?.Dispose(); }
+    }
+    [ExcelSerializable(typeof(Row), Factory = "CreateRow")]
+    [ExcelSerializable(typeof(EnumRow))]
+    private static partial class Maps
+    {
+        private static Row CreateRow() => new("factory");
     }
 }

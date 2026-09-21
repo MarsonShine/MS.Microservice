@@ -1,4 +1,4 @@
-namespace MS.Microservice.Lab.AotExamples.Static.Excel;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Excel.ManualMapping;
 
 // Independent teaching implementation: header and getter order are explicit; no production wrapper.
 public sealed class ColumnMapping<T>(params (string Header, Func<T, object?> Read)[] columns)

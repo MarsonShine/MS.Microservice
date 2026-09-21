@@ -12,7 +12,7 @@ using Xunit;
 
 namespace MS.Microservice.Excel.Tests.Aot
 {
-    public class ExcelHelperTests
+    public partial class ExcelHelperTests
     {
         private enum MyEnum
         {
@@ -23,11 +23,17 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class SampleRow
         {
+            [ExcelColumn("ID")]
             public int Id { get; set; }
+            [ExcelColumn("名称")]
             public string? Name { get; set; }
+            [ExcelColumn("金额")]
             public decimal Amount { get; set; }
+            [ExcelColumn("日期")]
             public DateTime Date { get; set; }
+            [ExcelColumn("启用")]
             public bool Enabled { get; set; }
+            [ExcelColumn("状态")]
             public MyEnum Status { get; set; }
         }
 
@@ -38,23 +44,11 @@ namespace MS.Microservice.Excel.Tests.Aot
             public DateTime C { get; set; }
         }
 
-        private static readonly ExcelModelMap<SampleRow> SampleRowMap = new(static () => new SampleRow(),
-            ExcelColumn<SampleRow>.Create("ID", static r => r.Id, static (r, v) => r.Id = v, ExcelValueConverters.Int32),
-            ExcelColumn<SampleRow>.Create("名称", static r => r.Name, static (r, v) => r.Name = v!, ExcelValueConverters.String),
-            ExcelColumn<SampleRow>.Create("金额", static r => r.Amount, static (r, v) => r.Amount = v, ExcelValueConverters.Decimal),
-            ExcelColumn<SampleRow>.Create("日期", static r => r.Date, static (r, v) => r.Date = v, ExcelValueConverters.DateTime),
-            ExcelColumn<SampleRow>.Create("启用", static r => r.Enabled, static (r, v) => r.Enabled = v, ExcelValueConverters.Boolean),
-            ExcelColumn<SampleRow>.Create("状态", static r => r.Status, static (r, v) => r.Status = v, ExcelValueConverters.Enum<MyEnum>()));
+        private static readonly ExcelModelMap<SampleRow> SampleRowMap = Maps.SampleRow;
 
-        private static readonly ExcelModelMap<PlainRow> PlainRowMap = new(static () => new PlainRow(),
-            ExcelColumn<PlainRow>.Create("A", static r => r.A, static (r, v) => r.A = v, ExcelValueConverters.Int32),
-            ExcelColumn<PlainRow>.Create("B", static r => r.B, static (r, v) => r.B = v!, ExcelValueConverters.String),
-            ExcelColumn<PlainRow>.Create("C", static r => r.C, static (r, v) => r.C = v, ExcelValueConverters.DateTime));
+        private static readonly ExcelModelMap<PlainRow> PlainRowMap = Maps.PlainRow;
 
-        private static readonly ExcelModelMap<MixedRow> MixedRowMap = new(static () => new MixedRow(),
-            ExcelColumn<MixedRow>.Create("显示名", static r => r.Display, static (r, v) => r.Display = v!, ExcelValueConverters.String),
-            ExcelColumn<MixedRow>.Create("Keep", static r => r.Keep, static (r, v) => r.Keep = v, ExcelValueConverters.Int32),
-            ExcelColumn<MixedRow>.Create("Tail", static r => r.Tail, static (r, v) => r.Tail = v, ExcelValueConverters.DateTime));
+        private static readonly ExcelModelMap<MixedRow> MixedRowMap = Maps.MixedRow;
 
         [Fact]
         public void Export_ExplicitMap_ShouldUseDeclaredHeaders()
@@ -135,11 +129,15 @@ namespace MS.Microservice.Excel.Tests.Aot
 
         private class MixedRow
         {
+            [ExcelColumn(Ignore = true)]
             public string Skip { get; set; } = string.Empty;
 
+            [ExcelColumn(Order = 1)]
             public int Keep { get; set; }
+            [ExcelColumn("显示名", Order = 0)]
             public string Display { get; set; } = string.Empty;
 
+            [ExcelColumn(Order = 2)]
             public DateTime Tail { get; set; }
         }
 
@@ -485,5 +483,9 @@ namespace MS.Microservice.Excel.Tests.Aot
             action.Should().Throw<InvalidOperationException>()
                 .WithMessage("*未找到名称为 Missing 的工作表*");
         }
-    }
+        [ExcelSerializable(typeof(SampleRow))]
+    [ExcelSerializable(typeof(PlainRow))]
+    [ExcelSerializable(typeof(MixedRow))]
+    private static partial class Maps;
+}
 }

@@ -1,4 +1,4 @@
-namespace MS.Microservice.Lab.AotExamples.Static.Excel;
+namespace MS.Microservice.Lab.AotExamples.Legacy.Excel.ManualMapping;
 
 // Bind only declared columns to the template's real indexes. Execute the getters for each current row.
 public static class TemplateMapping

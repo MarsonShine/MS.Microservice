@@ -9,7 +9,7 @@ Excel 后续调整：旧命名空间和接口已恢复，静态实现迁入 `src
 | 原入口或写法 | 现在的调用方式 | 行为边界 |
 |---|---|---|
 | 自动读取查询对象属性 | `QueryParameterMap<T>` 显式列出有序名称与 getter | 字典入口保留；读取最新值，null 跳过，集合展开、不变文化及 URI 转义保持 |
-| Excel 根据属性和注解发现模型 | 旧接口保留；新 `MS.Microservice.Excel.Aot` 使用 `ExcelModelMap<T>` | 两套命名空间隔离，同一项目按 ExcelVariant 分别出包 |
+| Excel 模型映射 | 新 `MS.Microservice.Excel.Aot` 通过 ExcelSerializable 上下文生成类型化列 | 手写字段委托 API 已删除；同一项目的 Generator 模式编译 analyzer，随 AOT 包交付 |
 | `Activator` 求默认值 | `TypeHelper.IsDefaultValue<T>` / `GetDefaultValue<T>` | 按 default 语义，不执行自定义结构体构造函数 |
 | 装箱实体键默认值 | `IEntity<TKey>.Id` 与泛型 EntityHelper；无须登记 | 删除 object[]/BoxedDefaults 路径；可空键采用声明类型 default；非可空 int/long 保留临时键规则 |
 | `LogHttpClient(logger, http)` | 构造时加 `JsonTypeRegistry` | 请求/响应根类型显式登记；未知类型失败；匿名请求改为命名 DTO |
@@ -106,3 +106,11 @@ A04 最初使用 BoxedDefaults 的过渡版本已退出生产路径，完整实�
 可空零值现在视为已赋值；复合键整体按其声明类型的 default 和相等性判断。这是明确采用的新规则，不保留 boxed 兼容回退。详见 [默认值与实体键说明](../samples/Lab/MS.Microservice.Lab.AotExamples/DefaultValueComparisons.md)。
 
 本次后续回归：完整解决方案 33 个测试项目，2158 项通过、0 项失败、31 项既有 opt-in 测试跳过。Core 与 Domain.Primitives 实际加载 ILLink 10.0.11，裁剪/AOT 静态分析零诊断；未执行 NativeAOT publish。
+
+## Excel 生成式映射后续调整
+
+AOT 模型映射现在由 Source Generator 生成。模型无需逐字段声明 getter/setter；静态生成上下文决定根模型，可选 ExcelColumn 注解控制名称、顺序、忽略和特殊转换。生成列直接使用具体属性类型，删除 object getter/setter 以及旧 ExcelValueConverters 接口，不保留映射兼容回退。普通导入导出与模板共用生成结果。
+
+遵循“不新建项目”的约束，编译期程序集使用现有 Excel.csproj 的 Generator 模式，AOT NuGet 包内置 analyzer。详细用法、特殊构造/转换及验证边界见 [Excel SG 说明](../src/MS.Microservice.Excel.Aot/README.md)。
+
+本次 SG 后续验证：完整解决方案 33 个测试项目，2187 项通过、0 项失败、31 项既有 opt-in 项跳过。Excel 专项及真实 NuGet 包消费各 93 项通过；学习区 114 项、Lab 288 项通过。AOT 运行时和包含实际生成代码的消费端均通过 ILLink 10.0.11 裁剪/AOT 静态分析，零诊断；未执行 NativeAOT publish。包消费直接复用现有测试项目，没有创建验证项目。

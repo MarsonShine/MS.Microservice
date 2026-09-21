@@ -1,50 +1,75 @@
 # MS.Microservice.Excel.Aot
 
-这里保存 Excel 的显式模型映射实现，所有公开类型位于 `MS.Microservice.Excel.Aot` 命名空间。目录包含 ExcelHelper、导入导出接口、ExcelModelMap、模板填充、静态颜色表和内部诊断代码；没有独立 csproj。
+本目录提供由 Source Generator 生成模型访问代码的 Excel 导入、导出与模板填充。调用方声明模型和生成上下文，不需要逐字段编写 getter、setter 或类型映射。生成列直接使用属性的具体类型，内置读写路径不经过 object 值委托。
 
-现有 `../MS.Microservice.Excel/MS.Microservice.Excel.csproj` 通过 Compile Include 编译这里的源码。原目录同时保留原命名空间的旧接口，包括属性注解、无 map 的 Import/Export、模板入口和 MiniExcelHelper。仓库的 Lab 导入服务继续显式使用 AOT 命名空间。两套实现不互相调用，也不引用学习类库。
+## 声明和使用
 
-## 一个项目，分别打包
+```csharp
+using MS.Microservice.Excel.Aot;
 
-在仓库根目录执行，版本由发布者指定：
+public sealed class Book
+{
+    [ExcelColumn("编号")]
+    public int Id { get; set; }
+    [ExcelColumn("名称")]
+    public string? Name { get; set; }
+}
+
+[ExcelSerializable(typeof(Book))]
+internal static partial class WorkbookModels;
+
+// 表头默认使用属性名；只在改名、排序、忽略或特殊转换时添加 ExcelColumn。
+var helper = new ExcelHelper().InitSheetIndex(0).InitStartReadRowIndex(0, 1);
+var bytes = helper.Export(books, "Books", WorkbookModels.Book);
+var rows = helper.Import(bytes, WorkbookModels.Book);
+var template = helper.OpenExcel(templateStream, books, WorkbookModels.Book);
+```
+
+一个上下文可以添加多个 ExcelSerializable。Name 可指定生成的属性名，避免两个模型同名。模型无需 partial；上下文是非泛型 static partial class，若嵌套在其他类中，包含类也必须为非泛型 partial class。生成器支持闭合泛型模型。
+
+只读取公开实例属性；静态属性、索引器和非公开 getter 不参与。只读、init 和非公开 setter 的属性只导出。Order 控制列顺序；同 Order 按属性发现的声明顺序排列，继承成员接在派生类成员之后。Ignore 明确排除列。空列名、重复列名、不支持的类型、无效上下文和缺失工厂产生 EXCEL001 编译错误，不回退到运行时成员发现。
+
+自动支持 string、bool、byte/sbyte、short/ushort、int/uint、long/ulong、float/double、decimal、DateTime、Guid、枚举及对应可空值类型。空白或无法解析的输入保留工厂默认值；整数不截断小数。公式先求值；日期公式保留工作簿格式解释。枚举按名称导出、支持名称及底层整数导入，Flags 的组合和未命名数值同样支持。
+
+## 只有特殊行为才需要扩展
+
+没有可访问无参构造函数，或有 required 属性的模型，在上下文声明一个静态无参工厂：
+
+```csharp
+[ExcelSerializable(typeof(SeededRow), Factory = "CreateRow")]
+internal static partial class WorkbookModels
+{
+    private static SeededRow CreateRow() => new("initial value");
+}
+```
+
+特殊列通过 `[ExcelColumn(Converter = typeof(MyConverter))]` 指定实现 `IExcelCellConverter<T>` 的类型。接口只有静态 TryRead 和 Write，T 必须对应属性类型；普通属性不需要转换器。转换器可以使用 ExcelCellReader 的类型化读取、GetText 或 GetFormattedText。没有转换器注册表、自动类型发现或 object 转换回退。
+
+## 一个项目，编译期生成器与运行时包分离
+
+没有新增 csproj。现有 `../MS.Microservice.Excel/MS.Microservice.Excel.csproj` 的 Generator 模式单独编译 `Generator/ExcelSourceGenerator.cs`，目标 netstandard2.0；该程序集只在编译期运行。All/Aot 构建按输入时间戳先构建生成器，Aot 包将它放到 `analyzers/dotnet/cs`。Roslyn 包引用为 PrivateAssets，不进入 Excel AOT 的运行时依赖。
+
+NuGet 调用方引用 MS.Microservice.Excel.Aot 后自动加载生成器。仓库内项目引用调用方还需导入本目录的 ExcelGenerator.props，现有 Lab、Excel 测试和学习项目已经接入。
 
 ```powershell
-dotnet pack src/MS.Microservice.Excel/MS.Microservice.Excel.csproj -c Release -p:ExcelVariant=Legacy -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
 dotnet pack src/MS.Microservice.Excel/MS.Microservice.Excel.csproj -c Release -p:ExcelVariant=Aot -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
 ```
 
-| ExcelVariant | 编译内容 | 程序集及包 |
-|---|---|---|
-| All（默认） | 旧接口 + 新 AOT 命名空间，供仓库开发与对照测试 | 不允许打包，必须明确选下面一种 |
-| Legacy | 原目录的兼容实现，依赖 MiniExcel 和 NPOI | MS.Microservice.Excel |
-| Aot | 仅本目录的静态映射实现，不包含旧类型或 MiniExcel | MS.Microservice.Excel.Aot |
+| ExcelVariant | 用途 |
+|---|---|
+| All（默认） | 仓库开发：编译原 Excel 与 AOT 两个命名空间，不允许直接打包 |
+| Aot | 编译本目录运行时源码，产出 MS.Microservice.Excel.Aot 包并内含 generator analyzer |
+| Legacy | 原 MS.Microservice.Excel 包，保持此前单独保存的原实现，不参与本次生成式接口设计 |
+| Generator | 同项目的编译期程序集，不能单独打包，不引用 NPOI 或 Excel 运行时程序集 |
 
-每个模式使用各自的 `obj/<variant>` 和 `bin/<variant>`，包括独立的 NuGet assets、生成代码和 Release 输出。这样先构建旧版再打 AOT 包时，不会复用旧依赖图或旧 DLL。使用 `--no-restore`、`--no-build` 时，必须先为同一个 ExcelVariant 完成对应步骤。普通 dotnet pack 未选择模式会明确失败，避免把开发时的组合程序集当成独立包。
+各模式的 obj/bin 相互隔离。不要用一种模式的 restore/build 结果配合另一模式的 --no-restore/--no-build。源码导出包含两个目录和生成器源码，仍是一个项目；通用 pack-modules 脚本默认产出 Legacy 包。
 
-仓库 `pack-modules.ps1 -Modules MS.Microservice.Excel` 继续产出旧包；AOT 包使用上面的同项目命令。源码导出脚本导出 Excel 时会同时携带本目录，保证 Compile Include 的路径完整。没有新增项目或修改解决方案项目列表。
+可用 `dotnet build <调用方项目> -t:Rebuild -p:EmitCompilerGeneratedFiles=true` 查看 obj 下实际生成的 `.Excel.g.cs`。修改属性后，生成结果随编译更新；删除必要声明会编译失败。
 
-## 调用对照
+## 迁移与验证边界
 
-```csharp
-// 旧调用方保持原命名空间和签名。
-var old = new MS.Microservice.Infrastructure.Utils.ExcelHelper();
-var oldBytes = old.Export(rows, "Rows");
+手写 `ExcelColumn<T>.Create(getter, setter, converter)`、ExcelValueConverter 和 ExcelValueConverters 已从 AOT 运行时删除，没有兼容重载。调用点改传生成上下文的模型属性。底层 ExcelModelMap 是生成代码所用的固定列元数据，保留表头到实际列号的绑定；它不负责运行时发现模型成员。DataTable 的数据表示本来就是 object，本次保留其既有导出逻辑。
 
-// 新调用方明确使用 AOT 命名空间与模型映射。
-var current = new MS.Microservice.Excel.Aot.ExcelHelper();
-var newBytes = current.Export(rows, "Rows", rowMap);
-```
+验证包括真实工作簿、生成代码编译和诊断、声明继承/可空/只读/工厂/转换器、模板样式与列定位，以及本地包自动加载 analyzer 的消费测试。数值列分配测试预创建 HSSF 单元格以隔离工作簿和压缩开销；结果不能推广成整个 NPOI 流程零分配。NPOI 的完整 NativeAOT 发布兼容性仍未验证，本次不执行 NativeAOT publish。
 
-rowMap 的完整声明见[模型映射说明](../../samples/Lab/MS.Microservice.Lab.AotExamples/ExcelModelMappings.md)。旧 `[ExcelColumn]` 不控制 AOT 版；新版本只执行显式声明的列和委托。
-
-旧实现从改造前源码恢复，唯独原 Core.PropertyAccessors 依赖改为 Excel 内部的 ExcelPropertyAccessors。它使用旧 ReflectionDelegateFactory 创建普通 getter/setter/工厂，保留公开实例属性、排除索引器、跳过私有/init setter 和公开无参构造函数要求；原 Excel 元数据缓存仍负责复用。这样无需把动态查询访问器重新放回 Core。旧版继续需要反射和运行时编译，不属于 AOT 兼容实现。
-
-## 验证
-
-Excel 原接口的完整回归测试位于 `test/MS.Microservice.Excel.Tests/Legacy`；现有映射、模板、颜色和诊断测试改为调用 AOT 命名空间。`ExcelCompatibilityTests` 直接比较两套实际实现，互相读取生成的工作簿，检查空集合、空值、中文、列顺序、忽略列和 MiniExcel 往返。`.cs.txt` 历史快照不参与这些测试。
-
-`build/validate-static-aot.ps1` 对 Excel 选择 Aot 模式，实际检查纯 AOT 源码的裁剪/动态代码诊断；不会把有意保留的 Legacy 实现伪装成无反射实现。NPOI 的完整 NativeAOT 发布兼容性仍未验证。这里的本地 NuGet 打包不等于发布包到远程源，也不等于 NativeAOT publish。
-
-本次本地验证还检查两个 nupkg 的程序集类型和依赖清单：旧包只含原命名空间，AOT 包只含新命名空间，后者没有 MiniExcel。兼容测试另外覆盖只读属性、私有 setter、init setter、私有 getter 和索引器，确认 Excel 内部访问器没有扩大旧接口的写入范围。
-
-本次回归：Excel 67 项、Lab 284 项、边界检查 39 项通过；19 项原有性能基准跳过。源码导出后的构建通过；Aot 变体实际加载 ILLink 10.0.11 后零诊断。
+本次验证结果：Excel 源码模式和 NuGet 包模式各 93 项通过，学习区 114 项、Lab 288 项通过；完整解决方案 2187 项通过、0 项失败、31 项既有 opt-in 跳过。AOT 运行时和生成消费端实际加载 ILLink 10.0.11 后零诊断，没有做 NativeAOT 发布。
