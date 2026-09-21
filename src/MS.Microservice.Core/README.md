@@ -17,6 +17,25 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 更高层取舍见[总体架构](../../docs/Architecture-Overview.md)；
 复制或包引用需要包含声明的依赖，见[组件消费](../../docs/components/consumption.md)。
 
+## Core 裁剪与 AOT 分析
+
+在仓库根目录运行，仅检查 Core 及构建所需的项目引用：
+
+```powershell
+./build/validate-static-aot.ps1 -Project src/MS.Microservice.Core/MS.Microservice.Core.csproj
+```
+
+脚本使用相同的裁剪/AOT 分析参数还原并重新编译，确认 Core 自身的编译命令加载
+`ILLink.RoslynAnalyzer.dll`。还原或构建失败、未加载分析器、出现 IL 诊断均视为失败。
+日志及成功报告位于 `artifacts/aot/MS.Microservice.Core`；失败重跑会清除旧的成功报告。
+默认使用仓库 SDK 对应的分析器版本，不需要指定 `ILLinkVersion`。
+
+这是静态分析基线，不发布或运行 Native AOT 程序，也不代表第三方依赖的完整原生兼容性。
+普通构建成功或 JSON 反射关闭测试通过，均不能替代此检查。
+
+分析脚本自身的失败分支回归检查：`./build/test-validate-static-aot.ps1`。
+该检查使用隔离的模拟项目与 dotnet 调用，不访问网络，也不替代上述真实分析。
+
 ### HTTP 请求辅助
 
 LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null 值省略，空字符串保留，
