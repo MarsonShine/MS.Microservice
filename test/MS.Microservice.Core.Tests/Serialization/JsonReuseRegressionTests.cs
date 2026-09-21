@@ -1,3 +1,6 @@
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -7,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace MS.Microservice.Core.Tests.Serialization;
 
-public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
+public sealed partial class JsonReuseRegressionTests(ITestOutputHelper output)
 {
     [Theory]
     [InlineData(false)]
@@ -17,8 +20,8 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         var value = new Payload("中文", 7, State.Active, new("nested"));
         var cache = new RecordingCache { Data = "{\"Name\":\"中文\",\"Count\":7}"u8.ToArray() };
         Func<Task> operation = write
-            ? () => cache.SetAsync("item", value, null, null)
-            : () => cache.GetAsync<Payload>("item");
+            ? () => cache.SetAsync("item", value, CacheJson.Payload, null, null)
+            : () => cache.GetAsync("item", CacheJson.Payload);
         for (int i = 0; i < 32; i++) Assert.True(operation().IsCompletedSuccessfully);
 
         long before = GC.GetAllocatedBytesForCurrentThread();
@@ -34,12 +37,12 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
     public async Task HttpReads_AvoidRepeatedConfigurationAllocations()
     {
         using var client = Client("{\"name\":\"中文\",\"count\":7}");
-        for (int i = 0; i < 32; i++) await client.GetAsync<Payload>("/item", body: null!);
+        for (int i = 0; i < 32; i++) await client.GetAsync<Payload>("/item", body: null!, HttpJson.Payload);
 
         long before = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 64; i++)
         {
-            var pending = client.GetAsync<Payload>("/item", body: null!);
+            var pending = client.GetAsync<Payload>("/item", body: null!, HttpJson.Payload);
             Assert.True(pending.IsCompletedSuccessfully); // The fake transport contains only in-memory data.
             var value = await pending;
             Assert.Equal(7, value.Count);
@@ -62,8 +65,8 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         var absolute = TimeSpan.FromMinutes(10);
         var sliding = TimeSpan.FromMinutes(1);
 
-        await cache.SetAsync("item", original, absolute, sliding, cancellation.Token);
-        var decoded = await cache.GetAsync<Payload>("item", cancellation.Token);
+        await cache.SetAsync("item", original, CacheJson.Payload, absolute, sliding, cancellation.Token);
+        var decoded = await cache.GetAsync("item", CacheJson.Payload, cancellation.Token);
 
         Assert.Equal(original, decoded);
         using var document = JsonDocument.Parse(cache.Data!);
@@ -92,8 +95,8 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         var cache = new RecordingCache { Data = Encoding.UTF8.GetBytes(json) };
         using var client = Client(json);
 
-        var cached = await cache.GetAsync<Payload>("item");
-        var http = await client.GetAsync<Payload>("/item", body: null!);
+        var cached = await cache.GetAsync("item", CacheJson.Payload);
+        var http = await client.GetAsync<Payload>("/item", body: null!, HttpJson.Payload);
 
         Assert.NotNull(cached);
         Assert.Null(cached.Name);
@@ -111,8 +114,8 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         var cache = new RecordingCache { Data = Encoding.UTF8.GetBytes(json) };
         using var client = Client(json);
 
-        await Assert.ThrowsAsync<JsonException>(() => cache.GetAsync<Payload>("item"));
-        Assert.Null(await client.GetAsync<Payload>("/item", body: null!));
+        await Assert.ThrowsAsync<JsonException>(() => cache.GetAsync("item", CacheJson.Payload));
+        Assert.Null(await client.GetAsync<Payload>("/item", body: null!, HttpJson.Payload));
     }
 
     [Fact]
@@ -123,14 +126,14 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         var original = new Payload("factory", 2, State.Active, null);
         Task<Payload> Factory() { calls++; return Task.FromResult(original); }
 
-        Assert.Equal(original, await cache.GetAsync("item", Factory));
-        Assert.Equal(original, await cache.GetAsync("item", Factory));
+        Assert.Equal(original, await cache.GetAsync("item", Factory, CacheJson.Payload));
+        Assert.Equal(original, await cache.GetAsync("item", Factory, CacheJson.Payload));
         Assert.Equal(1, calls);
         Assert.Equal(1, cache.Writes);
         cache.Data = "null"u8.ToArray();
-        Assert.Null(await cache.GetAsync<Payload>("item"));
+        Assert.Null(await cache.GetAsync("item", CacheJson.Payload));
         cache.Data = null;
-        Assert.Null(await cache.GetAsync<Payload>("item"));
+        Assert.Null(await cache.GetAsync("item", CacheJson.Payload));
     }
 
     [Fact]
@@ -139,7 +142,7 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         using var cancellation = new CancellationTokenSource();
         var cache = new RecordingCache { Data = "{}"u8.ToArray(), AfterRead = cancellation.Cancel };
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cache.GetAsync<Payload>("item", cancellation.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cache.GetAsync("item", CacheJson.Payload, cancellation.Token));
         Assert.Equal(cancellation.Token, cache.ReadToken);
     }
 
@@ -151,7 +154,7 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         byte[] bytes = [.. Encoding.UTF8.Preamble, .. Encoding.UTF8.GetBytes(json)];
         var cache = new RecordingCache { Data = bytes };
 
-        Assert.Equal("BOM", (await cache.GetAsync<Payload>("item"))!.Name);
+        Assert.Equal("BOM", (await cache.GetAsync("item", CacheJson.Payload))!.Name);
         Assert.Same(bytes, cache.Data);
         Assert.True(cache.Data.AsSpan().StartsWith(Encoding.UTF8.Preamble));
     }
@@ -163,7 +166,7 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
     public async Task CacheRead_RejectsEmptyOrMisplacedBomInput(string json)
     {
         var cache = new RecordingCache { Data = Encoding.UTF8.GetBytes(json) };
-        await Assert.ThrowsAsync<JsonException>(() => cache.GetAsync<Payload>("item"));
+        await Assert.ThrowsAsync<JsonException>(() => cache.GetAsync("item", CacheJson.Payload));
     }
 
     [Fact]
@@ -173,10 +176,23 @@ public sealed class JsonReuseRegressionTests(ITestOutputHelper output)
         {
             var original = new Payload($"值{index}", index, State.Active, new(index.ToString()));
             var cache = new RecordingCache();
-            await cache.SetAsync("item", original, null, null);
-            Assert.Equal(original, await cache.GetAsync<Payload>("item"));
+            await cache.SetAsync("item", original, CacheJson.Payload, null, null);
+            Assert.Equal(original, await cache.GetAsync("item", CacheJson.Payload));
         })));
     }
+
+    private static readonly ReuseTestJson CacheJson = new(new JsonSerializerOptions
+    {
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+    });
+    private static readonly ReuseTestJson HttpJson = new(new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true,
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+    });
+
+    [JsonSerializable(typeof(Payload))]
+    private partial class ReuseTestJson : JsonSerializerContext;
 
     public enum State { Inactive, Active }
     public sealed record Child(string Value);

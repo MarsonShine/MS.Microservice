@@ -4,33 +4,39 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text.Json.Serialization.Metadata;
+using System.Text.Encodings.Web;
 using System.Text.Json;
-
-
+using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using System.Threading.Tasks;
 
 namespace MS.WebHttpClient
 {
     public static partial class HttpClientExtensions
     {
+        // HTTP 忽略属性名大小写；与缓存规则不同，因此单独持有不可变的配置。
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNameCaseInsensitive = true,
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
+
         extension(HttpClient client)
         {
-            public async Task<T> GetAsync<T>(string api, IDictionary? body, JsonTypeInfo<T> typeInfo)
+            public async Task<T> GetAsync<T>(string api, IDictionary? body)
             {
-                ArgumentNullException.ThrowIfNull(typeInfo);
-                using var message = await GetAsyncCore(client, api, body);
-                return await ReadAsObjectAsync(message, typeInfo);
+                var message = await GetAsyncCore(client, api, body);
+                return await ReadAsObjectAsync<T>(message);
             }
 
             public Task<HttpResponseMessage> GetAsync(string api, IDictionary? body)
                 => GetAsyncCore(client, api, body);
 
-            public async Task<T> GetAsync<T, TQuery>(string api, TQuery? body, QueryParameterMap<TQuery> map, JsonTypeInfo<T> typeInfo)
+            public async Task<T> GetAsync<T, TQuery>(string api, TQuery? body, QueryParameterMap<TQuery> map)
             {
-                ArgumentNullException.ThrowIfNull(typeInfo);
-                using var message = await GetAsync(client, api, body, map);
-                return await ReadAsObjectAsync(message, typeInfo);
+                var message = await GetAsync(client, api, body, map);
+                return await ReadAsObjectAsync<T>(message);
             }
 
             public Task<HttpResponseMessage> GetAsync<TQuery>(string api, TQuery? body, QueryParameterMap<TQuery> map)
@@ -62,7 +68,7 @@ namespace MS.WebHttpClient
             return string.Join("&", parameters);
         }
 
-        private static async Task<T> ReadAsObjectAsync<T>(HttpResponseMessage message, JsonTypeInfo<T> typeInfo)
+        private static async Task<T> ReadAsObjectAsync<T>(HttpResponseMessage message)
         {
             try
             {
@@ -73,7 +79,7 @@ namespace MS.WebHttpClient
                         var contentStream = await message.Content.ReadAsStreamAsync();
                         try
                         {
-                            return (await JsonSerializer.DeserializeAsync(contentStream, typeInfo))!;
+                            return (await JsonSerializer.DeserializeAsync<T>(contentStream, JsonOptions))!;
                         }
                         catch (JsonException)
                         {

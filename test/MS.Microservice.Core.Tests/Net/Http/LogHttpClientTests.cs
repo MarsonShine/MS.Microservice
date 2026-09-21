@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using MS.Microservice.Core.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -12,7 +14,7 @@ using Xunit;
 
 namespace MS.Microservice.Core.Tests.Net.Http;
 
-public sealed class LogHttpClientTests
+public sealed partial class LogHttpClientTests
 {
     [Fact]
     public async Task GetAsync_ShouldConfigureBaseAddress_AndReturnModel()
@@ -21,10 +23,10 @@ public sealed class LogHttpClientTests
         var handler = new RecordingHandler(_ => Task.FromResult(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new ResponsePayload { Message = "ok" })
+                Content = JsonContent.Create(new ResponsePayload { Message = "ok" }, LogTestJson.Default.ResponsePayload)
             }));
         using var httpClient = new HttpClient(handler);
-        var client = new LogHttpClient(logger, httpClient);
+        var client = new LogHttpClient(logger, httpClient, Contracts);
 
         client.Configure("https://example.test/", TimeSpan.FromSeconds(5));
         ResponsePayload? result = await client.GetAsync<ResponsePayload, QueryPayload>("orders", new QueryPayload { Id = 1, Name = "alice" }, QueryMap);
@@ -48,11 +50,11 @@ public sealed class LogHttpClientTests
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new ResponsePayload { Message = "posted" })
+                Content = JsonContent.Create(new ResponsePayload { Message = "posted" }, LogTestJson.Default.ResponsePayload)
             };
         });
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        var client = new LogHttpClient(logger, httpClient);
+        var client = new LogHttpClient(logger, httpClient, Contracts);
 
         ResponsePayload? result = await client.PostAsync<ResponsePayload>(
             "orders",
@@ -74,7 +76,7 @@ public sealed class LogHttpClientTests
                 Content = new StringContent("{bad json", Encoding.UTF8, "application/json")
             }));
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        var client = new LogHttpClient(logger, httpClient);
+        var client = new LogHttpClient(logger, httpClient, Contracts);
 
         System.Text.Json.JsonException exception = await Assert.ThrowsAsync<System.Text.Json.JsonException>(() =>
             client.GetAsync<ResponsePayload, QueryPayload>("orders", new QueryPayload { Id = 3, Name = "broken" }, QueryMap).AsTask());
@@ -94,10 +96,10 @@ public sealed class LogHttpClientTests
         var handler = new RecordingHandler(request =>
         {
             Assert.Equal($"https://example.test/orders?fixed=1&Name={encoded}#anchor", request.RequestUri!.AbsoluteUri);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
+        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http, Contracts).GetAsync<object>(
             "orders?fixed=1#anchor", new Dictionary<string, object?> { ["Name"] = value });
     }
 
@@ -112,10 +114,10 @@ public sealed class LogHttpClientTests
             {
                 Assert.Equal("https://example.test/orders?amount=1.25&items=2&items=3&empty=",
                     request.RequestUri!.AbsoluteUri);
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
             });
             using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-            await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
+            await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http, Contracts).GetAsync<object>(
                 "orders?", new Dictionary<string, object?> { ["amount"] = 1.25m, ["items"] = new[] { 2, 3 }, ["nil"] = null, ["empty"] = "" });
         }
         finally { System.Globalization.CultureInfo.CurrentCulture = previous; }
@@ -134,10 +136,10 @@ public sealed class LogHttpClientTests
                 await Task.Yield();
             }
             else Assert.False(request.Headers.Contains("X-Secret"));
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") };
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        var client = new LogHttpClient(global::Microsoft.Extensions.Logging.Abstractions.NullLogger<LogHttpClient>.Instance, http);
+        var client = new LogHttpClient(global::Microsoft.Extensions.Logging.Abstractions.NullLogger<LogHttpClient>.Instance, http, Contracts);
         await Task.WhenAll(Enumerable.Range(0, 12).Select(index => client.PostAsync<object>(
             "orders", index.ToString(), new Dictionary<string, string>() { ["X-Secret"] = index.ToString() })));
         await client.GetAsync<object>("orders", null);
@@ -151,14 +153,14 @@ public sealed class LogHttpClientTests
     {
         using var http = new HttpClient(new RecordingHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable))))
             { BaseAddress = new Uri("https://example.test/") };
-        var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http);
+        var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http, Contracts);
         var exception = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            post ? client.PostAsync<object>("orders", new { }).AsTask() : client.GetAsync<object>("orders", null).AsTask());
+            post ? client.PostAsync<object>("orders", new EmptyPayload()).AsTask() : client.GetAsync<object>("orders", null).AsTask());
         Assert.Equal(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            post ? client.PostAsync<object>("orders", new { }, cancelled.Token).AsTask()
+            post ? client.PostAsync<object>("orders", new EmptyPayload(), cancelled.Token).AsTask()
                 : client.GetAsync<object>("orders", null, cancelled.Token).AsTask());
     }
     [Fact]
@@ -170,7 +172,7 @@ public sealed class LogHttpClientTests
             { BaseAddress = new Uri("https://example.test/") };
         var logger = new CapturingLogger<LogHttpClient>();
         using var cancellation = new CancellationTokenSource();
-        var call = new LogHttpClient(logger, http).PostAsync<object>("orders?secret=password", new { Password = "private-data" }, cancellation.Token).AsTask();
+        var call = new LogHttpClient(logger, http, Contracts).PostAsync<object>("orders?secret=password", new SecretPayload("private-data"), cancellation.Token).AsTask();
         await reading.Task.WaitAsync(TimeSpan.FromSeconds(5));
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => call);
@@ -192,7 +194,7 @@ public sealed class LogHttpClientTests
             if (request.RequestUri!.Query.Length == 0)
             {
                 Assert.Equal("https://example.test/orders", request.RequestUri.AbsoluteUri);
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
             }
 
             var query = request.RequestUri.Query;
@@ -200,10 +202,10 @@ public sealed class LogHttpClientTests
             Assert.True(query.StartsWith($"?Name=alice&Id={id:D}&Timestamp={Uri.EscapeDataString(timestamp.ToString("O", System.Globalization.CultureInfo.InvariantCulture))}&Amount=1.25", StringComparison.Ordinal),
                 $"unexpected query: {query}");
             Assert.Contains("&Computed=computed", query, StringComparison.Ordinal);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http);
+        var client = new LogHttpClient(new CapturingLogger<LogHttpClient>(), http, Contracts);
 
         await client.GetAsync<object, AccessorPayload>("orders", new AccessorPayload { Name = "alice", Id = id, Timestamp = timestamp, Amount = 1.25m }, AccessorMap);
         // 第二次调用命中缓存的委托，必须重新读取属性而不是复用首次结果。
@@ -218,10 +220,10 @@ public sealed class LogHttpClientTests
         {
             // null 值按原语义跳过；可枚举值在同一参数名下展开。
             Assert.Equal("https://example.test/orders?b=2&items=1&items=2&a=1", request.RequestUri!.AbsoluteUri);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object>(
+        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http, Contracts).GetAsync<object>(
             "orders", new Dictionary<string, object?> { ["b"] = 2, ["items"] = new[] { 1, 2 }, ["nil"] = null, ["a"] = 1 });
     }
 
@@ -231,12 +233,28 @@ public sealed class LogHttpClientTests
         var handler = new RecordingHandler(request =>
         {
             Assert.Equal("https://example.test/orders?Id=1", request.RequestUri!.AbsoluteUri);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { }) });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
         });
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
-        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http).GetAsync<object, EnumerablePayload>(
+        await new LogHttpClient(new CapturingLogger<LogHttpClient>(), http, Contracts).GetAsync<object, EnumerablePayload>(
             "orders", new EnumerablePayload { Id = 1, Tags = null }, EnumerableMap);
     }
+
+    private static readonly JsonTypeRegistry Contracts = new(LogTestJson.Default.ResponsePayload,
+        LogTestJson.Default.QueryPayload, LogTestJson.Default.Object, LogTestJson.Default.String,
+        LogTestJson.Default.EmptyPayload, LogTestJson.Default.SecretPayload);
+
+    private sealed record EmptyPayload;
+    private sealed record SecretPayload(string Password);
+
+    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    [JsonSerializable(typeof(ResponsePayload))]
+    [JsonSerializable(typeof(QueryPayload))]
+    [JsonSerializable(typeof(object))]
+    [JsonSerializable(typeof(string))]
+    [JsonSerializable(typeof(EmptyPayload))]
+    [JsonSerializable(typeof(SecretPayload))]
+    private partial class LogTestJson : JsonSerializerContext;
 
     private static readonly QueryParameterMap<QueryPayload> QueryMap = new(
         ("Id", static value => value.Id), ("Name", static value => value.Name));

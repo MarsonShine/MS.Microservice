@@ -64,7 +64,7 @@ namespace MS.Microservice.Lab.Infrastructure.Authorizations.Handlers
             {
                 var user = await _userDomainService.GetUserAsync(userId, cancellationToken);
                 return user is null || user.IsTransient() ? null : ToUserCache(user);
-            }, cancellationToken: cancellationToken);
+            }, CacheJsonContext.Instance.UserCacheItem, cancellationToken: cancellationToken);
         }
 
         private static bool TryGetUserId(ClaimsPrincipal principal, out int userId)

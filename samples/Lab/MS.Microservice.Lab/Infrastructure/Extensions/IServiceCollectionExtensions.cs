@@ -65,6 +65,7 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
                 services.AddCorsService(configuration);
                 services.AddApplicationCaching(configuration);
 
+                services.AddSingleton(new MS.Microservice.Core.Serialization.JsonTypeRegistry());
                 services.AddHttpClient<LogHttpClient>();
                 services.AddScoped<FileUploadValidator>();
                 services.AddScoped<IUploadStorage, LocalUploadStorage>();

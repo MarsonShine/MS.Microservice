@@ -46,6 +46,7 @@
     <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Aot.Tests/MS.Microservice.Aot.Tests.csproj" />
     <Project Path="test/MS.Microservice.Lab.AotExamples.Tests/MS.Microservice.Lab.AotExamples.Tests.csproj" />
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MS.Microservice.Core.Net.Http;
 using System;
 using System.Linq;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace MS.Microservice.Core.Tests.Net.Http;
 
-public sealed class HttpClientExtensionsTests
+public sealed partial class HttpClientExtensionsTests
 {
     [Fact]
     public async Task GetAsync_ShouldBuildQueryString_ForNullableEnumAndArrayValues()
@@ -20,7 +21,7 @@ public sealed class HttpClientExtensionsTests
         var handler = new RecordingHandler(_ => Task.FromResult(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new ResponsePayload { Message = "ok" })
+                Content = JsonContent.Create(new ResponsePayload { Message = "ok" }, HttpTestJson.Default.ResponsePayload)
             }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
@@ -29,7 +30,7 @@ public sealed class HttpClientExtensionsTests
             Id = 42,
             Status = QueryStatus.Ready,
             Tags = ["alpha", "beta"]
-        }, QueryMap);
+        }, QueryMap, HttpTestJson.Default.ResponsePayload);
 
         HttpResponseMessage response = await client.GetAsync("orders", new QueryPayload
         {
@@ -57,7 +58,7 @@ public sealed class HttpClientExtensionsTests
             }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
-        ResponsePayload? result = await client.GetAsync<ResponsePayload>("plain", body: null!);
+        ResponsePayload? result = await client.GetAsync<ResponsePayload>("plain", body: null!, HttpTestJson.Default.ResponsePayload);
 
         Assert.Null(result);
         Assert.Equal(string.Empty, handler.LastRequest!.RequestUri!.Query);
@@ -73,7 +74,7 @@ public sealed class HttpClientExtensionsTests
             }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
-        ResponsePayload? result = await client.GetAsync<ResponsePayload, QueryPayload>("broken", new QueryPayload { Id = 1 }, QueryMap);
+        ResponsePayload? result = await client.GetAsync<ResponsePayload, QueryPayload>("broken", new QueryPayload { Id = 1 }, QueryMap, HttpTestJson.Default.ResponsePayload);
 
         Assert.Null(result);
         Assert.Contains("Id=1", handler.LastRequest!.RequestUri!.Query);
@@ -83,20 +84,24 @@ public sealed class HttpClientExtensionsTests
     public async Task GetAsync_ShouldEscapeReservedCharactersInQueryValues()
     {
         var handler = new RecordingHandler(_ => Task.FromResult(
-            new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new ResponsePayload { Message = "ok" }) }));
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new ResponsePayload { Message = "ok" }, HttpTestJson.Default.ResponsePayload) }));
         using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 
         await client.GetAsync<ResponsePayload, EscapingPayload>("orders", new EscapingPayload
         {
             Keyword = "中文 空格&x=1",
             Tags = ["a&b", "c d"]
-        }, EscapingMap);
+        }, EscapingMap, HttpTestJson.Default.ResponsePayload);
 
         // 未转义时 "&" 会把一个参数值切断成新的参数、空格与中文直接进 URL，这里锁定修复后的形状。
         Assert.Equal(
             "https://example.test/orders?Keyword=%E4%B8%AD%E6%96%87%20%E7%A9%BA%E6%A0%BC%26x%3D1&Tags=a%26b&Tags=c%20d",
             handler.LastRequest!.RequestUri!.AbsoluteUri);
     }
+
+    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    [JsonSerializable(typeof(ResponsePayload))]
+    private partial class HttpTestJson : JsonSerializerContext;
 
     private static readonly QueryParameterMap<QueryPayload> QueryMap = new(
         ("Id", static value => value.Id), ("Status", static value => value.Status), ("Tags", static value => value.Tags));
