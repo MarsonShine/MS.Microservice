@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <!-- 此项目保留反射和动态编译的原实现；静态实现位于独立 AOT 项目。 -->
+    <IsAotCompatible>false</IsAotCompatible>
+    <EnableOfficeDiagnostics Condition="'$(EnableOfficeDiagnostics)' == ''">false</EnableOfficeDiagnostics>
+    <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EnableOfficeDiagnostics)' == 'true'">
+    <DefineConstants>$(DefineConstants);MS_Microservice_DIAGNOSTICS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Excel.Tests" />
+    <PackageReference Include="MiniExcel" />
+    <PackageReference Include="NPOI" />
+  </ItemGroup>
+</Project>

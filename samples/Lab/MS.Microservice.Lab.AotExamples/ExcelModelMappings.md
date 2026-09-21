@@ -16,7 +16,7 @@ helper.Import("books.xlsx", stream, Books.Book);
 
 特殊构造使用上下文的静态 Factory；特殊转换使用 IExcelCellConverter<T>。除此之外不要求调用方提供逐字段委托。列名、顺序、忽略属性和只读规则均由声明决定，缺失工厂、重复/空列名或不支持类型在编译时报 EXCEL001。
 
-[运行时目录说明](../../../src/MS.Microservice.Excel.Aot/README.md)给出完整声明、构建和包消费方式。生成器使用原 Excel.csproj 的 Generator 构建模式，没有新增项目；生成器随 AOT 包作为 analyzer 交付，不成为运行时依赖。手写 getter/setter API 已删除，不保留兼容回退。
+[运行时目录说明](../../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/README.md)给出完整声明、构建和包消费方式。生成器使用独立的 MS.Microservice.Excel.Generator 项目；生成器随 AOT 包作为 analyzer 交付，不成为运行时依赖。手写 getter/setter API 已删除，不保留兼容回退。
 
 ## 学习区里的三个阶段
 

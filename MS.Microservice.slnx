@@ -14,7 +14,6 @@
     <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
     <Project Path="src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
-    <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
@@ -53,7 +52,6 @@
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Excel.Tests/MS.Microservice.Excel.Tests.csproj" />
     <Project Path="test/MS.Microservice.Lab.Tests/MS.Microservice.Lab.Tests.csproj" />
     <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
@@ -63,6 +61,14 @@
     <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
     <Project Path="test/MS.Microservice.Samples.EducationalImages.Tests/MS.Microservice.Samples.EducationalImages.Tests.csproj" />
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Excel/src/">
+    <Project Path="MS.Microservice.Excel/src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <Project Path="MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj" />
+    <Project Path="MS.Microservice.Excel/src/MS.Microservice.Excel.Generator/MS.Microservice.Excel.Generator.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Excel/test/">
+    <Project Path="MS.Microservice.Excel/test/MS.Microservice.Excel.Tests/MS.Microservice.Excel.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">

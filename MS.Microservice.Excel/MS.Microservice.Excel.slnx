@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="README.md" />
+    <File Path="src/MS.Microservice.Excel.Aot/README.md" />
+    <File Path="src/MS.Microservice.Excel.Generator/README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <Project Path="src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj" />
+    <Project Path="src/MS.Microservice.Excel.Generator/MS.Microservice.Excel.Generator.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Excel.Tests/MS.Microservice.Excel.Tests.csproj" />
+  </Folder>
+</Solution>

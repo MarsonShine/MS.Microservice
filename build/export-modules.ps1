@@ -16,9 +16,6 @@ foreach ($file in @('Directory.Build.props', 'Directory.Packages.props', 'global
 foreach ($project in $projects) {
     $directory = [IO.Path]::GetRelativePath($root, (Split-Path $project -Parent)).Replace('\', '/')
     $paths = @($directory)
-    if ([IO.Path]::GetFileNameWithoutExtension($project) -eq 'MS.Microservice.Excel') {
-        $paths += 'src/MS.Microservice.Excel.Aot'
-    }
     $segments = $directory.Split('/')
     if ($segments.Length -ge 3 -and $segments[0].StartsWith('MS.Microservice.') -and $segments[1] -eq 'src') {
         $paths += @("$($segments[0])/README.md", "$($segments[0])/docs")

@@ -8,12 +8,12 @@
 <PackageReference Include="xunit" />
 <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
 <ProjectReference Include="../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+<ProjectReference Include="../../src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj" />
 </ItemGroup>
   <ItemGroup>
-    <Reference Include="MS.Microservice.Excel.Generator">
-      <HintPath>../../src/MS.Microservice.Excel/bin/Generator/$(Configuration)/netstandard2.0/MS.Microservice.Excel.Generator.dll</HintPath>
-    </Reference>
-    <Compile Include="../../samples/Lab/MS.Microservice.Lab.AotExamples/Legacy/Excel/ManualMapping/ExcelModelMap.cs" Link="Learning/ManualExcelModelMap.cs" />
+    <!-- 测试需要 new ExcelSourceGenerator()，因此同时作为普通引用和 analyzer。 -->
+    <ProjectReference Include="../../src/MS.Microservice.Excel.Generator/MS.Microservice.Excel.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="true" PrivateAssets="all" />
+    <Compile Include="../../../samples/Lab/MS.Microservice.Lab.AotExamples/Legacy/Excel/ManualMapping/ExcelModelMap.cs" Link="Learning/ManualExcelModelMap.cs" />
   </ItemGroup>
-  <Import Project="../../src/MS.Microservice.Excel.Aot/ExcelGenerator.props" />
 </Project>

@@ -27,17 +27,18 @@ if ($ILLinkVersion) {
 $restoreOptions = @()
 if ($PackageSource) { $restoreOptions += @('--source', $PackageSource) }
 if ($PackagesPath) { $restoreOptions += @('--packages', $PackagesPath) }
-$projects = @('src', 'MS.Microservice.AI/src', 'MS.Microservice.Messaging/src', 'MS.Microservice.Persistence/src') |
+$projects = @('src', 'MS.Microservice.Excel/src', 'MS.Microservice.AI/src', 'MS.Microservice.Messaging/src', 'MS.Microservice.Persistence/src') |
     ForEach-Object { Get-ChildItem (Join-Path $root $_) -Filter '*.csproj' -Recurse } |
-    Sort-Object FullName
+    Where-Object {
+        [xml]$definition = Get-Content -LiteralPath $_.FullName -Raw
+        $component = $definition.SelectSingleNode('//IsRoslynComponent')
+        $compatibility = $definition.SelectSingleNode('//IsAotCompatible')
+        ($null -eq $component -or $component.InnerText -ne 'true') -and ($null -eq $compatibility -or $compatibility.InnerText -ne 'false')
+    } | Sort-Object FullName
 $results = @()
 foreach ($project in $projects) {
     $name = $project.BaseName
     $projectProperties = @($properties)
-    if ($name -eq 'MS.Microservice.Excel') {
-        $projectProperties += '-p:ExcelVariant=Aot'
-        $name = 'MS.Microservice.Excel.Aot'
-    }
     $restoreLog = Join-Path $output "$name.restore.log"
     & dotnet restore $project.FullName @restoreOptions @projectProperties --verbosity quiet *> $restoreLog
     if ($LASTEXITCODE -ne 0) { Get-Content $restoreLog; throw "Restore failed: $name" }

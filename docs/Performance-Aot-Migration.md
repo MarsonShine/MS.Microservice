@@ -2,14 +2,14 @@
 
 专项分支为 `codex/performance-aot`，基线为 `master@7b1c78a`。范围是具体方法中的计算、分配、阻塞和动态成员发现；没有调整数据库、缓存策略、消息架构或业务流程。除下述 Excel 兼容性调整外，公开动态接口已按计划破坏兼容，仓库调用方同步迁移，未保留隐式反射回退。
 
-Excel 后续调整：旧命名空间和接口已恢复，静态实现迁入 `src/MS.Microservice.Excel.Aot`。仍只有一个 Excel 项目，通过 ExcelVariant 分别打旧版与 AOT 包；AOT 入口没有动态回退。详见 [Excel 目录与打包说明](../src/MS.Microservice.Excel.Aot/README.md)。
+Excel 后续调整：旧命名空间和接口已恢复，静态实现迁入 `MS.Microservice.Excel/src/MS.Microservice.Excel.Aot`。旧版与 AOT 版分别由独立项目打包；AOT 入口没有动态回退。详见 [Excel 目录与打包说明](../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/README.md)。
 
 ## API 迁移
 
 | 原入口或写法 | 现在的调用方式 | 行为边界 |
 |---|---|---|
 | 自动读取查询对象属性 | `QueryParameterMap<T>` 显式列出有序名称与 getter | 字典入口保留；读取最新值，null 跳过，集合展开、不变文化及 URI 转义保持 |
-| Excel 模型映射 | 新 `MS.Microservice.Excel.Aot` 通过 ExcelSerializable 上下文生成类型化列 | 手写字段委托 API 已删除；同一项目的 Generator 模式编译 analyzer，随 AOT 包交付 |
+| Excel 模型映射 | 新 `MS.Microservice.Excel.Aot` 通过 ExcelSerializable 上下文生成类型化列 | 手写字段委托 API 已删除；独立 Generator 项目编译 analyzer，随 AOT 包交付 |
 | `Activator` 求默认值 | `TypeHelper.IsDefaultValue<T>` / `GetDefaultValue<T>` | 按 default 语义，不执行自定义结构体构造函数 |
 | 装箱实体键默认值 | `IEntity<TKey>.Id` 与泛型 EntityHelper；无须登记 | 删除 object[]/BoxedDefaults 路径；可空键采用声明类型 default；非可空 int/long 保留临时键规则 |
 | `LogHttpClient(logger, http)` | 构造时加 `JsonTypeRegistry` | 请求/响应根类型显式登记；未知类型失败；匿名请求改为命名 DTO |
@@ -65,7 +65,7 @@ dotnet test MS.Microservice.slnx --no-restore --logger trx --results-directory a
 ./build/validate-static-aot.ps1
 ```
 
-分析脚本只执行 restore 与带裁剪/AOT 分析器的 build，不发布、不启动原生可执行文件。它检查实际编译命令含 `ILLink.RoslynAnalyzer.dll`，任何 IL 诊断或缺失分析器都失败；日志与结果在 `artifacts/aot`。分析范围为根 src、AI、Messaging、Persistence 的 21 个生产项目，自有源码与生成代码受检，第三方已编译程序集不会被 Roslyn 深入分析。Excel 现在明确选择 Aot 模式；Legacy/All 包含有意保留的动态兼容代码，不在零诊断承诺内。
+分析脚本只执行 restore 与带裁剪/AOT 分析器的 build，不发布、不启动原生可执行文件。它检查实际编译命令含 `ILLink.RoslynAnalyzer.dll`，任何 IL 诊断或缺失分析器都失败；日志与结果在 `artifacts/aot`。分析范围为根 src、AI、Messaging、Persistence 的 21 个生产项目，自有源码与生成代码受检，第三方已编译程序集不会被 Roslyn 深入分析。Excel 检查独立 AOT 运行时项目；标记 IsAotCompatible=false 的旧 Excel 项目和 IsRoslynComponent=true 的编译器组件不在运行时分析范围内。
 
 本机 SDK 为 10.0.401。缓存只有 ILLink 10.0.11，而 SDK 默认选择 10.0.12，本次显式选择缓存版本运行：
 
@@ -97,7 +97,7 @@ NPOI、EF、Wolverine、SqlSugar 及 Web 宿主的完整 NativeAOT 兼容性未�
 
 恢复旧接口并隔离 AOT 源码后，运行 Excel 测试 67 项、Lab 测试 284 项、架构边界测试 39 项，全部通过；Excel 原有 19 项 opt-in 性能基准仍跳过。旧测试现在运行真实旧实现，新旧实现直接交叉读取工作簿。
 
-已分别生成 Legacy 与 Aot 两个本地 NuGet 包，检查程序集命名空间和 nuspec 依赖：Aot 包没有旧类型或 MiniExcel。All 模式直接打包会被拒绝。源码导出包含两个目录，导出后的单项目解决方案独立 restore/build 成功。21 个静态分析目标重新验证通过，其中 Excel 明确选择 Aot 构建。没有新增项目，没有向远程源发布包，没有执行 NativeAOT publish。
+早期验证使用同项目的 Legacy/Aot 构建模式，分别检查两个本地 NuGet 包以及 21 个静态分析目标。当前改为独立的旧 Excel、AOT 运行时和 Generator 项目，已移除模式切换；这些历史结果不替代迁移后的重新验证。包保持独立，AOT 包内置 analyzer，不依赖旧类型或 MiniExcel。验证不向远程源发布包，也不执行 NativeAOT publish。
 
 ## 实体键后续调整
 
@@ -111,6 +111,12 @@ A04 最初使用 BoxedDefaults 的过渡版本已退出生产路径，完整实�
 
 AOT 模型映射现在由 Source Generator 生成。模型无需逐字段声明 getter/setter；静态生成上下文决定根模型，可选 ExcelColumn 注解控制名称、顺序、忽略和特殊转换。生成列直接使用具体属性类型，删除 object getter/setter 以及旧 ExcelValueConverters 接口，不保留映射兼容回退。普通导入导出与模板共用生成结果。
 
-遵循“不新建项目”的约束，编译期程序集使用现有 Excel.csproj 的 Generator 模式，AOT NuGet 包内置 analyzer。详细用法、特殊构造/转换及验证边界见 [Excel SG 说明](../src/MS.Microservice.Excel.Aot/README.md)。
+编译期程序集使用独立 MS.Microservice.Excel.Generator 项目，AOT NuGet 包内置 analyzer。详细用法、特殊构造/转换及验证边界见 [Excel SG 说明](../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/README.md)。
 
 本次 SG 后续验证：完整解决方案 33 个测试项目，2187 项通过、0 项失败、31 项既有 opt-in 项跳过。Excel 专项及真实 NuGet 包消费各 93 项通过；学习区 114 项、Lab 288 项通过。AOT 运行时和包含实际生成代码的消费端均通过 ILLink 10.0.11 裁剪/AOT 静态分析，零诊断；未执行 NativeAOT publish。包消费直接复用现有测试项目，没有创建验证项目。
+
+## Excel 独立项目与源码导航
+
+AOT 运行时代码迁入独立 MS.Microservice.Excel.Aot 项目，生成器迁入独立 MS.Microservice.Excel.Generator 项目，旧 Excel 项目不再包含 Aot 子目录。移除 ExcelVariant、条件源码收集和递归 Exec；源码调用方通过 ProjectReference 加载 analyzer，NuGet 包内置生成器。配置与导航说明见 [生成器学习说明](../MS.Microservice.Excel/src/MS.Microservice.Excel.Generator/README.md)。
+
+迁移回归：完整解决方案 2190 项通过、0 项失败、31 项既有 opt-in 跳过；真实 NuGet 包消费 93 项通过、19 项既有 opt-in 跳过。设计时 ResolveReferences 确認生成器源码参与 Compile，且具备 Roslyn 引用。独立 AOT 运行时加载 ILLink 10.0.11 后裁剪/AOT 静态分析零诊断；未执行 NativeAOT publish，也未在用户的 VS 会话中实际操作 F12。

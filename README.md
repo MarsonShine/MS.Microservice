@@ -25,6 +25,7 @@
 | 模块 | 独立解决方案 | 设计入口 |
 |---|---|---|
 | AI | [MS.Microservice.AI.slnx](MS.Microservice.AI/MS.Microservice.AI.slnx) | [说明](MS.Microservice.AI/docs/design.md) |
+| Excel | [MS.Microservice.Excel.slnx](MS.Microservice.Excel/MS.Microservice.Excel.slnx) | [说明](MS.Microservice.Excel/README.md) |
 | Logging | [MS.Microservice.Logging.slnx](MS.Microservice.Logging/MS.Microservice.Logging.slnx) | [说明](MS.Microservice.Logging/docs/design.md) |
 | Messaging | [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging/MS.Microservice.Messaging.slnx) | [说明](MS.Microservice.Messaging/docs/design.md) |
 | Persistence | [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence/MS.Microservice.Persistence.slnx) | [说明](MS.Microservice.Persistence/docs/design.md) |

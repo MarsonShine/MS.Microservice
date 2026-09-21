@@ -15,6 +15,14 @@ function Get-SharedProjects {
     }
 }
 
+# Compiler-only projects belong to the source/build graph but have no standalone runtime package.
+function Test-ProjectPackable {
+    param([string]$Project)
+    [xml]$document = Get-Content -LiteralPath $Project -Raw
+    $setting = $document.SelectSingleNode('/Project/PropertyGroup[not(@Condition)]/IsPackable')
+    return $null -eq $setting -or $setting.InnerText -ne 'false'
+}
+
 function Get-ModuleProjects {
     param([string]$RepositoryRoot, [string[]]$Modules)
     $available = @{}

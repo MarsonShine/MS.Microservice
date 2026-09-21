@@ -7,19 +7,15 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'module-tools.ps1')
 $root = [IO.Path]::GetFullPath($RepositoryRoot)
-if (-not $Modules) { $Modules = @(Get-SharedProjects $root | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }) }
-$projects = @(Get-ModuleProjects $root $Modules)
+if (-not $Modules) { $Modules = @(Get-SharedProjects $root | Where-Object { Test-ProjectPackable $_ } | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }) }
+$projects = @(Get-ModuleProjects $root $Modules | Where-Object { Test-ProjectPackable $_ })
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw 'Package output must be a new directory.' }
 New-Item -ItemType Directory $output | Out-Null
 Push-Location $root
 try {
     foreach ($project in $projects) {
-        $variant = @()
-        if ([IO.Path]::GetFileNameWithoutExtension($project) -eq 'MS.Microservice.Excel') {
-            $variant = @('-p:ExcelVariant=Legacy')
-        }
-        Invoke-CheckedDotnet pack $project -c Release --output $output "-p:PackageVersion=$Version" @variant --verbosity quiet
+        Invoke-CheckedDotnet pack $project -c Release --output $output "-p:PackageVersion=$Version" --verbosity quiet
     }
 }
 finally { Pop-Location }

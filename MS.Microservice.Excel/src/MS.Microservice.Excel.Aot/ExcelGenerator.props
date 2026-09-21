@@ -1,0 +1,8 @@
+<Project>
+  <!-- 仓库中的源码调用方导入本文件；NuGet 调用方会自动加载包内 analyzers/，无需导入。 -->
+  <ItemGroup>
+    <!-- 用项目引用替代 bin 下的 DLL 路径，MSBuild/VS 因而知道先构建哪个项目。 -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../MS.Microservice.Excel.Generator/MS.Microservice.Excel.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

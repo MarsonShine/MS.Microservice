@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="EnableTrimAnalyzer;EnableAotAnalyzer">
+  <PropertyGroup>
+    <!-- 生成器运行在编译器宿主中；不使用 Excel 应用的 net10.0 目标。 -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <!-- 即使命令行对整个解决方案开启运行时分析，也不分析 netstandard 编译器组件。 -->
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- DLL 随 Excel AOT 包的 analyzers/ 目录分发，不另发运行时包。 -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <!-- 供 Roslyn 检查诊断 ID、分类和默认严重程度的发布记录。 -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+</Project>

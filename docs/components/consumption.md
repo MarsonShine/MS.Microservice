@@ -64,10 +64,10 @@ module-manifest.json 记录源提交、文件 SHA-256 和项目闭包。
 
 ## Excel 的兼容包和 AOT 包
 
-Excel 保留唯一项目，`src/MS.Microservice.Excel.Aot` 是同项目编译的独立源码目录。源码导出会同时携带两个目录；通用 pack-modules 脚本继续打兼容包。单独的 AOT 包使用：
+Excel 由旧版运行时、AOT 运行时和编译期 Generator 三个独立项目组成。导出 AOT 模块时会沿项目引用携带生成器源码；通用 pack-modules 脚本跳过 IsPackable=false 的生成器项目，将其 DLL 内嵌在 AOT 包中。单独打包 AOT 版本：
 
 ```powershell
-dotnet pack src/MS.Microservice.Excel/MS.Microservice.Excel.csproj -c Release -p:ExcelVariant=Aot -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
+dotnet pack MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj -c Release -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
 ```
 
-需要原包时将 ExcelVariant 改为 Legacy。两种包的程序集和命名空间不同，可以同时引用；默认 All 构建只用于开发和测试，打包时必须明确选择。完整调用和验证边界见 [Excel AOT 说明](../../src/MS.Microservice.Excel.Aot/README.md)。
+需要原包时直接打包 MS.Microservice.Excel.csproj。两种包的程序集和命名空间不同，可以同时引用；不再使用 ExcelVariant。完整调用和验证边界见 [Excel AOT 说明](../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/README.md)。

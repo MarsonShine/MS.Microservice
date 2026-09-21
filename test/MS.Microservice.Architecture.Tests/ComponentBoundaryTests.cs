@@ -22,6 +22,7 @@ public sealed class ComponentBoundaryTests
 
     [Theory]
     [InlineData("MS.Microservice.AI")]
+    [InlineData("MS.Microservice.Excel")]
     [InlineData("MS.Microservice.Logging")]
     [InlineData("MS.Microservice.Messaging")]
     [InlineData("MS.Microservice.Persistence")]

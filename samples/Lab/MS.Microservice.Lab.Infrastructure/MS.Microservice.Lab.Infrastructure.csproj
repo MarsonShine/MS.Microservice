@@ -25,7 +25,7 @@
     <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <ProjectReference Include="../MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Excel/src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <ProjectReference Include="../MS.Microservice.Lab.Persistence/MS.Microservice.Lab.Persistence.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.SqlSugar/MS.Microservice.Persistence.SqlSugar.csproj" />

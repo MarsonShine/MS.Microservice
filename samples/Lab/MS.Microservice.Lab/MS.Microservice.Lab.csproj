@@ -31,6 +31,7 @@
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />
@@ -44,5 +45,5 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <Import Project="../../../src/MS.Microservice.Excel.Aot/ExcelGenerator.props" />
+  <Import Project="../../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/ExcelGenerator.props" />
 </Project>

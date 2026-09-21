@@ -7,10 +7,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
   </ItemGroup>
-  <Import Project="../../../src/MS.Microservice.Excel.Aot/ExcelGenerator.props" />
+  <Import Project="../../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/ExcelGenerator.props" />
 </Project>

@@ -45,31 +45,22 @@ internal static partial class WorkbookModels
 
 特殊列通过 `[ExcelColumn(Converter = typeof(MyConverter))]` 指定实现 `IExcelCellConverter<T>` 的类型。接口只有静态 TryRead 和 Write，T 必须对应属性类型；普通属性不需要转换器。转换器可以使用 ExcelCellReader 的类型化读取、GetText 或 GetFormattedText。没有转换器注册表、自动类型发现或 object 转换回退。
 
-## 一个项目，编译期生成器与运行时包分离
+## 独立项目与打包
 
-没有新增 csproj。现有 `../MS.Microservice.Excel/MS.Microservice.Excel.csproj` 的 Generator 模式单独编译 `Generator/ExcelSourceGenerator.cs`，目标 netstandard2.0；该程序集只在编译期运行。All/Aot 构建按输入时间戳先构建生成器，Aot 包将它放到 `analyzers/dotnet/cs`。Roslyn 包引用为 PrivateAssets，不进入 Excel AOT 的运行时依赖。
+本项目只编译 AOT 运行时代码。原 Excel 实现仍在同级 `MS.Microservice.Excel` 项目；生成器在同级 `MS.Microservice.Excel.Generator` 项目，以 netstandard2.0 编译并仅在编译期执行。三个项目分别拥有自己的 obj/bin，不再使用 ExcelVariant 或递归构建同一个 csproj。
 
-NuGet 调用方引用 MS.Microservice.Excel.Aot 后自动加载生成器。仓库内项目引用调用方还需导入本目录的 ExcelGenerator.props，现有 Lab、Excel 测试和学习项目已经接入。
+NuGet 调用方引用 MS.Microservice.Excel.Aot 后，通过包内 `analyzers/dotnet/cs` 自动加载生成器。Roslyn 不成为运行时依赖。仓库内源码调用方还需导入本目录的 ExcelGenerator.props；Excel 测试直接使用生成器 ProjectReference，以便同时执行 GeneratorDriver 测试并导航源码。
 
 ```powershell
-dotnet pack src/MS.Microservice.Excel/MS.Microservice.Excel.csproj -c Release -p:ExcelVariant=Aot -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
+dotnet pack MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/MS.Microservice.Excel.Aot.csproj -c Release -p:PackageVersion=1.0.0-local.1 -o artifacts/excel-packages
 ```
 
-| ExcelVariant | 用途 |
-|---|---|
-| All（默认） | 仓库开发：编译原 Excel 与 AOT 两个命名空间，不允许直接打包 |
-| Aot | 编译本目录运行时源码，产出 MS.Microservice.Excel.Aot 包并内含 generator analyzer |
-| Legacy | 原 MS.Microservice.Excel 包，保持此前单独保存的原实现，不参与本次生成式接口设计 |
-| Generator | 同项目的编译期程序集，不能单独打包，不引用 NPOI 或 Excel 运行时程序集 |
+原包使用 `MS.Microservice.Excel/src/MS.Microservice.Excel/MS.Microservice.Excel.csproj` 单独打包。通用模块脚本跳过不可打包的 Generator 项目；源码导出会沿项目引用携带生成器项目。
 
-各模式的 obj/bin 相互隔离。不要用一种模式的 restore/build 结果配合另一模式的 --no-restore/--no-build。源码导出包含两个目录和生成器源码，仍是一个项目；通用 pack-modules 脚本默认产出 Legacy 包。
-
-可用 `dotnet build <调用方项目> -t:Rebuild -p:EmitCompilerGeneratedFiles=true` 查看 obj 下实际生成的 `.Excel.g.cs`。修改属性后，生成结果随编译更新；删除必要声明会编译失败。
+关于 F12、编译过程、每个项目配置节点、ExcelGenerator.props 和 AnalyzerReleases 文件的解释，见 [生成器学习说明](../MS.Microservice.Excel.Generator/README.md)。可用 `dotnet build <调用方项目> -t:Rebuild -p:EmitCompilerGeneratedFiles=true` 查看 obj 下实际生成的 `.Excel.g.cs`。
 
 ## 迁移与验证边界
 
 手写 `ExcelColumn<T>.Create(getter, setter, converter)`、ExcelValueConverter 和 ExcelValueConverters 已从 AOT 运行时删除，没有兼容重载。调用点改传生成上下文的模型属性。底层 ExcelModelMap 是生成代码所用的固定列元数据，保留表头到实际列号的绑定；它不负责运行时发现模型成员。DataTable 的数据表示本来就是 object，本次保留其既有导出逻辑。
 
 验证包括真实工作簿、生成代码编译和诊断、声明继承/可空/只读/工厂/转换器、模板样式与列定位，以及本地包自动加载 analyzer 的消费测试。数值列分配测试预创建 HSSF 单元格以隔离工作簿和压缩开销；结果不能推广成整个 NPOI 流程零分配。NPOI 的完整 NativeAOT 发布兼容性仍未验证，本次不执行 NativeAOT publish。
-
-本次验证结果：Excel 源码模式和 NuGet 包模式各 93 项通过，学习区 114 项、Lab 288 项通过；完整解决方案 2187 项通过、0 项失败、31 项既有 opt-in 跳过。AOT 运行时和生成消费端实际加载 ILLink 10.0.11 后零诊断，没有做 NativeAOT 发布。

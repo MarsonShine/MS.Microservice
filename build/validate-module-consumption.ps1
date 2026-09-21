@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'module-tools.ps1')
 $root = Split-Path $PSScriptRoot -Parent
-if (-not $Modules) { $Modules = @(Get-SharedProjects $root | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }) }
+if (-not $Modules) { $Modules = @(Get-SharedProjects $root | Where-Object { Test-ProjectPackable $_ } | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_) }) }
 $working = Join-Path ([IO.Path]::GetTempPath()) ('ms-module-consumption-' + [Guid]::NewGuid().ToString('N'))
 $source = Join-Path $working 'source'
 $packages = Join-Path $working 'packages'
@@ -20,12 +20,8 @@ try {
     $manifest = Get-Content module-manifest.json -Raw | ConvertFrom-Json
     New-Item -ItemType Directory $packages | Out-Null
     foreach ($project in $manifest.projects) {
-        if ([IO.Path]::GetFileNameWithoutExtension($project) -eq 'MS.Microservice.Excel') {
-            Invoke-CheckedDotnet pack $project -c Release -p:ExcelVariant=Legacy --output $packages "-p:PackageVersion=$version" --verbosity quiet
-        }
-        else {
-            Invoke-CheckedDotnet pack $project -c Release --no-build --no-restore --output $packages "-p:PackageVersion=$version" --verbosity quiet
-        }
+        if (-not (Test-ProjectPackable $project)) { continue }
+        Invoke-CheckedDotnet pack $project -c Release --no-build --no-restore --output $packages "-p:PackageVersion=$version" --verbosity quiet
     }
 }
 finally { Pop-Location }

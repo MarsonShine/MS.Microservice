@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <EnableOfficeDiagnostics Condition="'$(EnableOfficeDiagnostics)' == ''">false</EnableOfficeDiagnostics>
+    <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(EnableOfficeDiagnostics)' == 'true'">
+    <DefineConstants>$(DefineConstants);MS_Microservice_DIAGNOSTICS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Excel.Tests" />
+    <PackageReference Include="NPOI" />
+    <!-- 先构建生成器，把输出交给编译器，不把它作为运行时程序集引用。 -->
+    <ProjectReference Include="../MS.Microservice.Excel.Generator/MS.Microservice.Excel.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <!-- NuGet 用户通过此标准目录自动获得 SG，不需要手工引用生成器 DLL。 -->
+    <None Include="../MS.Microservice.Excel.Generator/bin/$(Configuration)/netstandard2.0/MS.Microservice.Excel.Generator.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+</Project>

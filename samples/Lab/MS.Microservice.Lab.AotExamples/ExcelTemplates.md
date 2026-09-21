@@ -1,6 +1,6 @@
 # Excel 模板与颜色：复用声明，不再重新发现
 
-当前静态实现位于 `src/MS.Microservice.Excel.Aot`，使用 `MS.Microservice.Excel.Aot` 命名空间；原命名空间下的旧接口已恢复并独立保留。两套实现由同一项目分别打包，见 [目录与打包说明](../../../src/MS.Microservice.Excel.Aot/README.md)。
+当前静态实现位于 `MS.Microservice.Excel/src/MS.Microservice.Excel.Aot`，使用 `MS.Microservice.Excel.Aot` 命名空间；原命名空间下的旧接口已恢复并独立保留。两套实现由独立项目分别打包，见 [目录与打包说明](../../../MS.Microservice.Excel/src/MS.Microservice.Excel.Aot/README.md)。
 
 普通导入导出改为显式映射之后，旧模板填充仍会在每个 builder 中扫描属性和特性，再从缓存中取得 `Expression.Compile()` 生成的 getter。两条流程对同一个模型使用不同的发现机制。A03 让 `DynamicExcelBuilder<T>` 接收同一份 `ExcelModelMap<T>`，模板标题只负责决定实际列索引，映射负责决定读取哪个属性。
 
