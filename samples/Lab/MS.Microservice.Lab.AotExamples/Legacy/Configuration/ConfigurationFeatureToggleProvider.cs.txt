@@ -16,17 +16,7 @@ namespace MS.Microservice.Core.FeatureManager.Internals
 		/// <inheritdoc />
 		public bool IsFeatureEnabled(string featureName)
 		{
-			var section = _configuration.GetSection($"FeatureToggles:{featureName}");
-            if (section.Value is not { } value) return false;
-            try
-            {
-                return bool.Parse(value);
-            }
-            catch (FormatException exception)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to convert configuration value at '{section.Path}' to type 'System.Boolean'.", exception);
-            }
+			return _configuration.GetValue<bool>($"FeatureToggles:{featureName}");
 		}
 	}
 }

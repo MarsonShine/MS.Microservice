@@ -27,3 +27,7 @@ SDK 自带配置绑定 Source Generator。分别在拥有调用点的 AspNetCore
 测试覆盖稀疏数组索引、缺失数组、非法地址、默认/自定义身份声明、缺失遥测段、布尔值大小写、非法布尔值及 options reload，并保留原有真实认证管道测试。
 
 生成器只处理所在项目的调用点。启用这两个项目不会自动改变其他程序集中的配置绑定，也不代表认证中间件、遥测 SDK 或整个宿主已通过 NativeAOT 发布验证。
+
+## 单个布尔开关不需要模型绑定
+
+Core 的功能开关只读取一个布尔值，直接 `GetSection(key).Value` 加 `bool.Parse` 即可表达完整契约。缺失值为 false；大小写和前后空白遵循框架布尔解析；空串、yes、1 仍包装为带配置路径的 `InvalidOperationException`。测试与旧 binder 对照。Core 既有 `Microsoft.System` 命名空间会遮蔽当前绑定生成器输出里的 System using，因此这里选用明确的标量解析，不为单个字段改整个命名空间。旧文件保存在 Legacy/Configuration；新的独立例子见 Static/Configuration/FeatureToggle.cs。

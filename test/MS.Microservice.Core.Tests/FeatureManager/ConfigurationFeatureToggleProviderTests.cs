@@ -6,6 +6,32 @@ namespace MS.Microservice.Core.Tests.FeatureManager
 {
     public class ConfigurationFeatureToggleProviderTests
     {
+        [Theory]
+        [InlineData("TRUE", true)]
+        [InlineData("False", false)]
+        [InlineData(" true ", true)]
+        [InlineData(null, false)]
+        public void ScalarParsingPreservesBinderValues(string? value, bool expected)
+        {
+            var config = BuildConfiguration(new() { ["FeatureToggles:flag"] = value });
+            Assert.Equal(config.GetValue<bool>("FeatureToggles:flag"), new ConfigurationFeatureToggleProvider(config).IsFeatureEnabled("flag"));
+            Assert.Equal(expected, new ConfigurationFeatureToggleProvider(config).IsFeatureEnabled("flag"));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("yes")]
+        [InlineData("1")]
+        [InlineData("   ")]
+        public void InvalidScalarRemainsAConfigurationConversionError(string value)
+        {
+            var config = BuildConfiguration(new() { ["FeatureToggles:flag"] = value });
+            Assert.Throws<InvalidOperationException>(() => config.GetValue<bool>("FeatureToggles:flag"));
+            var exception = Assert.Throws<InvalidOperationException>(() => new ConfigurationFeatureToggleProvider(config).IsFeatureEnabled("flag"));
+            Assert.Contains("FeatureToggles:flag", exception.Message);
+            Assert.IsType<FormatException>(exception.InnerException);
+        }
+
         private static IConfiguration BuildConfiguration(Dictionary<string, string?> data)
         {
             return new ConfigurationBuilder()
