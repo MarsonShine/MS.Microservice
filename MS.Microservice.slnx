@@ -51,6 +51,7 @@
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Core.NativeAot.Smoke/MS.Microservice.Core.NativeAot.Smoke.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
     <Project Path="test/MS.Microservice.Lab.Tests/MS.Microservice.Lab.Tests.csproj" />
     <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />

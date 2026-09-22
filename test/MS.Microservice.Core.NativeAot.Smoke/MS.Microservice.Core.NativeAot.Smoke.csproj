@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <PublishAot>true</PublishAot>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
+    <NativeAotMode Condition="'$(NativeAotMode)' == ''">Consumer</NativeAotMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NativeAotMode)' == 'Analysis'">
+    <TrimmerRootAssembly Include="MS.Microservice.Core" />
+  </ItemGroup>
+  <Target Name="ValidateNativeAotMode" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(NativeAotMode)' != 'Consumer' and '$(NativeAotMode)' != 'Analysis'"
+           Text="NativeAotMode must be Consumer or Analysis." />
+  </Target>
+</Project>
