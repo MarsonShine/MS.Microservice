@@ -23,6 +23,8 @@ await Run("consumer-json-contract", () =>
 });
 foreach (var (name, scenario) in SerializationScenarios.All)
     await Run(name, scenario);
+foreach (var (name, scenario) in FoundationScenarios.All)
+    await Run(name, scenario);
 Console.WriteLine($"Native AOT smoke: {failed} failed.");
 return failed == 0 ? 0 : 1;
 

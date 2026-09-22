@@ -66,7 +66,24 @@ HTTP 使用内存 Handler，缓存使用内存替身，不连接外部服务。
 
 现有 `MS.Microservice.Aot.Tests` 通过源码链接运行同一组场景，便于比较托管与原生结果；
 原生程序只编译场景和手写替身，不引入 xUnit。这里验证的是 Core 的编码、元数据和异常行为，
-不验证真实网络、缓存服务的过期机制，也不代表 Reactive 等其他能力已完成运行验证。
+不验证真实网络或缓存服务的过期机制。
+
+基础能力见 [FoundationScenarios.cs](../../test/MS.Microservice.Core.NativeAot.Smoke/FoundationScenarios.cs)，
+Reactive 路径见 [ReactiveScenarios.cs](../../test/MS.Microservice.Core.NativeAot.Smoke/ReactiveScenarios.cs)。
+两者也由托管测试和原生入口共用：
+
+- 类型与实体键检查值类型、可空类型、引用类型和复合键，并区分默认值、临时键与已赋值的键。
+- 事件登记检查引用类型和值类型事件、顺序等待、退订和异常传播；不验证并发修改订阅集合。
+- 配置使用真实 Microsoft DI 容器，检查服务构造、单例生命周期和布尔值解析。消费程序须先注册 `IConfiguration`；
+  `AddFeatureToggle` 只登记功能开关服务。容器实现是验证程序的依赖，没有加入 Core。
+- 表达式只检查组合结构、参数重绑定、排序、投影和 Include 的泛型分派。
+  没有调用 `Compile`、`AsQueryable`，也没有连接 ORM；这些结果不证明任何数据库 Provider 能翻译或执行表达式。
+- Reactive 使用现有 System.Reactive 依赖，检查筛选、合并、异步成功/失败、Trace 订阅释放，以及热流的相邻配对。
+  异步场景用任务信号驱动，十秒超时只用于结束挂起的测试。没有据此承诺冷流的配对语义、多个订阅只执行一次副作用，
+  或任意调度器下的并发行为。
+
+这组验证的判断依据是消费方能否在原生产物中构造类型、调用代码并得到约定结果。
+它不把出现 `typeof`、泛型或表达式树本身视为不兼容，也不覆盖 System.Reactive 的全部 API。
 
 ## JSON 元数据由谁提供
 

@@ -7,6 +7,7 @@
 <ItemGroup>
 <PackageReference Include="FluentAssertions" />
 <PackageReference Include="Microsoft.NET.Test.Sdk" />
+<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
 <PackageReference Include="NSubstitute" />
 <PackageReference Include="xunit" />
 <PackageReference Include="xunit.runner.visualstudio">
@@ -26,6 +27,9 @@
 </ItemGroup>
 <ItemGroup>
 <Using Include="Xunit" />
+<Compile Include="../MS.Microservice.Core.NativeAot.Smoke/FoundationFixtures.cs" Link="Native/FoundationFixtures.cs" />
+<Compile Include="../MS.Microservice.Core.NativeAot.Smoke/FoundationScenarios.cs" Link="Native/FoundationScenarios.cs" />
+<Compile Include="../MS.Microservice.Core.NativeAot.Smoke/ReactiveScenarios.cs" Link="Native/ReactiveScenarios.cs" />
 <Compile Include="../MS.Microservice.Core.NativeAot.Smoke/SerializationFixtures.cs" Link="Native/SerializationFixtures.cs" />
 <Compile Include="../MS.Microservice.Core.NativeAot.Smoke/SerializationScenarios.cs" Link="Native/SerializationScenarios.cs" />
 <Compile Include="../MS.Microservice.Core.Tests/Net/Http/LogHttpClientTests.cs" Link="LogHttpClientTests.cs" />
