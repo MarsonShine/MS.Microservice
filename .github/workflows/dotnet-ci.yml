@@ -11,6 +11,69 @@ on:
       - main
 
 jobs:
+  core-aot:
+    name: Core AOT (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            rid: win-x64
+          - os: ubuntu-24.04
+            rid: linux-x64
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install Linux native prerequisites
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang zlib1g-dev
+
+      - name: Test static analysis checks
+        run: ./build/test-validate-static-aot.ps1
+
+      - name: Analyze Core
+        run: ./build/validate-static-aot.ps1 -Project src/MS.Microservice.Core/MS.Microservice.Core.csproj
+
+      - name: Test Core
+        run: dotnet test test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj -c Release --logger "trx;LogFileName=core.trx" --results-directory artifacts/aot/tests
+
+      - name: Test metadata and shared consumer scenarios
+        run: dotnet test test/MS.Microservice.Aot.Tests/MS.Microservice.Aot.Tests.csproj -c Release --logger "trx;LogFileName=aot.trx" --results-directory artifacts/aot/tests
+
+      - name: Publish and run native consumer
+        run: ./build/validate-core-native-aot.ps1 -RuntimeIdentifier ${{ matrix.rid }} -Mode All
+
+      - name: Upload Core validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-aot-${{ matrix.rid }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            artifacts/aot/MS.Microservice.Core/*.log
+            artifacts/aot/MS.Microservice.Core/results.json
+            artifacts/aot/Core.Native/**/publish.log
+            artifacts/aot/Core.Native/**/run.log
+            artifacts/aot/Core.Native/**/results.json
+            artifacts/aot/tests/*.trx
+
   build-test-publish:
     runs-on: ubuntu-latest
 

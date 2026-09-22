@@ -19,6 +19,10 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 
 ## Core 裁剪与 AOT 分析
 
+Core 在项目中设置 `IsAotCompatible=true`，日常构建即启用裁剪、AOT 和单文件兼容性分析，
+并允许消费应用裁剪未使用的 Core 代码。它不是关闭警告的开关，也不能代替实际发布。
+支持用法仍要求调用方提供业务类型的 JSON 元数据和查询映射；外部 Provider 的兼容性由对应模块验证。
+
 在仓库根目录运行，仅检查 Core 及构建所需的项目引用：
 
 ```powershell
@@ -84,6 +88,23 @@ Reactive 路径见 [ReactiveScenarios.cs](../../test/MS.Microservice.Core.Native
 
 这组验证的判断依据是消费方能否在原生产物中构造类型、调用代码并得到约定结果。
 它不把出现 `typeof`、泛型或表达式树本身视为不兼容，也不覆盖 System.Reactive 的全部 API。
+
+## CI 如何判定通过
+
+[dotnet-ci.yml](../../.github/workflows/dotnet-ci.yml) 中的 `Core AOT` 作业只验证 Core 及其依赖，
+分别在 Windows Server 2025 x64 和 Ubuntu 24.04 x64 上运行。SDK 来自仓库的 `global.json`，
+Linux 作业补齐 clang 和 zlib 开发包，Windows 使用 runner 的 C++ 工具链。
+
+每个平台依次执行脚本回归、Core 静态分析、Core 测试、关闭 JSON 默认反射的 AOT 测试，
+最后发布并运行 Analysis 和 Consumer 两种原生产物。任一检查失败，该平台作业就失败；
+一个平台失败不会取消另一个平台，便于同时看到两边的结果。
+
+日志以 `core-aot-win-x64` 和 `core-aot-linux-x64` 附件保留七天，失败时也会尝试上传。
+附件包含编译日志、原生运行日志、成功报告和测试结果，不打包构建目录或原生二进制。
+如果发布或运行中途失败，可能只有日志，没有 `results.json`；缺少报告不代表通过。
+
+两个平台的 CI 都通过，才说明当前提交在这两个环境中通过了已有场景。
+本机验证、工作流配置检查和 GitHub runner 上的实际运行是不同的证据，不能互相替代。
 
 ## JSON 元数据由谁提供
 
