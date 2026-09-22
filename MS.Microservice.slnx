@@ -18,6 +18,7 @@
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
+    <Project Path="samples/Reference/MS.Microservice.Reference.AotWeb/MS.Microservice.Reference.AotWeb.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.DatabaseMigrator/MS.Microservice.Reference.DatabaseMigrator.csproj" />
     <Project Path="samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj" />

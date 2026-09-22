@@ -10,6 +10,10 @@ Reference 展示“如何把可复用组件组合成一个实际服务”，不�
 前两层说明业务与用例；Persistence 负责应用自己的数据模型；
 Web 是选择具体组件的组合根；Migrator 负责显式结构变更。
 
+[Reference.AotWeb](MS.Microservice.Reference.AotWeb/README.md) 是独立的 Native AOT 接入站点，
+当前仅提供宿主基线，不替代现有 Web。已改内容、未接入能力和上游限制记录在
+[AOT 改造记录](MS.Microservice.Reference.AotWeb/AotMigration.md)。两个 Web 宿主互不引用。
+
 - [总体设计、拆分理由和代价](../../docs/Architecture-Overview.md)
 - [Web 配置与接口](MS.Microservice.Reference.Web/README.md)
 - [持久化模型](MS.Microservice.Reference.Persistence/README.md)
