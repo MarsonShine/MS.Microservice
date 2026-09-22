@@ -52,19 +52,43 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 Windows 需要 Visual Studio 的 C++ 桌面开发工具链及 Windows SDK；Ubuntu 需要 clang 和 zlib1g-dev。
 目标平台须与运行主机一致，不支持通过 Windows 交叉发布来代替 Linux 验证。
 
-验证程序直接消费 Core，不使用 xUnit 或动态 Mock。当前验证原生运行条件、关闭 JSON 默认反射，
-以及消费方定义的模型和生成上下文通过 `JsonTypeRegistry` 完成序列化往返。
+验证程序直接消费 Core，不使用 xUnit 或动态 Mock。模型与生成上下文由消费程序定义，
+HTTP 使用内存 Handler，缓存使用内存替身，不连接外部服务。
 脚本将发布的可执行文件单独复制到空目录运行，不携带托管 DLL 或 runtimeconfig。
 `PublishAot` 会影响中间托管程序的运行时开关，因此单独运行 DLL、`dotnet run` 或仅检查动态代码开关不构成原生验证。
-完整库分析不等于执行所有 API，也不覆盖所有泛型实例；此入口尚不代表 HTTP、缓存、Reactive 等能力的完整场景验证。
+完整库分析不等于执行所有 API，也不覆盖所有泛型实例。当前 JSON、HTTP、缓存的场景见
+[SerializationScenarios.cs](../../test/MS.Microservice.Core.NativeAot.Smoke/SerializationScenarios.cs)：
+
+- HTTP 检查闭合泛型、集合、空值、自定义转换器、多态、中文编码、请求头隔离，以及失败和取消。
+- 元数据缺失时，同时检查异常与请求次数，确保请求没有发出；也验证合法的嵌套类型可以发送。
+- 查询映射在 `fr-FR` 区域性下检查小数、日期、重复参数、空值，以及已有查询串和片段。
+- 缓存检查命中与回源次数、空结果不写入、过期配置、UTF-8 BOM、坏数据和取消。
+
+现有 `MS.Microservice.Aot.Tests` 通过源码链接运行同一组场景，便于比较托管与原生结果；
+原生程序只编译场景和手写替身，不引入 xUnit。这里验证的是 Core 的编码、元数据和异常行为，
+不验证真实网络、缓存服务的过期机制，也不代表 Reactive 等其他能力已完成运行验证。
+
+## JSON 元数据由谁提供
+
+`LogHttpClient` 从 `JsonTypeRegistry` 查找请求的实际类型和响应的声明类型。
+缓存与 `MS.WebHttpClient` 扩展直接接收 `JsonTypeInfo<T>`。调用方通过生成上下文提供这些元数据。
+
+Registry 只登记根类型，不会合并或补全每份元数据内部的解析器。例如 `Envelope.Data` 声明为 `object`，
+即使已经把 `Item` 登记到 Registry，Envelope 所用上下文仍须知道 Item，才能序列化这个嵌套值。
+普通 object 属性反序列化后通常得到 `JsonElement`；需要恢复具体派生类型时，应声明多态契约。
+缺失契约会报错，没有自动反射回退。`DefaultSerializeSetting` 只提供 JSON 配置，不提供业务类型元数据。
 
 ### HTTP 请求辅助
 
-LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null 值省略，空字符串保留，
+LogHttpClient 的 GET 参数使用 `IDictionary`，或使用业务对象与显式的 `QueryParameterMap<T>`；不会自动扫描对象属性。
+null 值省略，空字符串保留，
 集合展开为同名参数，数值使用 invariant culture，日期使用往返格式。键和值分别 URL 编码，
 追加参数时保留已有查询串和片段。POST 使用 UTF-8 application/json。
 传入的请求头仅属于本次请求，不修改 HttpClient.DefaultRequestHeaders。
 
-取消、HTTP 状态失败和 JSON 解析失败分别保留 OperationCanceledException、
+LogHttpClient 的取消、HTTP 状态失败和 JSON 解析失败分别保留 OperationCanceledException、
 HttpRequestException、JsonException；调用方应更新旧的“统一解析异常”捕获逻辑。
 默认日志不记录 URL、参数、正文及异常消息。
+
+较早的 `MS.WebHttpClient.HttpClientExtensions` 仍在非成功状态或无效 JSON 时返回默认值；
+它与 LogHttpClient 的异常约定不同，不能按同一套失败规则替换调用。

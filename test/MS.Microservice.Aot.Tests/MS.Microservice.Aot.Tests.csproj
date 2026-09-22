@@ -26,6 +26,8 @@
 </ItemGroup>
 <ItemGroup>
 <Using Include="Xunit" />
+<Compile Include="../MS.Microservice.Core.NativeAot.Smoke/SerializationFixtures.cs" Link="Native/SerializationFixtures.cs" />
+<Compile Include="../MS.Microservice.Core.NativeAot.Smoke/SerializationScenarios.cs" Link="Native/SerializationScenarios.cs" />
 <Compile Include="../MS.Microservice.Core.Tests/Net/Http/LogHttpClientTests.cs" Link="LogHttpClientTests.cs" />
 <Compile Include="../MS.Microservice.Core.Tests/Net/Http/HttpClientExtensionsTests.cs" Link="HttpClientExtensionsTests.cs" />
 <Compile Include="../MS.Microservice.Core.Tests/Serialization/JsonReuseRegressionTests.cs" Link="JsonReuseRegressionTests.cs" />
