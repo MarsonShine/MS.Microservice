@@ -23,7 +23,11 @@ public static class IdempotencyModel
     }
 }
 
-internal sealed class IdempotencyRecord
+/// <summary>
+/// EF model entity used by <see cref="IdempotencyModel.AddHttpIdempotency"/>.
+/// The type must be public because compiled models are generated in the consuming DbContext assembly.
+/// </summary>
+public sealed class IdempotencyRecord
 {
     public string ScopeHash { get; set; } = "";
     public string KeyHash { get; set; } = "";
