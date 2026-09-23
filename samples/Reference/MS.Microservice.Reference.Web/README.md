@@ -8,6 +8,8 @@ Required settings are `ConnectionStrings:ReferenceDatabase`, `Messaging:RabbitMQ
 
 `Http:RequestTimeouts:Enabled` is `false` in the sample configuration. When enabled, API requests have a 30-second deadline by default; `Seconds` must be positive. Health routes do not use that deadline. Downstream calls must honor the request cancellation token, and a `504` does not prove a write was rolled back. See [HTTP 请求超时](../../../src/MS.Microservice.AspNetCore/docs/request-timeouts.md).
 
+List endpoints validate pagination query ranges before calling repositories. Their omitted values remain `skip=0`, `take=50` and `limit=100`. Application errors use the shared ProblemDetails mapping, which preserves known public codes and hides unknown 500 details. The [HTTP error and validation note](../../../src/MS.Microservice.AspNetCore/docs/application-errors.md) records the .NET 10 binding behavior behind this choice.
+
 | Route | Purpose |
 | --- | --- |
 | `/health/live` | Process liveness, anonymous. |

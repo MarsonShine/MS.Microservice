@@ -25,6 +25,7 @@ using MS.Microservice.AspNetCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Messaging.RabbitMQ;
 using MS.Microservice.Reference.Application;
+using MS.Microservice.Reference.Domain;
 using MS.Microservice.Reference.Persistence;
 using MS.Microservice.Reference.Web;
 using Xunit;
@@ -64,13 +65,117 @@ public sealed class ReferenceHostTests
         Assert.Equal(2, (await changed.Content.ReadFromJsonAsync<ProfileView>())!.Version);
         using var stale = await fixture.Client.PatchAsJsonAsync($"/api/v1/profiles/{profile.Id}", new ChangeProfile("third", [], 1));
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        await AssertProblemCodeAsync(stale, "conflict");
         using var duplicate = await fixture.Client.PostAsJsonAsync("/api/v1/profiles", request);
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        await AssertProblemCodeAsync(duplicate, "conflict");
         using var denied = await fixture.Client.GetAsync("/api/operations/messages/failures");
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
         fixture.Authenticate("messaging.manage");
         using var allowed = await fixture.Client.GetAsync("/api/operations/messages/failures");
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvalidQueryValuesAreRejectedBeforeRepositoryMethodsRun()
+    {
+        var profiles = Substitute.For<IProfileRepository>();
+        var audits = Substitute.For<IProfileAuditRepository>();
+        var failures = Substitute.For<IFailedMessageOperations>();
+        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        {
+            services.RemoveAll<IProfileRepository>();
+            services.RemoveAll<IProfileAuditRepository>();
+            services.RemoveAll<IFailedMessageOperations>();
+            services.AddSingleton(profiles);
+            services.AddSingleton(audits);
+            services.AddSingleton(failures);
+        });
+        fixture.Authenticate("profiles.manage");
+        foreach (var path in new[]
+        {
+            "/api/v1/profiles?skip=-1", "/api/v1/profiles?take=0", "/api/v1/profiles?take=201",
+            "/api/v1/profiles?take=invalid", "/api/v1/audit?take=0", "/api/v1/audit?take=201"
+        })
+        {
+            using var response = await fixture.Client.GetAsync(path);
+            Assert.True(response.StatusCode == HttpStatusCode.BadRequest, $"{path} returned {(int)response.StatusCode}.");
+        }
+
+        fixture.Authenticate("messaging.manage");
+        foreach (var path in new[] { "/api/operations/messages/failures?limit=0", "/api/operations/messages/failures?limit=1001" })
+        {
+            using var response = await fixture.Client.GetAsync(path);
+            Assert.True(response.StatusCode == HttpStatusCode.BadRequest, $"{path} returned {(int)response.StatusCode}.");
+        }
+
+        _ = profiles.DidNotReceiveWithAnyArgs().ListAsync(default, default, default);
+        _ = audits.DidNotReceiveWithAnyArgs().ListAsync(default, default, default);
+        _ = failures.DidNotReceiveWithAnyArgs().ListAsync(default, default);
+    }
+
+    [Fact]
+    public async Task QueryDefaultsNormalValuesAndInclusiveLimitsReachRepositories()
+    {
+        var profiles = Substitute.For<IProfileRepository>();
+        profiles.ListAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<UserProfile>>([]));
+        var audits = Substitute.For<IProfileAuditRepository>();
+        audits.ListAsync(Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ProfileAuditEntry>>([]));
+        var failures = Substitute.For<IFailedMessageOperations>();
+        failures.ListAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<FailedMessage>>([]));
+        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        {
+            services.RemoveAll<IProfileRepository>();
+            services.RemoveAll<IProfileAuditRepository>();
+            services.RemoveAll<IFailedMessageOperations>();
+            services.AddSingleton(profiles);
+            services.AddSingleton(audits);
+            services.AddSingleton(failures);
+        });
+        fixture.Authenticate("profiles.manage");
+        using var profileDefault = await fixture.Client.GetAsync("/api/v1/profiles");
+        using var profileNormal = await fixture.Client.GetAsync("/api/v1/profiles?skip=7&take=25");
+        using var profileMax = await fixture.Client.GetAsync("/api/v1/profiles?skip=2147483647&take=200");
+        using var auditDefault = await fixture.Client.GetAsync("/api/v1/audit");
+        var profileId = Guid.NewGuid();
+        using var auditMax = await fixture.Client.GetAsync($"/api/v1/audit?profileId={profileId}&take=200");
+        Assert.All(new[] { profileDefault, profileNormal, profileMax, auditDefault, auditMax },
+            response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        _ = profiles.Received(1).ListAsync(0, 50, Arg.Any<CancellationToken>());
+        _ = profiles.Received(1).ListAsync(7, 25, Arg.Any<CancellationToken>());
+        _ = profiles.Received(1).ListAsync(int.MaxValue, 200, Arg.Any<CancellationToken>());
+        _ = audits.Received(1).ListAsync(null, 50, Arg.Any<CancellationToken>());
+        _ = audits.Received(1).ListAsync(profileId, 200, Arg.Any<CancellationToken>());
+
+        fixture.Authenticate("messaging.manage");
+        using var failuresDefault = await fixture.Client.GetAsync("/api/operations/messages/failures");
+        using var failuresNormal = await fixture.Client.GetAsync("/api/operations/messages/failures?limit=5");
+        using var failuresMax = await fixture.Client.GetAsync("/api/operations/messages/failures?limit=1000");
+        Assert.All(new[] { failuresDefault, failuresNormal, failuresMax },
+            response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        _ = failures.Received(1).ListAsync(100, Arg.Any<CancellationToken>());
+        _ = failures.Received(1).ListAsync(5, Arg.Any<CancellationToken>());
+        _ = failures.Received(1).ListAsync(1000, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DomainValidationStillMapsToPublicProblemDetails()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        using var response = await fixture.Client.PostAsJsonAsync("/api/v1/profiles", new CreateProfile("", "subject", "name", []));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await AssertProblemCodeAsync(response, "validation");
+    }
+
+    private static async Task AssertProblemCodeAsync(HttpResponseMessage response, string code)
+    {
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(code, body.RootElement.GetProperty("code").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(body.RootElement.GetProperty("traceId").GetString()));
     }
 
     [Fact]
@@ -229,7 +334,8 @@ public sealed class ReferenceHostTests
         ]);
 
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
-            int? apiPermitLimit = null, int? apiTimeoutSeconds = null, bool storageAvailable = true)
+            int? apiPermitLimit = null, int? apiTimeoutSeconds = null, bool storageAvailable = true,
+            Action<IServiceCollection>? configureServices = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -280,6 +386,7 @@ public sealed class ReferenceHostTests
             }
             else brokerFactory.CreateConnectionAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException<IConnection>(new IOException("offline")));
             builder.Services.AddSingleton(brokerFactory);
+            configureServices?.Invoke(builder.Services);
             var app = builder.Build();
             ReferenceHost.MapApplication(app);
             await using (var scope = app.Services.CreateAsyncScope())

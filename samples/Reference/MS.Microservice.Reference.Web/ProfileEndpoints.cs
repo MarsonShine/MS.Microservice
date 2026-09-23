@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Routing;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Core.Functional;
@@ -17,11 +18,9 @@ internal static class ProfileEndpoints
             ExternalIdentityOptions identity, CancellationToken token) =>
             Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
                 profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)));
-        profiles.MapGet("", async (IProfileRepository repository, int? skip, int? take, CancellationToken token) =>
-        {
-            if (skip is < 0 || take is < 1 or > 200) return InvalidPagination();
-            return Results.Ok((await repository.ListAsync(skip ?? 0, take ?? 50, token)).Select(ProfileView.From));
-        });
+        profiles.MapGet("", async (IProfileRepository repository, CancellationToken token,
+            [Range(0, int.MaxValue)] int skip = 0, [Range(1, 200)] int take = 50) =>
+            Results.Ok((await repository.ListAsync(skip, take, token)).Select(ProfileView.From)));
         profiles.MapGet("/{id:guid}", async (Guid id, IProfileRepository repository, CancellationToken token) =>
             await repository.GetAsync(id, token) is { } profile ? Results.Ok(ProfileView.From(profile)) : Results.NotFound());
         profiles.MapPatch("/{id:guid}", async (Guid id, ChangeProfile request, ProfileService service, HttpContext http,
@@ -35,17 +34,12 @@ internal static class ProfileEndpoints
             var profile = await repository.FindAsync(actor.Issuer, actor.Subject, token);
             return profile is null ? Results.NotFound() : Results.Ok(ProfileView.From(profile));
         }).RequireAuthorization();
-        app.MapGet("/api/v1/audit", async (IProfileAuditRepository repository, Guid? profileId, int? take, CancellationToken token) =>
-        {
-            if (take is < 1 or > 200) return InvalidPagination();
-            return Results.Ok(await repository.ListAsync(profileId, take ?? 50, token));
-        }).RequireAuthorization("Manage");
+        app.MapGet("/api/v1/audit", async (IProfileAuditRepository repository, CancellationToken token,
+            Guid? profileId = null, [Range(1, 200)] int take = 50) =>
+            Results.Ok(await repository.ListAsync(profileId, take, token))).RequireAuthorization("Manage");
         var operations = app.MapGroup("/api/operations/messages").RequireAuthorization("MessagingOperations");
-        operations.MapGet("/failures", async (IFailedMessageOperations failures, int? limit, CancellationToken token) =>
-        {
-            if (limit is < 1 or > 1000) return InvalidPagination();
-            return Results.Ok(await failures.ListAsync(limit ?? 100, token));
-        });
+        operations.MapGet("/failures", async (IFailedMessageOperations failures, CancellationToken token,
+            [Range(1, 1000)] int limit = 100) => Results.Ok(await failures.ListAsync(limit, token)));
         operations.MapPost("/failures/{failureId}/replay", async (string failureId, IFailedMessageOperations failures, CancellationToken token) =>
             await failures.ReplayAsync(failureId, token) switch
             {
@@ -57,10 +51,6 @@ internal static class ProfileEndpoints
 
     private static AuditActor Actor(ClaimsPrincipal user, ExternalIdentityOptions identity)
         => new(user.FindFirstValue("iss") ?? "", user.FindFirstValue(identity.SubjectClaimType) ?? "");
-    private static IResult InvalidPagination() => Results.Problem(statusCode: 400, title: "Pagination is outside the supported range.");
     private static IResult Respond<T>(Either<Error, T> result, Func<T, IResult> success)
-        => result.Match(error => Results.Problem(statusCode: error.Code switch
-        {
-            "validation" => 400, "not_found" => 404, "conflict" => 409, "unauthorized" => 401, _ => 500
-        }, title: error.Message, extensions: new Dictionary<string, object?> { ["code"] = error.Code }), success);
+        => result.Match(error => ApplicationErrorResults.ToProblem(error.Code, error.Message, error.Details), success);
 }

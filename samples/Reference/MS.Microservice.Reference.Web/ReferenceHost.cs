@@ -54,6 +54,7 @@ public static class ReferenceHost
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
+        builder.Services.AddValidation();
         builder.Services.AddPlatformHealthChecks()
             .Add(new HealthCheckRegistration("durable-storage",
                 static services => new ReferenceDurableStorageHealthCheck(
