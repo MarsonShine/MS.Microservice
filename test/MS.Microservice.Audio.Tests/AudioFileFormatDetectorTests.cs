@@ -34,6 +34,42 @@ public sealed class AudioFileFormatDetectorTests
         format.Should().Be(AudioFormat.Mp3);
     }
 
+    [Theory]
+    [InlineData(12, 10, AudioFormat.Mp3)]
+    [InlineData(1024, 1022, AudioFormat.Mp3)]
+    [InlineData(1025, 1023, AudioFormat.Auto)]
+    public void DetectFormatFromStream_ScansOnlyTheFirst1024BytesForMp3Frame(int length, int frameOffset, AudioFormat expected)
+    {
+        var bytes = new byte[length];
+        bytes[frameOffset] = 0xff;
+        bytes[frameOffset + 1] = 0xe0;
+        using var stream = new MemoryStream(bytes);
+        stream.Position = 7;
+
+        AudioFileFormatDetector.DetectFormatFromStream(stream).Should().Be(expected);
+        stream.Position.Should().Be(7);
+    }
+
+    [Theory]
+    [InlineData(0x66, 0x4c, 0x61, 0x43)]
+    [InlineData(0x4f, 0x67, 0x67, 0x53)]
+    public void DetectFormatFromStream_LeavesOtherFormatsAsAuto(byte first, byte second, byte third, byte fourth)
+    {
+        using var stream = new MemoryStream([first, second, third, fourth, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+        AudioFileFormatDetector.DetectFormatFromStream(stream).Should().Be(AudioFormat.Auto);
+    }
+
+    [Fact]
+    public void DetectFormatFromStream_BoundsScanBeforeConvertingLargeLengthToInt()
+    {
+        using var stream = new LargeLengthStream(new byte[1024]);
+        stream.Position = 3;
+
+        AudioFileFormatDetector.DetectFormatFromStream(stream).Should().Be(AudioFormat.Auto);
+        stream.Position.Should().Be(3);
+    }
+
     [Fact]
     public void DetectFormatFromStream_WhenStreamTooSmall_ShouldThrow()
     {
@@ -77,5 +113,10 @@ public sealed class AudioFileFormatDetectorTests
         Action action = () => AudioFileFormatDetector.DetectActualFormat(path);
 
         action.Should().Throw<FileNotFoundException>();
+    }
+
+    private sealed class LargeLengthStream(byte[] buffer) : MemoryStream(buffer)
+    {
+        public override long Length => (long)int.MaxValue + 1;
     }
 }
