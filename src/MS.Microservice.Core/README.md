@@ -17,6 +17,8 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 更高层取舍见[总体架构](../../docs/Architecture-Overview.md)；
 复制或包引用需要包含声明的依赖，见[组件消费](../../docs/components/consumption.md)。
 
+对称加密只接受调用方提供的 32 字节密钥，并使用带版本号的 AES-256-GCM 密文；旧 AES-ECB 和 3DES 格式已停用。原因、格式和密钥使用方式见[对称加密格式](Security/Cryptology/authenticated-encryption.md)。
+
 ### HTTP 请求辅助
 
 LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null 值省略，空字符串保留，

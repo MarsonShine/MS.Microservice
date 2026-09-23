@@ -19,7 +19,6 @@ using MS.Microservice.Lab.Infrastructure.Extensions;
 using MS.Microservice.Lab.Infrastructure.HealthChecks;
 using MS.Microservice.Lab.Infrastructure.Labs;
 using MS.Microservice.Lab.Infrastructure.Mediator.Behaviors;
-using MS.Microservice.Lab.Infrastructure.Mvc.ModelBinder.Extension;
 using System.Text.Json;
 using Wolverine;
 
@@ -108,10 +107,6 @@ public static class PlatformWebHost
             {
                 options.FeatureProviders.Add(
                     new LabOnlyControllerFeatureProvider(enableLabEndpoints));
-            })
-            .AddMvcOptions(options =>
-            {
-                options.UseApiDecryptModelBinding(builder.Configuration);
             })
             .AddJsonOptions(options =>
             {

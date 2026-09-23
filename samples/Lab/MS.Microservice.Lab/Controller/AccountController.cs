@@ -8,7 +8,6 @@ using System.Text;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
-using MS.Microservice.Infrastructure.Attributes;
 using MS.Microservice.Core.Extension;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Domain.Identity;
@@ -47,7 +46,6 @@ public class AccountController : ControllerBase
     [ProducesResponseType(typeof(ResultDto<AuthenticateResult>), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.Unauthorized)]
-    [NoEncrypt]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (request.Account == null || request.Password.IsNullOrEmpty())
@@ -94,7 +92,6 @@ public class AccountController : ControllerBase
     [Authorize(Policy = "Manage")]
     [ProducesResponseType(typeof(ResultDto<Domain.Identity.ActionResult>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.OK)]
-    [NoEncrypt]
     public async Task<IActionResult> Auth()
     {
 
