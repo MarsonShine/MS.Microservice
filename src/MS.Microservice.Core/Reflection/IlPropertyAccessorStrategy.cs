@@ -11,7 +11,7 @@ namespace MS.Microservice.Core.Reflection;
 /// <list type="bullet">
 /// <item>表达树只能用 <c>Expression.Convert(..., typeof(object))</c> 装箱；IL 按属性声明类型决定是否 <c>box</c>，
 /// 枚举还能直接 <c>call Enum.ToString()</c>，省掉 <c>IFormattable.ToString(null, provider)</c> 的接口分发。</item>
-/// <item>数组属性在 IL 里可以用 <c>ldlen</c> + <c>ldelem.ref</c> 展开，不构造枚举器；
+/// <item>零下界一维数组属性在 IL 里可以用 <c>ldlen</c> + 与元素类型匹配的 <c>ldelem</c> 展开，不构造枚举器；
 /// 表达树要写等价循环得手工拼 <c>Loop</c>/<c>Break</c>/<c>Label</c>，因此那边退化为 <c>IEnumerable</c> 分发。</item>
 /// </list>
 /// 代价是可读性与验证成本：栈平衡、局部变量、分支标签都要自己维护，改动前先跑同源测试。
@@ -62,8 +62,8 @@ public sealed class IlPropertyAccessorStrategy : PropertyAccessorStrategy
     {
         var storage = property.PropertyType;
 
-        // 数组：ldlen + 索引循环，不经过 IEnumerable，也不产生枚举器分配；null 数组按"无参数"跳过。
-        if (storage.IsArray && storage.GetArrayRank() == 1)
+        // SZArray：ldlen + 零起点索引循环；其他数组交给 IEnumerable 处理其维度与下界。
+        if (storage.IsSZArray)
         {
             var array = il.DeclareLocal(storage);
             var index = il.DeclareLocal(typeof(int));
@@ -151,7 +151,16 @@ public sealed class IlPropertyAccessorStrategy : PropertyAccessorStrategy
         il.Emit(OpCodes.Ldstr, name);
         il.Emit(OpCodes.Ldloc, array);
         il.Emit(OpCodes.Ldloc, index);
-        il.Emit(OpCodes.Ldelem_Ref);
+        var elementType = array.LocalType.GetElementType()!;
+        if (elementType.IsValueType)
+        {
+            il.Emit(OpCodes.Ldelem, elementType);
+            il.Emit(OpCodes.Box, elementType);
+        }
+        else
+        {
+            il.Emit(OpCodes.Ldelem_Ref);
+        }
         il.Emit(OpCodes.Ldarg_1);
         il.Emit(OpCodes.Call, AppendOne);
         il.Emit(OpCodes.Or);

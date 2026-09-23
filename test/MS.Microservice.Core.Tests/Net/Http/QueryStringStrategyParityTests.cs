@@ -23,6 +23,7 @@ public sealed class QueryStringStrategyParityTests
         ("value-types", new ValuePayload { Amount = 1.25m, At = new DateTime(2024, 1, 2, 3, 4, 5, DateTimeKind.Utc), Flag = true },
             "Amount=1.25&At=2024-01-02T03%3A04%3A05.0000000Z&Flag=True"),
         ("array", new CollectionPayload { Tags = ["a", "b"], Ids = [1, 2, 3] }, "Tags=a&Tags=b&Ids=1&Ids=2&Ids=3"),
+        ("value-array", new ArrayPayload<int> { Values = [1, 2, 3] }, "Values=1&Values=2&Values=3"),
         ("null-array", new CollectionPayload { Tags = null, Ids = null }, ""),
         ("empty-array", new CollectionPayload { Tags = [], Ids = [] }, ""),
         ("enum", new EnumPayload { Status = Status.Ready, Mode = Status.Ready }, "Status=Ready&Mode=Ready"),
@@ -59,6 +60,48 @@ public sealed class QueryStringStrategyParityTests
         finally
         {
             PropertyAccessors.Use(previous);
+        }
+    }
+
+    [Fact]
+    public void ArrayElementsAreLoadedAndFormattedByTheirActualType()
+    {
+        var nonZeroBased = Array.CreateInstance(typeof(int), [2], [5]);
+        nonZeroBased.SetValue(7, 5);
+        nonZeroBased.SetValue(8, 6);
+
+        (string Name, object Body, string Expected)[] cases =
+        [
+            ("int", new ArrayPayload<int> { Values = [1, -2] }, "Values=1&Values=-2"),
+            ("long", new ArrayPayload<long> { Values = [long.MinValue, long.MaxValue] },
+                "Values=-9223372036854775808&Values=9223372036854775807"),
+            ("decimal", new ArrayPayload<decimal> { Values = [1.25m, 0m] }, "Values=1.25&Values=0"),
+            ("nullable-int", new ArrayPayload<int?> { Values = [1, null, -2] }, "Values=1&Values=-2"),
+            ("enum", new ArrayPayload<Status> { Values = [Status.Ready, Status.None] }, "Values=Ready&Values=None"),
+            ("nullable-enum", new ArrayPayload<Status?> { Values = [Status.Ready, null, Status.None] },
+                "Values=Ready&Values=None"),
+            ("reference", new ArrayPayload<string?> { Values = ["a&b", null, ""] }, "Values=a%26b&Values="),
+            ("object", new ArrayPayload<object?> { Values = [1, null, "tail"] }, "Values=1&Values=tail"),
+            ("jagged", new ArrayPayload<int[]> { Values = [[1, 2], [], [3]] },
+                "Values=1&Values=2&Values=3"),
+            ("matrix", new MatrixPayload { Values = new int[,] { { 1, 2 }, { 3, 4 } } },
+                "Values=1&Values=2&Values=3&Values=4"),
+            ("nonzero-lower-bound", new NonZeroBasedArrayPayload { Values = nonZeroBased }, "Values=7&Values=8"),
+            ("empty", new ArrayPayload<int> { Values = [] }, ""),
+            ("null", new ArrayPayload<int> { Values = null }, ""),
+            ("list", new CollectionPayload { Ids = [1, 2] }, "Ids=1&Ids=2")
+        ];
+
+        foreach (var (name, body, expected) in cases)
+        {
+            foreach (var (strategyName, strategy) in new[] { ("IL", PropertyAccessors.Il), ("Expression", PropertyAccessors.Expression) })
+            {
+                var values = new List<string>();
+                strategy.CompilePopulate(body.GetType())(body, values);
+                var actual = string.Join('&', values);
+                Assert.True(string.Equals(expected, actual, StringComparison.Ordinal),
+                    $"{strategyName}/{name}: expected '{expected}', got '{actual}'");
+            }
         }
     }
 
@@ -131,6 +174,21 @@ public sealed class QueryStringStrategyParityTests
         public string[]? Tags { get; set; }
         public List<int>? Ids { get; set; }
         public string[]? Matrix { get; set; }
+    }
+
+    private sealed class ArrayPayload<T>
+    {
+        public T[]? Values { get; set; }
+    }
+
+    private sealed class MatrixPayload
+    {
+        public int[,]? Values { get; set; }
+    }
+
+    private sealed class NonZeroBasedArrayPayload
+    {
+        public Array? Values { get; set; }
     }
 
     private sealed class EnumPayload
