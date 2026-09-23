@@ -19,8 +19,10 @@ Reference.Web 已经承载可运行的业务流程。直接在它上面替换持
 | 日志 | JSON 控制台日志与请求日志中间件 | 保留相同设置和公共请求日志组件 | 日志仍可用于诊断启动和请求行为，不引入额外日志提供器。 |
 | 就绪检查 | 检查数据库迁移、消息存储与 broker | 暂不映射 `/health/ready` | 尚未接入这些依赖时，不能返回一个含义不同的“ready”。 |
 | HTTP 测试 | 原站点测试使用 TestServer、SQLite 和测试身份元数据 | 在同一测试项目增加 `AotHostTests`，支持 TestServer 或外部原生进程 | 不增加测试入口项目；原生验收通过真实 HTTP 访问已发布进程。 |
+| Core、领域和用例 | Core 已独立通过 AOT 验证；Reference.Domain、Application 原先只有普通测试 | Domain、Application 声明 `IsAotCompatible`，并通过已有原生验证程序的 Reference 变体运行业务场景 | 编译时持续检查自身代码，运行时验证档案状态、用例提交语义及显式生成的消息契约；不改已有业务 API。 |
 
-原站点、Application、Persistence、数据库迁移和现有部署入口均未因这个宿主改写。
+原站点、Persistence、数据库迁移和现有部署入口均未因这个宿主改写。
+Domain、Application 只增添兼容性声明，没有改变公共 API 或业务行为。
 两个宿主被同一个解决方案收录，但不存在宿主之间的项目引用。
 
 ## 能力现在走到哪里
@@ -28,6 +30,8 @@ Reference.Web 已经承载可运行的业务流程。直接在它上面替换持
 | 能力 | 当前判断 | 继续接入前需要解决的事 |
 |---|---|---|
 | Minimal API、命名 JSON 响应、CORS、请求日志 | 已实现独立宿主基线 | 验收范围见下节；不能从一个存活接口推断全部业务类型都兼容。 |
+| Core、Domain.Primitives、Reference.Domain | Core 已按独立切片验证；Reference.Domain 的自身 AOT 分析和原生业务场景已通过 | AotWeb 尚未直接调用领域业务。下一步接入业务接口时仍要验证路由绑定与数据表示。 |
+| Reference.Application、消息抽象契约 | 用例、事件映射、生成的消息 JSON 契约已有原生场景 | 手写端口只能验证业务层的调用和结果；不能替代真实事务、Outbox 或 broker 验收。 |
 | JWT / 外部身份 | 尚未迁入；ASP.NET Core 官方列出了 JWT 的 AOT 支持 | 验证项目自己的 Authority 配置、令牌验证、权限策略与错误响应。没有认证的基线站点不提供业务接口。 |
 | 档案、角色、审计接口 | 尚未迁入 | 显式登记请求、响应、集合和错误协议，再与实际业务依赖组合验证。 |
 | EF Core / Npgsql | 现有持久化路径尚未进行本站点的原生验证；EF 官方仍把 NativeAOT 与查询预编译列为实验性功能，不建议用于生产 | 核实 Provider、模型、查询预编译和事务能力。原审计仓储按条件追加 Where 的写法属于需要审查的动态查询。不能只打开 PublishAot。 |
@@ -55,6 +59,17 @@ Reference Web 测试共 14 项通过，其中原站点 6 项、新站点 8 项�
 发布依赖图不含 EF Core、Npgsql 或 Wolverine，原生进程也实际输出了 JSON 请求完成日志。
 这些结果证明的是宿主基线，不是尚未接入的业务能力。
 
+Reference.Domain 和 Reference.Application 的自身裁剪/AOT 分析均为零诊断。它们未更换模型或接口，
+只在项目中声明 `IsAotCompatible`，让后续修改持续接受分析。
+同一原生验证项目增加了 `Reference` 编译变体；默认 `Core` 变体仍只引用 Core，
+Reference 变体才引用 Application、Domain 和消息抽象契约。它验证创建、修改、重复/过期版本、
+提交失败时保留领域事件、审计业务键去重，以及消息契约的生成 JSON 元数据。
+托管测试复用相同场景；测试端口不会落库、模拟数据库回滚，或执行可靠消息传输。
+Windows x64、.NET SDK 10.0.401 上，Reference 变体的 Analysis 和 Consumer 两种原生发布均为零警告、零错误，
+各自通过 26 组场景（包括原有 Core 的 21 组）。Domain 测试 9 项、Application 测试 10 项通过。
+默认 Core 变体另行运行 21 组场景，确认条件引用没有改变原有验证范围。
+Linux 原生验证仍待执行，AotWeb 的 HTTP 请求目前也还没有调用 Application 用例。
+
 Linux 原生验证和本站点的原生 CI 尚未接入；Core 已有的 CI 结果不能作为这个 Web 宿主的验收结果。
 通用异常处理已注册，但当前原生 HTTP 场景验证的是 404、405 响应，尚未覆盖业务异常、身份错误或数据库冲突。
 
@@ -63,9 +78,10 @@ Linux 原生验证和本站点的原生 CI 尚未接入；Core 已有的 CI 结�
 | 顺序 | 内容 | 验收条件 | 拟定提交 |
 |---|---|---|---|
 | A1，已完成 | 独立宿主和能力记录 | Windows 原生站点启动，HTTP 场景及原站点回归通过 | `feat(reference-aot): add isolated native web host` |
-| A2，依赖 A1 | 外部身份、权限与协议 | 原生进程中的认证、拒绝访问、JSON 响应有实际测试 | `feat(reference-aot): add explicit identity and HTTP contracts` |
-| A3，依赖 A1 | 持久化与消息可行性 | 得到具体依赖组合的发布、事务和故障验证结果，再确定实现取舍 | `test(reference-aot): verify persistence and messaging viability` |
-| A4，依赖 A2、A3 | 业务流程和持续验证 | 实际数据与消息场景通过，Windows/Linux CI 留存结果 | `feat(reference-aot): integrate verified application paths` |
+| A2，已完成 | Core 接入路径、Reference.Domain 和 Application | 库分析与 Windows 原生业务场景通过；不把手写端口视作基础设施验收 | `test(reference-aot): verify native domain and application paths` |
+| A3，依赖 A2 | Reference.Persistence 与所需消息适配器 | 得到具体依赖组合的发布、事务和故障验证结果，再确定实现取舍 | `test(reference-aot): verify persistence and messaging viability` |
+| A4，依赖 A2 | 外部身份、权限与 HTTP 协议 | 原生进程中的认证、拒绝访问、JSON 响应有实际测试 | `feat(reference-aot): add explicit identity and HTTP contracts` |
+| A5，依赖 A3、A4 | 业务流程和持续验证 | 实际数据与消息场景通过，Windows/Linux CI 留存结果 | `feat(reference-aot): integrate verified application paths` |
 
-A2 至 A4 尚未实施。若某个依赖无法满足约定，记录具体失败路径与上游限制，再决定替换或调整边界，
+A3 至 A5 尚未实施。若某个依赖无法满足约定，记录具体失败路径与上游限制，再决定替换或调整边界，
 不把关闭功能或换成内存替身算作业务迁移成功。

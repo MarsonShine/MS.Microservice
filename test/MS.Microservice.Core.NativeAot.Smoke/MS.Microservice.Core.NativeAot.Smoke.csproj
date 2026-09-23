@@ -7,6 +7,8 @@
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
     <ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
     <NativeAotMode Condition="'$(NativeAotMode)' == ''">Consumer</NativeAotMode>
+    <SmokeVariant Condition="'$(SmokeVariant)' == ''">Core</SmokeVariant>
+    <DefineConstants Condition="'$(SmokeVariant)' == 'Reference'">$(DefineConstants);REFERENCE_LAYERS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
@@ -15,8 +17,20 @@
   <ItemGroup Condition="'$(NativeAotMode)' == 'Analysis'">
     <TrimmerRootAssembly Include="MS.Microservice.Core" />
   </ItemGroup>
+  <ItemGroup Condition="'$(SmokeVariant)' == 'Reference'">
+    <ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(SmokeVariant)' != 'Reference'">
+    <Compile Remove="ReferenceScenarios.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NativeAotMode)' == 'Analysis' and '$(SmokeVariant)' == 'Reference'">
+    <TrimmerRootAssembly Include="MS.Microservice.Reference.Domain" />
+    <TrimmerRootAssembly Include="MS.Microservice.Reference.Application" />
+  </ItemGroup>
   <Target Name="ValidateNativeAotMode" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(NativeAotMode)' != 'Consumer' and '$(NativeAotMode)' != 'Analysis'"
            Text="NativeAotMode must be Consumer or Analysis." />
+    <Error Condition="'$(SmokeVariant)' != 'Core' and '$(SmokeVariant)' != 'Reference'"
+           Text="SmokeVariant must be Core or Reference." />
   </Target>
 </Project>

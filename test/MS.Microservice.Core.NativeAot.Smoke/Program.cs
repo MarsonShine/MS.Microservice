@@ -25,6 +25,10 @@ foreach (var (name, scenario) in SerializationScenarios.All)
     await Run(name, scenario);
 foreach (var (name, scenario) in FoundationScenarios.All)
     await Run(name, scenario);
+#if REFERENCE_LAYERS
+foreach (var (name, scenario) in ReferenceScenarios.All)
+    await Run(name, scenario);
+#endif
 Console.WriteLine($"Native AOT smoke: {failed} failed.");
 return failed == 0 ? 0 : 1;
 

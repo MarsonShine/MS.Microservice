@@ -7,4 +7,7 @@
     <PackageReference Include="NSubstitute" />
     <ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../MS.Microservice.Core.NativeAot.Smoke/ReferenceScenarios.cs" Link="Native/ReferenceScenarios.cs" />
+  </ItemGroup>
 </Project>

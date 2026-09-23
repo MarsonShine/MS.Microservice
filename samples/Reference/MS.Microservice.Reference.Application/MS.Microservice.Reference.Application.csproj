@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><IsPackable>false</IsPackable></PropertyGroup>
+  <PropertyGroup><IsPackable>false</IsPackable><IsAotCompatible>true</IsAotCompatible></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />

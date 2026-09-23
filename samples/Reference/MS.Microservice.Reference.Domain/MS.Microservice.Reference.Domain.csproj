@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><IsPackable>false</IsPackable></PropertyGroup>
+  <PropertyGroup><IsPackable>false</IsPackable><IsAotCompatible>true</IsAotCompatible></PropertyGroup>
   <ItemGroup><ProjectReference Include="../../../src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" /></ItemGroup>
 </Project>

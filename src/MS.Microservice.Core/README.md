@@ -89,6 +89,16 @@ Reactive 路径见 [ReactiveScenarios.cs](../../test/MS.Microservice.Core.Native
 这组验证的判断依据是消费方能否在原生产物中构造类型、调用代码并得到约定结果。
 它不把出现 `typeof`、泛型或表达式树本身视为不兼容，也不覆盖 System.Reactive 的全部 API。
 
+同一验证项目可运行 Reference.Domain 和 Reference.Application 场景：
+
+```powershell
+./build/validate-core-native-aot.ps1 -Variant Reference
+```
+
+这会单独编译 Reference 变体并写入 `artifacts/aot/Reference.Native`。
+不指定 `Variant` 时，Core 验证继续只引用 Core；Reference 业务端口使用手写替身，
+结果不代表其 EF 仓储或消息传输已经过原生验证。
+
 ## CI 如何判定通过
 
 [dotnet-ci.yml](../../.github/workflows/dotnet-ci.yml) 中的 `Core AOT` 作业只验证 Core 及其依赖，

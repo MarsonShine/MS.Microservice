@@ -1,6 +1,7 @@
 param(
     [ValidateSet('win-x64', 'linux-x64')][string]$RuntimeIdentifier,
-    [ValidateSet('All', 'Analysis', 'Consumer')][string]$Mode = 'All'
+    [ValidateSet('All', 'Analysis', 'Consumer')][string]$Mode = 'All',
+    [ValidateSet('Core', 'Reference')][string]$Variant = 'Core'
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -13,7 +14,8 @@ if ($RuntimeIdentifier -ne $hostRid) { throw "Publish and run on the matching ho
 
 $project = Join-Path $root 'test/MS.Microservice.Core.NativeAot.Smoke/MS.Microservice.Core.NativeAot.Smoke.csproj'
 # Each mode starts with fresh intermediates and output so roots and old binaries cannot mask failures.
-$runPath = Join-Path $root ('artifacts/aot/Core.Native/' + $RuntimeIdentifier + '/' + [guid]::NewGuid().ToString('N'))
+$suiteName = if ($Variant -eq 'Core') { 'Core.Native' } else { 'Reference.Native' }
+$runPath = Join-Path $root ('artifacts/aot/' + $suiteName + '/' + $RuntimeIdentifier + '/' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $runPath | Out-Null
 Write-Output "Native validation logs: $runPath"
 $modes = if ($Mode -eq 'All') { @('Analysis', 'Consumer') } else { @($Mode) }
@@ -24,7 +26,7 @@ foreach ($currentMode in $modes) {
     $publishPath = Join-Path $modePath 'publish'
     $publishLog = Join-Path $modePath 'publish.log'
     & dotnet publish $project -c Release -r $RuntimeIdentifier --artifacts-path (Join-Path $modePath 'build') -o $publishPath `
-        "-p:NativeAotMode=$currentMode" '-p:NuGetAudit=false' --verbosity normal *> $publishLog
+        "-p:NativeAotMode=$currentMode" "-p:SmokeVariant=$Variant" '-p:NuGetAudit=false' --verbosity normal *> $publishLog
     if ($LASTEXITCODE -ne 0) {
         Get-Content -LiteralPath $publishLog -Tail 60
         throw "Native publish failed ($currentMode). See $publishLog"
@@ -48,6 +50,7 @@ foreach ($currentMode in $modes) {
 }
 [ordered]@{
     sdk = (& dotnet --version)
+    variant = $Variant
     runtimeIdentifier = $RuntimeIdentifier
     modes = $results
 } | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $runPath 'results.json')
