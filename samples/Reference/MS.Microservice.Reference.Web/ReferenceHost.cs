@@ -1,5 +1,8 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Logging.AspNetCore;
@@ -15,6 +18,8 @@ namespace MS.Microservice.Reference.Web;
 
 public static class ReferenceHost
 {
+    private const string ApiRateLimitPolicy = "reference-api";
+
     public static void AddServices(WebApplicationBuilder builder)
     {
         var connection = builder.Configuration.GetConnectionString("ReferenceDatabase");
@@ -45,6 +50,18 @@ public static class ReferenceHost
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
+        if (RateLimitingEnabled(builder.Configuration))
+        {
+            var permitLimit = PositiveInt(builder.Configuration, "Http:RateLimiting:PermitLimit", 120);
+            var windowSeconds = PositiveInt(builder.Configuration, "Http:RateLimiting:WindowSeconds", 60);
+            builder.Services.AddPlatformRateLimiting(options => options.AddFixedWindowLimiter(ApiRateLimitPolicy, limiter =>
+            {
+                limiter.PermitLimit = permitLimit;
+                limiter.Window = TimeSpan.FromSeconds(windowSeconds);
+                limiter.QueueLimit = 0;
+                limiter.AutoReplenishment = true;
+            }));
+        }
         builder.Services.AddMsRequestLogging();
         builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1024 * 1024);
         if (builder.Configuration.GetValue("OpenTelemetry:Enabled", true)) builder.Services.AddMsOpenTelemetry(builder.Configuration);
@@ -52,13 +69,32 @@ public static class ReferenceHost
 
     public static void MapApplication(WebApplication app)
     {
+        var rateLimiting = RateLimitingEnabled(app.Configuration);
         app.UsePlatformHttp();
         app.UseMsRequestLogging();
         app.UseAuthentication();
+        if (rateLimiting) app.UsePlatformRateLimiting();
         app.UseAuthorization();
         app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
         app.MapGet("/health/ready", ReadinessAsync).AllowAnonymous();
-        ProfileEndpoints.Map(app);
+        ProfileEndpoints.Map(rateLimiting ? app.MapGroup("").RequireRateLimiting(ApiRateLimitPolicy) : app);
+    }
+
+    private static bool RateLimitingEnabled(IConfiguration configuration)
+    {
+        var setting = configuration["Http:RateLimiting:Enabled"];
+        if (setting is null) return false;
+        if (bool.TryParse(setting, out var enabled)) return enabled;
+        throw new ArgumentException("Http:RateLimiting:Enabled must be true or false.");
+    }
+
+    private static int PositiveInt(IConfiguration configuration, string key, int fallback)
+    {
+        var setting = configuration[key];
+        if (setting is null) return fallback;
+        if (int.TryParse(setting, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value > 0)
+            return value;
+        throw new ArgumentException($"{key} must be a positive integer.");
     }
 
     private static async Task<IResult> ReadinessAsync(ReferenceDbContext context, IMessageStorageProbe storage,

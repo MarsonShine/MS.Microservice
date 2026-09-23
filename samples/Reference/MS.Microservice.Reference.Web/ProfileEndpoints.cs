@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Routing;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Messaging;
@@ -9,7 +10,7 @@ namespace MS.Microservice.Reference.Web;
 
 internal static class ProfileEndpoints
 {
-    public static void Map(WebApplication app)
+    public static void Map(IEndpointRouteBuilder app)
     {
         var profiles = app.MapGroup("/api/v1/profiles").RequireAuthorization("Manage");
         profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,

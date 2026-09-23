@@ -4,6 +4,8 @@ This host manages external-identity profiles and audit records. It contains no l
 
 Required settings are `ConnectionStrings:ReferenceDatabase`, `Messaging:RabbitMQ:ConnectionString`, `Authentication:Authority`, and `Authentication:Audience`. Supply secrets from the environment. `Messaging:Provider` defaults to `SelfManaged`; `Wolverine` selects the alternative provider. Unknown values fail startup. Apply the selected provider's migrations before starting the service; the host does not create or upgrade its database.
 
+`Http:RateLimiting:Enabled` is `false` in the sample configuration. When enabled, the API routes share a per-process fixed-window limit of 120 requests per 60 seconds with no queue; health routes do not consume this quota. Set `Enabled` to `true` and choose `PermitLimit` and `WindowSeconds` for the deployment. See [HTTP 入口限流](../../../src/MS.Microservice.AspNetCore/docs/rate-limiting.md) for policy behavior and the multi-instance limit.
+
 | Route | Purpose |
 | --- | --- |
 | `/health/live` | Process liveness, anonymous. |

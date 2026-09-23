@@ -88,6 +88,57 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
+    public async Task ApiRateLimitCoversAnonymousRequestsWithoutLimitingHealthOrUnknownPaths()
+    {
+        await using var fixture = await Fixture.CreateAsync(apiPermitLimit: 2);
+        for (var i = 0; i < 3; i++)
+        {
+            using var health = await fixture.Client.GetAsync("/health/live");
+            Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+        }
+
+        using var first = await fixture.Client.GetAsync("/api/v1/profiles");
+        using var second = await fixture.Client.GetAsync("/api/v1/profiles");
+        using var rejected = await fixture.Client.GetAsync("/api/v1/profiles");
+        using var unknown = await fixture.Client.GetAsync("/not-found");
+        using var healthAfter = await fixture.Client.GetAsync("/health/live");
+        using var readiness = await fixture.Client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.Unauthorized, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, healthAfter.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, readiness.StatusCode);
+    }
+
+    [Fact]
+    public async Task ApiRateLimitCoversAuthenticatedRequests()
+    {
+        await using var fixture = await Fixture.CreateAsync(apiPermitLimit: 2);
+        fixture.Authenticate("profiles.manage");
+
+        using var first = await fixture.Client.GetAsync("/api/v1/roles");
+        using var second = await fixture.Client.GetAsync("/api/v1/roles");
+        using var rejected = await fixture.Client.GetAsync("/api/v1/roles");
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("invalid", "120", "60")]
+    [InlineData("true", "0", "60")]
+    [InlineData("true", "120", "0")]
+    public void InvalidRateLimitConfigurationFailsDuringComposition(string enabled, string permitLimit, string windowSeconds)
+    {
+        var builder = Fixture.Builder();
+        builder.Configuration["Http:RateLimiting:Enabled"] = enabled;
+        builder.Configuration["Http:RateLimiting:PermitLimit"] = permitLimit;
+        builder.Configuration["Http:RateLimiting:WindowSeconds"] = windowSeconds;
+        Assert.Throws<ArgumentException>(() => ReferenceHost.AddServices(builder));
+    }
+
+    [Fact]
     public void UnknownProviderFailsDuringComposition()
     {
         var builder = Fixture.Builder("unknown");
@@ -106,11 +157,17 @@ public sealed class ReferenceHostTests
             "--OpenTelemetry:Enabled", "false"
         ]);
 
-        public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false)
+        public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false, int? apiPermitLimit = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
             var builder = Builder();
+            if (apiPermitLimit is { } limit)
+            {
+                builder.Configuration["Http:RateLimiting:Enabled"] = "true";
+                builder.Configuration["Http:RateLimiting:PermitLimit"] = limit.ToString();
+                builder.Configuration["Http:RateLimiting:WindowSeconds"] = "60";
+            }
             builder.WebHost.UseTestServer();
             ReferenceHost.AddServices(builder);
             foreach (var descriptor in builder.Services.Where(descriptor =>

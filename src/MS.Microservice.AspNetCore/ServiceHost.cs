@@ -1,9 +1,12 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -50,7 +53,34 @@ public static class ServiceHost
         application.UseExceptionHandler();
         application.UseStatusCodePages();
         application.UseForwardedHeaders();
+        application.UseRouting();
         application.UseCors();
+        return application;
+    }
+
+    public static IServiceCollection AddPlatformRateLimiting(this IServiceCollection services, Action<RateLimiterOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = static (context, _) =>
+            {
+                var response = context.HttpContext.Response;
+                response.StatusCode = StatusCodes.Status429TooManyRequests;
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+                    response.Headers.RetryAfter = Math.Max(1, Math.Ceiling(retryAfter.TotalSeconds))
+                        .ToString("0", CultureInfo.InvariantCulture);
+                return ValueTask.CompletedTask;
+            };
+            configure(options);
+        });
+        return services;
+    }
+
+    public static WebApplication UsePlatformRateLimiting(this WebApplication application)
+    {
+        application.UseRateLimiter();
         return application;
     }
 }
