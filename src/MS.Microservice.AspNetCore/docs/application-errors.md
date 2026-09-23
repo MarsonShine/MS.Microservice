@@ -22,7 +22,7 @@ Reference 原先在三个列表端点内分别检查 `skip`、`take` 和 `limit`
 
 这里没有使用 `[AsParameters]` 查询类。当前项目的 .NET 10.0.12 TestServer 验证表明：类属性的初始化默认值在该绑定方式下被当作必填参数，省略 `take` 返回 `400`；位置记录虽然能保留默认值，但 `[Range]` 对展开后的成员未生效，`skip=-1` 返回 `200`。直接可选参数同时保留了缺省语义和框架验证结果。`Microsoft.Extensions.Validation` 的程序集与生成器由当前 Web SDK 的 `Microsoft.AspNetCore.App` 提供；直接添加同版本 PackageReference 会触发 `NU1510`，所以没有保留冗余包引用。
 
-Reference 的 `Respond` 现在调用 `ApplicationErrorResults.ToProblem`。已知的 400、401、404、409 保留对外摘要和错误码；未知错误统一返回 `500`、固定标题和 `unexpected`，不会把异常文字或细节写入响应。共享适配层不引用业务模型，也不扫描程序集。
+Reference 的 `Respond` 调用同一映射，业务错误也遵守上表；共享适配层不引用业务模型，也不扫描程序集。
 
 ## 验证与范围
 
