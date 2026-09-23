@@ -151,62 +151,49 @@ public sealed class LoggingHttpClientHandlerTests
     }
 
     [Fact]
-    public async Task SendAsync_ShouldWrapRequestAndResponseContent_AndLogPayloads()
+    public async Task RedactionEnabled_DisposesUnreturnedResponseWhenLoggerThrows()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler> { ThrowOnEntry = 1 };
+        var responseContent = new ProbeContent();
+        var innerHandler = new RecordingHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = responseContent
+        }));
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.GetAsync("https://example.test/orders?token=private-query"));
+
+        Assert.Equal("Logger failed.", failure.Message);
+        Assert.True(responseContent.Disposed);
+    }
+
+    [Fact]
+    public async Task DefaultModeStillLogsFullUriAndBodiesWithoutReplacingContent()
     {
         var logger = new CapturingLogger<LoggingHttpClientHandler>();
-        var innerHandler = new RecordingHandler(async request =>
+        using var requestContent = new StringContent("{\"name\":\"demo\"}", Encoding.UTF8, "application/json");
+        using var responseContent = new StringContent("{\"ok\":true}", Encoding.UTF8, "application/json");
+        var innerHandler = new RecordingHandler(request =>
         {
-            Assert.IsType<LoggingHttpClientHandler.LoggableHttpContent>(request.Content);
-            return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("{\"ok\":true}", Encoding.UTF8, "application/json")
-            });
+            Assert.Same(requestContent, request.Content);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = responseContent });
         });
 
         using var client = new HttpClient(new LoggingHttpClientHandler(logger) { InnerHandler = innerHandler });
-        using var request = new StringContent("{\"name\":\"demo\"}", Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response = await client.PostAsync("https://example.test/orders?token=legacy-query", request);
+        using var response = await client.PostAsync("https://example.test/orders?token=legacy-query", requestContent);
         string requestPayload = await innerHandler.LastRequest!.Content!.ReadAsStringAsync();
         string responsePayload = await response.Content!.ReadAsStringAsync();
 
         Assert.Equal("{\"name\":\"demo\"}", requestPayload);
         Assert.Equal("{\"ok\":true}", responsePayload);
-        Assert.IsType<LoggingHttpClientHandler.LoggableHttpContent>(response.Content);
+        Assert.Same(responseContent, response.Content);
         Assert.Equal(2, logger.Entries.Count);
         Assert.Contains("\"name\":\"demo\"", logger.Entries[0].Message);
         Assert.Contains("legacy-query", logger.Entries[0].Message);
         Assert.Contains("\"ok\":true", logger.Entries[1].Message);
-    }
-
-    [Fact]
-    public void LazyContentLogger_ShouldHandleNullPlainAndWrappedContent()
-    {
-        Assert.Equal("null", new LoggingHttpClientHandler.LazyContentLogger(null, CancellationToken.None).ToString());
-
-        var plain = new LoggingHttpClientHandler.LazyContentLogger(
-            new StringContent("plain", Encoding.UTF8, "text/plain"),
-            CancellationToken.None);
-        Assert.Equal("[Non-loggable content]", plain.ToString());
-
-        var wrapped = new LoggingHttpClientHandler.LoggableHttpContent(
-            new StringContent("payload", Encoding.UTF8, "text/plain"));
-        var lazy = new LoggingHttpClientHandler.LazyContentLogger(wrapped, CancellationToken.None);
-        Assert.Equal("payload", lazy.ToString());
-    }
-
-    [Fact]
-    public async Task LoggableHttpContent_CopyToAsync_ShouldPreservePayloadAndHeaders()
-    {
-        var content = new LoggingHttpClientHandler.LoggableHttpContent(
-            new StringContent("payload", Encoding.UTF8, "text/plain"));
-
-        await using var stream = new MemoryStream();
-        await content.CopyToAsync(stream);
-        string payload = Encoding.UTF8.GetString(stream.ToArray());
-
-        Assert.Equal("payload", payload);
-        Assert.Equal("text/plain", content.Headers.ContentType?.MediaType);
     }
 
     private sealed class RecordingHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) : HttpMessageHandler
@@ -223,6 +210,7 @@ public sealed class LoggingHttpClientHandlerTests
     private sealed class ProbeContent : HttpContent
     {
         public int SerializationCount { get; private set; }
+        public bool Disposed { get; private set; }
 
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
         {
@@ -235,11 +223,18 @@ public sealed class LoggingHttpClientHandlerTests
             length = 0;
             return false;
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) Disposed = true;
+            base.Dispose(disposing);
+        }
     }
 
     private sealed class CapturingLogger<T> : ILogger<T>
     {
         public List<LogEntry> Entries { get; } = [];
+        public int ThrowOnEntry { get; set; }
 
         public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
 
@@ -247,6 +242,7 @@ public sealed class LoggingHttpClientHandlerTests
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            if (ThrowOnEntry == Entries.Count + 1) throw new InvalidOperationException("Logger failed.");
             Entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
         }
     }
