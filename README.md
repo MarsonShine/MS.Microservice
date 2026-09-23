@@ -27,6 +27,7 @@
 | Logging | [MS.Microservice.Logging.slnx](MS.Microservice.Logging/MS.Microservice.Logging.slnx) | [说明](MS.Microservice.Logging/docs/design.md) |
 | Messaging | [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging/MS.Microservice.Messaging.slnx) | [说明](MS.Microservice.Messaging/docs/design.md) |
 | Persistence | [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence/MS.Microservice.Persistence.slnx) | [说明](MS.Microservice.Persistence/docs/design.md) |
+| Idempotency | [MS.Microservice.Idempotency.slnx](MS.Microservice.Idempotency/MS.Microservice.Idempotency.slnx) | [说明](MS.Microservice.Idempotency/README.md) |
 
 Reference 是完整接入的参考应用，不是新的底层框架；使用模块不需要引用或启动它。
 项目拆分理由和代价见[Reference 说明](samples/Reference/README.md)。
@@ -69,6 +70,6 @@ Lab 与正式 Host 是两个独立程序集。实验 Controller 只在 Lab 中�
 
 ## 可选组件
 
-Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、EFCore、SqlSugar、EventSourcing、Audio、Excel 和 AI 按需接入。具体依赖与平台限制以模块文档为准；参考业务模型不作为通用组件的依赖。
+Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、Idempotency、EFCore、SqlSugar、EventSourcing、Audio、Excel 和 AI 按需接入。具体依赖与平台限制以模块文档为准；参考业务模型不作为通用组件的依赖。
 
 数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。

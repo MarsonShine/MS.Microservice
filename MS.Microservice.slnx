@@ -108,4 +108,10 @@
     <Project Path="MS.Microservice.Messaging/test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.Persistence/" />
+  <Folder Name="/MS.Microservice.Idempotency/src/">
+    <Project Path="MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Idempotency/test/">
+    <Project Path="MS.Microservice.Idempotency/test/MS.Microservice.Idempotency.EFCore.Tests/MS.Microservice.Idempotency.EFCore.Tests.csproj" />
+  </Folder>
 </Solution>

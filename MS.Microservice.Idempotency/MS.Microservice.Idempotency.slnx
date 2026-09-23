@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/docs/"><File Path="README.md" /></Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Idempotency.EFCore.Tests/MS.Microservice.Idempotency.EFCore.Tests.csproj" />
+  </Folder>
+</Solution>
