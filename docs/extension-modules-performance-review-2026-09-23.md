@@ -5,7 +5,7 @@
 | 模块 | 处理结果 | 测量依据 |
 | --- | --- | --- |
 | AI | `027e2e6`：DeepSeek 配置校验改用静态 Provider 选择器 | 每类能力 128 个模型时，校验由 19,084.9 ns / 480.4 B 降至 6,722.0 ns / 368 B。该校验主要发生在配置验证时；详见 [AI 说明](../MS.Microservice.AI/docs/performance-2026-09-23.md)。 |
-| Logging | `14a52f4`：请求日志作用域不再包装上下文 | 普通 Push/Dispose 由 117.0 ns / 128 B 降至 100.8 ns / 104 B。分配稳定减少 24 B/次；详见 [Logging 说明](../MS.Microservice.Logging/docs/design.md#请求上下文的分配成本)。 |
+| Logging | `14a52f4` 的直接存值优化已由后续生命周期修正取代 | 直接存值时普通 Push/Dispose 为 100.8 ns / 104 B，但释放后的子任务仍能读到旧请求上下文；可清空 Holder 为 117.3 ns / 136 B，并使子任务的 ambient 查找失效。详见 [Holder 说明](../MS.Microservice.Logging/docs/async-local-holder-lifetime.md)。 |
 | Messaging | `65ac46c`：按 consumer 名称索引订阅 | 单订阅查找由 67.8 ns / 120 B 降至 16.6 ns / 0 B。接收器每条消息都会调用该查找；详见 [Messaging 说明](../MS.Microservice.Messaging/docs/design.md#consumer-查找成本)。 |
 | Persistence | 不改动 | EFCore 审计时间戳的 LINQ 过滤候选在单实体场景变快，但 32 实体场景变慢；未保留。SqlSugar 序列化与 ORM 查询没有定位到能在本层安全替换的热点。 |
 
@@ -18,7 +18,7 @@ Persistence 的审计扩展实验关闭了 EF Core 自动变更检测，以单�
 
 没有实际保存操作的实体数分布数据，无法证明该候选能改善整体工作负载，故已撤销生产改动及临时基准。EFCore 9 项、SqlSugar 20 项测试通过。
 
-AI 解决方案测试 144 项通过；Logging 四个测试项目 21 项通过；Messaging 本地测试 117 项通过，另有 12 项真实依赖集成测试按配置跳过；架构测试 39 项通过。DeepSeek 项目使用 `IsAotCompatible=true` 的分析构建为 0 警告，但这不等于整个 AI 模块已通过 Native AOT 发布验证。
+AI 解决方案测试 144 项通过；Logging 四个测试项目当前 28 项通过；Messaging 本地测试 117 项通过，另有 12 项真实依赖集成测试按配置跳过；架构测试 39 项通过。DeepSeek 项目使用 `IsAotCompatible=true` 的分析构建为 0 警告，但这不等于整个 AI 模块已通过 Native AOT 发布验证。
 
 ## 后续方向（本轮未实现）
 

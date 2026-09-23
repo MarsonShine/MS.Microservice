@@ -35,7 +35,7 @@ Provider-agnostic structured request logging for .NET, with first-class NLog and
 │  MS.Microservice.Logging.AspNetCore                 │
 │    - MsRequestLoggingMiddleware                     │
 │    - Captures headers, timing, status               │
-│    - Pushes RequestLogContext into AsyncLocal        │
+│    - Stores a clearable scope in AsyncLocal          │
 ├─────────────────────────────────────────────────────┤
 │  MS.Microservice.Logging.Core                        │
 │    - RequestLogContext (POCO)                        │
@@ -51,7 +51,7 @@ Provider-agnostic structured request logging for .NET, with first-class NLog and
 
 **Key design: provider-agnostic ambient context**
 
-The middleware pushes a `RequestLogContext` onto an `AsyncLocal` stack. Both NLog layout renderers and the Serilog enricher read from `RequestLogScope.Current` — they don't know or care whether the data came from HTTP headers, gRPC metadata, or a message bus envelope. This keeps each provider focused on its single responsibility (rendering / enriching) and open for extension (new data sources don't require provider changes).
+The middleware pushes a `RequestLogContext` through a clearable holder in `AsyncLocal`. Both NLog layout renderers and the Serilog enricher read from `RequestLogScope.Current` — they don't know or care whether the data came from HTTP headers, gRPC metadata, or a message bus envelope. The holder is cleared when the scope ends, including for child execution contexts that inherited it. See [the lifetime explanation](docs/async-local-holder-lifetime.md) for the distinction from storing the context directly.
 
 ### Quick Start — ASP.NET Core + NLog
 

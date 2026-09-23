@@ -115,12 +115,141 @@ public sealed class RequestLogScopeTests
     }
 
     [Fact]
+    public async Task Dispose_ShouldClearContextInChildFlowCapturedBeforeDisposal()
+    {
+        var context = new RequestLogContext { RequestId = "expired" };
+        var releaseChild = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<RequestLogContext?> child;
+
+        using (RequestLogScope.Push(context))
+        {
+            child = Task.Run(async () =>
+            {
+                await releaseChild.Task;
+                return RequestLogScope.Current;
+            });
+        }
+
+        releaseChild.SetResult();
+        (await child).Should().BeNull();
+    }
+
+    [Fact]
+    public void Dispose_ShouldClearContextInCapturedExecutionContext()
+    {
+        ExecutionContext? captured;
+        using (RequestLogScope.Push(new RequestLogContext { RequestId = "captured" }))
+        {
+            captured = ExecutionContext.Capture();
+        }
+
+        RequestLogContext? observed = null;
+        ExecutionContext.Run(captured!, _ => observed = RequestLogScope.Current, null);
+
+        observed.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Dispose_ShouldClearOnlyInnerState_WhenSameContextIsNested()
+    {
+        var context = new RequestLogContext { RequestId = "shared" };
+        var releaseChild = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<RequestLogContext?> child;
+
+        using (RequestLogScope.Push(context))
+        {
+            using (RequestLogScope.Push(context))
+            {
+                child = Task.Run(async () =>
+                {
+                    await releaseChild.Task;
+                    return RequestLogScope.Current;
+                });
+            }
+
+            RequestLogScope.Current.Should().BeSameAs(context);
+            releaseChild.SetResult();
+            (await child).Should().BeNull();
+            RequestLogScope.Current.Should().BeSameAs(context);
+        }
+
+        RequestLogScope.Current.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Dispose_ShouldClearStateInEveryForkedChild()
+    {
+        var releaseChildren = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<RequestLogContext?> first;
+        Task<RequestLogContext?> second;
+
+        using (RequestLogScope.Push(new RequestLogContext { RequestId = "shared" }))
+        {
+            first = Task.Run(ReadAfterRelease);
+            second = Task.Run(ReadAfterRelease);
+        }
+
+        releaseChildren.SetResult();
+        var observed = await Task.WhenAll(first, second);
+        observed.Should().OnlyContain(context => context == null);
+
+        async Task<RequestLogContext?> ReadAfterRelease()
+        {
+            await releaseChildren.Task;
+            return RequestLogScope.Current;
+        }
+    }
+
+    [Fact]
+    public async Task Dispose_ShouldNotClearChildOwnedScope()
+    {
+        var parent = new RequestLogContext { RequestId = "parent" };
+        var childContext = new RequestLogContext { RequestId = "child" };
+        var childEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseChild = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<(RequestLogContext? Active, RequestLogContext? After)> child;
+
+        using (RequestLogScope.Push(parent))
+        {
+            child = Task.Run(async () =>
+            {
+                RequestLogContext? active;
+                using (RequestLogScope.Push(childContext))
+                {
+                    childEntered.SetResult();
+                    await releaseChild.Task;
+                    active = RequestLogScope.Current;
+                }
+
+                return (active, RequestLogScope.Current);
+            });
+            await childEntered.Task;
+        }
+
+        releaseChild.SetResult();
+        var observed = await child;
+        observed.Active.Should().BeSameAs(childContext);
+        observed.After.Should().BeNull();
+    }
+
+    [Fact]
     public void Dispose_ShouldBeIdempotent()
     {
         var context = new RequestLogContext { RequestId = "req-002" };
         var scope = RequestLogScope.Push(context);
 
         scope.Dispose();
+        scope.Dispose();
+
+        RequestLogScope.Current.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Dispose_ShouldBeIdempotentAcrossConcurrentCalls()
+    {
+        var scope = RequestLogScope.Push(new RequestLogContext { RequestId = "concurrent" });
+
+        await Task.WhenAll(Task.Run(scope.Dispose), Task.Run(scope.Dispose));
         scope.Dispose();
 
         RequestLogScope.Current.Should().BeNull();
