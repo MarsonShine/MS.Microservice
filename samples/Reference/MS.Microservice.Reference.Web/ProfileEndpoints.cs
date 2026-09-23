@@ -3,9 +3,11 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Routing;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Core.Functional;
+using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Domain;
+using MS.Microservice.Reference.Persistence;
 
 namespace MS.Microservice.Reference.Web;
 
@@ -15,9 +17,10 @@ internal static class ProfileEndpoints
     {
         var profiles = app.MapGroup("/api/v1/profiles").RequireAuthorization("Manage");
         profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
-            ExternalIdentityOptions identity, CancellationToken token) =>
-            Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
-                profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)));
+            ExternalIdentityOptions identity, IUnitOfWork unit, EfCoreIdempotencyStore<ReferenceDbContext> store,
+            IServiceScopeFactory scopes, CancellationToken token) =>
+            await ProfileIdempotencyHandler.CreateAsync(request, Actor(http.User, identity), service, http,
+                unit, store, scopes, token));
         profiles.MapGet("", async (IProfileRepository repository, CancellationToken token,
             [Range(0, int.MaxValue)] int skip = 0, [Range(1, 200)] int take = 50) =>
             Results.Ok((await repository.ListAsync(skip, take, token)).Select(ProfileView.From)));

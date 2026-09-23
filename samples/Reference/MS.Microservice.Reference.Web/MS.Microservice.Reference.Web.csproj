@@ -2,6 +2,7 @@
   <PropertyGroup><IsPackable>false</IsPackable><GenerateDocumentationFile>true</GenerateDocumentationFile></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />

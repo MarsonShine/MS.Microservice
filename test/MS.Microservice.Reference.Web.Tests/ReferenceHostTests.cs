@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -22,8 +23,10 @@ using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.AspNetCore;
+using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Messaging.RabbitMQ;
+using MS.Microservice.Messaging.SelfManaged;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Domain;
 using MS.Microservice.Reference.Persistence;
@@ -74,6 +77,224 @@ public sealed class ReferenceHostTests
         fixture.Authenticate("messaging.manage");
         using var allowed = await fixture.Client.GetAsync("/api/operations/messages/failures");
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    }
+
+    [Fact]
+    public async Task KeyedProfileCreationReplaysTheExactCreatedResponseWithoutAnotherWrite()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["reader"]);
+
+        using var created = await PostKeyedAsync(fixture.Client, request, "create-123");
+        var firstBody = await created.Content.ReadAsByteArrayAsync();
+        using var replay = await PostKeyedAsync(fixture.Client, request, "create-123");
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(created.StatusCode, replay.StatusCode);
+        Assert.Equal(created.Headers.Location, replay.Headers.Location);
+        Assert.Equal(created.Content.Headers.ContentType, replay.Content.Headers.ContentType);
+        Assert.Equal(firstBody, await replay.Content.ReadAsByteArrayAsync());
+
+        using var reordered = new HttpRequestMessage(HttpMethod.Post, "/api/v1/profiles")
+        {
+            Content = new StringContent("""
+                {"roles":["reader"],"displayName":"first","subject":"keyed-subject","issuer":"https://issuer.example"}
+                """, Encoding.UTF8, "application/json")
+        };
+        reordered.Headers.TryAddWithoutValidation("Idempotency-Key", "create-123");
+        using var canonicalReplay = await fixture.Client.SendAsync(reordered);
+        Assert.Equal(HttpStatusCode.Created, canonicalReplay.StatusCode);
+        Assert.Equal(firstBody, await canonicalReplay.Content.ReadAsByteArrayAsync());
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task KeyedRequestWithDifferentPayloadReturnsConflictWithoutReplayingPrivateResponse()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["reader"]);
+
+        using var created = await PostKeyedAsync(fixture.Client, request, "create-123");
+        using var conflict = await PostKeyedAsync(fixture.Client, request with { DisplayName = "changed" }, "create-123");
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        using var body = JsonDocument.Parse(await conflict.Content.ReadAsStringAsync());
+        Assert.Equal("conflict", body.RootElement.GetProperty("code").GetString());
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task SameKeyBelongsToTheAuthenticatedActor()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var firstRequest = new CreateProfile("https://issuer.example", "first-subject", "first", []);
+        fixture.Authenticate("profiles.manage", "first-admin");
+        using var first = await PostKeyedAsync(fixture.Client, firstRequest, "shared-key");
+        fixture.Authenticate("profiles.manage", "second-admin");
+        using var second = await PostKeyedAsync(fixture.Client,
+            firstRequest with { Subject = "second-subject" }, "shared-key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        Assert.Equal((2, 2, 2), await fixture.CountWritesAsync());
+    }
+
+    [Theory]
+    [InlineData("bad,key")]
+    [InlineData("has space")]
+    public async Task InvalidIdempotencyKeyIsRejectedBeforeBusinessWrite(string key)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", []);
+
+        using var invalid = await PostKeyedAsync(fixture.Client, request, key);
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task MultipleAndOverlongIdempotencyKeysAreRejected()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", []);
+
+        using var multiple = await PostKeyedAsync(fixture.Client, request, "one", "two");
+        using var overlong = await PostKeyedAsync(fixture.Client, request, new string('x', 129));
+
+        Assert.Equal(HttpStatusCode.BadRequest, multiple.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, overlong.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task BusinessValidationAndConflictDoNotReserveTheKey()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["invalid"]);
+
+        using var invalid = await PostKeyedAsync(fixture.Client, request, "reusable-key");
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+
+        using var created = await PostKeyedAsync(fixture.Client, request with { Roles = ["reader"] }, "reusable-key");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using var duplicate = await PostKeyedAsync(fixture.Client, request with { Roles = ["reader"] }, "new-key");
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task PruningAnExpiredSnapshotRemovesOnlyTheIdempotencyRecord()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        using var created = await PostKeyedAsync(fixture.Client,
+            new CreateProfile("https://issuer.example", "keyed-subject", "first", []), "create-123");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        await fixture.ExecuteSqlAsync("UPDATE HttpIdempotency SET ExpiresAtUtcTicks = 0");
+        Assert.Equal(1, await fixture.PruneExpiredAsync());
+        Assert.Equal((1, 1, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task MissingIdempotencyTableDoesNotChangeUnkeyedWritesOrCreateSchema()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Authenticate("profiles.manage");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+
+        using var unkeyed = await fixture.Client.PostAsJsonAsync("/api/v1/profiles",
+            new CreateProfile("https://issuer.example", "unkeyed-subject", "first", []));
+        using var keyed = await PostKeyedAsync(fixture.Client,
+            new CreateProfile("https://issuer.example", "keyed-subject", "second", []), "create-123");
+
+        Assert.Equal(HttpStatusCode.Created, unkeyed.StatusCode);
+        Assert.Equal(HttpStatusCode.InternalServerError, keyed.StatusCode);
+        Assert.Equal(1, await fixture.CountProfilesAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
+    public async Task ServerFailureRollsBackProfileOutboxAndIdempotencyClaim()
+    {
+        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        {
+            services.RemoveAll<IIntegrationEventPublisher>();
+            services.AddSingleton<IIntegrationEventPublisher>(new FailingPublisher(new IOException("publisher failed")));
+        });
+        fixture.Authenticate("profiles.manage");
+
+        using var response = await PostKeyedAsync(fixture.Client,
+            new CreateProfile("https://issuer.example", "keyed-subject", "first", []), "create-123");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task CanceledBusinessOperationLeavesNoIdempotencyClaim()
+    {
+        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        {
+            services.RemoveAll<IIntegrationEventPublisher>();
+            services.AddSingleton<IIntegrationEventPublisher>(
+                new FailingPublisher(new OperationCanceledException("operation canceled")));
+        });
+        fixture.Authenticate("profiles.manage");
+
+        using var response = await PostKeyedAsync(fixture.Client,
+            new CreateProfile("https://issuer.example", "keyed-subject", "first", []), "create-123");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ClaimConflictUsesFreshScopeForReplayOrDifferentRequest(bool differentRequest)
+    {
+        var race = new ClaimRace();
+        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        {
+            services.RemoveAll<IUnitOfWork>();
+            services.AddScoped<IUnitOfWork>(provider => new ClaimRaceUnitOfWork(
+                provider.GetRequiredService<SelfManagedUnitOfWork<SelfManagedReferenceDbContext>>(), race));
+        });
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["reader"]);
+        byte[]? winnerBody = null;
+        Uri? winnerLocation = null;
+        race.Winner = async () =>
+        {
+            using var winner = await PostKeyedAsync(fixture.Client,
+                differentRequest ? request with { DisplayName = "winner" } : request, "create-123");
+            Assert.Equal(HttpStatusCode.Created, winner.StatusCode);
+            winnerBody = await winner.Content.ReadAsByteArrayAsync();
+            winnerLocation = winner.Headers.Location;
+        };
+
+        using var contender = await PostKeyedAsync(fixture.Client, request, "create-123");
+
+        if (differentRequest)
+        {
+            Assert.Equal(HttpStatusCode.Conflict, contender.StatusCode);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.Created, contender.StatusCode);
+            Assert.Equal(winnerLocation, contender.Headers.Location);
+            Assert.Equal(winnerBody, await contender.Content.ReadAsByteArrayAsync());
+        }
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
     }
 
     [Fact]
@@ -319,6 +540,41 @@ public sealed class ReferenceHostTests
         Assert.Throws<ArgumentException>(() => ReferenceHost.AddServices(builder));
     }
 
+    private static async Task<HttpResponseMessage> PostKeyedAsync(HttpClient client, CreateProfile body,
+        params string[] keys)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/profiles")
+        {
+            Content = JsonContent.Create(body)
+        };
+        Assert.True(request.Headers.TryAddWithoutValidation("Idempotency-Key", keys));
+        return await client.SendAsync(request);
+    }
+
+    private sealed class FailingPublisher(Exception failure) : IIntegrationEventPublisher
+    {
+        public ValueTask EnqueueAsync(IIntegrationEvent message, CancellationToken cancellationToken = default)
+            => throw failure;
+    }
+
+    private sealed class ClaimRace
+    {
+        internal Func<Task>? Winner { get; set; }
+        internal int Triggered;
+    }
+
+    private sealed class ClaimRaceUnitOfWork(
+        SelfManagedUnitOfWork<SelfManagedReferenceDbContext> inner, ClaimRace race) : IUnitOfWork
+    {
+        public async Task<T> ExecuteAsync<T>(Func<CancellationToken, Task<T>> operation,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref race.Triggered, 1) == 0)
+                await (race.Winner ?? throw new InvalidOperationException("The winner request was not configured."))();
+            return await inner.ExecuteAsync(operation, cancellationToken);
+        }
+    }
+
     private sealed class Fixture(WebApplication app, SqliteConnection connection) : IAsyncDisposable
     {
         private static readonly SymmetricSecurityKey Key = new(Enumerable.Repeat((byte)19, 32).ToArray());
@@ -405,12 +661,52 @@ public sealed class ReferenceHostTests
             return new(app, connection);
         }
 
-        public void Authenticate(string scope)
+        public void Authenticate(string scope, string subject = "test-admin")
         {
             var token = new JwtSecurityToken("https://issuer.example", "ms-reference",
-                [new("sub", "test-admin"), new("scope", scope)], expires: DateTime.UtcNow.AddMinutes(5),
+                [new("sub", subject), new("scope", scope)], expires: DateTime.UtcNow.AddMinutes(5),
                 signingCredentials: new(Key, SecurityAlgorithms.HmacSha256));
             Client.DefaultRequestHeaders.Authorization = new("Bearer", new JwtSecurityTokenHandler().WriteToken(token));
+        }
+
+        public async Task<(int Profiles, int Outbox, int Idempotency)> CountWritesAsync()
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
+            return (await context.Profiles.CountAsync(),
+                await context.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS Value FROM Outbox").SingleAsync(),
+                await context.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS Value FROM HttpIdempotency").SingleAsync());
+        }
+
+        public async Task ExecuteSqlAsync(string sql)
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
+            await context.Database.ExecuteSqlRawAsync(sql);
+        }
+
+        public async Task<int> CountProfilesAsync()
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>()
+                .Profiles.CountAsync();
+        }
+
+        public async Task<bool> HasIdempotencyTableAsync()
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
+            var count = await context.Database.SqlQueryRaw<int>(
+                "SELECT COUNT(*) AS Value FROM sqlite_master WHERE type = 'table' AND name = 'HttpIdempotency'")
+                .SingleAsync();
+            return count != 0;
+        }
+
+        public async Task<int> PruneExpiredAsync()
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var store = scope.ServiceProvider.GetRequiredService<EfCoreIdempotencyStore<ReferenceDbContext>>();
+            return await store.PruneExpiredAsync();
         }
 
         public async ValueTask DisposeAsync()

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Logging.AspNetCore;
+using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Messaging.RabbitMQ;
 using MS.Microservice.Messaging.SelfManaged;
@@ -52,6 +53,9 @@ public static class ReferenceHost
             builder.Services.AddReferenceRepositories<WolverineReferenceDbContext>();
         }
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
+        builder.Services.AddScoped(services => new EfCoreIdempotencyStore<ReferenceDbContext>(
+            services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<TimeProvider>()));
+        builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
         builder.Services.AddValidation();

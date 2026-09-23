@@ -8,6 +8,8 @@ Required settings are `ConnectionStrings:ReferenceDatabase`, `Messaging:RabbitMQ
 
 `Http:RequestTimeouts:Enabled` is `false` in the sample configuration. When enabled, API requests have a 30-second deadline by default; `Seconds` must be positive. Health routes do not use that deadline. Downstream calls must honor the request cancellation token, and a `504` does not prove a write was rolled back. See [HTTP 请求超时](../../../src/MS.Microservice.AspNetCore/docs/request-timeouts.md).
 
+`POST /api/v1/profiles` accepts an optional `Idempotency-Key`. Successful keyed requests save the `201` response with the profile and Outbox write, so a retry can replay its `Location` and body. A different request using the same key returns `409`. Invalid or conflicting business requests do not reserve the key. Unkeyed requests keep the existing behavior. The selected provider's database migration must be applied before using the header; the host never creates the table automatically. See [创建档案时如何处理重复 HTTP 请求](idempotent-profile-create.md).
+
 List endpoints validate pagination query ranges before calling repositories. Their omitted values remain `skip=0`, `take=50` and `limit=100`. Application errors use the shared ProblemDetails mapping, which preserves known public codes and hides unknown 500 details. The [HTTP error and validation note](../../../src/MS.Microservice.AspNetCore/docs/application-errors.md) records the .NET 10 binding behavior behind this choice.
 
 | Route | Purpose |
