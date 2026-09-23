@@ -39,6 +39,7 @@ public sealed class PlatformMetricsTests
         metrics.RecordOutboxClaimed(3);
         metrics.RecordOutboxPublished(12.5);
         metrics.RecordOutboxFailed(20, deadLettered: true);
+        metrics.RecordOutboxFailed(21, deadLettered: false);
         metrics.RecordInboxRegistration(firstDelivery: true);
         metrics.RecordInboxRegistration(firstDelivery: false);
         metrics.RecordInboxShortCircuited();
@@ -51,9 +52,23 @@ public sealed class PlatformMetricsTests
         Assert.Contains(("ms.messaging.inbox.duplicate", 1L), longMeasurements);
         Assert.Contains(doubleMeasurements, measurement =>
             measurement.Name == "ms.messaging.outbox.publish.duration"
+            && measurement.Value == 12.5
             && measurement.Outcome == "published");
         Assert.Contains(doubleMeasurements, measurement =>
+            measurement.Name == "ms.messaging.outbox.publish.duration"
+            && measurement.Value == 20
+            && measurement.Outcome == "dead_lettered");
+        Assert.Contains(doubleMeasurements, measurement =>
+            measurement.Name == "ms.messaging.outbox.publish.duration"
+            && measurement.Value == 21
+            && measurement.Outcome == "failed");
+        Assert.Contains(doubleMeasurements, measurement =>
             measurement.Name == "ms.messaging.inbox.handler.duration"
+            && measurement.Value == 7
+            && measurement.Outcome == "processed");
+        Assert.Contains(doubleMeasurements, measurement =>
+            measurement.Name == "ms.messaging.inbox.handler.duration"
+            && measurement.Value == 9
             && measurement.Outcome == "failed");
     }
 }

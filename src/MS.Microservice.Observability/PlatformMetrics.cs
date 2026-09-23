@@ -6,6 +6,11 @@ public sealed class PlatformMetrics : IDisposable
 {
     public const string MeterName = "MS.Microservice";
 
+    private static readonly KeyValuePair<string, object?>[] PublishedOutcome = [new("outcome", "published")];
+    private static readonly KeyValuePair<string, object?>[] FailedOutcome = [new("outcome", "failed")];
+    private static readonly KeyValuePair<string, object?>[] DeadLetteredOutcome = [new("outcome", "dead_lettered")];
+    private static readonly KeyValuePair<string, object?>[] ProcessedOutcome = [new("outcome", "processed")];
+
     private readonly Meter _meter = new(MeterName, "1.0.0");
     private readonly Counter<long> _outboxClaimed;
     private readonly Counter<long> _outboxPublished;
@@ -39,9 +44,7 @@ public sealed class PlatformMetrics : IDisposable
     public void RecordOutboxPublished(double durationMilliseconds)
     {
         _outboxPublished.Add(1);
-        _outboxPublishDuration.Record(
-            durationMilliseconds,
-            new KeyValuePair<string, object?>[] { new("outcome", "published") });
+        _outboxPublishDuration.Record(durationMilliseconds, PublishedOutcome);
     }
 
     public void RecordOutboxFailed(double durationMilliseconds, bool deadLettered)
@@ -52,12 +55,7 @@ public sealed class PlatformMetrics : IDisposable
             _outboxDeadLettered.Add(1);
         }
 
-        _outboxPublishDuration.Record(
-            durationMilliseconds,
-            new KeyValuePair<string, object?>[]
-            {
-                new("outcome", deadLettered ? "dead_lettered" : "failed")
-            });
+        _outboxPublishDuration.Record(durationMilliseconds, deadLettered ? DeadLetteredOutcome : FailedOutcome);
     }
 
     public void RecordInboxRegistration(bool firstDelivery)
@@ -77,17 +75,13 @@ public sealed class PlatformMetrics : IDisposable
     public void RecordInboxProcessed(double durationMilliseconds)
     {
         _inboxProcessed.Add(1);
-        _inboxHandlerDuration.Record(
-            durationMilliseconds,
-            new KeyValuePair<string, object?>[] { new("outcome", "processed") });
+        _inboxHandlerDuration.Record(durationMilliseconds, ProcessedOutcome);
     }
 
     public void RecordInboxFailed(double durationMilliseconds)
     {
         _inboxFailed.Add(1);
-        _inboxHandlerDuration.Record(
-            durationMilliseconds,
-            new KeyValuePair<string, object?>[] { new("outcome", "failed") });
+        _inboxHandlerDuration.Record(durationMilliseconds, FailedOutcome);
     }
 
     public void Dispose() => _meter.Dispose();
