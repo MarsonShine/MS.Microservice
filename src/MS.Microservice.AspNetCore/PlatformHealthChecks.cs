@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Timeouts;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -21,7 +23,7 @@ public static class PlatformHealthChecks
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapGet("/health/live", (RequestDelegate)(context => WriteStatusAsync(context, "healthy")))
-            .AllowAnonymous();
+            .AllowAnonymous().DisableRateLimiting().DisableRequestTimeout();
         endpoints.MapGet("/health/ready", (RequestDelegate)(async context =>
         {
             var lifetime = context.RequestServices.GetRequiredService<IHostApplicationLifetime>();
@@ -45,7 +47,7 @@ public static class PlatformHealthChecks
                     _ => "unhealthy"
                 });
             else await writeReadyResponse(context, report);
-        })).AllowAnonymous();
+        })).AllowAnonymous().DisableRateLimiting().DisableRequestTimeout();
 
         return endpoints;
     }
