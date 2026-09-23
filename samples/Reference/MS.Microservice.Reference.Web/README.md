@@ -6,6 +6,8 @@ Required settings are `ConnectionStrings:ReferenceDatabase`, `Messaging:RabbitMQ
 
 `Http:RateLimiting:Enabled` is `false` in the sample configuration. When enabled, the API routes share a per-process fixed-window limit of 120 requests per 60 seconds with no queue; health routes do not consume this quota. Set `Enabled` to `true` and choose `PermitLimit` and `WindowSeconds` for the deployment. See [HTTP 入口限流](../../../src/MS.Microservice.AspNetCore/docs/rate-limiting.md) for policy behavior and the multi-instance limit.
 
+`Http:RequestTimeouts:Enabled` is `false` in the sample configuration. When enabled, API requests have a 30-second deadline by default; `Seconds` must be positive. Health routes do not use that deadline. Downstream calls must honor the request cancellation token, and a `504` does not prove a write was rolled back. See [HTTP 请求超时](../../../src/MS.Microservice.AspNetCore/docs/request-timeouts.md).
+
 | Route | Purpose |
 | --- | --- |
 | `/health/live` | Process liveness, anonymous. |

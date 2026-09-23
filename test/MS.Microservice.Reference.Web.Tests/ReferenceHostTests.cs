@@ -4,6 +4,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Timeouts;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -139,6 +142,37 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
+    public async Task RequestTimeoutPolicyAppliesToApiButNotHealth()
+    {
+        await using var fixture = await Fixture.CreateAsync(apiTimeoutSeconds: 5);
+        var api = fixture.Endpoints.OfType<RouteEndpoint>()
+            .Single(endpoint => endpoint.RoutePattern.RawText == "/api/v1/roles");
+        var live = fixture.Endpoints.OfType<RouteEndpoint>()
+            .Single(endpoint => endpoint.RoutePattern.RawText == "/health/live");
+        var ready = fixture.Endpoints.OfType<RouteEndpoint>()
+            .Single(endpoint => endpoint.RoutePattern.RawText == "/health/ready");
+        Assert.Equal("reference-api-timeout", api.Metadata.GetMetadata<RequestTimeoutAttribute>()?.PolicyName);
+        Assert.Null(live.Metadata.GetMetadata<RequestTimeoutAttribute>());
+        Assert.Null(ready.Metadata.GetMetadata<RequestTimeoutAttribute>());
+
+        fixture.Authenticate("profiles.manage");
+        using var response = await fixture.Client.GetAsync("/api/v1/roles");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("invalid", "30")]
+    [InlineData("true", "0")]
+    [InlineData("true", "-1")]
+    public void InvalidRequestTimeoutConfigurationFailsDuringComposition(string enabled, string seconds)
+    {
+        var builder = Fixture.Builder();
+        builder.Configuration["Http:RequestTimeouts:Enabled"] = enabled;
+        builder.Configuration["Http:RequestTimeouts:Seconds"] = seconds;
+        Assert.Throws<ArgumentException>(() => ReferenceHost.AddServices(builder));
+    }
+
+    [Fact]
     public void UnknownProviderFailsDuringComposition()
     {
         var builder = Fixture.Builder("unknown");
@@ -149,6 +183,7 @@ public sealed class ReferenceHostTests
     {
         private static readonly SymmetricSecurityKey Key = new(Enumerable.Repeat((byte)19, 32).ToArray());
         public HttpClient Client { get; } = app.GetTestClient();
+        public IReadOnlyList<Endpoint> Endpoints => app.Services.GetRequiredService<EndpointDataSource>().Endpoints;
 
         public static WebApplicationBuilder Builder(string provider = "SelfManaged") => ServiceHost.CreateBuilder([
             "--environment", "Production", "--ConnectionStrings:ReferenceDatabase", "Host=unused;Database=reference;Username=test",
@@ -157,7 +192,8 @@ public sealed class ReferenceHostTests
             "--OpenTelemetry:Enabled", "false"
         ]);
 
-        public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false, int? apiPermitLimit = null)
+        public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
+            int? apiPermitLimit = null, int? apiTimeoutSeconds = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -167,6 +203,11 @@ public sealed class ReferenceHostTests
                 builder.Configuration["Http:RateLimiting:Enabled"] = "true";
                 builder.Configuration["Http:RateLimiting:PermitLimit"] = limit.ToString();
                 builder.Configuration["Http:RateLimiting:WindowSeconds"] = "60";
+            }
+            if (apiTimeoutSeconds is { } seconds)
+            {
+                builder.Configuration["Http:RequestTimeouts:Enabled"] = "true";
+                builder.Configuration["Http:RequestTimeouts:Seconds"] = seconds.ToString();
             }
             builder.WebHost.UseTestServer();
             ReferenceHost.AddServices(builder);

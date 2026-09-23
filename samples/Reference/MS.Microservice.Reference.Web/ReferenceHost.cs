@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,7 @@ namespace MS.Microservice.Reference.Web;
 public static class ReferenceHost
 {
     private const string ApiRateLimitPolicy = "reference-api";
+    private const string ApiTimeoutPolicy = "reference-api-timeout";
 
     public static void AddServices(WebApplicationBuilder builder)
     {
@@ -50,7 +52,7 @@ public static class ReferenceHost
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
-        if (RateLimitingEnabled(builder.Configuration))
+        if (Enabled(builder.Configuration, "Http:RateLimiting:Enabled"))
         {
             var permitLimit = PositiveInt(builder.Configuration, "Http:RateLimiting:PermitLimit", 120);
             var windowSeconds = PositiveInt(builder.Configuration, "Http:RateLimiting:WindowSeconds", 60);
@@ -62,6 +64,16 @@ public static class ReferenceHost
                 limiter.AutoReplenishment = true;
             }));
         }
+        if (Enabled(builder.Configuration, "Http:RequestTimeouts:Enabled"))
+        {
+            var seconds = PositiveInt(builder.Configuration, "Http:RequestTimeouts:Seconds", 30);
+            builder.Services.AddPlatformRequestTimeouts(options => options.AddPolicy(ApiTimeoutPolicy,
+                new RequestTimeoutPolicy
+                {
+                    Timeout = TimeSpan.FromSeconds(seconds),
+                    TimeoutStatusCode = StatusCodes.Status504GatewayTimeout
+                }));
+        }
         builder.Services.AddMsRequestLogging();
         builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1024 * 1024);
         if (builder.Configuration.GetValue("OpenTelemetry:Enabled", true)) builder.Services.AddMsOpenTelemetry(builder.Configuration);
@@ -69,23 +81,32 @@ public static class ReferenceHost
 
     public static void MapApplication(WebApplication app)
     {
-        var rateLimiting = RateLimitingEnabled(app.Configuration);
+        var rateLimiting = Enabled(app.Configuration, "Http:RateLimiting:Enabled");
+        var requestTimeouts = Enabled(app.Configuration, "Http:RequestTimeouts:Enabled");
         app.UsePlatformHttp();
         app.UseMsRequestLogging();
+        if (requestTimeouts) app.UsePlatformRequestTimeouts();
         app.UseAuthentication();
         if (rateLimiting) app.UsePlatformRateLimiting();
         app.UseAuthorization();
         app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
         app.MapGet("/health/ready", ReadinessAsync).AllowAnonymous();
-        ProfileEndpoints.Map(rateLimiting ? app.MapGroup("").RequireRateLimiting(ApiRateLimitPolicy) : app);
+        if (rateLimiting || requestTimeouts)
+        {
+            var api = app.MapGroup("");
+            if (rateLimiting) api.RequireRateLimiting(ApiRateLimitPolicy);
+            if (requestTimeouts) api.WithRequestTimeout(ApiTimeoutPolicy);
+            ProfileEndpoints.Map(api);
+        }
+        else ProfileEndpoints.Map(app);
     }
 
-    private static bool RateLimitingEnabled(IConfiguration configuration)
+    private static bool Enabled(IConfiguration configuration, string key)
     {
-        var setting = configuration["Http:RateLimiting:Enabled"];
+        var setting = configuration[key];
         if (setting is null) return false;
         if (bool.TryParse(setting, out var enabled)) return enabled;
-        throw new ArgumentException("Http:RateLimiting:Enabled must be true or false.");
+        throw new ArgumentException($"{key} must be true or false.");
     }
 
     private static int PositiveInt(IConfiguration configuration, string key, int fallback)

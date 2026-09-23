@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -81,6 +82,19 @@ public static class ServiceHost
     public static WebApplication UsePlatformRateLimiting(this WebApplication application)
     {
         application.UseRateLimiter();
+        return application;
+    }
+
+    public static IServiceCollection AddPlatformRequestTimeouts(this IServiceCollection services, Action<RequestTimeoutOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        services.AddRequestTimeouts(configure);
+        return services;
+    }
+
+    public static WebApplication UsePlatformRequestTimeouts(this WebApplication application)
+    {
+        application.UseRequestTimeouts();
         return application;
     }
 }
