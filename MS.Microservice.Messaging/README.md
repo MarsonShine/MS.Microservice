@@ -12,6 +12,7 @@
 
 打开 [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging.slnx)，阅读 [设计理由与调用链](docs/design.md)。
 [消息元数据长度契约](docs/message-metadata-limits.md)说明入队、传输和持久化共用的上限。
+[契约名与路由键](docs/contract-routing-key.md)说明注册时如何检查完整路由键的字节范围。
 Dependencies 中的 Reference 类库用于真实业务测试，不是消息组件的运行依赖。
 
 在本目录构建：

@@ -106,7 +106,7 @@ public static class WolverineMessagingExtensions
     private static void ConfigureContract<TEvent, TContext>(WolverineOptions options, MessageContract contract)
         where TEvent : IIntegrationEvent where TContext : DbContext
     {
-        var alias = $"{contract.Name}.v{contract.Version}";
+        var alias = MessageRoutingKey.Format(contract.Name, contract.Version);
         options.RegisterMessageType(typeof(TEvent), alias);
         options.Discovery.IncludeType(typeof(WolverineIntegrationEventHandler<TEvent, TContext>));
         options.PublishMessage<TEvent>().To(new Uri($"{ConfirmedRabbitMqTransport.Scheme}://exchange/{Uri.EscapeDataString(alias)}"))

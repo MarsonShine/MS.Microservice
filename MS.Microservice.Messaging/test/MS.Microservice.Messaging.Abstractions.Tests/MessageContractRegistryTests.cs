@@ -120,6 +120,40 @@ public sealed class MessageContractRegistryTests
     public void RejectsInvalidVersion(int version)
         => Assert.Throws<ArgumentException>(() => new MessageContractRegistry([MessageContract.For<Changed>("profile.changed", version)]));
 
+    [Theory]
+    [InlineData(83, 1, true)]
+    [InlineData(84, 1, false)]
+    [InlineData(80, int.MaxValue, true)]
+    [InlineData(81, int.MaxValue, false)]
+    public void ContractRegistrationChecksFullRoutingKeyBytes(int characters, int version, bool valid)
+    {
+        var name = new string('中', characters);
+        var contract = MessageContract.For<Changed>(name, version);
+        if (valid)
+        {
+            var registry = new MessageContractRegistry([contract]);
+            Assert.Equal(name, registry.Get(typeof(Changed)).Name);
+        }
+        else Assert.Throws<ArgumentException>(() => new MessageContractRegistry([contract]));
+    }
+
+    [Fact]
+    public void AsciiColumnBoundaryAndDottedNamesRemainValid()
+    {
+        var name = "segment." + new string('a', 192);
+        var registry = new MessageContractRegistry([MessageContract.For<Changed>(name, int.MaxValue)]);
+        Assert.Equal(name, registry.Get(typeof(Changed)).Name);
+        Assert.Throws<ArgumentException>(() => new MessageContractRegistry([
+            MessageContract.For<Changed>(name + "a", int.MaxValue)]));
+    }
+
+    [Fact]
+    public void ContractNameMustBeLosslesslyEncodableAsUtf8()
+    {
+        var invalid = "event." + new string((char)0xd800, 1);
+        Assert.Throws<ArgumentException>(() => new MessageContractRegistry([MessageContract.For<Changed>(invalid)]));
+    }
+
     [Fact]
     public void RejectsEmptyIdOrNonUtcTime()
     {

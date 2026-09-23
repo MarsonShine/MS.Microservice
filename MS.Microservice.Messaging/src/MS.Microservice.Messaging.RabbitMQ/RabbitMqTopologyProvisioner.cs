@@ -28,7 +28,7 @@ public sealed class RabbitMqTopologyProvisioner(RabbitMqOptions options, Message
                     ["x-dead-letter-routing-key"] = dead
                 }, cancellationToken: cancellationToken);
             var contract = topology.Registry.Get(subscription.MessageType);
-            await channel.QueueBindAsync(queue, options.Exchange, $"{contract.Name}.v{contract.Version}",
+            await channel.QueueBindAsync(queue, options.Exchange, MessageRoutingKey.Format(contract.Name, contract.Version),
                 cancellationToken: cancellationToken);
         }
     }

@@ -11,7 +11,7 @@ public sealed class IntegrationEventIdentityRule(MessageContractRegistry registr
         var contract = registry.Get(message.GetType());
         if (message.Id == Guid.Empty) throw new MessageContractException("An integration event must have a stable Id.");
         envelope.Id = message.Id;
-        envelope.MessageType = $"{contract.Name}.v{contract.Version}";
+        envelope.MessageType = MessageRoutingKey.Format(contract.Name, contract.Version);
         envelope.Headers["ms-contract-name"] = contract.Name;
         envelope.Headers["ms-contract-version"] = contract.Version.ToString(CultureInfo.InvariantCulture);
         envelope.Headers["ms-occurred-at"] = message.OccurredAtUtc.ToString("O", CultureInfo.InvariantCulture);

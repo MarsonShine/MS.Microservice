@@ -7,17 +7,20 @@ namespace MS.Microservice.Messaging.RabbitMQ;
 internal static class RabbitMqWireCodec
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
-    public static string RoutingKey(SerializedMessage message) => $"{message.ContractName}.v{message.ContractVersion}";
+    public static string RoutingKey(SerializedMessage message)
+        => MessageRoutingKey.Format(message.ContractName, message.ContractVersion);
 
     public static (BasicProperties Properties, byte[] Body) Encode(SerializedMessage message, int maxBytes)
     {
         if (message.Id == Guid.Empty || message.OccurredAtUtc == default || message.OccurredAtUtc.Offset != TimeSpan.Zero
             || string.IsNullOrWhiteSpace(message.ContractName) || message.ContractVersion <= 0)
             throw new PermanentMessageException("invalid_message_metadata");
+        if (!MessageRoutingKey.IsValid(message.ContractName, message.ContractVersion))
+            throw new PermanentMessageException("message_limits_exceeded");
         if (!MessageMetadataLimits.AreValid(message.CorrelationId, message.TraceParent, message.TraceState))
             throw new PermanentMessageException("message_limits_exceeded");
         var body = Utf8.GetBytes(message.Payload);
-        if (body.Length > maxBytes || Utf8.GetByteCount(RoutingKey(message)) >= 255)
+        if (body.Length > maxBytes)
             throw new PermanentMessageException("message_limits_exceeded");
         return (new BasicProperties
         {
@@ -38,9 +41,9 @@ internal static class RabbitMqWireCodec
         if (body.Length > maxBytes || !Guid.TryParse(properties.MessageId, out var id) || id == Guid.Empty)
             throw new MessageContractException("Missing message identity or excessive payload size.");
         var name = Header(properties, "ms-contract-name");
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 200
-            || !int.TryParse(Header(properties, "ms-contract-version"), NumberStyles.None, CultureInfo.InvariantCulture, out var version)
-            || version <= 0 || !DateTimeOffset.TryParseExact(Header(properties, "ms-occurred-at"), "O",
+        if (!int.TryParse(Header(properties, "ms-contract-version"), NumberStyles.None, CultureInfo.InvariantCulture, out var version)
+            || !MessageRoutingKey.IsValid(name, version)
+            || !DateTimeOffset.TryParseExact(Header(properties, "ms-occurred-at"), "O",
                 CultureInfo.InvariantCulture, DateTimeStyles.None, out var occurred) || occurred.Offset != TimeSpan.Zero)
             throw new MessageContractException("Invalid message contract metadata.");
         try

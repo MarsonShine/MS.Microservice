@@ -1,6 +1,6 @@
 # Reliable messaging contracts
 
-Business code references this package, not a broker or a persistence provider. Events carry a stable `Id` and UTC occurrence time. Register each CLR type under an explicit name/version; readers only accept registered contracts.
+Business code references this package, not a broker or a persistence provider. Events carry a stable `Id` and UTC occurrence time. Register each CLR type under an explicit name/version; readers only accept registered contracts. Registration checks the complete UTF-8 routing key before any message is stored; see [contract routing key](../../docs/contract-routing-key.md).
 
 `IIntegrationEventPublisher.EnqueueAsync` stages a serialized snapshot in the active `IUnitOfWork.ExecuteAsync` operation. It does not send over the network. A successful outer unit of work commits business changes and pending messages together. Handlers track business changes and enqueue follow-up events without committing their own transactions.
 

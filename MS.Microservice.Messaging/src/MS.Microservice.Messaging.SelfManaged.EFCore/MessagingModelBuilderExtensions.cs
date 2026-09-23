@@ -12,7 +12,7 @@ public static class MessagingModelBuilderExtensions
         outbox.ToTable("Outbox", schema);
         outbox.HasKey(x => x.Id);
         outbox.Property(x => x.Id).ValueGeneratedNever();
-        outbox.Property(x => x.ContractName).HasMaxLength(200);
+        outbox.Property(x => x.ContractName).HasMaxLength(MessageRoutingKey.MaxContractNameLength);
         // Event identity must round-trip 100ns ticks even on databases with microsecond timestamps.
         outbox.Property(x => x.OccurredAtUtc).HasConversion(value => value.Ticks,
             ticks => new DateTime(ticks, DateTimeKind.Utc));
@@ -31,7 +31,7 @@ public static class MessagingModelBuilderExtensions
         inbox.HasKey(x => new { x.MessageId, x.Consumer });
         inbox.Property(x => x.MessageId).ValueGeneratedNever();
         inbox.Property(x => x.Consumer).HasMaxLength(200);
-        inbox.Property(x => x.ContractName).HasMaxLength(200);
+        inbox.Property(x => x.ContractName).HasMaxLength(MessageRoutingKey.MaxContractNameLength);
         inbox.Property(x => x.OccurredAtUtc).HasConversion(value => value.Ticks,
             ticks => new DateTime(ticks, DateTimeKind.Utc));
         inbox.Property(x => x.Payload).IsRequired();

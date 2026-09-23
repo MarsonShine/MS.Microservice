@@ -105,6 +105,42 @@ public sealed class WireAndPublisherTests
         Assert.Throws<MessageContractException>(() => RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024));
     }
 
+    [Theory]
+    [InlineData(83, 1, true)]
+    [InlineData(84, 1, false)]
+    [InlineData(80, int.MaxValue, true)]
+    [InlineData(81, int.MaxValue, false)]
+    public void WireRequiresRegisteredRoutingKeyByteRange(int characters, int version, bool valid)
+    {
+        var name = new string('中', characters);
+        var message = Message("{}") with { ContractName = name, ContractVersion = version };
+        if (valid)
+        {
+            var encoded = RabbitMqWireCodec.Encode(message, 1024);
+            Assert.Equal($"{name}.v{version}", encoded.Properties.Type);
+            Assert.Equal(name, RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024).ContractName);
+        }
+        else
+        {
+            Assert.Throws<PermanentMessageException>(() => RabbitMqWireCodec.Encode(message, 1024));
+            var encoded = RabbitMqWireCodec.Encode(Message("{}"), 1024);
+            encoded.Properties.Headers!["ms-contract-name"] = Encoding.UTF8.GetBytes(name);
+            encoded.Properties.Headers!["ms-contract-version"] = version;
+            Assert.Throws<MessageContractException>(() => RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024));
+        }
+    }
+
+    [Fact]
+    public void WireRejectsUnpairedSurrogateContractNameAsPermanentError()
+    {
+        var name = "event." + new string((char)0xd800, 1);
+        Assert.Throws<PermanentMessageException>(() => RabbitMqWireCodec.Encode(
+            Message("{}") with { ContractName = name }, 1024));
+        var encoded = RabbitMqWireCodec.Encode(Message("{}"), 1024);
+        encoded.Properties.Headers!["ms-contract-name"] = name;
+        Assert.Throws<MessageContractException>(() => RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024));
+    }
+
     [Fact]
     public async Task PublishDoesNotCompleteBeforeBrokerConfirmation()
     {

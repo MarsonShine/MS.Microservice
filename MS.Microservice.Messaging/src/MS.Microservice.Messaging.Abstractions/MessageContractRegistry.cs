@@ -21,7 +21,7 @@ public sealed class MessageContractRegistry
         foreach (var contract in contracts)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(contract.Name);
-            if (contract.Version <= 0 || contract.Name.Length > 200
+            if (!MessageRoutingKey.IsValid(contract.Name, contract.Version)
                 || !typeof(IIntegrationEvent).IsAssignableFrom(contract.MessageType)
                 || contract.MessageType.IsAbstract || contract.MessageType.ContainsGenericParameters)
                 throw new ArgumentException($"Invalid message contract: {contract.Name} v{contract.Version}.");
