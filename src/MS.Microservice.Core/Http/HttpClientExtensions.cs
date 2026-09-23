@@ -14,6 +14,14 @@ namespace MS.WebHttpClient
 {
     public static partial class HttpClientExtensions
     {
+        // HTTP 忽略属性名大小写；与缓存规则不同，因此单独持有不可变的配置。
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNameCaseInsensitive = true,
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
+
         extension(HttpClient client)
         {
             public async Task<T> GetAsync<T>(string api, object body)
@@ -57,7 +65,7 @@ namespace MS.WebHttpClient
                         var contentStream = await message.Content.ReadAsStreamAsync();
                         try
                         {
-                            return (await JsonSerializer.DeserializeAsync<T>(contentStream, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNameCaseInsensitive = true, Encoder = JavaScriptEncoder.Create(UnicodeRanges.All) }))!;
+                            return (await JsonSerializer.DeserializeAsync<T>(contentStream, JsonOptions))!;
                         }
                         catch (JsonException)
                         {
