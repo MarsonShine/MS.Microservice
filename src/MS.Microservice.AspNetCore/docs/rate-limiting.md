@@ -4,19 +4,21 @@
 
 原来的 `ServiceHost` 只安装异常处理、转发头和 CORS。请求进入 Reference 的业务端点后，只有身份与权限检查；同一客户端连续请求昂贵的查询或写入端点时，宿主没有入口配额。健康端点和业务端点共用 HTTP 管线，简单地把全局配额加到所有请求上，又会让存活探针消耗配额，甚至在业务流量达到上限时被拒绝。
 
-限流中间件必须在路由后读取端点上的策略元数据。Reference 还需要先完成认证，再运行限流器，才能让将来按已验证身份分配配额的策略读到 `HttpContext.User`。如果直接用客户端提供的 `X-Forwarded-For` 或任意请求字段作为分区键，攻击者可以更换字段绕过配额，并制造大量分区对象。
+限流中间件必须在路由后读取端点上的策略元数据。Reference 曾把一个固定窗口策略挂到所有业务 API，并在授权前执行限流：限额为 2 时，匿名请求访问受保护端点三次，第 3 次就得到 `429`，而合法用户的额度也已被消耗。正确的配额边界是通过认证和授权的调用者，不能让返回 `401` 或 `403` 的请求占用它。
 
 ## 本次方案
 
 `AddPlatformRateLimiting` 和 `UsePlatformRateLimiting` 是显式启用入口。它们使用 ASP.NET Core 自带的 `RateLimiterOptions`，宿主可以配置全局限流器，也可以注册命名策略并把它附到端点或路由组。共享组件负责默认拒绝响应：返回 `429`；只有限流租约提供重试时间时才写 `Retry-After` 秒数。没有配置策略的宿主不会因这两个方法之外的现有 HTTP 接入代码受到限制。
 
-`UsePlatformHttp` 现在把路由放在 CORS 前。Reference 的顺序是：转发头、路由、CORS、请求日志、认证、限流、授权、端点。这样命名策略能读取端点元数据，日志能记录被拒绝的请求；如果将来采用身份分区，限流器能读取已验证身份。转发头仍只接受 `Http:KnownProxies` 中可信代理的地址。当前 Reference 策略不按 IP 或身份分区，因此请求头和未验证的身份字段都不能改变额度。
+`UsePlatformHttp` 把路由放在 CORS 前。Reference 的顺序是：转发头、路由、CORS、请求日志、请求超时（启用时）、认证、授权、限流、端点。授权先拒绝无凭据或权限不足的请求；限流器随后只看到已授权身份。命名策略从经过 JWT 验证的 `iss` 和配置的 subject claim 组成身份元组，不读取原始 `X-Forwarded-For` 或其他客户端可改写的头。缺少有效身份时，策略使用固定的兜底分区，不为任意输入创建分区。
 
-Reference 在 `Http:RateLimiting:Enabled` 为 `true` 时，为所有业务 API 端点注册同一个固定窗口策略。默认配置是每个进程的 API 总量每 60 秒 120 次，排队长度为 0；超过配额立即返回 `429`。存活和就绪端点没有附加此策略。配置可调整 `PermitLimit` 和 `WindowSeconds`；非正整数或无效的 `Enabled` 值会在服务组合阶段报错。设为 `false` 或省略设置时，Reference 不注册或运行限流器。
+Reference 在 `Http:RateLimiting:Enabled` 为 `true` 时，为业务 API 端点注册按认证身份分区的固定窗口策略。默认配置是每个进程、每个 `(issuer, subject)` 每 60 秒 120 次，排队长度为 0；超过配额立即返回 `429`。不同身份拥有各自的额度。存活和就绪端点没有附加此策略。配置可调整 `PermitLimit` 和 `WindowSeconds`；非正整数或无效的 `Enabled` 值会在服务组合阶段报错。设为 `false` 或省略设置时，Reference 不注册或运行限流器。
+
+分区使用 `RateLimitPartition.GetFixedWindowLimiter`，窗口额度由分区限流器统一补充，因此单个窗口的 `AutoReplenishment` 设为 `false`。TestServer 用短窗口验证了超额后下一窗口能重新获得额度。
 
 | 路径或策略 | 配额行为 |
 | --- | --- |
-| Reference `/api/...` | 共享 `reference-api` 固定窗口；匿名和已认证请求都占用额度。 |
+| Reference `/api/...` | `reference-api` 按已验证 `(issuer, subject)` 分区；`401`、`403` 不占用用户额度。 |
 | Reference `/health/live`、`/health/ready` | 不占用 API 配额。 |
 | 其他宿主的命名策略 | 只作用于显式调用 `RequireRateLimiting` 的端点。 |
 | 其他宿主的 `GlobalLimiter` | 作用于所有端点，端点可显式调用 `DisableRateLimiting`。 |
@@ -25,8 +27,8 @@ Reference 在 `Http:RateLimiting:Enabled` 为 `true` 时，为所有业务 API �
 
 ## 边界与后续
 
-Reference 的配额存放在当前进程内。两个实例各自允许每分钟 120 次，总请求量可能达到每分钟 240 次；如需跨实例统一额度，应在网关或共享限流存储中实现并单独验证。固定窗口边界附近也可能出现短时间内连续两窗口的请求，这是该算法的正常行为。
+Reference 的配额存放在当前进程内。两个实例对同一用户各自允许每分钟 120 次，总请求量可能达到每分钟 240 次；如需跨实例统一额度，应在网关或共享限流存储中实现并单独验证。固定窗口边界附近也可能出现短时间内连续两窗口的请求，这是该算法的正常行为。分区按有效身份建立；如果单个部署会接纳大量短生命周期身份，应评估分区数量及进程内存。
 
-将来若需要按用户或 IP 分区，应先明确身份和代理信任边界，并控制分区数量。用户身份只能来自已验证的认证结果；IP 应取转发头中间件处理后的 `RemoteIpAddress`，不能直接读原始 `X-Forwarded-For`。目前没有这类分区，也没有维护不受控的用户输入键缓存。
+按 IP 限流若将来确有需要，应先定义代理信任边界，并使用转发头中间件处理后的 `RemoteIpAddress`，不能直接读原始 `X-Forwarded-For`。当前策略只按认证身份分区。
 
-TestServer 覆盖命名策略、全局策略、健康豁免、匿名与已认证请求、`429`、`Retry-After` 和变更 `X-Forwarded-For` 时不能刷新 Reference 的共享额度。
+TestServer 覆盖命名策略、全局策略、健康豁免、匿名与权限不足的请求不占用户额度、不同身份隔离、单一身份超额 `429`、`Retry-After`，以及变更 `X-Forwarded-For` 后不能刷新身份额度。

@@ -452,7 +452,7 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
-    public async Task ApiRateLimitCoversAnonymousRequestsWithoutLimitingHealthOrUnknownPaths()
+    public async Task AnonymousAndForbiddenRequestsDoNotConsumeAnAuthorizedUsersQuota()
     {
         await using var fixture = await Fixture.CreateAsync(apiPermitLimit: 2);
         for (var i = 0; i < 3; i++)
@@ -461,32 +461,76 @@ public sealed class ReferenceHostTests
             Assert.Equal(HttpStatusCode.OK, health.StatusCode);
         }
 
-        using var first = await fixture.Client.GetAsync("/api/v1/profiles");
-        using var second = await fixture.Client.GetAsync("/api/v1/profiles");
-        using var rejected = await fixture.Client.GetAsync("/api/v1/profiles");
+        for (var i = 0; i < 4; i++)
+        {
+            using var anonymous = await fixture.Client.GetAsync("/api/v1/profiles");
+            Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        }
+
+        fixture.Authenticate("messaging.manage", "forbidden-user");
+        for (var i = 0; i < 4; i++)
+        {
+            using var forbidden = await fixture.Client.GetAsync("/api/v1/roles");
+            Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        }
+
+        fixture.Authenticate("profiles.manage", "authorized-user");
+        using var first = await fixture.Client.GetAsync("/api/v1/roles");
+        using var second = await fixture.Client.GetAsync("/api/v1/roles");
+        using var rejected = await fixture.Client.GetAsync("/api/v1/roles");
         using var unknown = await fixture.Client.GetAsync("/not-found");
         using var healthAfter = await fixture.Client.GetAsync("/health/live");
         using var readiness = await fixture.Client.GetAsync("/health/ready");
-        Assert.Equal(HttpStatusCode.Unauthorized, first.StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, unknown.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
         Assert.Equal(HttpStatusCode.OK, healthAfter.StatusCode);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, readiness.StatusCode);
     }
 
     [Fact]
-    public async Task ApiRateLimitCoversAuthenticatedRequests()
+    public async Task AuthenticatedSubjectsHaveIndependentRateLimitPartitions()
     {
         await using var fixture = await Fixture.CreateAsync(apiPermitLimit: 2);
-        fixture.Authenticate("profiles.manage");
+        fixture.Authenticate("profiles.manage", "user-a");
+
+        using var firstA = await fixture.Client.GetAsync("/api/v1/roles");
+        using var secondA = await fixture.Client.GetAsync("/api/v1/roles");
+        using var rejectedA = await fixture.Client.GetAsync("/api/v1/roles");
+        Assert.Equal(HttpStatusCode.OK, firstA.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondA.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejectedA.StatusCode);
+
+        fixture.Authenticate("profiles.manage", "user-b");
+        using var firstB = await fixture.Client.GetAsync("/api/v1/roles");
+        using var secondB = await fixture.Client.GetAsync("/api/v1/roles");
+        using var rejectedB = await fixture.Client.GetAsync("/api/v1/roles");
+        Assert.Equal(HttpStatusCode.OK, firstB.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondB.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejectedB.StatusCode);
+
+        fixture.Authenticate("profiles.manage", "user-a");
+        using var changedHeader = new HttpRequestMessage(HttpMethod.Get, "/api/v1/roles");
+        changedHeader.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.50");
+        using var stillRejectedA = await fixture.Client.SendAsync(changedHeader);
+        Assert.Equal(HttpStatusCode.TooManyRequests, stillRejectedA.StatusCode);
+    }
+
+    [Fact]
+    public async Task IdentityPartitionReceivesNewPermitAfterItsFixedWindow()
+    {
+        await using var fixture = await Fixture.CreateAsync(apiPermitLimit: 1, apiWindowSeconds: 2);
+        fixture.Authenticate("profiles.manage", "window-user");
 
         using var first = await fixture.Client.GetAsync("/api/v1/roles");
-        using var second = await fixture.Client.GetAsync("/api/v1/roles");
         using var rejected = await fixture.Client.GetAsync("/api/v1/roles");
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(2500));
+        using var restored = await fixture.Client.GetAsync("/api/v1/roles");
+        Assert.Equal(HttpStatusCode.OK, restored.StatusCode);
     }
 
     [Theory]
@@ -590,7 +634,7 @@ public sealed class ReferenceHostTests
         ]);
 
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
-            int? apiPermitLimit = null, int? apiTimeoutSeconds = null, bool storageAvailable = true,
+            int? apiPermitLimit = null, int apiWindowSeconds = 60, int? apiTimeoutSeconds = null, bool storageAvailable = true,
             Action<IServiceCollection>? configureServices = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
@@ -600,7 +644,7 @@ public sealed class ReferenceHostTests
             {
                 builder.Configuration["Http:RateLimiting:Enabled"] = "true";
                 builder.Configuration["Http:RateLimiting:PermitLimit"] = limit.ToString();
-                builder.Configuration["Http:RateLimiting:WindowSeconds"] = "60";
+                builder.Configuration["Http:RateLimiting:WindowSeconds"] = apiWindowSeconds.ToString();
             }
             if (apiTimeoutSeconds is { } seconds)
             {

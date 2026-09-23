@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Security.Claims;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
@@ -71,12 +73,22 @@ public static class ReferenceHost
         {
             var permitLimit = PositiveInt(builder.Configuration, "Http:RateLimiting:PermitLimit", 120);
             var windowSeconds = PositiveInt(builder.Configuration, "Http:RateLimiting:WindowSeconds", 60);
-            builder.Services.AddPlatformRateLimiting(options => options.AddFixedWindowLimiter(ApiRateLimitPolicy, limiter =>
+            var subjectClaimType = builder.Configuration["Authentication:SubjectClaimType"] ?? "sub";
+            builder.Services.AddPlatformRateLimiting(options => options.AddPolicy<(string Issuer, string Subject)>(
+                ApiRateLimitPolicy, http =>
             {
-                limiter.PermitLimit = permitLimit;
-                limiter.Window = TimeSpan.FromSeconds(windowSeconds);
-                limiter.QueueLimit = 0;
-                limiter.AutoReplenishment = true;
+                var issuer = http.User.FindFirstValue("iss");
+                var subject = http.User.FindFirstValue(subjectClaimType);
+                (string Issuer, string Subject) partition = http.User.Identity?.IsAuthenticated == true
+                    && !string.IsNullOrWhiteSpace(issuer) && !string.IsNullOrWhiteSpace(subject)
+                    ? (issuer, subject) : (string.Empty, string.Empty);
+                return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = permitLimit,
+                    Window = TimeSpan.FromSeconds(windowSeconds),
+                    QueueLimit = 0,
+                    AutoReplenishment = false
+                });
             }));
         }
         if (Enabled(builder.Configuration, "Http:RequestTimeouts:Enabled"))
@@ -102,8 +114,8 @@ public static class ReferenceHost
         app.UseMsRequestLogging();
         if (requestTimeouts) app.UsePlatformRequestTimeouts();
         app.UseAuthentication();
-        if (rateLimiting) app.UsePlatformRateLimiting();
         app.UseAuthorization();
+        if (rateLimiting) app.UsePlatformRateLimiting();
         app.MapPlatformHealthChecks(WriteReadinessAsync);
         if (rateLimiting || requestTimeouts)
         {
