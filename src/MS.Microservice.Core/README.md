@@ -27,3 +27,13 @@ LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null
 取消、HTTP 状态失败和 JSON 解析失败分别保留 OperationCanceledException、
 HttpRequestException、JsonException；调用方应更新旧的“统一解析异常”捕获逻辑。
 默认日志不记录 URL、参数、正文及异常消息。
+
+`LoggingHttpClientHandler` 是另一种可选的 `DelegatingHandler`。为兼容已有使用者，它默认继续记录完整 URI、请求和响应正文，并会包装、缓冲正文。宿主需要脱敏日志时，可显式开启 `EnableRedaction`：
+
+```csharp
+services.Configure<LoggingHttpClientHandlerOptions>(options => options.EnableRedaction = true);
+services.AddTransient<LoggingHttpClientHandler>();
+services.AddHttpClient("remote-api").AddHttpMessageHandler<LoggingHttpClientHandler>();
+```
+
+开启后，该 Handler 只记录方法、不含查询字符串的路径、响应状态或失败类型、耗时。它不读取、包装或记录请求与响应正文；HTTP 内容和异常仍原样交给调用方。路径本身可能包含业务标识，调用方仍应避免把凭据放进路径。没有开启该设置的客户端维持原有完整日志行为。
