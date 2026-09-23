@@ -15,6 +15,7 @@
     <Project Path="src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
     <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <Project Path="src/MS.Microservice.Http.Resilience/MS.Microservice.Http.Resilience.csproj" />
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
@@ -51,6 +52,7 @@
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
     <Project Path="test/MS.Microservice.Excel.Tests/MS.Microservice.Excel.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Http.Resilience.Tests/MS.Microservice.Http.Resilience.Tests.csproj" />
     <Project Path="test/MS.Microservice.Lab.Tests/MS.Microservice.Lab.Tests.csproj" />
     <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
