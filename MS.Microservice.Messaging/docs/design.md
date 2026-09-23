@@ -50,3 +50,27 @@ Wolverine 接管可靠存储、事务中间件、原生收发与恢复；不会�
 两种实现可以有不同内部状态、失败标识和 Broker ACK 时序。
 共同要求是已经承诺的持久化与业务恢复行为，而不是强行统一内部表。
 切换前需要停写、排空和处置死信；配置不会自动迁移在途消息。
+
+## Consumer 查找成本
+
+`SelfManagedReceiver.ReceiveAsync` 每收到一条消息都会按 consumer 名称查找订阅。原实现对只读订阅列表调用
+`SingleOrDefault`。它每次构造 LINQ 查找状态，并遍历列表；即使只有一个订阅，查找仍分配 120 B。
+构造 `MessageTopology` 时已经检查名称唯一，因此接收时不需要再次扫描以证明唯一性。
+
+现在构造拓扑时用同一个 `Dictionary<string, MessageSubscription>` 完成唯一性检查和后续查找，
+字符串比较仍为 `Ordinal`，公开的 `Subscriptions` 仍保持注册顺序和只读快照。
+字典占用随订阅数量增长的一次性内存，但代替了原本用于去重的 `HashSet`。查找路径没有反射或动态代码生成。
+
+在 `MS.Microservice.Messaging` 目录下，以 Windows、.NET 10、Release 运行 `dotnet run --project benchmarks/MS.Microservice.Messaging.Benchmarks -c Release`，
+每个场景预热 2 万次，随后测 5 轮、每轮 20 万次，表中为各轮中位数；分配使用
+`GC.GetAllocatedBytesForCurrentThread` 测量：
+
+| 查找场景 | 修改前 | 修改后 |
+| --- | ---: | ---: |
+| 1 个订阅，首项 | 67.8 ns、120 B/次 | 16.6 ns、0 B/次 |
+| 2 个订阅，末项 | 85.2 ns、120 B/次 | 16.7 ns、0 B/次 |
+| 8 个订阅，末项 | 115.5 ns、120 B/次 | 16.8 ns、0 B/次 |
+
+这是内存中的订阅查找微基准；没有测量数据库、Broker 或完整消费吞吐量。
+当前 `MessageContractRegistry` 仍通过运行时 `Type` 执行 JSON 序列化，Wolverine 配置也仍使用反射构造泛型调用。
+若要让这些路径完整支持 Native AOT，需要分别设计源码生成的类型元数据和静态注册入口，并验证所用框架的支持范围；本次没有改变这两条路径。
