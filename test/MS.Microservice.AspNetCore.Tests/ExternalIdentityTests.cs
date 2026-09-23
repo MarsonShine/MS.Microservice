@@ -18,6 +18,35 @@ public sealed class ExternalIdentityTests
     private static readonly SymmetricSecurityKey Key = new(new byte[32].Select((_, i) => (byte)(i + 1)).ToArray());
 
     [Theory]
+    [InlineData("profiles.manage", "profiles.manage", true)]
+    [InlineData("read profiles.manage write", "profiles.manage", true)]
+    [InlineData("  profiles.manage   ", "profiles.manage", true)]
+    [InlineData("profiles.manage.extra", "profiles.manage", false)]
+    [InlineData("PROFILES.MANAGE", "profiles.manage", false)]
+    [InlineData("read\tprofiles.manage", "profiles.manage", false)]
+    [InlineData("read\u00a0profiles.manage", "profiles.manage", false)]
+    [InlineData("profiles.manage", "", false)]
+    [InlineData("", "profiles.manage", false)]
+    public void PermissionMatchesWholeSpaceDelimitedScopeWithOrdinalComparison(string scope, string permission, bool expected)
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("scope", scope)]));
+
+        Assert.Equal(expected, ExternalIdentityExtensions.HasPermission(principal, "scope", permission));
+    }
+
+    [Fact]
+    public void PermissionSearchesAllClaimsAndIdentitiesWithClaimTypeMatching()
+    {
+        var principal = new ClaimsPrincipal([
+            new ClaimsIdentity([new Claim("other", "profiles.manage"), new Claim("scope", "read")]),
+            new ClaimsIdentity([new Claim("SCOPE", "write profiles.manage")])
+        ]);
+
+        Assert.True(ExternalIdentityExtensions.HasPermission(principal, "scope", "profiles.manage"));
+        Assert.False(ExternalIdentityExtensions.HasPermission(principal, "other", "write"));
+    }
+
+    [Theory]
     [InlineData(null, "audience", HttpStatusCode.Unauthorized)]
     [InlineData("", "audience", HttpStatusCode.Forbidden)]
     [InlineData("profiles.manage", "audience", HttpStatusCode.OK)]
