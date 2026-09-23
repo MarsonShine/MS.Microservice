@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +23,7 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Messaging;
+using MS.Microservice.Messaging.RabbitMQ;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Persistence;
 using MS.Microservice.Reference.Web;
@@ -37,6 +39,7 @@ public sealed class ReferenceHostTests
         await using var fixture = await Fixture.CreateAsync();
         using var live = await fixture.Client.GetAsync("/health/live");
         Assert.Equal(HttpStatusCode.OK, live.StatusCode);
+        Assert.Equal("{\"status\":\"healthy\"}", await live.Content.ReadAsStringAsync());
         using var anonymous = await fixture.Client.GetAsync("/api/v1/profiles");
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
         fixture.Authenticate("profiles.manage");
@@ -76,7 +79,10 @@ public sealed class ReferenceHostTests
         await using var fixture = await Fixture.CreateAsync();
         using var response = await fixture.Client.GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Contains("pending_migrations", await response.Content.ReadAsStringAsync());
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("unhealthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Equal("pending_migrations", body.RootElement.GetProperty("reason").GetString());
+        Assert.Equal(2, body.RootElement.EnumerateObject().Count());
     }
 
     [Theory]
@@ -87,7 +93,36 @@ public sealed class ReferenceHostTests
         await using var fixture = await Fixture.CreateAsync(migrated: true, brokerAvailable: connected);
         using var response = await fixture.Client.GetAsync("/health/ready");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(expected, await response.Content.ReadAsStringAsync());
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(expected, body.RootElement.GetProperty("status").GetString());
+        Assert.Equal("SelfManaged", body.RootElement.GetProperty("messaging").GetString());
+        Assert.Equal(2, body.RootElement.EnumerateObject().Count());
+    }
+
+    [Theory]
+    [InlineData(false, "pending_migrations")]
+    [InlineData(true, "storage_unavailable")]
+    public async Task StorageFailureIsUnhealthyAndKeepsMigrationReasonPriority(bool migrated, string reason)
+    {
+        await using var fixture = await Fixture.CreateAsync(migrated: migrated, storageAvailable: false);
+        using var response = await fixture.Client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("unhealthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Equal(reason, body.RootElement.GetProperty("reason").GetString());
+        Assert.Equal(2, body.RootElement.EnumerateObject().Count());
+    }
+
+    [Fact]
+    public async Task BrokerProbeExceptionIsUnhealthyRatherThanDegraded()
+    {
+        await using var fixture = await Fixture.CreateAsync(migrated: true, brokerAvailable: true);
+        await fixture.Broker.DisposeAsync();
+        using var response = await fixture.Client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("unhealthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Equal("storage_unavailable", body.RootElement.GetProperty("reason").GetString());
     }
 
     [Fact]
@@ -183,6 +218,7 @@ public sealed class ReferenceHostTests
     {
         private static readonly SymmetricSecurityKey Key = new(Enumerable.Repeat((byte)19, 32).ToArray());
         public HttpClient Client { get; } = app.GetTestClient();
+        public RabbitMqTransport Broker => app.Services.GetRequiredService<RabbitMqTransport>();
         public IReadOnlyList<Endpoint> Endpoints => app.Services.GetRequiredService<EndpointDataSource>().Endpoints;
 
         public static WebApplicationBuilder Builder(string provider = "SelfManaged") => ServiceHost.CreateBuilder([
@@ -193,7 +229,7 @@ public sealed class ReferenceHostTests
         ]);
 
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
-            int? apiPermitLimit = null, int? apiTimeoutSeconds = null)
+            int? apiPermitLimit = null, int? apiTimeoutSeconds = null, bool storageAvailable = true)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -220,6 +256,13 @@ public sealed class ReferenceHostTests
             builder.Services.RemoveAll<DbContextOptions<SelfManagedReferenceDbContext>>();
             builder.Services.RemoveAll<SelfManagedReferenceDbContext>();
             builder.Services.AddDbContext<SelfManagedReferenceDbContext>(options => options.UseSqlite(connection));
+            if (!storageAvailable)
+            {
+                builder.Services.RemoveAll<IMessageStorageProbe>();
+                var storage = Substitute.For<IMessageStorageProbe>();
+                storage.CheckAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("storage offline")));
+                builder.Services.AddSingleton(storage);
+            }
             builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 var configuration = new OpenIdConnectConfiguration { Issuer = "https://issuer.example" };

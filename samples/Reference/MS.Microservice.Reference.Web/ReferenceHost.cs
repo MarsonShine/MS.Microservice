@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Logging.AspNetCore;
@@ -52,6 +54,14 @@ public static class ReferenceHost
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
+        builder.Services.AddPlatformHealthChecks()
+            .Add(new HealthCheckRegistration("durable-storage",
+                static services => new ReferenceDurableStorageHealthCheck(
+                    services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<IMessageStorageProbe>()),
+                HealthStatus.Unhealthy, [PlatformHealthChecks.ReadyTag], TimeSpan.FromSeconds(5)))
+            .Add(new HealthCheckRegistration("broker",
+                static services => new ReferenceBrokerHealthCheck(services.GetRequiredService<RabbitMqTransport>()),
+                HealthStatus.Unhealthy, [PlatformHealthChecks.ReadyTag], TimeSpan.FromSeconds(5)));
         if (Enabled(builder.Configuration, "Http:RateLimiting:Enabled"))
         {
             var permitLimit = PositiveInt(builder.Configuration, "Http:RateLimiting:PermitLimit", 120);
@@ -89,8 +99,7 @@ public static class ReferenceHost
         app.UseAuthentication();
         if (rateLimiting) app.UsePlatformRateLimiting();
         app.UseAuthorization();
-        app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
-        app.MapGet("/health/ready", ReadinessAsync).AllowAnonymous();
+        app.MapPlatformHealthChecks(WriteReadinessAsync);
         if (rateLimiting || requestTimeouts)
         {
             var api = app.MapGroup("");
@@ -118,20 +127,26 @@ public static class ReferenceHost
         throw new ArgumentException($"{key} must be a positive integer.");
     }
 
-    private static async Task<IResult> ReadinessAsync(ReferenceDbContext context, IMessageStorageProbe storage,
-        RabbitMqTransport broker, MessagingProviderRegistration provider, CancellationToken cancellationToken)
+    private static async Task WriteReadinessAsync(HttpContext context, HealthReport report)
     {
-        try
+        context.Response.ContentType = "application/json";
+        using var writer = new Utf8JsonWriter(context.Response.BodyWriter);
+        writer.WriteStartObject();
+        writer.WriteString("status", report.Status switch
         {
-            await context.Profiles.AsNoTracking().AnyAsync(cancellationToken);
-            if ((await context.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
-                return Results.Json(new { status = "unhealthy", reason = "pending_migrations" }, statusCode: 503);
-            await storage.CheckAsync(cancellationToken);
-            var connected = await broker.ProbeAsync(cancellationToken);
-            return Results.Ok(new { status = connected ? "healthy" : "degraded", messaging = provider.Name });
+            HealthStatus.Healthy => "healthy",
+            HealthStatus.Degraded => "degraded",
+            _ => "unhealthy"
+        });
+        if (report.Status == HealthStatus.Unhealthy)
+        {
+            var pendingMigrations = report.Entries.TryGetValue("durable-storage", out var storage)
+                && storage.Description == "pending_migrations";
+            writer.WriteString("reason", pendingMigrations ? "pending_migrations" : "storage_unavailable");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch { return Results.Json(new { status = "unhealthy", reason = "storage_unavailable" }, statusCode: 503); }
+        else writer.WriteString("messaging", context.RequestServices.GetRequiredService<MessagingProviderRegistration>().Name);
+        writer.WriteEndObject();
+        await writer.FlushAsync(context.RequestAborted);
     }
 }
 

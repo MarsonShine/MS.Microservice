@@ -21,3 +21,5 @@ Required settings are `ConnectionStrings:ReferenceDatabase`, `Messaging:RabbitMQ
 | `/api/operations/messages/failures/{failureId}/replay` | Submit an authorized replay. |
 
 The test project executes the same HTTP pipeline with SQLite and static test identity metadata. It replaces external background services and broker connections; separate integration tests verify actual PostgreSQL/RabbitMQ behavior.
+
+The health endpoints use shared ASP.NET Core health-check wiring. Liveness never queries external dependencies. Readiness checks database migrations, message storage and Broker with five-second probe deadlines; after shutdown begins, it immediately returns `503` with reason `stopping`. The existing `healthy`, `degraded`, `pending_migrations` and `storage_unavailable` responses remain available. See [存活与就绪检查](../../../src/MS.Microservice.AspNetCore/docs/health-checks.md).
