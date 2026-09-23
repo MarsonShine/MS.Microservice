@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Identity;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace MS.Microservice.Lab.Application.Identity;
 
@@ -46,7 +43,7 @@ public sealed class UserPasswordService(
 
         var verificationResult = VerifyModernPassword(user, user.Password, providedPassword);
         if (verificationResult == PasswordVerificationResult.Failed
-            && VerifyLegacyPassword(user, providedPassword))
+            && LegacyPasswordVerifier.Verify(user, providedPassword))
         {
             verificationResult = PasswordVerificationResult.SuccessRehashNeeded;
         }
@@ -80,19 +77,4 @@ public sealed class UserPasswordService(
         }
     }
 
-    private static bool VerifyLegacyPassword(User user, string providedPassword)
-    {
-        if (string.IsNullOrEmpty(user.Salt)
-            || string.Equals(user.Salt, User.ModernPasswordSaltMarker, StringComparison.Ordinal)
-            || string.IsNullOrEmpty(user.Password))
-        {
-            return false;
-        }
-
-        var expectedHash = CryptologyHelper.HmacSha256(providedPassword + user.Salt);
-        var expectedBytes = Encoding.UTF8.GetBytes(expectedHash);
-        var actualBytes = Encoding.UTF8.GetBytes(user.Password);
-        return expectedBytes.Length == actualBytes.Length
-            && CryptographicOperations.FixedTimeEquals(expectedBytes, actualBytes);
-    }
 }

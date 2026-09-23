@@ -19,6 +19,8 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 
 对称加密只接受调用方提供的 32 字节密钥，并使用带版本号的 AES-256-GCM 密文；旧 AES-ECB 和 3DES 格式已停用。原因、格式和密钥使用方式见[对称加密格式](Security/Cryptology/authenticated-encryption.md)。
 
+`HmacSha256` 要求调用方明确传入密钥。旧密码哈希的固定密钥只保留在 Lab 的[旧密码验证说明](../../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)所述登录升级路径中。
+
 ### HTTP 请求辅助
 
 LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null 值省略，空字符串保留，

@@ -1,6 +1,5 @@
 ﻿using MS.Microservice.Core.Extension;
 using MS.Microservice.Core.Identity;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using System.Linq;
 using System.Security.Claims;
@@ -30,17 +29,5 @@ namespace MS.Microservice.Domain.Identity
             return await Task.FromResult(id);
         }
 
-        public static User JWT2User(ClaimsIdentity identity)
-        {
-            var name = identity.FindFirst(c => c.Type == JwtClaimTypes.NickName);
-            var phoneNumber = identity.FindFirst(c => c.Type == JwtClaimTypes.PhoneNumber);
-            var id = identity.FindFirst(c => c.Type == JwtClaimTypes.Id);
-            var mail = "mail@example.com";
-            var salt = PasswordSaltHelper.Generate();
-            var pwd = CryptologyHelper.HmacSha256("Example123456" + salt);
-            var u = new User(account: phoneNumber!.Value, pwd, salt, false, phoneNumber.Value, 0, 0, mail, name!.Value, phoneNumber!.Value, id!.Value);
-
-            return u;
-        }
     }
 }
