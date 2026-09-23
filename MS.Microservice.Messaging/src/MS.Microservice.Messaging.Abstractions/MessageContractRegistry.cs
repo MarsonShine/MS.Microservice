@@ -38,7 +38,7 @@ public sealed class MessageContractRegistry
         foreach (var contract in contracts)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(contract.Name);
-            if (contract.Version <= 0 || contract.Name.Length > 200
+            if (!MessageRoutingKey.IsValid(contract.Name, contract.Version)
                 || !typeof(IIntegrationEvent).IsAssignableFrom(contract.MessageType)
                 || contract.MessageType.IsAbstract || contract.MessageType.ContainsGenericParameters)
                 throw new ArgumentException($"Invalid message contract: {contract.Name} v{contract.Version}.");
@@ -60,6 +60,7 @@ public sealed class MessageContractRegistry
     {
         ArgumentNullException.ThrowIfNull(message);
         ValidateIdentity(message.Id, message.OccurredAtUtc);
+        MessageMetadataLimits.Validate(context?.CorrelationId, context?.TraceParent, context?.TraceState);
         var contract = Get(message.GetType());
         return new(message.Id, contract.Name, contract.Version, message.OccurredAtUtc,
             contract.Serialize(message), context?.CorrelationId,
@@ -70,6 +71,7 @@ public sealed class MessageContractRegistry
     {
         ArgumentNullException.ThrowIfNull(message);
         ValidateIdentity(message.Id, message.OccurredAtUtc);
+        MessageMetadataLimits.Validate(message.CorrelationId, message.TraceParent, message.TraceState);
         var contract = Get(message.ContractName, message.ContractVersion);
         try
         {

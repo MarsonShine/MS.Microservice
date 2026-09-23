@@ -9,6 +9,8 @@
 - [快速启动](Getting-Started.md)：Reference 与 Lab 的独立配置、初始化和恢复演练。
 - [六个递进 Lab](labs/README.md)：从请求分层到消息组件替换。
 - [组件复制与包消费](components/consumption.md)：源码导出、本地打包和仓库外验证。
+- [`src` 基础设施性能检查](infrastructure-performance-review-2026-09-23.md)：合并前 `master` 的逐项目测量记录，部分架构描述已过时。
+- [AI、Logging、Messaging、Persistence 性能检查](extension-modules-performance-review-2026-09-23.md)：合并前 `master` 的四模块测量记录；当前 AOT 状态以[迁移说明](Performance-Aot-Migration.md)为准。
 
 下方理论资料继续保留。执行当前仓库时优先使用以上入口；历史示例的路径和接口应先与当前代码核对。
 ## 如何使用这个文档中心

@@ -140,3 +140,13 @@ HttpRequestException、JsonException；调用方应更新旧的“统一解析�
 
 较早的 `MS.WebHttpClient.HttpClientExtensions` 仍在非成功状态或无效 JSON 时返回默认值；
 它与 LogHttpClient 的异常约定不同，不能按同一套失败规则替换调用。
+
+`LoggingHttpClientHandler` 是另一种可选的 `DelegatingHandler`。Information 日志关闭时，它直接转发原始 `HttpContent`；开启时，默认异步读取并记录完整 URI、请求和响应正文。正文缓存在原 `HttpContent` 内，Handler 不再替换内容对象。宿主需要只记录元数据时，可显式开启 `EnableRedaction`：
+
+```csharp
+services.Configure<LoggingHttpClientHandlerOptions>(options => options.EnableRedaction = true);
+services.AddTransient<LoggingHttpClientHandler>();
+services.AddHttpClient("remote-api").AddHttpMessageHandler<LoggingHttpClientHandler>();
+```
+
+开启后，该 Handler 只记录方法、不含查询字符串的路径、响应状态或失败类型、耗时。它不读取或记录请求与响应正文；HTTP 内容和异常仍原样交给调用方。路径本身可能包含业务标识，调用方仍应避免把凭据放进路径。没有开启该设置的客户端维持完整正文日志行为。两种模式的读取、缓冲与资源所有权见[正文日志实现说明](Net/Http/body-logging.md)。

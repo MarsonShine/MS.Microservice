@@ -24,15 +24,14 @@ public sealed class DeepSeekOptionsValidator : IValidateOptions<AIOptions>
 
     private static void AddUnsupportedCapabilityFailures<TModelOptions>(
         IDictionary<string, TModelOptions> models,
-        Func<TModelOptions, string?> getProvider,
+        Func<TModelOptions, string> getProvider,
         ICollection<string> failures,
         string capabilitySection)
         where TModelOptions : class
     {
         foreach (var model in models)
         {
-            var provider = getProvider(model.Value);
-            if (string.Equals(provider, DeepSeekProviderDefaults.ProviderName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(getProvider(model.Value), DeepSeekProviderDefaults.ProviderName, StringComparison.OrdinalIgnoreCase))
             {
                 failures.Add($"AI:Models:{capabilitySection}:{model.Key} cannot use provider '{DeepSeekProviderDefaults.ProviderName}' because it currently supports chat only.");
             }

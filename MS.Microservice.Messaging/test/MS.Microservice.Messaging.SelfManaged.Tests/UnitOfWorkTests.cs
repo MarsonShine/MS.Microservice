@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MS.Microservice.Messaging.SelfManaged;
@@ -101,6 +102,24 @@ public sealed class UnitOfWorkTests
             await unit.EnqueueAsync(message, token);
             await unit.EnqueueAsync(message with { Name = "different" }, token);
         }));
+        Assert.Empty(await context.Set<OutboxEntry>().ToListAsync());
+    }
+
+    [Fact]
+    public async Task OversizedAmbientCorrelationIdCannotCommitBusinessOrOutbox()
+    {
+        await using var connection = await OpenAsync();
+        await using var context = new BusinessContext(connection);
+        await context.Database.EnsureCreatedAsync();
+        var unit = Create(context);
+        using var activity = new Activity("messaging-test")
+            .AddBaggage("correlationId", new string('x', 201)).Start();
+        await Assert.ThrowsAsync<MessageContractException>(() => unit.ExecuteAsync(async token =>
+        {
+            context.Add(new BusinessRow { Id = 1 });
+            await unit.EnqueueAsync(NewEvent(), token);
+        }));
+        Assert.Empty(await context.Set<BusinessRow>().ToListAsync());
         Assert.Empty(await context.Set<OutboxEntry>().ToListAsync());
     }
 

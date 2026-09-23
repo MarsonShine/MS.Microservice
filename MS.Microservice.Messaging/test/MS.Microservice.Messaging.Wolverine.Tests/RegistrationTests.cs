@@ -41,6 +41,20 @@ public sealed class RegistrationTests
         Assert.Equal(typeof(Changed).FullName, Assert.Single(endpoint.Subscriptions).Match);
     }
 
+    [Fact]
+    public void NativeProviderAcceptsValidUnicodeRoutingBoundary()
+    {
+        var name = new string('中', 83);
+        var topology = new MessageTopology([MessageContract.For<Changed>(name, TestMessageJsonContext.Default.RegisteredChanged)],
+            [MessageSubscription.For<Changed, Handler>("audit")]);
+        var options = new WolverineOptions();
+        WolverineMessagingExtensions.ConfigureWolverineMessaging<TestContext>(options, topology, Options(),
+            [WolverineMessageRegistration<TestContext>.For<Changed>()]);
+        var envelope = new Envelope(new Changed(Guid.NewGuid(), DateTimeOffset.UtcNow));
+        new IntegrationEventIdentityRule(topology.Registry).Modify(envelope);
+        Assert.Equal(MessageRoutingKey.Format(name, 1), envelope.MessageType);
+    }
+
     [Theory]
     [InlineData("schema")]
     [InlineData("database")]

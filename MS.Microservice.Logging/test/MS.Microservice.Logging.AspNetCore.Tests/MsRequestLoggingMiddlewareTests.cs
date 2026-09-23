@@ -10,6 +10,31 @@ namespace MS.Microservice.Logging.AspNetCore.Tests;
 public sealed class MsRequestLoggingMiddlewareTests
 {
     [Fact]
+    public async Task InvokeAsync_ShouldExpireAmbientContextInDetachedChild()
+    {
+        var releaseChild = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<RequestLogContext?>? child = null;
+        var middleware = new MsRequestLoggingMiddleware(
+            next: _ =>
+            {
+                child = Task.Run(async () =>
+                {
+                    await releaseChild.Task;
+                    return RequestLogScope.Current;
+                });
+                return Task.CompletedTask;
+            },
+            TimeProvider.System,
+            new TestLogger<MsRequestLoggingMiddleware>(),
+            Options.Create(new AspNetCoreRequestLoggingOptions { EmitCompletionLog = false }));
+
+        await middleware.InvokeAsync(new DefaultHttpContext());
+        releaseChild.SetResult();
+
+        (await child!).Should().BeNull();
+    }
+
+    [Fact]
     public async Task InvokeAsync_ShouldCaptureHeadersAndEmitCompletionLog()
     {
         var timeProvider = new ControlledTimeProvider(DateTimeOffset.Parse("2026-06-03T00:00:00Z"));

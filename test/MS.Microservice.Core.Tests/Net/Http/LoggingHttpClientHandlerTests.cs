@@ -1,146 +1,260 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
-using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Core.Net.Http;
-using static MS.Microservice.TestSupport.HttpLoggingTestSupport;
+using Xunit;
 
 namespace MS.Microservice.Core.Tests.Net.Http;
 
 public sealed class LoggingHttpClientHandlerTests
 {
-    [Theory]
-    [InlineData("", "utf-8")]
-    [InlineData("{\"name\":\"demo\"}", "utf-8")]
-    [InlineData("中文正文", "utf-8")]
-    [InlineData("中文正文", "utf-16")]
-    public async Task EnabledLogging_PreservesBodiesHeadersAndOwnership(string body, string charset)
+    [Fact]
+    public async Task ConfiguredOptionsEnableRedactionThroughDependencyInjection()
     {
         var logger = new CapturingLogger<LoggingHttpClientHandler>();
-        var encoding = Encoding.GetEncoding(charset);
-        var requestContent = new ProbeContent(encoding.GetBytes(body));
-        var responseContent = new ProbeContent(encoding.GetBytes(body));
-        foreach (var content in new[] { requestContent, responseContent })
-        {
-            content.Headers.ContentType = new MediaTypeHeaderValue("text/plain") { CharSet = charset };
-            content.Headers.Add("X-Payload", "preserved");
-        }
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test") { Content = requestContent };
-        using var client = new HttpMessageInvoker(new LoggingHttpClientHandler(logger)
-        {
-            InnerHandler = new CallbackHandler(async (message, token) =>
-            {
-                Assert.Same(requestContent, message.Content);
-                Assert.Equal(body, await message.Content!.ReadAsStringAsync(token));
-                return new(HttpStatusCode.OK) { Content = responseContent };
-            })
-        });
+        var services = new ServiceCollection();
+        services.AddSingleton<ILogger<LoggingHttpClientHandler>>(logger);
+        services.Configure<LoggingHttpClientHandlerOptions>(options => options.EnableRedaction = true);
+        services.AddTransient<LoggingHttpClientHandler>();
+        using var provider = services.BuildServiceProvider();
+        var handler = provider.GetRequiredService<LoggingHttpClientHandler>();
+        handler.InnerHandler = new RecordingHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+        using var client = new HttpClient(handler);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.GetAsync("https://example.test/orders?token=private-query");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Single(logger.Entries);
+        Assert.Contains("GET /orders responded 204", logger.Entries[0].Message);
+        Assert.DoesNotContain("private-query", logger.Entries[0].Message);
+    }
+
+    [Fact]
+    public async Task RedactionEnabled_LogsOnlyMetadataAndLeavesContentUnwrapped()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler>();
+        using var requestContent = new StringContent("request-private-value", Encoding.UTF8, "application/json");
+        using var responseContent = new StringContent("response-private-value", Encoding.UTF8, "application/json");
+        var innerHandler = new RecordingHandler(request =>
+        {
+            Assert.Same(requestContent, request.Content);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Accepted) { Content = responseContent });
+        });
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+        using var request = new HttpRequestMessage(HttpMethod.Post,
+            "https://user:password@example.test/orders/42?token=query-private-value#fragment") { Content = requestContent };
+
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
         Assert.Same(responseContent, response.Content);
-        Assert.Equal(body, await response.Content.ReadAsStringAsync());
-        Assert.False(requestContent.Disposed);
-        Assert.False(responseContent.Disposed);
-        foreach (var content in new[] { requestContent, responseContent })
-        {
-            Assert.Equal(charset, content.Headers.ContentType!.CharSet);
-            Assert.Equal("preserved", Assert.Single(content.Headers.GetValues("X-Payload")));
-            Assert.Equal(1, content.Serializations);
-        }
-        Assert.Equal(2, logger.Entries.Count);
-        Assert.Equal(body, Assert.IsType<string>(logger.Entries[0].Fields["@Payload"]));
-        Assert.Equal(body, Assert.IsType<string>(logger.Entries[1].Fields["@Response"]));
-        Assert.Equal(logger.Entries[0].Fields["Guid"], logger.Entries[1].Fields["Guid"]);
+        Assert.Single(logger.Entries);
+        var log = logger.Entries[0].Message;
+        Assert.Contains("POST /orders/42 responded 202", log);
+        Assert.Contains(" ms", log);
+        Assert.DoesNotContain("request-private-value", log);
+        Assert.DoesNotContain("response-private-value", log);
+        Assert.DoesNotContain("query-private-value", log);
+        Assert.DoesNotContain("password", log);
+        Assert.DoesNotContain("example.test", log);
+        Assert.DoesNotContain("fragment", log);
+    }
 
-        request.Dispose();
-        response.Dispose();
-        Assert.True(requestContent.Disposed);
+    [Fact]
+    public async Task RedactionEnabled_RemovesQueryAndFragmentFromRelativeUri()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler>();
+        var innerHandler = new RecordingHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
+        using var invoker = new HttpMessageInvoker(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+        using var request = new HttpRequestMessage(HttpMethod.Get,
+            new Uri("/relative/orders?token=private-query#fragment", UriKind.Relative));
+
+        using var response = await invoker.SendAsync(request, CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Single(logger.Entries);
+        Assert.Contains("GET /relative/orders responded 200", logger.Entries[0].Message);
+        Assert.DoesNotContain("private-query", logger.Entries[0].Message);
+        Assert.DoesNotContain("fragment", logger.Entries[0].Message);
+    }
+
+    [Fact]
+    public async Task RedactionEnabled_DoesNotReadRequestOrResponseStreamsForLogging()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler>();
+        using var requestContent = new ProbeContent();
+        using var responseContent = new ProbeContent();
+        var innerHandler = new RecordingHandler(request =>
+        {
+            Assert.Same(requestContent, request.Content);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = responseContent });
+        });
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test/stream") { Content = requestContent };
+
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+        Assert.Same(responseContent, response.Content);
+        Assert.Equal(0, requestContent.SerializationCount);
+        Assert.Equal(0, responseContent.SerializationCount);
+        Assert.Single(logger.Entries);
+    }
+
+    [Fact]
+    public async Task RedactionEnabled_LogsFailureTypeWithoutExceptionMessageOrQuery()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler>();
+        var failure = new InvalidOperationException("private-failure-message");
+        var innerHandler = new RecordingHandler(_ => Task.FromException<HttpResponseMessage>(failure));
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+
+        var observed = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.GetAsync("https://example.test/fail?token=private-query"));
+
+        Assert.Same(failure, observed);
+        Assert.Single(logger.Entries);
+        Assert.Contains("GET /fail failed InvalidOperationException", logger.Entries[0].Message);
+        Assert.DoesNotContain("private-failure-message", logger.Entries[0].Message);
+        Assert.DoesNotContain("private-query", logger.Entries[0].Message);
+    }
+
+    [Fact]
+    public async Task RedactionEnabled_PreservesCancellationAndLogsMetadata()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler>();
+        using var cancellation = new CancellationTokenSource();
+        var innerHandler = new RecordingHandler(_ =>
+        {
+            cancellation.Cancel();
+            return Task.FromCanceled<HttpResponseMessage>(cancellation.Token);
+        });
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.GetAsync("https://example.test/cancel?token=private-query", cancellation.Token));
+
+        Assert.Single(logger.Entries);
+        Assert.Contains("GET /cancel canceled", logger.Entries[0].Message);
+        Assert.DoesNotContain("private-query", logger.Entries[0].Message);
+    }
+
+    [Fact]
+    public async Task RedactionEnabled_DisposesUnreturnedResponseWhenLoggerThrows()
+    {
+        var logger = new CapturingLogger<LoggingHttpClientHandler> { ThrowOnEntry = 1 };
+        var responseContent = new ProbeContent();
+        var innerHandler = new RecordingHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = responseContent
+        }));
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger,
+            Options.Create(new LoggingHttpClientHandlerOptions { EnableRedaction = true })) { InnerHandler = innerHandler });
+
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.GetAsync("https://example.test/orders?token=private-query"));
+
+        Assert.Equal("Logger failed.", failure.Message);
         Assert.True(responseContent.Disposed);
-        foreach (var entry in logger.Entries) Assert.Equal(entry.Message, entry.Render());
-        Assert.Equal(1, requestContent.Serializations);
-        Assert.Equal(1, responseContent.Serializations);
     }
 
     [Fact]
-    public async Task EnabledLogging_HandlesAbsentRequestAndEmptyResponseBodies()
+    public async Task DefaultModeStillLogsFullUriAndBodiesWithoutReplacingContent()
     {
         var logger = new CapturingLogger<LoggingHttpClientHandler>();
-        using var client = new HttpMessageInvoker(new LoggingHttpClientHandler(logger)
+        using var requestContent = new StringContent("{\"name\":\"demo\"}", Encoding.UTF8, "application/json");
+        using var responseContent = new StringContent("{\"ok\":true}", Encoding.UTF8, "application/json");
+        var innerHandler = new RecordingHandler(request =>
         {
-            InnerHandler = new CallbackHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)))
-        });
-        using var request = new HttpRequestMessage(HttpMethod.Get, "https://example.test");
-        using var response = await client.SendAsync(request, CancellationToken.None);
-
-        Assert.Null(request.Content);
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal("null", logger.Entries[0].Fields["@Payload"]);
-        Assert.Equal("", logger.Entries[1].Fields["@Response"]);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task LoggingReadFailure_IsReportedWithoutReplacingContent(bool requestBody)
-    {
-        var logger = new CapturingLogger<LoggingHttpClientHandler>();
-        var broken = new BrokenContent();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test");
-        if (requestBody) request.Content = broken;
-        using var client = new HttpMessageInvoker(new LoggingHttpClientHandler(logger)
-        {
-            InnerHandler = new CallbackHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = requestBody ? new StringContent("response") : broken
-            }))
-        });
-        using var response = await client.SendAsync(request, CancellationToken.None);
-
-        Assert.Same(broken, requestBody ? request.Content : response.Content);
-        var entry = logger.Entries[requestBody ? 0 : 1];
-        Assert.StartsWith("Error reading content:", Assert.IsType<string>(entry.Fields[requestBody ? "@Payload" : "@Response"]));
-    }
-
-    [Fact]
-    public async Task ResponseLoggerFailure_DisposesResponseBeforePropagating()
-    {
-        var logger = new CapturingLogger<LoggingHttpClientHandler> { ThrowOnEntry = 2 };
-        var content = new ProbeContent("response"u8.ToArray());
-        using var client = new HttpMessageInvoker(new LoggingHttpClientHandler(logger)
-        {
-            InnerHandler = new CallbackHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content }))
-        });
-        using var request = new HttpRequestMessage(HttpMethod.Get, "https://example.test");
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => client.SendAsync(request, CancellationToken.None));
-
-        Assert.Equal("Logger failed.", exception.Message);
-        Assert.True(content.Disposed);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task TransportFailure_IsPreservedAndRequestRemainsCallerOwned(bool enabled)
-    {
-        var logger = new CapturingLogger<LoggingHttpClientHandler> { Enabled = enabled };
-        var content = new ProbeContent("request"u8.ToArray());
-        var failure = new HttpRequestException("transport failed");
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://example.test") { Content = content };
-        using var client = new HttpMessageInvoker(new LoggingHttpClientHandler(logger)
-        {
-            InnerHandler = new CallbackHandler((_, _) => Task.FromException<HttpResponseMessage>(failure))
+            Assert.Same(requestContent, request.Content);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = responseContent });
         });
 
-        Assert.Same(failure, await Assert.ThrowsAsync<HttpRequestException>(() => client.SendAsync(request, CancellationToken.None)));
-        Assert.False(content.Disposed);
-        Assert.Equal(enabled ? 1 : 0, logger.Entries.Count);
+        using var client = new HttpClient(new LoggingHttpClientHandler(logger) { InnerHandler = innerHandler });
+
+        using var response = await client.PostAsync("https://example.test/orders?token=legacy-query", requestContent);
+        string requestPayload = await innerHandler.LastRequest!.Content!.ReadAsStringAsync();
+        string responsePayload = await response.Content!.ReadAsStringAsync();
+
+        Assert.Equal("{\"name\":\"demo\"}", requestPayload);
+        Assert.Equal("{\"ok\":true}", responsePayload);
+        Assert.Same(responseContent, response.Content);
+        Assert.Equal(2, logger.Entries.Count);
+        Assert.Contains("\"name\":\"demo\"", logger.Entries[0].Message);
+        Assert.Contains("legacy-query", logger.Entries[0].Message);
+        Assert.Contains("\"ok\":true", logger.Entries[1].Message);
     }
 
-    private sealed class BrokenContent : HttpContent
+    private sealed class RecordingHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) : HttpMessageHandler
     {
-        protected override bool TryComputeLength(out long length) { length = 0; return false; }
+        public HttpRequestMessage? LastRequest { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return await responder(request);
+        }
+    }
+
+    private sealed class ProbeContent : HttpContent
+    {
+        public int SerializationCount { get; private set; }
+        public bool Disposed { get; private set; }
+
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
-            => Task.FromException(new IOException("body failed"));
+        {
+            SerializationCount++;
+            throw new InvalidOperationException("Content was read for logging.");
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<LogEntry> Entries { get; } = [];
+        public int ThrowOnEntry { get; set; }
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (ThrowOnEntry == Entries.Count + 1) throw new InvalidOperationException("Logger failed.");
+            Entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
+        }
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
+
+    private sealed class NullScope : IDisposable
+    {
+        public static NullScope Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
     }
 }

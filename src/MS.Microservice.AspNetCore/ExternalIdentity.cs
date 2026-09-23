@@ -71,6 +71,22 @@ public static class ExternalIdentityExtensions
     }
 
     public static bool HasPermission(ClaimsPrincipal user, string claimType, string permission)
-        => user.FindAll(claimType).SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            .Contains(permission, StringComparer.Ordinal);
+    {
+        if (string.IsNullOrEmpty(permission)) return false;
+
+        foreach (var claim in user.FindAll(claimType))
+        {
+            var remaining = claim.Value.AsSpan();
+            while (!remaining.IsEmpty)
+            {
+                var separator = remaining.IndexOf(' ');
+                var scope = separator < 0 ? remaining : remaining[..separator];
+                if (!scope.IsEmpty && scope.Equals(permission, StringComparison.Ordinal)) return true;
+                if (separator < 0) break;
+                remaining = remaining[(separator + 1)..];
+            }
+        }
+
+        return false;
+    }
 }

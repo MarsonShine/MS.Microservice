@@ -16,7 +16,7 @@ public sealed class WolverineMessageRegistration<TContext> where TContext : DbCo
     public static WolverineMessageRegistration<TContext> For<TEvent>() where TEvent : IIntegrationEvent
         => new(typeof(TEvent), static (options, contract) =>
         {
-            var alias = $"{contract.Name}.v{contract.Version}";
+            var alias = MessageRoutingKey.Format(contract.Name, contract.Version);
             options.RegisterMessageType(typeof(TEvent), alias);
             options.Discovery.IncludeType(typeof(WolverineIntegrationEventHandler<TEvent, TContext>));
             options.PublishMessage<TEvent>()

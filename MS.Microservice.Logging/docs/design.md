@@ -23,3 +23,9 @@ Logging 关注日志字段、输出与后端；根 src 下的 Observability 负�
 
 阅读顺序：Core 上下文 → AspNetCore 中间件 → 选择的后端适配器 → 相应测试。
 详细配置见[模块 README](../README.md)。
+
+## 请求作用域为什么使用 Holder
+
+`MsRequestLoggingMiddleware` 每次请求调用 `RequestLogScope.Push`，请求结束时释放作用域。只在当前执行流恢复 `AsyncLocal.Value`，不能使此前继承该值的子任务失效；子任务可能在请求结束后继续把旧的 RequestId 等字段写入日志。现在每次 Push 创建可清空的 Holder，释放时先清空当前 Holder，再恢复外层 Holder。详细的执行流示例、三种写法的区别和使用条件见[技术文章](async-local-holder-lifetime.md)。
+
+这一生命周期保证有分配成本：Windows x64、.NET 10.0.12、Release 下，[基准程序](../benchmarks/MS.Microservice.Logging.Core.Benchmarks/Program.cs)按每场景 7 轮、每轮 20 万次测得普通 Push/Dispose 从直接存值时的 100.8 ns、104 B/次变为 117.3 ns、136 B/次。耗时有波动，分配差值在重复运行中稳定。这不是完整请求或日志后端的吞吐数据。NLog XML 与 Serilog 配置的 Native AOT 发布兼容性仍需单独验证。

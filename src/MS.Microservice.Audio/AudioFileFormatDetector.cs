@@ -44,8 +44,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
             try
             {
-                var header = new byte[12];
-                stream.ReadExactly(header, 0, 12);
+                Span<byte> header = stackalloc byte[12];
+                stream.ReadExactly(header);
 
                 // 检测 WAV 格式 (RIFF....WAVE)
                 if (header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46 && // "RIFF"
@@ -63,8 +63,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
                 // 检测其他可能的格式
                 stream.Position = 0;
-                var firstBytes = new byte[4];
-                stream.ReadExactly(firstBytes, 0, 4);
+                Span<byte> firstBytes = stackalloc byte[4];
+                stream.ReadExactly(firstBytes);
 
                 // 检测 FLAC 格式
                 if (firstBytes[0] == 0x66 && firstBytes[1] == 0x4C && firstBytes[2] == 0x61 && firstBytes[3] == 0x43) // "fLaC"
@@ -91,8 +91,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         /// </summary>
         private static bool IsMp3Format(Stream stream)
         {
-            var buffer = new byte[10];
-            stream.ReadExactly(buffer, 0, 10);
+            Span<byte> buffer = stackalloc byte[10];
+            stream.ReadExactly(buffer);
 
             // 检测 ID3v2 标签
             if (buffer[0] == 0x49 && buffer[1] == 0x44 && buffer[2] == 0x33) // "ID3"
@@ -102,7 +102,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
             // 检测 MP3 帧头
             stream.Position = 0;
-            var searchBuffer = new byte[Math.Min(1024, (int)stream.Length)];
+            Span<byte> searchBuffer = stackalloc byte[(int)Math.Min(1024L, stream.Length)];
             stream.ReadExactly(searchBuffer);
 
             for (int i = 0; i < searchBuffer.Length - 1; i++)
