@@ -13,3 +13,5 @@
 | 未知格式，扫描 1024 字节 | 570.0 ns/次 | 505.3 ns/次 | 1160 B/次 | 0 B/次 |
 
 可运行 `dotnet run --project benchmarks/MS.Microservice.Audio.Benchmarks/MS.Microservice.Audio.Benchmarks.csproj -c Release` 复测。后续若要优化整条音频处理路径，应先用代表性文件测量 I/O、重采样和编码开销；本次数据不足以支持改动那些部分。
+
+合并音频时写入静音的内存问题与测量结果见[静音写入](silence-buffer-reuse.md)。

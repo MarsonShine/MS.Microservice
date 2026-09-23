@@ -14,6 +14,9 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
     /// </summary>
     public class AudioProcessor : IAudioProcessor
     {
+        // Writers only read this private input buffer; audio readers never use it.
+        private static readonly byte[] SilenceBuffer = new byte[4096];
+
         /// <summary>
         /// 合并多个音频文件为一个文件
         /// </summary>
@@ -356,7 +359,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
                     if (options.SilenceDuration > 0)
                     {
-                        WriteSilenceToMp3(mp3Writer, targetFormat, options.SilenceDuration);
+                        WriteSilence(mp3Writer, targetFormat, options.SilenceDuration);
                     }
                 }
                 finally
@@ -393,7 +396,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
                     if (options.SilenceDuration > 0)
                     {
-                        WriteSilenceToWav(waveWriter, targetFormat, options.SilenceDuration);
+                        WriteSilence(waveWriter, targetFormat, options.SilenceDuration);
                     }
                 }
                 finally
@@ -706,25 +709,21 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             }
         }
 
-        // 修正后的静音写入方法
-        private static void WriteSilenceToWav(WaveFileWriter output, WaveFormat format, float durationSeconds)
+        // Both output paths write PCM silence through their writer, including the MP3 encoder.
+        internal static void WriteSilence(Stream output, WaveFormat format, float durationSeconds)
         {
             int bytesPerSample = format.BitsPerSample / 8;
-            int samplesPerSecond = format.SampleRate * format.Channels;
-            int totalSamples = (int)(samplesPerSecond * durationSeconds);
-            var silenceBuffer = new byte[totalSamples * bytesPerSample];
-
-            output.Write(silenceBuffer, 0, silenceBuffer.Length);
-        }
-
-        private static void WriteSilenceToMp3(LameMP3FileWriter output, WaveFormat format, float durationSeconds)
-        {
-            int bytesPerSample = format.BitsPerSample / 8;
-            int samplesPerSecond = format.SampleRate * format.Channels;
-            int totalSamples = (int)(samplesPerSecond * durationSeconds);
-            var silenceBuffer = new byte[totalSamples * bytesPerSample];
-
-            output.Write(silenceBuffer, 0, silenceBuffer.Length);
+            int samplesPerSecond = checked(format.SampleRate * format.Channels);
+            // Keep the former float multiplication and sample truncation order.
+            int totalSamples = checked((int)(samplesPerSecond * durationSeconds));
+            int remaining = checked(totalSamples * bytesPerSample);
+            ArgumentOutOfRangeException.ThrowIfNegative(remaining, nameof(durationSeconds));
+            while (remaining > 0)
+            {
+                int count = Math.Min(remaining, SilenceBuffer.Length);
+                output.Write(SilenceBuffer, 0, count);
+                remaining -= count;
+            }
         }
 
         private static IWaveProvider CreateAudioReaderFromStream(Stream stream)
