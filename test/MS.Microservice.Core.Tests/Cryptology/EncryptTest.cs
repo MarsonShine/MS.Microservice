@@ -11,7 +11,7 @@ namespace MS.Microservice.Core.Tests.Cryptology
         [Fact]
         public void RsaCrypt_ShouldRoundTrip_WithPkcs8Keys()
         {
-            using var rsa = RSA.Create(1024);
+            using var rsa = RSA.Create(2048);
             string publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
             string privateKey = Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
             const string content = "hello world";

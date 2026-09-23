@@ -21,6 +21,8 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 
 `HmacSha256` 要求调用方明确传入密钥。旧密码哈希的固定密钥只保留在 Lab 的[旧密码验证说明](../../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)所述登录升级路径中。
 
+RSA 新密文使用 OAEP-SHA256 和版本前缀；无前缀的 PKCS#1 v1.5 密文仍可读取。密文长度限制、兼容边界和旧分支退出条件见[RSA 密文格式](Security/Cryptology/rsa-oaep.md)。
+
 ### HTTP 请求辅助
 
 LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null 值省略，空字符串保留，
