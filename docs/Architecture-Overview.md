@@ -18,7 +18,7 @@ Reference 回答“这些能力怎样组合成一个服务”，Lab 回答“为
 
 ## 目录为什么按模块分组
 
-AI、Excel、Logging、Messaging、Persistence 都有多个协作项目、独立测试和自己的接入说明。
+AI、Excel、Logging、Messaging、Persistence、Idempotency 都有独立测试和自己的接入说明。
 因此采用模块优先的组织方式：
 
     MS.Microservice.AI/
@@ -33,7 +33,7 @@ AI、Excel、Logging、Messaging、Persistence 都有多个协作项目、独立
         ...
       MS.Microservice.AI.slnx
 
-其他模块使用同样的结构。根 src/test 保留较小独立组件、跨模块架构测试和宿主测试；
+其他模块按需要组合 README、src、test 和独立解决方案。根 src/test 保留较小独立组件、跨模块架构测试和宿主测试；
 samples 按实际应用组织。根 MS.Microservice.slnx 用于全仓库开发，每个模块的 slnx 用于日常独立打开。
 
 | 组织方式 | 更方便的事情 | 代价 |

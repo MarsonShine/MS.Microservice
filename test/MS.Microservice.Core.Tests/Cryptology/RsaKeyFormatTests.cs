@@ -10,12 +10,13 @@ public sealed class RsaKeyFormatTests
     [Fact]
     public void ShortCrtIntegerEncodingImportsWithoutLosingParameterWidth()
     {
-        var encrypted = CryptologyHelper.RsaCrypt.Encrypt("fixture", ShortRsaParameterFixture.PublicKey, Encoding.UTF8);
+        using var rsa = RSA.Create();
+        rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(ShortRsaParameterFixture.PublicKey), out _);
+        var encrypted = Convert.ToBase64String(rsa.Encrypt(Encoding.UTF8.GetBytes("fixture"), RSAEncryptionPadding.Pkcs1));
         Assert.Equal("fixture", CryptologyHelper.RsaCrypt.Decrypt(encrypted, ShortRsaParameterFixture.PrivateKey, Encoding.UTF8));
     }
 
     [Theory]
-    [InlineData(1024)]
     [InlineData(2048)]
     [InlineData(3072)]
     public void BlockSizeComesFromImportedKey(int bits)
@@ -24,7 +25,9 @@ public sealed class RsaKeyFormatTests
         var publicKey = Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
         var privateKey = Convert.ToBase64String(rsa.ExportPkcs8PrivateKey());
         var encrypted = CryptologyHelper.RsaCrypt.Encrypt("中文 payload", publicKey, Encoding.UTF8);
-        Assert.Equal(bits / 8, Convert.FromBase64String(encrypted).Length);
+        const string prefix = "msenc:v1:rsa-oaep-sha256:";
+        Assert.StartsWith(prefix, encrypted);
+        Assert.Equal(bits / 8, Convert.FromBase64String(encrypted[prefix.Length..]).Length);
         Assert.Equal("中文 payload", CryptologyHelper.RsaCrypt.Decrypt(encrypted, privateKey, Encoding.UTF8));
     }
 
@@ -40,6 +43,7 @@ public sealed class RsaKeyFormatTests
     }
 
     [Theory]
+    [InlineData(0)]
     [InlineData(1)]
     [InlineData(127)]
     [InlineData(129)]

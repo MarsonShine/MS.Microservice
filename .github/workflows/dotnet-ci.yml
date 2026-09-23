@@ -96,6 +96,10 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
+      - name: Validate idempotency compiled model
+        shell: pwsh
+        run: ./build/validate-idempotency-compiled-model.ps1
+
       - name: Test
         run: dotnet test --no-build -c Release --verbosity normal
 

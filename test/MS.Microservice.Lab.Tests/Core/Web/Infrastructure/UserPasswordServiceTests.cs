@@ -1,7 +1,6 @@
 using Autofac;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using MS.Microservice.Core.Security.Cryptology;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Lab.Application.Identity;
@@ -95,6 +94,21 @@ public class UserPasswordServiceTests
             .UpdatePasswordHashAsync(default!, default!, default);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(User.ModernPasswordSaltMarker)]
+    [InlineData("wrong-salt")]
+    public async Task VerifyAndUpgradeAsync_DoesNotAcceptHistoricalHashWithDifferentSalt(string salt)
+    {
+        var userDomainService = Substitute.For<IUserDomainService>();
+        var user = new PersistedUser(7, HistoricalHash, salt);
+        var service = new UserPasswordService(CreateHasher(), userDomainService);
+
+        Assert.False(await service.VerifyAndUpgradeAsync(user, Password));
+        await userDomainService.DidNotReceiveWithAnyArgs()
+            .UpdatePasswordHashAsync(default!, default!, default);
+    }
+
     [Fact]
     public async Task VerifyAndUpgradeAsync_WhenUpgradePersistenceFails_DeniesLogin()
     {
@@ -151,11 +165,11 @@ public class UserPasswordServiceTests
     private static User CreateLegacyUser()
     {
         const string salt = "a1b2";
-        return new PersistedUser(
-            7,
-            CryptologyHelper.HmacSha256(Password + salt),
-            salt);
+        return new PersistedUser(7, HistoricalHash, salt);
     }
+
+    // HMAC-SHA256("Password123a1b2", the historical application key).
+    private const string HistoricalHash = "3f3ed14aa2e8ee40796b1a520ee64e01cbecfc85eaa08bf3616b43c1bf7b21e3";
 
     private sealed class PersistedUser : User
     {

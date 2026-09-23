@@ -56,6 +56,8 @@ module-manifest.json 记录源提交、文件 SHA-256 和项目闭包。
 | Messaging.Wolverine | 独立具体 DbContext、原生存储初始化、原生恢复配置 |
 | Persistence.EFCore / SqlSugar | 数据库 Provider、业务映射、事务入口、数据库结构 |
 | AspNetCore / Logging / Observability | 身份 Authority/Audience、权限、日志后端、遥测导出器 |
+| Http.Resilience | 为选定的命名或类型化客户端设置目标地址、总超时与调用容量；明确哪些业务请求允许重试 |
+| Idempotency.EFCore | 在业务 DbContext 注册模型并应用迁移；由同一工作单元提交业务和响应记录，安排过期清理 |
 | AI.* | Provider 凭据、模型能力、超时、配额与成本报告 |
 | Audio / Excel / EventSourcing | 平台限制、输入文件、资源所有权；事件溯源存储示例在 Lab |
 

@@ -3,12 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Net;
-using System.Security.Claims;
 using System.Text;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Core.Dto;
 using MS.Microservice.Core.Functional;
-using MS.Microservice.Infrastructure.Attributes;
+using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Extension;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Domain.Identity;
@@ -47,7 +46,6 @@ public class AccountController : ControllerBase
     [ProducesResponseType(typeof(ResultDto<AuthenticateResult>), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), (int)HttpStatusCode.Unauthorized)]
-    [NoEncrypt]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         if (request.Account == null || request.Password.IsNullOrEmpty())
@@ -94,15 +92,20 @@ public class AccountController : ControllerBase
     [Authorize(Policy = "Manage")]
     [ProducesResponseType(typeof(ResultDto<Domain.Identity.ActionResult>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.OK)]
-    [NoEncrypt]
     public async Task<IActionResult> Auth()
     {
+        var account = User.FindFirst(JwtClaimTypes.PhoneNumber)?.Value;
+        if (string.IsNullOrWhiteSpace(account))
+        {
+            return this.ToProblem(Error.Unauthorized("当前令牌缺少账号标识。"));
+        }
 
-        var identity = new ClaimsIdentity("BearerIdentity");
-        identity.AddClaims(User.Claims);
+        var user = await _userDomainService.FindAsync(account);
+        if (user is null)
+        {
+            return this.ToProblem(Error.Unauthorized("当前用户不存在。"));
+        }
 
-        var ju = UserClaimHelper.JWT2User(identity);
-        var user = await _userDomainService.FindAsync(ju.Account!);
-        return Ok(new Domain.Identity.ActionResult(user!));
+        return Ok(new Domain.Identity.ActionResult(user));
     }
 }

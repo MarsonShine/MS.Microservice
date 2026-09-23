@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using MS.Microservice.Core.Functional;
+using MS.Microservice.Core.Identity;
+using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Exception;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Lab.Application.Commands;
@@ -13,6 +15,7 @@ using MS.Microservice.Lab.Controller;
 using MS.Microservice.Lab.Infrastructure.Filters;
 using MS.Microservice.Lab.Infrastructure.Http;
 using NSubstitute;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 
@@ -117,6 +120,48 @@ public class ApiProblemDetailsTests
         });
 
         AssertProblem(result, StatusCodes.Status401Unauthorized, "unauthorized");
+    }
+
+    [Fact]
+    public async Task AccountAuth_UsesPhoneClaimToLoadCurrentUser()
+    {
+        const string account = "13800138000";
+        var user = new User(account, "unused", User.ModernPasswordSaltMarker, false,
+            account, 0, 0, "test@example.com", "Test User", account, "test-id");
+        var userDomainService = Substitute.For<IUserDomainService>();
+        userDomainService.FindAsync(account, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<User?>(user));
+        var controller = CreateAccountController(userDomainService);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity([new Claim(JwtClaimTypes.PhoneNumber, account)], "Bearer"));
+
+        var result = await controller.Auth();
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<MS.Microservice.Domain.Identity.ActionResult>(ok.Value);
+        await userDomainService.Received(1).FindAsync(account, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AccountAuth_WhenPhoneClaimIsMissing_ReturnsUnauthorizedProblem()
+    {
+        var controller = CreateAccountController();
+
+        AssertProblem(await controller.Auth(), StatusCodes.Status401Unauthorized, "unauthorized");
+    }
+
+    [Fact]
+    public async Task AccountAuth_WhenAccountNoLongerExists_ReturnsUnauthorizedProblem()
+    {
+        const string account = "13800138000";
+        var userDomainService = Substitute.For<IUserDomainService>();
+        userDomainService.FindAsync(account, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<User?>(null));
+        var controller = CreateAccountController(userDomainService);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity([new Claim(JwtClaimTypes.PhoneNumber, account)], "Bearer"));
+
+        AssertProblem(await controller.Auth(), StatusCodes.Status401Unauthorized, "unauthorized");
     }
 
     [Fact]

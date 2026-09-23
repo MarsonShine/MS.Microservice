@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging.SelfManaged;
 using MS.Microservice.Reference.Domain;
 using global::Wolverine.EntityFrameworkCore;
@@ -14,6 +15,7 @@ public abstract class ReferenceDbContext(DbContextOptions options) : DbContext(o
     protected override void OnModelCreating(ModelBuilder model)
     {
         model.HasDefaultSchema(Schema);
+        model.AddHttpIdempotency(Schema);
         var profile = model.Entity<UserProfile>();
         profile.ToTable("UserProfiles");
         profile.HasKey(x => x.Id);

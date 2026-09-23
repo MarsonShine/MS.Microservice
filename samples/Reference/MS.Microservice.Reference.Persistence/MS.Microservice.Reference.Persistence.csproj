@@ -2,6 +2,7 @@
   <PropertyGroup><IsPackable>false</IsPackable><GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Wolverine/MS.Microservice.Messaging.Wolverine.csproj" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />

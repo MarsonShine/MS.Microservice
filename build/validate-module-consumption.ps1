@@ -60,7 +60,7 @@ New-Item -ItemType Directory -Force (Split-Path ([IO.Path]::GetFullPath($ReportP
 [ordered]@{
     revision = $manifest.revision; sdk = (& dotnet --version); version = $version
     modules = $Modules; sourceProjectCount = $manifest.projects.Count
-    sourceBuild = 'passed'; packageConsumer = 'passed'; messagingContextsVerified = 2; validatedAtUtc = [DateTimeOffset]::UtcNow
+    sourceBuild = 'passed'; packageConsumer = 'passed'; messagingContextsVerified = $(if ($verifyMessaging) { 2 } else { 0 }); validatedAtUtc = [DateTimeOffset]::UtcNow
     workingDirectory = $working
 } | ConvertTo-Json -Depth 5 | Set-Content $ReportPath
 Write-Output "Source and package consumption passed. Report: $ReportPath"

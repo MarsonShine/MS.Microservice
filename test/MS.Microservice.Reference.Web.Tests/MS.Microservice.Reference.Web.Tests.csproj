@@ -7,6 +7,7 @@
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <ProjectReference Include="../../MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
     <ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj" />
     <ProjectReference Include="../../samples/Reference/MS.Microservice.Reference.AotWeb/MS.Microservice.Reference.AotWeb.csproj" />
   </ItemGroup>

@@ -17,6 +17,14 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 更高层取舍见[总体架构](../../docs/Architecture-Overview.md)；
 复制或包引用需要包含声明的依赖，见[组件消费](../../docs/components/consumption.md)。
 
+## 加密辅助
+
+对称加密只接受调用方提供的 32 字节密钥，并使用带版本号的 AES-256-GCM 密文；旧 AES-ECB 和 3DES 格式已停用。原因、格式和密钥使用方式见[对称加密格式](Security/Cryptology/authenticated-encryption.md)。
+
+`HmacSha256` 要求调用方明确传入密钥。旧密码哈希的固定密钥只保留在 Lab 的[旧密码验证说明](../../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)所述登录升级路径中。
+
+RSA 新密文使用 OAEP-SHA256 和版本前缀；无前缀的 PKCS#1 v1.5 密文仍可读取。密文长度限制、兼容边界和旧分支退出条件见[RSA 密文格式](Security/Cryptology/rsa-oaep.md)。
+
 ## Core 裁剪与 AOT 分析
 
 Core 在项目中设置 `IsAotCompatible=true`，日常构建即启用裁剪、AOT 和单文件兼容性分析，
@@ -126,7 +134,7 @@ Registry 只登记根类型，不会合并或补全每份元数据内部的解�
 普通 object 属性反序列化后通常得到 `JsonElement`；需要恢复具体派生类型时，应声明多态契约。
 缺失契约会报错，没有自动反射回退。`DefaultSerializeSetting` 只提供 JSON 配置，不提供业务类型元数据。
 
-### HTTP 请求辅助
+## HTTP 请求辅助
 
 LogHttpClient 的 GET 参数使用 `IDictionary`，或使用业务对象与显式的 `QueryParameterMap<T>`；不会自动扫描对象属性。
 null 值省略，空字符串保留，

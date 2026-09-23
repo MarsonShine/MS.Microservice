@@ -15,6 +15,7 @@
     <Project Path="test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
   </Folder>
   <Folder Name="/Dependencies/">
+    <Project Path="../MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
     <Project Path="../samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
     <Project Path="../samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj" />
     <Project Path="../samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj" />

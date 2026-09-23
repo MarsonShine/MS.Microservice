@@ -14,6 +14,7 @@
     <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
     <Project Path="src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
+    <Project Path="src/MS.Microservice.Http.Resilience/MS.Microservice.Http.Resilience.csproj" />
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
@@ -54,6 +55,7 @@
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.NativeAot.Smoke/MS.Microservice.Core.NativeAot.Smoke.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Http.Resilience.Tests/MS.Microservice.Http.Resilience.Tests.csproj" />
     <Project Path="test/MS.Microservice.Lab.Tests/MS.Microservice.Lab.Tests.csproj" />
     <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
@@ -117,4 +119,10 @@
     <Project Path="MS.Microservice.Messaging/test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.Persistence/" />
+  <Folder Name="/MS.Microservice.Idempotency/src/">
+    <Project Path="MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Idempotency/test/">
+    <Project Path="MS.Microservice.Idempotency/test/MS.Microservice.Idempotency.EFCore.Tests/MS.Microservice.Idempotency.EFCore.Tests.csproj" />
+  </Folder>
 </Solution>

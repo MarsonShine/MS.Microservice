@@ -24,6 +24,48 @@ namespace MS.Microservice.Reference.Persistence.Migrations.Wolverine
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MS.Microservice.Idempotency.EFCore.IdempotencyRecord", b =>
+                {
+                    b.Property<string>("ScopeHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("KeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<byte[]>("Body")
+                        .HasColumnType("bytea");
+
+                    b.Property<long?>("CompletedAtUtcTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<long>("ExpiresAtUtcTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ScopeHash", "KeyHash");
+
+                    b.HasIndex("ExpiresAtUtcTicks");
+
+                    b.ToTable("HttpIdempotency", "reference");
+                });
+
             modelBuilder.Entity("MS.Microservice.Reference.Domain.ProfileAuditEntry", b =>
                 {
                     b.Property<Guid>("MessageId")

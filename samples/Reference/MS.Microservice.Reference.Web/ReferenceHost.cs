@@ -1,8 +1,17 @@
+using System.Globalization;
+using System.Security.Claims;
+using System.Text.Json;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Timeouts;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Logging.AspNetCore;
+using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Messaging.RabbitMQ;
 using MS.Microservice.Messaging.SelfManaged;
@@ -15,6 +24,9 @@ namespace MS.Microservice.Reference.Web;
 
 public static class ReferenceHost
 {
+    private const string ApiRateLimitPolicy = "reference-api";
+    private const string ApiTimeoutPolicy = "reference-api-timeout";
+
     public static void AddServices(WebApplicationBuilder builder)
     {
         var connection = builder.Configuration.GetConnectionString("ReferenceDatabase");
@@ -44,8 +56,52 @@ public static class ReferenceHost
             builder.Services.AddReferenceRepositories<WolverineReferenceDbContext>();
         }
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
+        builder.Services.AddScoped(services => new EfCoreIdempotencyStore<ReferenceDbContext>(
+            services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<TimeProvider>()));
+        builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
+        builder.Services.AddValidation();
+        builder.Services.AddPlatformHealthChecks()
+            .Add(new HealthCheckRegistration("durable-storage",
+                static services => new ReferenceDurableStorageHealthCheck(
+                    services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<IMessageStorageProbe>()),
+                HealthStatus.Unhealthy, [PlatformHealthChecks.ReadyTag], TimeSpan.FromSeconds(5)))
+            .Add(new HealthCheckRegistration("broker",
+                static services => new ReferenceBrokerHealthCheck(services.GetRequiredService<RabbitMqTransport>()),
+                HealthStatus.Unhealthy, [PlatformHealthChecks.ReadyTag], TimeSpan.FromSeconds(5)));
+        if (Enabled(builder.Configuration, "Http:RateLimiting:Enabled"))
+        {
+            var permitLimit = PositiveInt(builder.Configuration, "Http:RateLimiting:PermitLimit", 120);
+            var windowSeconds = PositiveInt(builder.Configuration, "Http:RateLimiting:WindowSeconds", 60);
+            var subjectClaimType = builder.Configuration["Authentication:SubjectClaimType"] ?? "sub";
+            builder.Services.AddPlatformRateLimiting(options => options.AddPolicy<(string Issuer, string Subject)>(
+                ApiRateLimitPolicy, http =>
+            {
+                var issuer = http.User.FindFirstValue("iss");
+                var subject = http.User.FindFirstValue(subjectClaimType);
+                (string Issuer, string Subject) partition = http.User.Identity?.IsAuthenticated == true
+                    && !string.IsNullOrWhiteSpace(issuer) && !string.IsNullOrWhiteSpace(subject)
+                    ? (issuer, subject) : (string.Empty, string.Empty);
+                return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = permitLimit,
+                    Window = TimeSpan.FromSeconds(windowSeconds),
+                    QueueLimit = 0,
+                    AutoReplenishment = false
+                });
+            }));
+        }
+        if (Enabled(builder.Configuration, "Http:RequestTimeouts:Enabled"))
+        {
+            var seconds = PositiveInt(builder.Configuration, "Http:RequestTimeouts:Seconds", 30);
+            builder.Services.AddPlatformRequestTimeouts(options => options.AddPolicy(ApiTimeoutPolicy,
+                new RequestTimeoutPolicy
+                {
+                    Timeout = TimeSpan.FromSeconds(seconds),
+                    TimeoutStatusCode = StatusCodes.Status504GatewayTimeout
+                }));
+        }
         builder.Services.AddMsRequestLogging();
         builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1024 * 1024);
         if (builder.Configuration.GetValue("OpenTelemetry:Enabled", true)) builder.Services.AddMsOpenTelemetry(builder.Configuration);
@@ -53,29 +109,62 @@ public static class ReferenceHost
 
     public static void MapApplication(WebApplication app)
     {
+        var rateLimiting = Enabled(app.Configuration, "Http:RateLimiting:Enabled");
+        var requestTimeouts = Enabled(app.Configuration, "Http:RequestTimeouts:Enabled");
         app.UsePlatformHttp();
         app.UseMsRequestLogging();
+        if (requestTimeouts) app.UsePlatformRequestTimeouts();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
-        app.MapGet("/health/ready", ReadinessAsync).AllowAnonymous();
-        ProfileEndpoints.Map(app);
+        if (rateLimiting) app.UsePlatformRateLimiting();
+        app.MapPlatformHealthChecks(WriteReadinessAsync);
+        if (rateLimiting || requestTimeouts)
+        {
+            var api = app.MapGroup("");
+            if (rateLimiting) api.RequireRateLimiting(ApiRateLimitPolicy);
+            if (requestTimeouts) api.WithRequestTimeout(ApiTimeoutPolicy);
+            ProfileEndpoints.Map(api);
+        }
+        else ProfileEndpoints.Map(app);
     }
 
-    private static async Task<IResult> ReadinessAsync(ReferenceDbContext context, IMessageStorageProbe storage,
-        RabbitMqTransport broker, MessagingProviderRegistration provider, CancellationToken cancellationToken)
+    private static bool Enabled(IConfiguration configuration, string key)
     {
-        try
+        var setting = configuration[key];
+        if (setting is null) return false;
+        if (bool.TryParse(setting, out var enabled)) return enabled;
+        throw new ArgumentException($"{key} must be true or false.");
+    }
+
+    private static int PositiveInt(IConfiguration configuration, string key, int fallback)
+    {
+        var setting = configuration[key];
+        if (setting is null) return fallback;
+        if (int.TryParse(setting, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value > 0)
+            return value;
+        throw new ArgumentException($"{key} must be a positive integer.");
+    }
+
+    private static async Task WriteReadinessAsync(HttpContext context, HealthReport report)
+    {
+        context.Response.ContentType = "application/json";
+        using var writer = new Utf8JsonWriter(context.Response.BodyWriter);
+        writer.WriteStartObject();
+        writer.WriteString("status", report.Status switch
         {
-            await context.Profiles.AsNoTracking().AnyAsync(cancellationToken);
-            if ((await context.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
-                return Results.Json(new { status = "unhealthy", reason = "pending_migrations" }, statusCode: 503);
-            await storage.CheckAsync(cancellationToken);
-            var connected = await broker.ProbeAsync(cancellationToken);
-            return Results.Ok(new { status = connected ? "healthy" : "degraded", messaging = provider.Name });
+            HealthStatus.Healthy => "healthy",
+            HealthStatus.Degraded => "degraded",
+            _ => "unhealthy"
+        });
+        if (report.Status == HealthStatus.Unhealthy)
+        {
+            var pendingMigrations = report.Entries.TryGetValue("durable-storage", out var storage)
+                && storage.Description == "pending_migrations";
+            writer.WriteString("reason", pendingMigrations ? "pending_migrations" : "storage_unavailable");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch { return Results.Json(new { status = "unhealthy", reason = "storage_unavailable" }, statusCode: 503); }
+        else writer.WriteString("messaging", context.RequestServices.GetRequiredService<MessagingProviderRegistration>().Name);
+        writer.WriteEndObject();
+        await writer.FlushAsync(context.RequestAborted);
     }
 }
 

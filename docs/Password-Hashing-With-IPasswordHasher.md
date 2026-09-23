@@ -361,6 +361,8 @@ SuccessRehashNeeded   → 重新生成哈希并持久化
 
 ## 七、旧 HMAC 用户如何平滑迁移
 
+当前代码把固定密钥和旧格式计算限制在 Lab 内部的[旧密码验证器](../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)；Core 已移除不传密钥的 `HmacSha256` 重载。下文的旧调用形式仅用于说明历史数据格式，不能用于新账号。
+
 数据库中已有用户仍可能保存旧格式：
 
 ```text

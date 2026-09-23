@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Messaging;
 using MS.Microservice.Messaging.SelfManaged;
@@ -102,6 +104,27 @@ public sealed class ProfilePersistenceTests
         Assert.Contains(self.Model.GetEntityTypes(), type => type.GetTableName() == "Outbox");
         Assert.DoesNotContain(native.Model.GetEntityTypes(), type => type.GetTableName() == "Outbox");
         Assert.Contains(native.Model.GetEntityTypes(), type => type.GetTableName()!.Contains("outgoing", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BothProvidersMapTheSameBoundedIdempotencyTableWithSeparateMigrationHistories()
+    {
+        using var self = new SelfManagedContextFactory().CreateDbContext([]);
+        using var native = new WolverineContextFactory().CreateDbContext([]);
+        foreach (var context in new ReferenceDbContext[] { self, native })
+        {
+            var entity = Assert.Single(context.Model.GetEntityTypes(), type => type.GetTableName() == "HttpIdempotency");
+            Assert.Equal(ReferenceDbContext.Schema, entity.GetSchema());
+            Assert.Equal(new[] { "ScopeHash", "KeyHash" }, entity.FindPrimaryKey()!.Properties.Select(property => property.Name));
+            Assert.Equal(64, entity.FindProperty("RequestHash")!.GetMaxLength());
+            Assert.Contains(entity.GetIndexes(), index =>
+                index.Properties.Count == 1 && index.Properties[0].Name == "ExpiresAtUtcTicks");
+            Assert.Equal(2, context.Database.GetMigrations().Count());
+            var script = context.GetService<IMigrator>().GenerateScript();
+            Assert.Contains("CREATE TABLE", script);
+            Assert.Contains("HttpIdempotency", script);
+            Assert.Contains("IX_HttpIdempotency_ExpiresAtUtcTicks", script);
+        }
     }
 
     private static SelfManagedReferenceDbContext Context(SqliteConnection connection)
