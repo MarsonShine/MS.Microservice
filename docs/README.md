@@ -10,6 +10,7 @@
 - [六个递进 Lab](labs/README.md)：从请求分层到消息组件替换。
 - [组件复制与包消费](components/consumption.md)：源码导出、本地打包和仓库外验证。
 - [`src` 基础设施性能检查](infrastructure-performance-review-2026-09-23.md)：逐项目的测量、改动与未改动原因。
+- [AI、Logging、Messaging、Persistence 性能检查](extension-modules-performance-review-2026-09-23.md)：四个模块的测量、提交及 AOT 边界。
 
 下方理论资料继续保留。执行当前仓库时优先使用以上入口；历史示例的路径和接口应先与当前代码核对。
 ## 如何使用这个文档中心
