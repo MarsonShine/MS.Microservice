@@ -112,4 +112,49 @@ public sealed class InboxStoreTests
             message with { Payload = "{}" }, "audit", Guid.NewGuid(), default));
         Assert.Equal(message.Payload, (await store.FindAsync(message.Id, "audit", default))!.Payload);
     }
+
+    [Theory]
+    [InlineData("correlation", 201)]
+    [InlineData("traceparent", 129)]
+    [InlineData("tracestate", 513)]
+    public async Task InvalidMetadataCannotReachInboxInsert(string field, int length)
+    {
+        await using var connection = await OpenAsync();
+        await using var context = new BusinessContext(connection);
+        await context.Database.EnsureCreatedAsync();
+        var store = new InboxStore<BusinessContext>(context, new(), TimeProvider.System);
+        var original = Registry().Serialize(NewEvent());
+        var value = new string('x', length);
+        var invalid = field switch
+        {
+            "correlation" => original with { CorrelationId = value },
+            "traceparent" => original with { TraceParent = value },
+            _ => original with { TraceState = value }
+        };
+        await Assert.ThrowsAsync<MessageContractException>(() =>
+            store.AcquireAsync(invalid, "audit", Guid.NewGuid(), default));
+        Assert.Empty(await context.Set<InboxEntry>().ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BoundaryMetadataIsStoredWithoutChangingItsValue(bool unicodeCorrelation)
+    {
+        await using var connection = await OpenAsync();
+        await using var context = new BusinessContext(connection);
+        await context.Database.EnsureCreatedAsync();
+        var store = new InboxStore<BusinessContext>(context, new(), TimeProvider.System);
+        var message = Registry().Serialize(NewEvent()) with
+        {
+            CorrelationId = unicodeCorrelation ? new string('中', 85) : new string('a', 200),
+            TraceParent = new string('p', 128), TraceState = new string('中', 512)
+        };
+        Assert.Equal(InboxAcquisition.Acquired,
+            (await store.AcquireAsync(message, "audit", Guid.NewGuid(), default)).Result);
+        var saved = await store.FindAsync(message.Id, "audit", default);
+        Assert.Equal(message.CorrelationId, saved!.CorrelationId);
+        Assert.Equal(message.TraceParent, saved.TraceParent);
+        Assert.Equal(message.TraceState, saved.TraceState);
+    }
 }

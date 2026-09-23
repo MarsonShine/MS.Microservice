@@ -14,9 +14,10 @@ internal static class RabbitMqWireCodec
         if (message.Id == Guid.Empty || message.OccurredAtUtc == default || message.OccurredAtUtc.Offset != TimeSpan.Zero
             || string.IsNullOrWhiteSpace(message.ContractName) || message.ContractVersion <= 0)
             throw new PermanentMessageException("invalid_message_metadata");
+        if (!MessageMetadataLimits.AreValid(message.CorrelationId, message.TraceParent, message.TraceState))
+            throw new PermanentMessageException("message_limits_exceeded");
         var body = Utf8.GetBytes(message.Payload);
-        if (body.Length > maxBytes || Utf8.GetByteCount(RoutingKey(message)) >= 255
-            || (message.CorrelationId is not null && Utf8.GetByteCount(message.CorrelationId) > 255))
+        if (body.Length > maxBytes || Utf8.GetByteCount(RoutingKey(message)) >= 255)
             throw new PermanentMessageException("message_limits_exceeded");
         return (new BasicProperties
         {
@@ -44,8 +45,10 @@ internal static class RabbitMqWireCodec
             throw new MessageContractException("Invalid message contract metadata.");
         try
         {
-            return new(id, name, version, occurred, Utf8.GetString(body.Span), properties.CorrelationId,
+            var message = new SerializedMessage(id, name, version, occurred, Utf8.GetString(body.Span), properties.CorrelationId,
                 Header(properties, "traceparent"), Header(properties, "tracestate"));
+            MessageMetadataLimits.Validate(message.CorrelationId, message.TraceParent, message.TraceState);
+            return message;
         }
         catch (DecoderFallbackException) { throw new MessageContractException("Message is not valid UTF-8."); }
     }

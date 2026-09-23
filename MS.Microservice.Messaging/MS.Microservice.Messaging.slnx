@@ -1,5 +1,5 @@
 <Solution>
-  <Folder Name="/docs/"><File Path="README.md" /><File Path="docs/design.md" /></Folder>
+  <Folder Name="/docs/"><File Path="README.md" /><File Path="docs/design.md" /><File Path="docs/message-metadata-limits.md" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
     <Project Path="src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />

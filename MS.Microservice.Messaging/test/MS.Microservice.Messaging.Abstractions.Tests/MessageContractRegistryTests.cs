@@ -47,6 +47,66 @@ public sealed class MessageContractRegistryTests
         Assert.Throws<MessageContractException>(() => _registry.Deserialize(message with { Id = Guid.NewGuid() }));
     }
 
+    public static IEnumerable<object[]> MetadataCases()
+    {
+        yield return [null!, null!, null!, true];
+        yield return ["", "", "", true];
+        yield return [new string('a', 200), new string('p', 128), new string('s', 512), true];
+        yield return [new string('中', 85), new string('中', 128), new string('中', 512), true];
+        yield return [new string('a', 201), null!, null!, false];
+        yield return [new string('中', 86), null!, null!, false];
+        yield return [null!, new string('p', 129), null!, false];
+        yield return [null!, null!, new string('s', 513), false];
+    }
+
+    [Fact]
+    public void UnpairedSurrogateCannotBeStoredInAnyMetadataField()
+    {
+        var invalid = new string((char)0xd800, 1);
+        var message = NewEvent();
+        var serialized = _registry.Serialize(message);
+        foreach (var (correlationId, traceParent, traceState) in new[]
+                 {
+                     (invalid, (string?)null, (string?)null),
+                     (null, invalid, null),
+                     (null, null, invalid)
+                 })
+        {
+            Assert.False(MessageMetadataLimits.AreValid(correlationId, traceParent, traceState));
+            Assert.Throws<MessageContractException>(() => _registry.Serialize(message,
+                new(message.Id, "audit", correlationId, traceParent, traceState)));
+            Assert.Throws<MessageContractException>(() => _registry.Deserialize(serialized with
+            {
+                CorrelationId = correlationId, TraceParent = traceParent, TraceState = traceState
+            }));
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(MetadataCases))]
+    public void MetadataLimitsApplyToBothContractDirections(string? correlationId, string? traceParent,
+        string? traceState, bool valid)
+    {
+        var message = NewEvent();
+        var context = new MessageContext(message.Id, "audit", correlationId, traceParent, traceState);
+        var serialized = _registry.Serialize(message);
+        var incoming = serialized with
+        {
+            CorrelationId = correlationId, TraceParent = traceParent, TraceState = traceState
+        };
+        Assert.Equal(valid, MessageMetadataLimits.AreValid(correlationId, traceParent, traceState));
+        if (valid)
+        {
+            Assert.Equal(incoming, _registry.Serialize(message, context));
+            Assert.Equal(message, _registry.Deserialize(incoming));
+        }
+        else
+        {
+            Assert.Throws<MessageContractException>(() => _registry.Serialize(message, context));
+            Assert.Throws<MessageContractException>(() => _registry.Deserialize(incoming));
+        }
+    }
+
     [Fact]
     public void RejectsDuplicateRegistration()
     {

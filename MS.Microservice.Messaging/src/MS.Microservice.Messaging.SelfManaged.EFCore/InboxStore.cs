@@ -15,6 +15,7 @@ internal sealed class InboxStore<TContext>(TContext context, SelfManagedOptions 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
         if (consumer.Length > 200 || token == Guid.Empty) throw new ArgumentException("Invalid consumer or claim token.");
+        MessageMetadataLimits.Validate(message.CorrelationId, message.TraceParent, message.TraceState);
         var now = clock.GetUtcNow().UtcDateTime;
         var entry = await FindAsync(message.Id, consumer, cancellationToken);
         if (entry is null)

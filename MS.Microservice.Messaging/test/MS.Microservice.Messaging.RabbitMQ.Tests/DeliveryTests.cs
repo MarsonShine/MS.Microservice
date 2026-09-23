@@ -67,6 +67,22 @@ public sealed class DeliveryTests
         await channel.Received().BasicNackAsync(1, false, false, Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData("correlation")]
+    [InlineData("traceparent")]
+    [InlineData("tracestate")]
+    public async Task OversizedMetadataIsRejectedWithoutRequeueOrBusinessDispatch(string field)
+    {
+        var receiver = Substitute.For<IMessageReceiver>();
+        var channel = Substitute.For<IChannel>();
+        var delivery = Encoded();
+        if (field == "correlation") delivery.Properties.CorrelationId = new string('x', 201);
+        else delivery.Properties.Headers![field] = new string('x', field == "traceparent" ? 129 : 513);
+        await Handler(receiver).HandleAsync(channel, 1, delivery.Properties, delivery.Body, "audit", () => { }, default);
+        await receiver.DidNotReceive().ReceiveAsync(Arg.Any<SerializedMessage>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await channel.Received().BasicNackAsync(1, false, false, Arg.Any<CancellationToken>());
+    }
+
     private static RabbitMqDeliveryHandler Handler(IMessageReceiver receiver)
         => new(receiver, new() { ReconnectDelay = TimeSpan.FromMilliseconds(1) }, NullLogger<RabbitMqDeliveryHandler>.Instance);
     private static (BasicProperties Properties, byte[] Body) Encoded()

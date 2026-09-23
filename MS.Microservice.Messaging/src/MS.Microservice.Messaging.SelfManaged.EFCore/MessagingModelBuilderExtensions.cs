@@ -18,9 +18,9 @@ public static class MessagingModelBuilderExtensions
             ticks => new DateTime(ticks, DateTimeKind.Utc));
         outbox.Property(x => x.Payload).IsRequired();
         outbox.Property(x => x.LockToken).IsConcurrencyToken();
-        outbox.Property(x => x.CorrelationId).HasMaxLength(200);
-        outbox.Property(x => x.TraceParent).HasMaxLength(128);
-        outbox.Property(x => x.TraceState).HasMaxLength(512);
+        outbox.Property(x => x.CorrelationId).HasMaxLength(MessageMetadataLimits.CorrelationIdMaxLength);
+        outbox.Property(x => x.TraceParent).HasMaxLength(MessageMetadataLimits.TraceParentMaxLength);
+        outbox.Property(x => x.TraceState).HasMaxLength(MessageMetadataLimits.TraceStateMaxLength);
         outbox.Property(x => x.ErrorCode).HasMaxLength(200);
         outbox.HasIndex(x => new { x.State, x.NextAttemptAtUtc });
         outbox.HasIndex(x => x.LockedUntilUtc);
@@ -36,9 +36,9 @@ public static class MessagingModelBuilderExtensions
             ticks => new DateTime(ticks, DateTimeKind.Utc));
         inbox.Property(x => x.Payload).IsRequired();
         inbox.Property(x => x.LockToken).IsConcurrencyToken();
-        inbox.Property(x => x.CorrelationId).HasMaxLength(200);
-        inbox.Property(x => x.TraceParent).HasMaxLength(128);
-        inbox.Property(x => x.TraceState).HasMaxLength(512);
+        inbox.Property(x => x.CorrelationId).HasMaxLength(MessageMetadataLimits.CorrelationIdMaxLength);
+        inbox.Property(x => x.TraceParent).HasMaxLength(MessageMetadataLimits.TraceParentMaxLength);
+        inbox.Property(x => x.TraceState).HasMaxLength(MessageMetadataLimits.TraceStateMaxLength);
         inbox.Property(x => x.ErrorCode).HasMaxLength(200);
         inbox.HasIndex(x => new { x.State, x.NextAttemptAtUtc });
         inbox.HasIndex(x => x.CompletedAtUtc);

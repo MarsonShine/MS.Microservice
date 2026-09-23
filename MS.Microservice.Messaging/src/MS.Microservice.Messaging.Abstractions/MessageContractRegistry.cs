@@ -43,6 +43,7 @@ public sealed class MessageContractRegistry
     {
         ArgumentNullException.ThrowIfNull(message);
         ValidateIdentity(message.Id, message.OccurredAtUtc);
+        MessageMetadataLimits.Validate(context?.CorrelationId, context?.TraceParent, context?.TraceState);
         var contract = Get(message.GetType());
         return new(message.Id, contract.Name, contract.Version, message.OccurredAtUtc,
             JsonSerializer.Serialize(message, contract.MessageType, _json), context?.CorrelationId,
@@ -53,6 +54,7 @@ public sealed class MessageContractRegistry
     {
         ArgumentNullException.ThrowIfNull(message);
         ValidateIdentity(message.Id, message.OccurredAtUtc);
+        MessageMetadataLimits.Validate(message.CorrelationId, message.TraceParent, message.TraceState);
         var contract = Get(message.ContractName, message.ContractVersion);
         try
         {

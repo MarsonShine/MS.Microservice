@@ -1,3 +1,4 @@
+using System.Text;
 using NSubstitute;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
@@ -38,6 +39,71 @@ public sealed class WireAndPublisherTests
     [Fact]
     public void LimitsAreMeasuredInUtf8Bytes()
         => Assert.Throws<PermanentMessageException>(() => RabbitMqWireCodec.Encode(Message("中文"), 3));
+
+    [Theory]
+    [InlineData("correlation", 201)]
+    [InlineData("traceparent", 129)]
+    [InlineData("tracestate", 513)]
+    public void OversizedMetadataIsRejectedOnBothWireDirections(string field, int length)
+    {
+        var value = new string('x', length);
+        var message = Message("{}");
+        var oversized = field switch
+        {
+            "correlation" => message with { CorrelationId = value },
+            "traceparent" => message with { TraceParent = value },
+            _ => message with { TraceState = value }
+        };
+        Assert.Throws<PermanentMessageException>(() => RabbitMqWireCodec.Encode(oversized, 1024));
+        var encoded = RabbitMqWireCodec.Encode(message, 1024);
+        if (field == "correlation") encoded.Properties.CorrelationId = value;
+        else encoded.Properties.Headers![field] = value;
+        Assert.Throws<MessageContractException>(() => RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024));
+    }
+
+    [Theory]
+    [InlineData(85, true)]
+    [InlineData(86, false)]
+    public void CorrelationIdAlsoRespectsAmqpUtf8ByteLimit(int characters, bool valid)
+    {
+        var correlationId = new string('中', characters);
+        var message = Message("{}") with { CorrelationId = correlationId };
+        if (valid)
+        {
+            var encoded = RabbitMqWireCodec.Encode(message, 1024);
+            Assert.Equal(correlationId, RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024).CorrelationId);
+        }
+        else
+        {
+            Assert.Throws<PermanentMessageException>(() => RabbitMqWireCodec.Encode(message, 1024));
+            var encoded = RabbitMqWireCodec.Encode(Message("{}"), 1024);
+            encoded.Properties.CorrelationId = correlationId;
+            Assert.Throws<MessageContractException>(() => RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024));
+        }
+    }
+
+    [Fact]
+    public void WirePreservesValidDatabaseLengthBoundaries()
+    {
+        var message = Message("{}") with
+        {
+            CorrelationId = new string('a', 200), TraceParent = new string('中', 128),
+            TraceState = new string('中', 512)
+        };
+        var encoded = RabbitMqWireCodec.Encode(message, 1024);
+        var decoded = RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024);
+        Assert.Equal(message.CorrelationId, decoded.CorrelationId);
+        Assert.Equal(message.TraceParent, decoded.TraceParent);
+        Assert.Equal(message.TraceState, decoded.TraceState);
+    }
+
+    [Fact]
+    public void Utf8EncodedExternalTraceHeaderMustFitDatabaseColumn()
+    {
+        var encoded = RabbitMqWireCodec.Encode(Message("{}"), 1024);
+        encoded.Properties.Headers!["tracestate"] = Encoding.UTF8.GetBytes(new string('中', 513));
+        Assert.Throws<MessageContractException>(() => RabbitMqWireCodec.Decode(encoded.Properties, encoded.Body, 1024));
+    }
 
     [Fact]
     public async Task PublishDoesNotCompleteBeforeBrokerConfirmation()

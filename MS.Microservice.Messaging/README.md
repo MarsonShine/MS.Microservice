@@ -11,6 +11,7 @@
 | [Wolverine](src/MS.Microservice.Messaging.Wolverine/README.md) | 原生可靠存储、事务与恢复的契约适配 |
 
 打开 [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging.slnx)，阅读 [设计理由与调用链](docs/design.md)。
+[消息元数据长度契约](docs/message-metadata-limits.md)说明入队、传输和持久化共用的上限。
 Dependencies 中的 Reference 类库用于真实业务测试，不是消息组件的运行依赖。
 
 在本目录构建：
