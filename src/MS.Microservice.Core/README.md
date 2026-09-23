@@ -150,3 +150,5 @@ services.AddHttpClient("remote-api").AddHttpMessageHandler<LoggingHttpClientHand
 ```
 
 开启后，该 Handler 只记录方法、不含查询字符串的路径、响应状态或失败类型、耗时。它不读取或记录请求与响应正文；HTTP 内容和异常仍原样交给调用方。路径本身可能包含业务标识，调用方仍应避免把凭据放进路径。没有开启该设置的客户端维持完整正文日志行为。两种模式的读取、缓冲与资源所有权见[正文日志实现说明](Net/Http/body-logging.md)。
+
+缓存与 HTTP JSON 辅助方法接收调用方的 `JsonTypeInfo<T>`，复用生成的类型元数据；原因、格式差异与分配数据见[JSON 元数据复用说明](Serialization/json-configuration-reuse.md)。
