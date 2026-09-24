@@ -32,6 +32,8 @@ public static class ReferenceHost
         var connection = builder.Configuration.GetConnectionString("ReferenceDatabase");
         if (string.IsNullOrWhiteSpace(connection)) throw new ArgumentException("ConnectionStrings:ReferenceDatabase is required.");
         var provider = builder.Configuration["Messaging:Provider"] ?? "SelfManaged";
+        var idempotency = new ReferenceIdempotencyOptions(Enabled(builder.Configuration, "Http:Idempotency:Enabled"));
+        builder.Services.AddSingleton(idempotency);
         var topology = ReferenceMessages.Topology();
         var broker = builder.Configuration.GetSection("Messaging:RabbitMQ").Get<RabbitMqOptions>() ?? new();
         broker.Validate();
@@ -55,16 +57,20 @@ public static class ReferenceHost
             builder.Services.AddReferenceRepositories<WolverineReferenceDbContext>();
         }
         else throw new ArgumentException("Messaging:Provider must be SelfManaged or Wolverine.");
-        builder.Services.AddScoped(services => new EfCoreIdempotencyStore<ReferenceDbContext>(
-            services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<TimeProvider>()));
-        builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
+        if (idempotency.Enabled)
+        {
+            builder.Services.AddScoped(services => new EfCoreIdempotencyStore<ReferenceDbContext>(
+                services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<TimeProvider>()));
+            builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
+        }
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
         builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
         builder.Services.AddValidation();
         builder.Services.AddPlatformHealthChecks()
             .Add(new HealthCheckRegistration("durable-storage",
                 static services => new ReferenceDurableStorageHealthCheck(
-                    services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<IMessageStorageProbe>()),
+                    services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<IMessageStorageProbe>(),
+                    services.GetRequiredService<ReferenceIdempotencyOptions>()),
                 HealthStatus.Unhealthy, [PlatformHealthChecks.ReadyTag], TimeSpan.FromSeconds(5)))
             .Add(new HealthCheckRegistration("broker",
                 static services => new ReferenceBrokerHealthCheck(services.GetRequiredService<RabbitMqTransport>()),
@@ -110,6 +116,7 @@ public static class ReferenceHost
     {
         var rateLimiting = Enabled(app.Configuration, "Http:RateLimiting:Enabled");
         var requestTimeouts = Enabled(app.Configuration, "Http:RequestTimeouts:Enabled");
+        var idempotency = app.Services.GetRequiredService<ReferenceIdempotencyOptions>().Enabled;
         app.UsePlatformHttp();
         app.UseMsRequestLogging();
         if (requestTimeouts) app.UsePlatformRequestTimeouts();
@@ -122,9 +129,9 @@ public static class ReferenceHost
             var api = app.MapGroup("");
             if (rateLimiting) api.RequireRateLimiting(ApiRateLimitPolicy);
             if (requestTimeouts) api.WithRequestTimeout(ApiTimeoutPolicy);
-            ProfileEndpoints.Map(api);
+            ProfileEndpoints.Map(api, idempotency);
         }
-        else ProfileEndpoints.Map(app);
+        else ProfileEndpoints.Map(app, idempotency);
     }
 
     private static bool Enabled(IConfiguration configuration, string key)
@@ -166,6 +173,8 @@ public static class ReferenceHost
         await writer.FlushAsync(context.RequestAborted);
     }
 }
+
+internal sealed record ReferenceIdempotencyOptions(bool Enabled);
 
 internal sealed class ReferenceConflictHandler(IProblemDetailsService problems) : IExceptionHandler
 {

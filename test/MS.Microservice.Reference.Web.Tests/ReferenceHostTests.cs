@@ -79,10 +79,65 @@ public sealed class ReferenceHostTests
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisabledIdempotencyIgnoresKeysWithoutRequiringItsTable(bool explicitDisable)
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: explicitDisable ? false : null);
+        fixture.Authenticate("profiles.manage");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+        var request = new CreateProfile("https://issuer.example", "disabled-one", "first", []);
+
+        using var first = await PostKeyedAsync(fixture.Client, request, "same-key");
+        using var duplicate = await PostKeyedAsync(fixture.Client, request, "same-key");
+        using var invalid = await PostKeyedAsync(fixture.Client,
+            request with { Subject = "disabled-two" }, "bad,key");
+        using var multiple = await PostKeyedAsync(fixture.Client,
+            request with { Subject = "disabled-three" }, "one", "two");
+        using var unkeyed = await fixture.Client.PostAsJsonAsync("/api/v1/profiles",
+            request with { Subject = "disabled-four" });
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, multiple.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, unkeyed.StatusCode);
+        Assert.Equal(4, await fixture.CountProfilesAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Theory]
+    [InlineData("SelfManaged", false)]
+    [InlineData("SelfManaged", true)]
+    [InlineData("Wolverine", false)]
+    [InlineData("Wolverine", true)]
+    public void IdempotencyServicesAreRegisteredOnlyWhenEnabled(string provider, bool enabled)
+    {
+        var builder = Fixture.Builder(provider);
+        builder.Configuration["Http:Idempotency:Enabled"] = enabled.ToString();
+        ReferenceHost.AddServices(builder);
+
+        Assert.Equal(enabled, builder.Services.Any(descriptor =>
+            descriptor.ServiceType == typeof(EfCoreIdempotencyStore<ReferenceDbContext>)));
+        Assert.Equal(enabled, builder.Services.Any(descriptor =>
+            descriptor.ServiceType == typeof(IHostedService)
+            && descriptor.ImplementationType?.Name == "ReferenceIdempotencyCleanupWorker"));
+    }
+
+    [Fact]
+    public void InvalidIdempotencyConfigurationFailsDuringComposition()
+    {
+        var builder = Fixture.Builder();
+        builder.Configuration["Http:Idempotency:Enabled"] = "sometimes";
+        var exception = Assert.Throws<ArgumentException>(() => ReferenceHost.AddServices(builder));
+        Assert.Contains("Http:Idempotency:Enabled", exception.Message);
+    }
+
     [Fact]
     public async Task KeyedProfileCreationReplaysTheExactCreatedResponseWithoutAnotherWrite()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["reader"]);
 
@@ -110,9 +165,24 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
+    public async Task EnabledIdempotencyLeavesUnkeyedRequestsOnTheOriginalPath()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "unkeyed-subject", "first", []);
+
+        using var first = await fixture.Client.PostAsJsonAsync("/api/v1/profiles", request);
+        using var duplicate = await fixture.Client.PostAsJsonAsync("/api/v1/profiles", request);
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Equal((1, 1, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
     public async Task KeyedRequestWithDifferentPayloadReturnsConflictWithoutReplayingPrivateResponse()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["reader"]);
 
@@ -129,7 +199,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task SameKeyBelongsToTheAuthenticatedActor()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         var firstRequest = new CreateProfile("https://issuer.example", "first-subject", "first", []);
         fixture.Authenticate("profiles.manage", "first-admin");
         using var first = await PostKeyedAsync(fixture.Client, firstRequest, "shared-key");
@@ -147,7 +217,7 @@ public sealed class ReferenceHostTests
     [InlineData("has space")]
     public async Task InvalidIdempotencyKeyIsRejectedBeforeBusinessWrite(string key)
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", []);
 
@@ -160,7 +230,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task MultipleAndOverlongIdempotencyKeysAreRejected()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", []);
 
@@ -175,7 +245,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task BusinessValidationAndConflictDoNotReserveTheKey()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         var request = new CreateProfile("https://issuer.example", "keyed-subject", "first", ["invalid"]);
 
@@ -193,7 +263,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task PruningAnExpiredSnapshotRemovesOnlyTheIdempotencyRecord()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         using var created = await PostKeyedAsync(fixture.Client,
             new CreateProfile("https://issuer.example", "keyed-subject", "first", []), "create-123");
@@ -207,7 +277,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task MissingIdempotencyTableDoesNotChangeUnkeyedWritesOrCreateSchema()
     {
-        await using var fixture = await Fixture.CreateAsync();
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
         await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
 
@@ -225,7 +295,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task ServerFailureRollsBackProfileOutboxAndIdempotencyClaim()
     {
-        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, configureServices: services =>
         {
             services.RemoveAll<IIntegrationEventPublisher>();
             services.AddSingleton<IIntegrationEventPublisher>(new FailingPublisher(new IOException("publisher failed")));
@@ -242,7 +312,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task CanceledBusinessOperationLeavesNoIdempotencyClaim()
     {
-        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, configureServices: services =>
         {
             services.RemoveAll<IIntegrationEventPublisher>();
             services.AddSingleton<IIntegrationEventPublisher>(
@@ -263,7 +333,7 @@ public sealed class ReferenceHostTests
     public async Task ClaimConflictUsesFreshScopeForReplayOrDifferentRequest(bool differentRequest)
     {
         var race = new ClaimRace();
-        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, configureServices: services =>
         {
             services.RemoveAll<IUnitOfWork>();
             services.AddScoped<IUnitOfWork>(provider => new ClaimRaceUnitOfWork(
@@ -409,6 +479,23 @@ public sealed class ReferenceHostTests
         Assert.Equal("unhealthy", body.RootElement.GetProperty("status").GetString());
         Assert.Equal("pending_migrations", body.RootElement.GetProperty("reason").GetString());
         Assert.Equal(2, body.RootElement.EnumerateObject().Count());
+    }
+
+    [Theory]
+    [InlineData(false, HttpStatusCode.OK)]
+    [InlineData(true, HttpStatusCode.ServiceUnavailable)]
+    public async Task IdempotencyMigrationIsRequiredForReadinessOnlyWhenEnabled(bool enabled, HttpStatusCode expected)
+    {
+        await using var fixture = await Fixture.CreateAsync(
+            brokerAvailable: true, onlyIdempotencyMigrationPending: true, httpIdempotencyEnabled: enabled);
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+
+        using var response = await fixture.Client.GetAsync("/health/ready");
+        Assert.Equal(expected, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal(enabled ? "unhealthy" : "healthy", body.RootElement.GetProperty("status").GetString());
+        Assert.Equal(enabled ? "pending_migrations" : "SelfManaged",
+            body.RootElement.GetProperty(enabled ? "reason" : "messaging").GetString());
     }
 
     [Theory]
@@ -635,11 +722,14 @@ public sealed class ReferenceHostTests
 
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
             int? apiPermitLimit = null, int apiWindowSeconds = 60, int? apiTimeoutSeconds = null, bool storageAvailable = true,
-            Action<IServiceCollection>? configureServices = null)
+            Action<IServiceCollection>? configureServices = null, bool? httpIdempotencyEnabled = null,
+            bool onlyIdempotencyMigrationPending = false)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
             var builder = Builder();
+            if (httpIdempotencyEnabled is { } enabled)
+                builder.Configuration["Http:Idempotency:Enabled"] = enabled.ToString();
             if (apiPermitLimit is { } limit)
             {
                 builder.Configuration["Http:RateLimiting:Enabled"] = "true";
@@ -693,11 +783,12 @@ public sealed class ReferenceHostTests
             {
                 var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
                 await context.Database.EnsureCreatedAsync();
-                if (migrated)
+                if (migrated || onlyIdempotencyMigrationPending)
                 {
                     var history = context.GetService<IHistoryRepository>();
                     await context.Database.ExecuteSqlRawAsync(history.GetCreateIfNotExistsScript());
-                    foreach (var migration in context.Database.GetMigrations())
+                    foreach (var migration in context.Database.GetMigrations().Where(migration =>
+                        !onlyIdempotencyMigrationPending || !migration.EndsWith("_AddHttpIdempotency", StringComparison.Ordinal)))
                         await context.Database.ExecuteSqlRawAsync(history.GetInsertScript(new HistoryRow(migration, "10.0.6")));
                 }
             }
