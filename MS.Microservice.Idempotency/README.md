@@ -30,3 +30,7 @@
 业务 `DbContext` 位于使用本组件的项目中，因此 EF 生成的编译模型也位于使用方程序集。原先 `IdempotencyRecord` 是组件内部类型；普通 EF 模型能注册它，但 `dotnet ef dbcontext optimize --nativeaot` 生成的代码会直接引用这个类型，使用方编译时出现 `CS0122`。`IdempotencyRecord` 现在公开，仅为让跨程序集的生成代码能够引用它。表名、主键、列和事务行为没有改变，数据库不需要新迁移。
 
 运行 `./build/validate-idempotency-compiled-model.ps1` 会创建临时使用方 `DbContext`，生成 EF Native AOT 编译模型并再次编译使用方。它验证组件不会因实体可见性阻断编译模型生成。EF Core 的 `DbContext` 构造函数仍标注了 `IL2026` 和 `IL3050`；这项检查不等于 Reference.Web 已完成 Native AOT 发布，也不验证 PostgreSQL 驱动或 Wolverine 的原生运行。未来若要原生发布整个宿主，需要单独处理这些依赖和运行路径。
+
+## MVC Action 接入
+
+MVC 可以在单个 Action 上使用泛型 `[RequireHttpIdempotency<TFilter>]`，由 DI 提供该 Action 的专用 Filter。Attribute 只选择 Filter；请求指纹、事务和响应快照仍由业务接入代码负责。当前示例仅在 Reference.Web.Tests 的非 AOT TestServer 中映射，详见 [MVC Action 如何接入 HTTP 幂等](src/MS.Microservice.Idempotency.Mvc/README.md)。

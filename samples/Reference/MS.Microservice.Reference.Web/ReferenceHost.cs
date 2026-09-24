@@ -117,7 +117,6 @@ public static class ReferenceHost
     {
         var rateLimiting = Enabled(app.Configuration, "Http:RateLimiting:Enabled");
         var requestTimeouts = Enabled(app.Configuration, "Http:RequestTimeouts:Enabled");
-        var idempotency = app.Services.GetRequiredService<ReferenceIdempotencyOptions>().Enabled;
         app.UsePlatformHttp();
         app.UseMsRequestLogging();
         if (requestTimeouts) app.UsePlatformRequestTimeouts();
@@ -130,9 +129,9 @@ public static class ReferenceHost
             var api = app.MapGroup("");
             if (rateLimiting) api.RequireRateLimiting(ApiRateLimitPolicy);
             if (requestTimeouts) api.WithRequestTimeout(ApiTimeoutPolicy);
-            ProfileEndpoints.Map(api, idempotency);
+            ProfileEndpoints.Map(api);
         }
-        else ProfileEndpoints.Map(app, idempotency);
+        else ProfileEndpoints.Map(app);
     }
 
     private static bool Enabled(IConfiguration configuration, string key)
