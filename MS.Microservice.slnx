@@ -9,6 +9,7 @@
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
+    <Project Path="src/MS.Microservice.HealthChecks.Redis/MS.Microservice.HealthChecks.Redis.csproj" />
     <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
@@ -48,6 +49,7 @@
   <Folder Name="/test/">
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
+    <Project Path="test/MS.Microservice.HealthChecks.Redis.Tests/MS.Microservice.HealthChecks.Redis.Tests.csproj" />
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
