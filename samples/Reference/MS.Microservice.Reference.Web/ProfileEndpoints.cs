@@ -13,14 +13,24 @@ namespace MS.Microservice.Reference.Web;
 
 internal static class ProfileEndpoints
 {
-    public static void Map(IEndpointRouteBuilder app)
+    public static void Map(IEndpointRouteBuilder app, bool idempotencyEnabled)
     {
         var profiles = app.MapGroup("/api/v1/profiles").RequireAuthorization("Manage");
-        profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
-            ExternalIdentityOptions identity, IUnitOfWork unit, EfCoreIdempotencyStore<ReferenceDbContext> store,
-            IServiceScopeFactory scopes, CancellationToken token) =>
-            await ProfileIdempotencyHandler.CreateAsync(request, Actor(http.User, identity), service, http,
-                unit, store, scopes, token));
+        if (idempotencyEnabled)
+        {
+            profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
+                ExternalIdentityOptions identity, IUnitOfWork unit, EfCoreIdempotencyStore<ReferenceDbContext> store,
+                IServiceScopeFactory scopes, CancellationToken token) =>
+                await ProfileIdempotencyHandler.CreateAsync(request, Actor(http.User, identity), service, http,
+                    unit, store, scopes, token));
+        }
+        else
+        {
+            profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
+                ExternalIdentityOptions identity, CancellationToken token) =>
+                Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
+                    profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)));
+        }
         profiles.MapGet("", async (IProfileRepository repository, CancellationToken token,
             [Range(0, int.MaxValue)] int skip = 0, [Range(1, 200)] int take = 50) =>
             Results.Ok((await repository.ListAsync(skip, take, token)).Select(ProfileView.From)));
