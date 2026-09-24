@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -123,6 +124,8 @@ public sealed class ReferenceHostTests
             descriptor.ServiceType == typeof(EfCoreIdempotencyStore<ReferenceDbContext>)));
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType.Name == "ReferenceHttpIdempotencyExecutor"));
+        Assert.Equal(enabled, builder.Services.Any(descriptor =>
+            descriptor.ServiceType.Name == "IIdempotencyActorScope"));
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType == typeof(IHostedService)
             && descriptor.ImplementationType?.Name == "ReferenceIdempotencyCleanupWorker"));
@@ -624,6 +627,27 @@ public sealed class ReferenceHostTests
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
         Assert.Equal((2, 2, 2), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task RefreshedTokenReplaysForTheSameActorButLosingPermissionBlocksReplay()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        var request = new CreateProfile("https://issuer.example", "refreshed-token", "first", []);
+        fixture.Authenticate("profiles.manage", tokenId: "first-token");
+        using var first = await PostKeyedAsync(fixture.Client, request, "refresh-key");
+
+        fixture.Authenticate("messaging.manage", tokenId: "denied-token");
+        using var denied = await PostKeyedAsync(fixture.Client, request, "refresh-key");
+
+        fixture.Authenticate("profiles.manage", tokenId: "second-token");
+        using var replay = await PostKeyedAsync(fixture.Client, request, "refresh-key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, replay.StatusCode);
+        Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
     }
 
     [Theory]
@@ -1220,10 +1244,12 @@ public sealed class ReferenceHostTests
             return new(app, connection);
         }
 
-        public void Authenticate(string scope, string subject = "test-admin")
+        public void Authenticate(string scope, string subject = "test-admin", string? tokenId = null)
         {
+            var claims = new List<Claim> { new("sub", subject), new("scope", scope) };
+            if (tokenId is not null) claims.Add(new("jti", tokenId));
             var token = new JwtSecurityToken("https://issuer.example", "ms-reference",
-                [new("sub", subject), new("scope", scope)], expires: DateTime.UtcNow.AddMinutes(5),
+                claims, expires: DateTime.UtcNow.AddMinutes(5),
                 signingCredentials: new(Key, SecurityAlgorithms.HmacSha256));
             Client.DefaultRequestHeaders.Authorization = new("Bearer", new JwtSecurityTokenHandler().WriteToken(token));
         }

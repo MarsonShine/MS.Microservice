@@ -16,7 +16,7 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
     EfCoreIdempotencyStore<ReferenceDbContext> store,
     IUnitOfWork unit,
     IServiceScopeFactory scopes,
-    ExternalIdentityOptions identity)
+    IIdempotencyActorScope actorScope)
 {
     internal const string HeaderName = "Idempotency-Key";
     private static readonly TimeSpan Retention = TimeSpan.FromHours(24);
@@ -32,14 +32,12 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
             return false;
         }
 
-        var actor = ProfileEndpoints.Actor(http.User, identity);
-        if (string.IsNullOrEmpty(actor.Issuer) || string.IsNullOrEmpty(actor.Subject))
+        var actorHash = actorScope.Resolve(http.User);
+        if (actorHash is null)
         {
             http.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return false;
         }
-        var actorBytes = JsonSerializer.SerializeToUtf8Bytes(actor, ReferenceIdempotencyJsonContext.Default.AuditActor);
-        var actorHash = Convert.ToHexString(SHA256.HashData(actorBytes));
 
         if (http.Request.ContentLength > IdempotencyRequest.MaximumRequestBytes)
         {

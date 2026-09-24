@@ -19,6 +19,8 @@
 
 相同 Body 不一定表示重试。客户端可以用相同内容发起两次独立创建，所以服务端先用**操作名、已验证的身份、`Idempotency-Key`**定位记录，再比较请求指纹。同一身份用同一个键提交不同请求，返回 `409`；不同身份不能读取彼此的响应。键只接受一个值，长度为 1–128 个可见 ASCII 字符，不能含逗号。无效键返回 `400`，业务处理不执行。
 
+`ReferenceIdempotencyActorScope` 在宿主启用幂等时注册一次，从认证中间件验证后的 `ClaimsPrincipal` 读取 `iss` 和配置的 subject claim。它只生成隔离记录所需的稳定身份，不检查 `profiles.manage` 等权限；路由的授权策略仍在端点执行前生效。使用整个 token 作身份会让刷新 token 后的重试失去原记录，完全不区分身份则可能把一个用户的响应重放给另一个用户。当前身份哈希格式保持与旧记录一致；如果以后更改其格式，需要单独处理存量记录。新增 API 不需要再提供一份身份提取代码。
+
 旧创建档案实现先把已绑定的 `CreateProfile` 再序列化为规范 JSON。新 `ReferenceHttpIdempotencyExecutor` 在模型绑定之前读取并回卷 Body，用 HTTP 层看到的 **Method、Path、QueryString、完整的 Content-Type 和 Body 表示**计算指纹。对 `application/json` 与 `+json` 类型，UTF-8 Body 直接解析，标为 `charset=utf-16` 的 Body 先按 UTF-16 解码；之后递归按字段名排序每层对象。字符串之外的 JSON 空白不参与比较，数组顺序保持不变。非 JSON Body 直接比较原始字节。各部分分别带长度写入 SHA-256，后面的模型绑定仍读取原始 Body。一个 JSON 对象中若字段名重复，即使只差大小写，如 `displayName` 与 `DisplayName`，也会在绑定前返回 `400`，不占用键。
 
 例如，第一次 `POST /api/v1/profiles` 使用键 `K1`、`Content-Type: application/json`，Body 为 `{"issuer":"https://issuer.example","subject":"S","displayName":"first","roles":["reader","editor"]}`，返回 `201` 和 `Location: /api/v1/profiles/P1`。同一身份以 `K1` 重发时，只要 `Content-Type` 不变，即使把对象字段换个顺序、加上换行和空格，仍得到首次保存的 `201`、`Location` 和正文字节，不再创建档案或 Outbox 消息。若把 `roles` 改成 `["editor","reader"]`，或改了查询字符串、`Content-Type` 的大小写或 `charset` 参数，同键返回 `409`。更换 `X-Request-Id` 不影响指纹。一个接口使用自己的稳定操作名，因此另一个已标记接口可以单独使用 `K1`。非 JSON 请求则须保持 Body 字节完全一致。
