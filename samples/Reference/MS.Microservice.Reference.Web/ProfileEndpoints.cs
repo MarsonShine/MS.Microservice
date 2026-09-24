@@ -18,7 +18,7 @@ internal static class ProfileEndpoints
             ExternalIdentityOptions identity, CancellationToken token) =>
             Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
                 profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)))
-            .RequireHttpIdempotency();
+            .RequireHttpIdempotency("profiles.create");
         profiles.MapGet("", async (IProfileRepository repository, CancellationToken token,
             [Range(0, int.MaxValue)] int skip = 0, [Range(1, 200)] int take = 50) =>
             Results.Ok((await repository.ListAsync(skip, take, token)).Select(ProfileView.From)));

@@ -10,16 +10,16 @@
 
 先保存占位记录使同键并发请求在执行第二次业务操作之前发生数据库写冲突。赢家提交后，输家必须退出并回滚自己的事务，再用新的上下文调用 `FindAsync`：相同指纹返回已保存响应；不同指纹返回 `DifferentRequest`。如果查不到记录，应报告原数据库错误或按照调用方明确的重试策略处理，不能假定任意数据库异常都是幂等键冲突。赢家失败并回滚时，占位记录也回滚，后续请求可以执行。
 
-`IdempotencyRequest.Create` 接收稳定的操作名、已认证身份、一个请求键和调用方提供的规范化请求字节。键最多 128 个可见 ASCII 字符；请求表示最多 1 MiB。库仅保存三项 SHA-256 哈希，不保存原始键或请求。调用方须先拒绝多个 `Idempotency-Key` 请求头，并对同一业务请求始终生成相同的字节。JSON 请求可通过显式 `JsonTypeInfo<T>` 生成字节；本组件不做运行时 JSON 反射。身份必须来自已经验证的认证信息，重放前仍须执行授权。
+`IdempotencyRequest.Create` 接收稳定的操作名、已认证身份、一个请求键和调用方选定的请求表示字节。键最多 128 个可见 ASCII 字符；请求表示最多 1 MiB。库仅保存三项 SHA-256 哈希，不保存原始键或请求。调用方须先拒绝多个 `Idempotency-Key` 请求头，并确定“同一请求”的比较规则。Reference 执行器把 Method、Path、QueryString、完整的 Content-Type 和 Body 表示纳入指纹：UTF-8 JSON 直接解析，标为 `charset=utf-16` 的 JSON 先解码；随后递归按对象字段名排序并忽略字符串之外的空白，数组保持原顺序。非 JSON 使用原始 Body 字节。JSON 同一对象内的字段名重复，包括只差大小写的字段名，会在绑定前被拒绝。此规则由 Reference 实现，EFCore 存储组件不解析 HTTP 或 JSON。身份必须来自已经验证的认证信息，重放前仍须执行授权。
 
-可保存响应的状态码是 200–499，正文最多 64 KiB。调用方应让初次响应与重放响应都使用 `IdempotencyResponse` 中的状态码、内容类型、`Location` 和正文；动态响应头和服务器错误不属于重放契约。存储原响应正文意味着它可能包含个人信息，应按业务数据控制访问与保留期限。`PruneExpiredAsync` 删除到期记录，但不会自动运行：宿主必须安排清理。到期后、实际删除前继续重放；删除后同键可以重新执行。客户端应在最早可能清理记录之前完成重试，并确保服务端仍保留该记录。
+可保存响应的状态码是 200–499，正文最多 64 KiB。`Content-Type` 可为空，例如 `204 No Content` 可以保存空正文，之后按原状态和空正文重放。调用方应让初次响应与重放响应都使用 `IdempotencyResponse` 中的状态码、可为空的内容类型、`Location` 和正文；动态响应头和服务器错误不属于重放契约。Reference 的 HTTP 执行器进一步限定只保存 `2xx`，并在响应写入暂存流时执行 64 KiB 上限，超过时回滚事务。存储原响应正文意味着它可能包含个人信息，应按业务数据控制访问与保留期限。`PruneExpiredAsync` 删除到期记录，但不会自动运行：宿主必须安排清理。到期后、实际删除前继续重放；删除后同键可以重新执行。客户端应在最早可能清理记录之前完成重试，并确保服务端仍保留该记录。
 
 本组件只约束同一数据库事务内的业务记录和响应记录。外部网络调用、邮件和没有参与该事务的消息发送不获得 exactly-once 保证。要与现有消息单元配合，幂等执行应是最外层事务，业务服务的嵌套 `IUnitOfWork` 参加同一个 `DbContext` 事务。
 
 ## 最小接入顺序
 
 1. 在业务 `DbContext.OnModelCreating` 中调用 `model.AddHttpIdempotency(schema)`，为实际数据库生成迁移。
-2. 在已经鉴权的端点校验单个请求键，用静态 JSON 元数据生成请求指纹和有界响应。
+2. 在已经鉴权的端点校验单个请求键，按该接口明确的比较规则生成请求指纹和有界响应。
 3. 在该 `DbContext` 的最外层业务事务中调用 `ClaimAndExecuteAsync`。提交失败后先回滚，再查询赢家结果。
 4. 安排过期记录清理；用真实数据库验证两次并发请求及故障重试行为。
 
@@ -33,4 +33,4 @@
 
 ## MVC Action 接入
 
-MVC 可以在单个 Action 上使用泛型 `[RequireHttpIdempotency<TFilter>]`，由 DI 提供该 Action 的专用 Filter。Attribute 只选择 Filter；请求指纹、事务和响应快照仍由业务接入代码负责。当前示例仅在 Reference.Web.Tests 的非 AOT TestServer 中映射，详见 [MVC Action 如何接入 HTTP 幂等](src/MS.Microservice.Idempotency.Mvc/README.md)。
+MVC 可以在单个 Action 上使用 `[RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.create")]`。Attribute 只通过 DI 选择 Filter，并携带稳定操作名；Reference 的多个测试 Action 共用这个 `IAsyncResourceFilter` 和 `ReferenceHttpIdempotencyExecutor`，不再为每个 Action 编写业务 Filter。共用执行器仍在 Reference.Web，其他宿主需要提供自己的事务和身份接入。为了让旧创建档案记录继续重放，Reference 在 `profiles.create` 的新指纹查到冲突时，会在旧记录保留窗口内按原 `CreateProfile` 规则再查一次；其他操作没有这项兼容。它是过渡处理，不是本组件的长期请求指纹契约。当前 MVC 示例只在 Reference.Web.Tests 的非 AOT TestServer 中映射，详见 [MVC Action 如何接入 HTTP 幂等](src/MS.Microservice.Idempotency.Mvc/README.md)。

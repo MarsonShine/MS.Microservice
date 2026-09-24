@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Idempotency.Mvc;
 using MS.Microservice.Reference.Application;
@@ -13,8 +14,24 @@ namespace MS.Microservice.Reference.Web.Tests;
 public sealed class ProfileMvcTestController(ProfileService service, ExternalIdentityOptions identity) : ControllerBase
 {
     [HttpPost]
-    [RequireHttpIdempotency<ProfileCreateMvcIdempotencyFilter>]
+    [RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.create")]
     public Task<IActionResult> Create([FromBody] CreateProfile request) => CreateCoreAsync(request);
+
+    [HttpPost("alternate")]
+    [RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.alternate")]
+    public Task<IActionResult> Alternate([FromBody] CreateProfile request) => CreateCoreAsync(request);
+
+    [HttpPost("echo")]
+    [RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.echo")]
+    public IActionResult Echo([FromBody] CreateProfile request) => Ok(request.DisplayName);
+
+    [HttpPost("json")]
+    [RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.json")]
+    public IActionResult Json([FromBody] JsonElement request) => Ok(request);
+
+    [HttpPost("empty")]
+    [RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.empty")]
+    public IActionResult ReturnNoContent([FromBody] CreateProfile request) => NoContent();
 
     [HttpPost("plain")]
     public Task<IActionResult> Plain([FromBody] CreateProfile request) => CreateCoreAsync(request);
