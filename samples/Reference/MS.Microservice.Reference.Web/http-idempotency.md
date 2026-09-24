@@ -33,4 +33,6 @@ Profile 与 Order 都调用同一个 `ReferenceHttpIdempotencyExecutor`。执行
 
 Reference 只保存 `2xx` 响应，带键请求 Body 上限为 1 MiB，响应正文上限为 64 KiB；快照只包含状态码、可为空的 `Content-Type`、`Location` 和正文。流式输出、文件下载或依赖其他响应头的接口不能直接套用。宿主不自动建表；部署前要应用所选提供者的迁移。两种迁移流都先有 `AddHttpIdempotency`，后有新增的 `AddOrders`，所以标准完整迁移即使在功能关闭时也会建幂等表；关闭仅表示请求运行时不访问该表。记录保留 24 小时，清理任务每小时运行一次。
 
+执行器在已处理的返回路径清理当前请求正文缓冲区。读取时抛异常以及其他副本的边界，见[托管缓冲区清零](../../../docs/ZeroMemory-In-Managed-Services.md)。
+
 测试代码覆盖两个创建路由的重放和冲突、JSON 字段重排、旧指纹同键冲突、禁用开关及事务回滚。本次没有延迟、分配或 GC 的前后基准数据，也没有完成整个 Reference 宿主的 Native AOT 发布验证。真实 PostgreSQL 并发、Wolverine 原生 Outbox 和进程崩溃恢复仍需对应环境验证。

@@ -11,6 +11,7 @@
 - [组件复制与包消费](components/consumption.md)：源码导出、本地打包和仓库外验证。
 - [`src` 基础设施性能检查](infrastructure-performance-review-2026-09-23.md)：合并前 `master` 的逐项目测量记录，部分架构描述已过时。
 - [AI、Logging、Messaging、Persistence 性能检查](extension-modules-performance-review-2026-09-23.md)：合并前 `master` 的四模块测量记录；当前 AOT 状态以[迁移说明](Performance-Aot-Migration.md)为准。
+- [托管缓冲区清零与 `ZeroMemory`](ZeroMemory-In-Managed-Services.md)：结合 HTTP 幂等正文和 AES 密钥说明收益、成本与边界。
 
 下方理论资料继续保留。执行当前仓库时优先使用以上入口；历史示例的路径和接口应先与当前代码核对。
 ## 如何使用这个文档中心
@@ -334,6 +335,7 @@ flowchart TD
 | 文档 | 说明 |
 | --- | --- |
 | [Password-Hashing-With-IPasswordHasher.md](./Password-Hashing-With-IPasswordHasher.md) | 密码安全：`IPasswordHasher<User>`、旧 HMAC 迁移、自动重新哈希与项目实战 |
+| [ZeroMemory-In-Managed-Services.md](./ZeroMemory-In-Managed-Services.md) | 托管缓冲区清零：HTTP 正文与 AES 密钥的收益、成本和清理边界 |
 | [Lab-Only-Controller-Discovery.md](./Lab-Only-Controller-Discovery.md) | MVC 工程实践：ApplicationPart、FeatureProvider、Controller discovery 与实验端点隔离 |
 | [Separated-Interface.md](./Separated-Interface.md) | 接口分离：消费方定义接口降低耦合 |
 | [Enumeration.md](./Enumeration.md) | 枚举类：替代原生 enum 以支持多态 |
@@ -385,6 +387,7 @@ flowchart TD
 | [Serverless Architectures.md](./Serverless%20Architectures.md) | 无服务架构（Serverless Architectures） |
 | [Snapshot.md](./Snapshot.md) | 快照模式 |
 | [ValueObject.md](./ValueObject.md) | 值对象 |
+| [ZeroMemory-In-Managed-Services.md](./ZeroMemory-In-Managed-Services.md) | 托管缓冲区清零：`CryptographicOperations.ZeroMemory` 的收益与边界 |
 
 ### 子目录文档
 
