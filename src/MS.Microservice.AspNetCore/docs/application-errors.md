@@ -24,6 +24,8 @@ Reference 原先在三个列表端点内分别检查 `skip`、`take` 和 `limit`
 
 Reference 的 `Respond` 调用同一映射，业务错误也遵守上表；共享适配层不引用业务模型，也不扫描程序集。
 
+如果需要从实际请求理解 `AddValidation()`、参数绑定和业务校验分别处理什么，参见 [Reference 为什么调用 `AddValidation()`](minimal-api-validation.md)。
+
 ## 验证与范围
 
 TestServer 验证了八种非法分页值在仓储调用前被拒绝，以及省略、正常值和上界值实际传入仓储。Reference 的领域验证和冲突响应仍带公开错误码；共享适配层的测试覆盖四类公开错误、未知错误的信息隐藏、细节及 traceId。这项修改修复响应契约和信息暴露，没有性能优化数据。后续新增查询字段时，应在 HTTP 边界写明解析、缺省和范围，同时保留业务层独有的规则。

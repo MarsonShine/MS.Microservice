@@ -11,11 +11,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MS.Microservice.AspNetCore;
 using MS.Microservice.Core.Ceching;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
-using MS.Microservice.Infrastructure.HealthChecks;
 using MS.Microservice.Infrastructure.Telemetry.Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Lab.Application.Orders;
 using MS.Microservice.Lab.Application.Identity.Token;
@@ -25,6 +25,7 @@ using MS.Microservice.Lab.Infrastructure.Cors;
 using MS.Microservice.Lab.Infrastructure.Filters;
 using MS.Microservice.Lab.Infrastructure.Uploads;
 using MS.Microservice.Swagger;
+using Npgsql;
 
 namespace MS.Microservice.Lab.Infrastructure.Extensions
 {
@@ -124,9 +125,8 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
                     "self",
                     () => HealthCheckResult.Healthy(),
                     tags: ["live"]);
-                hcBuilder.AddCheck<SqlHealthCheck>(
-                    SqlHealthCheck.Name,
-                    tags: [SqlHealthCheck.ReadinessTag]);
+                var connection = configuration.GetConnectionString("ActivationConnection") ?? string.Empty;
+                hcBuilder.AddDbConnectionCheck("postgresql", _ => new NpgsqlConnection(connection));
                 return services;
             }
 
