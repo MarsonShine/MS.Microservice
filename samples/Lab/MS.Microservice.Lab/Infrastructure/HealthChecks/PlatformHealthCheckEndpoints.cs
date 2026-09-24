@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using MS.Microservice.Infrastructure.HealthChecks;
+using MS.Microservice.AspNetCore;
 
 namespace MS.Microservice.Lab.Infrastructure.HealthChecks;
 
@@ -15,8 +15,8 @@ public static class PlatformHealthCheckEndpoints
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapHealthChecks(LivenessPath, CreateOptions("live"));
-        endpoints.MapHealthChecks(ReadinessPath, CreateOptions(SqlHealthCheck.ReadinessTag));
-        endpoints.MapHealthChecks(CompatibilityPath, CreateOptions(SqlHealthCheck.ReadinessTag));
+        endpoints.MapHealthChecks(ReadinessPath, CreateOptions(PlatformHealthChecks.ReadyTag));
+        endpoints.MapHealthChecks(CompatibilityPath, CreateOptions(PlatformHealthChecks.ReadyTag));
         return endpoints;
     }
 

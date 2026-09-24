@@ -10,6 +10,8 @@ Reference 原先直接在 `/health/ready` 端点里依次检查数据库、迁�
 
 `AddPlatformHealthChecks` 返回 ASP.NET Core 的 `IHealthChecksBuilder`。宿主显式注册探针，并给参与就绪判定的探针加 `ready` 标签。`MapPlatformHealthChecks` 映射两个匿名 GET 端点：
 
+通用端点不会自行发现数据库或缓存。数据库可通过可选的 [`AddDbConnectionCheck`](db-health-checks.md) 探测；Redis 需要接入真实 Redis 客户端后再显式注册对应探针。Reference 已有包含迁移和消息存储判断的宿主探针，Lab 使用通用数据库探针。未使用的依赖不应出现在就绪检查中。
+
 | 路径 | 执行内容 | HTTP 状态 |
 | --- | --- | --- |
 | `/health/live` | 不访问依赖，返回 `{"status":"healthy"}`。 | `200` |

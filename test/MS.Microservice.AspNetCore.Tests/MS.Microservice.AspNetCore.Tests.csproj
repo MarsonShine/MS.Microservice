@@ -5,6 +5,7 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <ProjectReference Include="../../src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
   </ItemGroup>
 </Project>
