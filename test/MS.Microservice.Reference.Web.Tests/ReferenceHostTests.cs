@@ -180,6 +180,38 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
+    public async Task GloballyEnabledIdempotencyDoesNotChangeUnmarkedPostEndpoints()
+    {
+        var failures = Substitute.For<IFailedMessageOperations>();
+        failures.ReplayAsync("missing", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(ReplayResult.NotFound));
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true,
+            configureServices: services =>
+            {
+                services.RemoveAll<IFailedMessageOperations>();
+                services.AddSingleton(failures);
+            });
+        fixture.Authenticate("messaging.manage");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+
+        foreach (var keys in new[]
+        {
+            Array.Empty<string>(), ["safe-key"], ["bad,key"], ["one", "two"], [new string('x', 129)]
+        })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post,
+                "/api/operations/messages/failures/missing/replay");
+            if (keys.Length != 0)
+                Assert.True(request.Headers.TryAddWithoutValidation("Idempotency-Key", keys));
+            using var response = await fixture.Client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        await failures.Received(5).ReplayAsync("missing", Arg.Any<CancellationToken>());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
     public async Task KeyedRequestWithDifferentPayloadReturnsConflictWithoutReplayingPrivateResponse()
     {
         await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);

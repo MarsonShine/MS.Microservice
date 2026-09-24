@@ -3,34 +3,22 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Routing;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Core.Functional;
-using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Domain;
-using MS.Microservice.Reference.Persistence;
 
 namespace MS.Microservice.Reference.Web;
 
 internal static class ProfileEndpoints
 {
-    public static void Map(IEndpointRouteBuilder app, bool idempotencyEnabled)
+    public static void Map(IEndpointRouteBuilder app)
     {
         var profiles = app.MapGroup("/api/v1/profiles").RequireAuthorization("Manage");
-        if (idempotencyEnabled)
-        {
-            profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
-                ExternalIdentityOptions identity, IUnitOfWork unit, EfCoreIdempotencyStore<ReferenceDbContext> store,
-                IServiceScopeFactory scopes, CancellationToken token) =>
-                await ProfileIdempotencyHandler.CreateAsync(request, Actor(http.User, identity), service, http,
-                    unit, store, scopes, token));
-        }
-        else
-        {
-            profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
-                ExternalIdentityOptions identity, CancellationToken token) =>
-                Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
-                    profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)));
-        }
+        profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
+            ExternalIdentityOptions identity, CancellationToken token) =>
+            Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
+                profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)))
+            .RequireHttpIdempotency();
         profiles.MapGet("", async (IProfileRepository repository, CancellationToken token,
             [Range(0, int.MaxValue)] int skip = 0, [Range(1, 200)] int take = 50) =>
             Results.Ok((await repository.ListAsync(skip, take, token)).Select(ProfileView.From)));
@@ -62,7 +50,7 @@ internal static class ProfileEndpoints
             });
     }
 
-    private static AuditActor Actor(ClaimsPrincipal user, ExternalIdentityOptions identity)
+    internal static AuditActor Actor(ClaimsPrincipal user, ExternalIdentityOptions identity)
         => new(user.FindFirstValue("iss") ?? "", user.FindFirstValue(identity.SubjectClaimType) ?? "");
     private static IResult Respond<T>(Either<Error, T> result, Func<T, IResult> success)
         => result.Match(error => ApplicationErrorResults.ToProblem(error.Code, error.Message, error.Details), success);
