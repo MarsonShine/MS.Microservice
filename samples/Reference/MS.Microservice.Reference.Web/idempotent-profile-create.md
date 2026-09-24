@@ -25,13 +25,15 @@
 
 例如，第一次 `POST /api/v1/profiles` 使用键 `K1`、`Content-Type: application/json`，Body 为 `{"issuer":"https://issuer.example","subject":"S","displayName":"first","roles":["reader","editor"]}`，返回 `201` 和 `Location: /api/v1/profiles/P1`。同一身份以 `K1` 重发时，只要 `Content-Type` 不变，即使把对象字段换个顺序、加上换行和空格，仍得到首次保存的 `201`、`Location` 和正文字节，不再创建档案或 Outbox 消息。若把 `roles` 改成 `["editor","reader"]`，或改了查询字符串、`Content-Type` 的大小写或 `charset` 参数，同键返回 `409`。更换 `X-Request-Id` 不影响指纹。一个接口使用自己的稳定操作名，因此另一个已标记接口可以单独使用 `K1`。非 JSON 请求则须保持 Body 字节完全一致。
 
-旧 `profiles.create` 记录的请求哈希来自绑定后的 `CreateProfile` JSON，新记录则使用 HTTP 字段与排序后的 JSON。旧行不会改写，但新规则查到同键冲突时，Reference **只对 `profiles.create`** 再按旧方式绑定、序列化 `CreateProfile` 并查询一次。旧指纹匹配便重放原来的 `201`、`Location` 和正文；确实改变了旧请求则返回 `409`。这只为旧记录在 24 小时保留窗口内继续处理重试；记录到期但尚未清理时仍可能重放。其他操作名没有旧格式兼容，后续接口不应依赖这条过渡路径。
+旧 `profiles.create` 记录的请求哈希来自绑定后的 `CreateProfile` JSON，新记录则使用 HTTP 字段与排序后的 JSON。旧行不会改写，但新规则查到同键冲突时，`ReferenceLegacyProfileIdempotencyLookup` **只对原正式路由 `POST /api/v1/profiles` 的 `profiles.create`** 再按旧方式绑定、序列化 `CreateProfile` 并查询一次。旧指纹匹配便重放原来的 `201`、`Location` 和正文；确实改变了旧请求则返回 `409`。其他路径即使使用相同操作名也不走旧格式回退，避免重放别的路由的响应。这只为旧记录在 24 小时保留窗口内继续处理重试；记录到期但尚未清理时仍可能重放。共享执行器只依赖查询接口，不再包含档案类型或操作名；其他操作名没有旧格式兼容，后续接口不应依赖这条过渡路径。
 
 ## 业务与响应怎样一起提交
 
 首次带键请求查不到记录时，执行器让消息 `IUnitOfWork` 开启外层事务，先插入唯一键占位并刷新到数据库，然后运行原来的端点委托。`ProfileService.CreateAsync` 的内层工作单元加入同一事务，档案和 Outbox 消息与幂等记录使用同一个 `DbContext`。执行器暂存端点实际写出的状态码、`Content-Type`、`Location` 和正文字节，保存成功响应快照后才提交，再把响应送给客户端。因此网络断开在提交之后，也不会使重试再次执行创建。
 
 这也是旧的逐 Action Filter 不合适的原因：它绕过 Action，另写一条创建档案处理路径。修改 Action 的业务规则或响应时，带键路径可能不同步。现在 MVC 的 `IAsyncResourceFilter` 包围模型绑定、Action 和结果写出；Minimal API 则在绑定之前包裹这个路由的请求委托。两者都运行原有业务代码，不再为每个操作复制一份 Filter 和业务处理器。MVC Attribute 目前只负责从 DI 选择共用 Filter；执行器仍放在 Reference.Web，而不是一个可直接套在任意宿主上的通用库。
+
+测试中的另一个 Controller 提供 `/test/mvc/echo`，请求类型是 `JsonElement`，与档案创建无关。它只写 `[RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("echo.create")]`；字段重排会重放，正文改变会返回 `409`。新增 Reference API 仍需实现自己的正常业务处理、选择稳定操作名并标记端点，但不需要新的幂等执行器、Filter、身份提取或旧档案兼容分支。换一个宿主时，则需要在宿主层接好自己的存储事务与身份来源一次。
 
 Reference 执行器**只持久化 `2xx` 响应**。创建档案成功保存的是 `201`；MVC 测试还覆盖 `Echo` 的 `200`，以及无正文、无 `Content-Type` 的 `204` 首次响应和重放。业务校验、模型校验或冲突返回 `4xx` 时，执行器回滚占键，再发送该错误；修正请求后可复用该键。异常、取消和 `5xx` 也不留下记录。带键请求的 Body 最多 1 MiB，超过时返回 `413`。响应写入有界暂存流，正文一旦超过 64 KiB 就失败并回滚事务，不会继续把大响应缓存在内存。快照没有保存任意响应头，流式结果、文件下载或依赖其他响应头的接口不应直接标记。
 

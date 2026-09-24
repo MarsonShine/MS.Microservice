@@ -127,6 +127,8 @@ public sealed class ReferenceHostTests
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType.Name == "IIdempotencyActorScope"));
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
+            descriptor.ServiceType.Name == "IIdempotencyLookup"));
+        Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType == typeof(IHostedService)
             && descriptor.ImplementationType?.Name == "ReferenceIdempotencyCleanupWorker"));
     }
@@ -270,7 +272,7 @@ public sealed class ReferenceHostTests
     [Fact]
     public async Task AProfileClaimFromTheOldFingerprintCanStillReplay()
     {
-        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
         fixture.Authenticate("profiles.manage");
         var profile = new CreateProfile("https://issuer.example", "old-claim", "first", ["reader"]);
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -300,6 +302,7 @@ public sealed class ReferenceHostTests
         };
         utf16Request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
         using var utf16Replay = await fixture.Client.SendAsync(utf16Request);
+        using var otherRoute = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", profile, key);
         using var changed = await PostKeyedAsync(fixture.Client,
             profile with { DisplayName = "second" }, key);
 
@@ -308,6 +311,7 @@ public sealed class ReferenceHostTests
         Assert.Equal(legacyResponse, await replay.Content.ReadAsByteArrayAsync());
         Assert.Equal(HttpStatusCode.Created, utf16Replay.StatusCode);
         Assert.Equal(legacyResponse, await utf16Replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal(HttpStatusCode.Conflict, otherRoute.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
         Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
 
@@ -393,6 +397,33 @@ public sealed class ReferenceHostTests
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
         Assert.Equal((2, 2, 2), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task UnrelatedMvcApiNeedsOnlyTheOperationMarker()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+
+        using var first = await PostAsync("{\"left\":1,\"right\":2}");
+        using var reordered = await PostAsync("{\"right\":2,\"left\":1}");
+        using var changed = await PostAsync("{\"left\":1,\"right\":3}");
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, reordered.StatusCode);
+        Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await reordered.Content.ReadAsByteArrayAsync());
+        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+
+        async Task<HttpResponseMessage> PostAsync(string json)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/test/mvc/echo")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", "echo-key");
+            return await fixture.Client.SendAsync(request);
+        }
     }
 
     [Fact]

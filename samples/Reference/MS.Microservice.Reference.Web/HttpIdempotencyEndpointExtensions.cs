@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Builder;
 
 namespace MS.Microservice.Reference.Web;
 
-internal static class ProfileIdempotencyEndpointExtensions
+internal static class HttpIdempotencyEndpointExtensions
 {
     internal static RouteHandlerBuilder RequireHttpIdempotency(this RouteHandlerBuilder route, string operation)
     {
