@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using MS.Microservice.Idempotency.Mvc;
 
-namespace MS.Microservice.Reference.Web;
+namespace MS.Microservice.Reference.Web.HttpIdempotency;
 
 public sealed class ReferenceHttpIdempotencyResourceFilter : IAsyncResourceFilter
 {

@@ -24,7 +24,7 @@ public Task<IActionResult> Create([FromBody] CreateProfile request) => CreateCor
 
 `profiles.create` 是稳定的操作名。同一个 Filter 也用于测试 Controller 的 `Alternate` 和 `Echo` Action，它们各有自己的操作名；未标记的 `Plain` Action 不经过该 Filter。Attribute 通过 DI 取得指定 Filter，要求它实现 `IAsyncResourceFilter`。使用方仍须为自己的宿主注册持久化存储、工作单元和 Filter；全局 `Http:Idempotency:Enabled` 只控制基础设施是否启用。
 
-测试还包含独立的 `IdempotentEchoTestController`：它的请求是 `JsonElement`，只用同一个 Attribute 标记 `echo.create`，没有专属幂等 Filter 或处理器。Reference 的身份来源和旧档案记录兼容都在宿主注册一次；每个新 Action 只需选择稳定操作名并保留自己的正常业务逻辑。
+测试还包含独立的 `IdempotentEchoTestController`：它的请求是 `JsonElement`，只用同一个 Attribute 标记 `echo.create`，没有专属幂等 Filter 或处理器。Reference 的身份来源在宿主注册一次；每个新 Action 只需选择稳定操作名并保留自己的正常业务逻辑。
 
 ## 一次带键请求怎样执行
 
@@ -46,6 +46,6 @@ public Task<IActionResult> Create([FromBody] CreateProfile request) => CreateCor
 
 带键请求的 Body 最多 1 MiB；超过时返回 `413`，Action 不执行。响应暂存流也限制在 64 KiB：写出超过上限时立即失败，整个事务回滚，不会继续缓存更大的正文。快照只保存状态码、可为空的 `Content-Type`、`Location` 和正文；依赖其他响应头或流式输出的 Action 不应直接标记。业务写入和 Outbox 必须参加执行器开启的同一个数据库事务；事务外的邮件或网络调用不在此保证内。
 
-旧 `profiles.create` 记录的指纹来自绑定后的 `CreateProfile` JSON，现有记录不会改写。新指纹查询遇到冲突时，Reference 会仅对原正式路由 `/api/v1/profiles` 和这个操作名按旧规则绑定并序列化 `CreateProfile`，再查询一次：若旧指纹匹配，直接重放旧响应；若仍不匹配，返回 `409`。测试 MVC 路由虽然也使用这个操作名，却不能重放正式路由的旧响应。这是让旧记录在 24 小时保留期内继续处理重试的过渡逻辑，记录实际清理前仍可能重放。其他操作名不尝试旧格式匹配，新的接口不能把这段兼容逻辑当作长期 API 契约。
+旧 `profiles.create` 记录的指纹来自绑定后的 `CreateProfile` JSON，现有记录不会改写。相同身份和键命中这种记录时，新规则的指纹不同，存储返回 `DifferentRequest`，HTTP 层返回 `409`。执行器不会按旧格式再次查询、转换记录或执行 Action。记录被清理后，该键才可能作为新请求使用。
 
-SQLite TestServer 测试覆盖多个 Action 共用 Filter、UTF-16 JSON 字段重排、`200` 和 `204` 重放、旧创建档案记录重放、不同操作名、查询变化、业务拒绝后复用键，以及异常和大小限制的回滚。这些测试不能证明其他字符集、真实 PostgreSQL 并发或 Wolverine 原生 Outbox 的行为；本次也没有延迟和分配的前后测量，不能宣称性能收益。MVC 示例未进行 Native AOT 发布验证。需要了解 Reference 的配置、Minimal API 接入及迁移行为，可读[创建档案时如何处理重复 HTTP 请求](../../../samples/Reference/MS.Microservice.Reference.Web/idempotent-profile-create.md)。
+SQLite TestServer 测试覆盖多个 Action 共用 Filter、UTF-16 JSON 字段重排、`200` 和 `204` 重放、旧创建档案记录同键冲突、不同操作名、查询变化、业务拒绝后复用键，以及异常和大小限制的回滚。这些测试不能证明其他字符集、真实 PostgreSQL 并发或 Wolverine 原生 Outbox 的行为；本次也没有延迟和分配的前后测量，不能宣称性能收益。MVC 示例未进行 Native AOT 发布验证。需要了解 Reference 的配置、Minimal API 接入及迁移行为，可读[Profile 与 Order 如何共用 HTTP 幂等](../../../samples/Reference/MS.Microservice.Reference.Web/http-idempotency.md)。

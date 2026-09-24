@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Routing;
 using MS.Microservice.AspNetCore;
@@ -6,6 +5,7 @@ using MS.Microservice.Core.Functional;
 using MS.Microservice.Messaging;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Domain;
+using MS.Microservice.Reference.Web.HttpIdempotency;
 
 namespace MS.Microservice.Reference.Web;
 
@@ -16,7 +16,7 @@ internal static class ProfileEndpoints
         var profiles = app.MapGroup("/api/v1/profiles").RequireAuthorization("Manage");
         profiles.MapPost("", async (CreateProfile request, ProfileService service, HttpContext http,
             ExternalIdentityOptions identity, CancellationToken token) =>
-            Respond(await service.CreateAsync(request, Actor(http.User, identity), token),
+            Respond(await service.CreateAsync(request, ReferenceActor.From(http.User, identity), token),
                 profile => Results.Created($"/api/v1/profiles/{profile.Id}", profile)))
             .RequireHttpIdempotency("profiles.create");
         profiles.MapGet("", async (IProfileRepository repository, CancellationToken token,
@@ -26,12 +26,12 @@ internal static class ProfileEndpoints
             await repository.GetAsync(id, token) is { } profile ? Results.Ok(ProfileView.From(profile)) : Results.NotFound());
         profiles.MapPatch("/{id:guid}", async (Guid id, ChangeProfile request, ProfileService service, HttpContext http,
             ExternalIdentityOptions identity, CancellationToken token) =>
-            Respond(await service.ChangeAsync(id, request, Actor(http.User, identity), token), Results.Ok));
+            Respond(await service.ChangeAsync(id, request, ReferenceActor.From(http.User, identity), token), Results.Ok));
         app.MapGet("/api/v1/roles", () => Results.Ok(ProfileRoles.All)).RequireAuthorization("Manage");
         app.MapGet("/api/v1/me", async (HttpContext http, ExternalIdentityOptions identity,
             IProfileRepository repository, CancellationToken token) =>
         {
-            var actor = Actor(http.User, identity);
+            var actor = ReferenceActor.From(http.User, identity);
             var profile = await repository.FindAsync(actor.Issuer, actor.Subject, token);
             return profile is null ? Results.NotFound() : Results.Ok(ProfileView.From(profile));
         }).RequireAuthorization();
@@ -50,8 +50,6 @@ internal static class ProfileEndpoints
             });
     }
 
-    internal static AuditActor Actor(ClaimsPrincipal user, ExternalIdentityOptions identity)
-        => new(user.FindFirstValue("iss") ?? "", user.FindFirstValue(identity.SubjectClaimType) ?? "");
     private static IResult Respond<T>(Either<Error, T> result, Func<T, IResult> success)
         => result.Match(error => ApplicationErrorResults.ToProblem(error.Code, error.Message, error.Details), success);
 }

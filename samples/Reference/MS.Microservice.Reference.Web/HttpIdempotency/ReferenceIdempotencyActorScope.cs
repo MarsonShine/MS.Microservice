@@ -4,7 +4,7 @@ using System.Text.Json;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Reference.Application;
 
-namespace MS.Microservice.Reference.Web;
+namespace MS.Microservice.Reference.Web.HttpIdempotency;
 
 internal interface IIdempotencyActorScope
 {
@@ -16,12 +16,11 @@ internal sealed class ReferenceIdempotencyActorScope(ExternalIdentityOptions ide
     public string? Resolve(ClaimsPrincipal user)
     {
         if (user.Identity?.IsAuthenticated != true) return null;
-        var issuer = user.FindFirstValue("iss");
-        var subject = user.FindFirstValue(identity.SubjectClaimType);
-        if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(subject)) return null;
+        var actor = ReferenceActor.From(user, identity);
+        if (string.IsNullOrWhiteSpace(actor.Issuer) || string.IsNullOrWhiteSpace(actor.Subject)) return null;
 
-        // Preserve the scope format used by existing records while taking identity from validated claims.
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(new AuditActor(issuer, subject),
+        // Token refresh must not change the authenticated actor's key scope.
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(actor,
             ReferenceIdempotencyJsonContext.Default.AuditActor);
         try
         {

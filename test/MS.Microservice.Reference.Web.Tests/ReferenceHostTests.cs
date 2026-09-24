@@ -32,8 +32,8 @@ using MS.Microservice.Messaging.SelfManaged;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Domain;
 using MS.Microservice.Reference.Persistence;
-using MS.Microservice.Reference.Web;
 using Xunit;
+using MS.Microservice.Reference.Web.HttpIdempotency;
 
 namespace MS.Microservice.Reference.Web.Tests;
 
@@ -48,6 +48,8 @@ public sealed class ReferenceHostTests
         Assert.Equal("{\"status\":\"healthy\"}", await live.Content.ReadAsStringAsync());
         using var anonymous = await fixture.Client.GetAsync("/api/v1/profiles");
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        using var anonymousOrder = await fixture.Client.PostAsJsonAsync("/api/v1/orders", new CreateOrder("SKU-1", 1));
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousOrder.StatusCode);
         fixture.Authenticate("profiles.manage");
         foreach (var path in new[] { "/api/demo", "/api/v1/Account/login", "/api/orders", "/api/image" })
         {
@@ -126,8 +128,6 @@ public sealed class ReferenceHostTests
             descriptor.ServiceType.Name == "ReferenceHttpIdempotencyExecutor"));
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType.Name == "IIdempotencyActorScope"));
-        Assert.Equal(enabled, builder.Services.Any(descriptor =>
-            descriptor.ServiceType.Name == "IIdempotencyLookup"));
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType == typeof(IHostedService)
             && descriptor.ImplementationType?.Name == "ReferenceIdempotencyCleanupWorker"));
@@ -270,7 +270,7 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
-    public async Task AProfileClaimFromTheOldFingerprintCanStillReplay()
+    public async Task OldProfileFingerprintIsRejectedByTheCurrentComparisonRule()
     {
         await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
         fixture.Authenticate("profiles.manage");
@@ -306,17 +306,146 @@ public sealed class ReferenceHostTests
         using var changed = await PostKeyedAsync(fixture.Client,
             profile with { DisplayName = "second" }, key);
 
-        Assert.Equal(HttpStatusCode.Created, replay.StatusCode);
-        Assert.Equal("/api/v1/profiles/old", replay.Headers.Location?.OriginalString);
-        Assert.Equal(legacyResponse, await replay.Content.ReadAsByteArrayAsync());
-        Assert.Equal(HttpStatusCode.Created, utf16Replay.StatusCode);
-        Assert.Equal(legacyResponse, await utf16Replay.Content.ReadAsByteArrayAsync());
-        Assert.Equal(HttpStatusCode.Conflict, otherRoute.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+        foreach (var response in new[] { replay, utf16Replay, otherRoute, changed })
+        {
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            await AssertProblemCodeAsync(response, "conflict");
+        }
         Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
 
         static string Hash(string text) =>
             Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+    }
+
+    [Fact]
+    public async Task KeyedOrderCreationReplaysAfterJsonReorderingWithoutAnotherWrite()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("unrelated.scope");
+        var order = new CreateOrder(" SKU-42 ", 2);
+
+        using var created = await PostKeyedOrderAsync(fixture.Client, order, "order-key");
+        using var reorderedRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/orders")
+        {
+            Content = new StringContent("{\"quantity\":2,\"sku\":\" SKU-42 \"}", Encoding.UTF8,
+                "application/json")
+        };
+        reorderedRequest.Headers.TryAddWithoutValidation("Idempotency-Key", "order-key");
+        using var replay = await fixture.Client.SendAsync(reorderedRequest);
+        var createdOrder = (await created.Content.ReadFromJsonAsync<OrderView>())!;
+        using var fetched = await fixture.Client.GetAsync(created.Headers.Location);
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(created.StatusCode, replay.StatusCode);
+        Assert.Equal(created.Headers.Location, replay.Headers.Location);
+        Assert.Equal(await created.Content.ReadAsByteArrayAsync(), await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal("SKU-42", createdOrder.Sku);
+        Assert.Equal(2, createdOrder.Quantity);
+        Assert.Equal(HttpStatusCode.OK, fetched.StatusCode);
+        Assert.Equal(createdOrder, await fetched.Content.ReadFromJsonAsync<OrderView>());
+        Assert.Equal(1, await fixture.CountOrdersAsync());
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task AnotherAuthenticatedActorCannotReadTheOrder()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("unrelated.scope", "order-owner");
+        using var created = await PostKeyedOrderAsync(fixture.Client, new CreateOrder("SKU-42", 2), "owner-key");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        fixture.Authenticate("unrelated.scope", "another-actor");
+        using var hidden = await fixture.Client.GetAsync(created.Headers.Location);
+        Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
+
+        fixture.Authenticate("unrelated.scope", "order-owner");
+        using var visible = await fixture.Client.GetAsync(created.Headers.Location);
+        Assert.Equal(HttpStatusCode.OK, visible.StatusCode);
+        Assert.Equal(1, await fixture.CountOrdersAsync());
+    }
+
+    [Fact]
+    public async Task OrderKeyRejectsChangedBodyButDifferentKeyCreatesAnotherOrder()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("unrelated.scope");
+        var order = new CreateOrder("SKU-42", 2);
+
+        using var first = await PostKeyedOrderAsync(fixture.Client, order, "first-order-key");
+        using var changed = await PostKeyedOrderAsync(fixture.Client, order with { Quantity = 3 }, "first-order-key");
+        using var separate = await PostKeyedOrderAsync(fixture.Client, order, "second-order-key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+        await AssertProblemCodeAsync(changed, "conflict");
+        Assert.Equal(HttpStatusCode.Created, separate.StatusCode);
+        Assert.NotEqual(first.Headers.Location, separate.Headers.Location);
+        Assert.Equal(2, await fixture.CountOrdersAsync());
+        Assert.Equal((0, 0, 2), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task InvalidOrderCanReuseItsKeyAfterCorrection()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("unrelated.scope");
+
+        using var badQuantity = await PostKeyedOrderAsync(fixture.Client, new CreateOrder("SKU-42", 0), "fix-order-key");
+        using var badSku = await PostKeyedOrderAsync(fixture.Client, new CreateOrder(" ", 1), "fix-order-key");
+        using var created = await PostKeyedOrderAsync(fixture.Client, new CreateOrder("SKU-42", 2), "fix-order-key");
+
+        Assert.Equal(HttpStatusCode.BadRequest, badQuantity.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, badSku.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(1, await fixture.CountOrdersAsync());
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task OrderCreationWithoutActiveIdempotencyDoesNotRequireTheTable()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: false);
+        fixture.Authenticate("unrelated.scope");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+
+        using var keyed = await PostKeyedOrderAsync(fixture.Client, new CreateOrder("SKU-1", 1), "bad,key");
+        using var unkeyed = await fixture.Client.PostAsJsonAsync("/api/v1/orders", new CreateOrder("SKU-2", 2));
+
+        Assert.Equal(HttpStatusCode.Created, keyed.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, unkeyed.StatusCode);
+        Assert.Equal(2, await fixture.CountOrdersAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
+    public async Task EnabledIdempotencyDoesNotReadTheTableForAnUnkeyedOrder()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("unrelated.scope");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+
+        using var created = await fixture.Client.PostAsJsonAsync("/api/v1/orders", new CreateOrder("SKU-3", 3));
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(1, await fixture.CountOrdersAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
+    public async Task ProfileAndOrderCanUseTheSameKeyUnderDifferentOperations()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("profiles.manage");
+
+        using var profile = await PostKeyedAsync(fixture.Client,
+            new CreateProfile("https://issuer.example", "separate-operation", "first", []), "shared-key");
+        using var order = await PostKeyedOrderAsync(fixture.Client, new CreateOrder("SKU-4", 4), "shared-key");
+
+        Assert.Equal(HttpStatusCode.Created, profile.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, order.StatusCode);
+        Assert.Equal(1, await fixture.CountOrdersAsync());
+        Assert.Equal((1, 1, 2), await fixture.CountWritesAsync());
     }
 
     [Fact]
@@ -1155,6 +1284,16 @@ public sealed class ReferenceHostTests
         return await client.SendAsync(request);
     }
 
+    private static async Task<HttpResponseMessage> PostKeyedOrderAsync(HttpClient client, CreateOrder body, string key)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/orders")
+        {
+            Content = JsonContent.Create(body)
+        };
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+        return await client.SendAsync(request);
+    }
+
     private sealed class FailingPublisher(Exception failure) : IIntegrationEventPublisher
     {
         public ValueTask EnqueueAsync(IIntegrationEvent message, CancellationToken cancellationToken = default)
@@ -1306,6 +1445,13 @@ public sealed class ReferenceHostTests
             await using var scope = app.Services.CreateAsyncScope();
             return await scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>()
                 .Profiles.CountAsync();
+        }
+
+        public async Task<int> CountOrdersAsync()
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
+            return await context.Orders.CountAsync();
         }
 
         public async Task SeedIdempotencyAsync(IdempotencyRecord record)

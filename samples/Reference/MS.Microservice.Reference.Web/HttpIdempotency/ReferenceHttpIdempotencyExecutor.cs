@@ -10,11 +10,10 @@ using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Messaging;
 using MS.Microservice.Reference.Persistence;
 
-namespace MS.Microservice.Reference.Web;
+namespace MS.Microservice.Reference.Web.HttpIdempotency;
 
 internal sealed class ReferenceHttpIdempotencyExecutor(
     EfCoreIdempotencyStore<ReferenceDbContext> store,
-    IIdempotencyLookup lookup,
     IUnitOfWork unit,
     IServiceScopeFactory scopes,
     IIdempotencyActorScope actorScope)
@@ -79,8 +78,7 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         http.Request.Body = body;
         try
         {
-            var existing = await lookup.FindAsync(request, operation, http.Request.Path.Value ?? "", actorHash, key,
-                http.Request.ContentType, bodyBytes, http.RequestAborted);
+            var existing = await store.FindAsync(request, http.RequestAborted);
             if (existing.Kind == IdempotencyLookupKind.Replay)
             {
                 await WriteStoredAsync(http, existing.Response!);
@@ -119,9 +117,8 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
             {
                 RestoreResponse(http, originalStatus, originalHeaders);
                 await using var scope = scopes.CreateAsyncScope();
-                var freshLookup = scope.ServiceProvider.GetRequiredService<IIdempotencyLookup>();
-                var winner = await freshLookup.FindAsync(request, operation, http.Request.Path.Value ?? "", actorHash, key,
-                    http.Request.ContentType, bodyBytes, http.RequestAborted);
+                var freshStore = scope.ServiceProvider.GetRequiredService<EfCoreIdempotencyStore<ReferenceDbContext>>();
+                var winner = await freshStore.FindAsync(request, http.RequestAborted);
                 if (winner.Kind == IdempotencyLookupKind.Replay)
                 {
                     await WriteStoredAsync(http, winner.Response!);
@@ -196,7 +193,7 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         return hash.GetHashAndReset();
     }
 
-    internal static ReadOnlySpan<char> MediaType(string? contentType)
+    private static ReadOnlySpan<char> MediaType(string? contentType)
     {
         var mediaType = contentType.AsSpan();
         var separator = mediaType.IndexOf(';');
@@ -204,13 +201,13 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         return mediaType.Trim();
     }
 
-    internal static bool IsJson(ReadOnlySpan<char> mediaType)
+    private static bool IsJson(ReadOnlySpan<char> mediaType)
     {
         return mediaType.Equals("application/json".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
             mediaType.EndsWith("+json".AsSpan(), StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static JsonDocument ParseJson(ReadOnlyMemory<byte> body, string? contentType)
+    private static JsonDocument ParseJson(ReadOnlyMemory<byte> body, string? contentType)
     {
         if (System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(contentType, out var mediaType) &&
             string.Equals(mediaType.CharSet, "utf-16", StringComparison.OrdinalIgnoreCase))

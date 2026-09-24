@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 
-namespace MS.Microservice.Reference.Web;
+namespace MS.Microservice.Reference.Web.HttpIdempotency;
 
 internal static class HttpIdempotencyEndpointExtensions
 {
