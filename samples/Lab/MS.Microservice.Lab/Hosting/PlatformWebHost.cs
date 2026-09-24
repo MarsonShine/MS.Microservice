@@ -19,6 +19,8 @@ using MS.Microservice.Lab.Infrastructure.Extensions;
 using MS.Microservice.Lab.Infrastructure.HealthChecks;
 using MS.Microservice.Lab.Infrastructure.Labs;
 using MS.Microservice.Lab.Infrastructure.Mediator.Behaviors;
+using MS.Microservice.AspNetCore.Encryption;
+using MS.Microservice.Lab.Infrastructure.Encryption;
 using System.Text.Json;
 using Wolverine;
 
@@ -108,6 +110,8 @@ public static class PlatformWebHost
                 options.FeatureProviders.Add(
                     new LabOnlyControllerFeatureProvider(enableLabEndpoints));
             })
+            .AddApiDecryptModelBinding(builder.Configuration,
+                static models => models.Add(LabApiEncryptionJsonContext.Default.EncryptedEchoRequest))
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;

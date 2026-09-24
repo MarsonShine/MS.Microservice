@@ -6,6 +6,8 @@ Supply `LabTokenIssuer__SigningKey` with an externally generated key of at least
 
 The local account/password login is for this laboratory. Password request Base64 is an encoding, not encryption; company services use the separate reference host's external JWT/OIDC integration. Existing Activation/EventStore practice databases remain separate from reference databases.
 
+`ApiEncryptOptions:IsEnabled` defaults to `false`. When enabled, `/api/lab/encryption/echo` accepts a new RSA-OAEP + AES-GCM envelope for its registered DTO; `/api/lab/encryption/plain` keeps plain JSON through `[NoEncrypt]`. Supply the RSA private key as `ApiEncryptOptions__PrivateKey` from the deployment environment. The binder belongs to the reusable AspNetCore component; see [加密请求模型绑定](../../../src/MS.Microservice.AspNetCore/docs/encrypted-model-binding.md).
+
 可靠消息实验通过 LabMessaging:Enabled=true 显式启用，使用
 ConnectionStrings:LabMessagingDatabase 和 Messaging 配置；默认 SelfManaged，也可选择 Wolverine。
 使用 Reference.DatabaseMigrator 显式初始化此独立数据库（将 ReferenceDatabase 环境变量指向实验库）。

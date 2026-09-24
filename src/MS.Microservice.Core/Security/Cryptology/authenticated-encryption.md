@@ -26,7 +26,7 @@ string plaintext = CryptologyHelper.AesCrypt.Decrypt(key, encrypted);
 
 ## 旧调用方的变化
 
-原先的 `AesCrypt.Encrypt(string key, string content, bool autoHandle)` 与对应解密重载已删除。新方法接受 `ReadOnlySpan<byte>` 密钥，旧的字符串密钥调用会在编译期报错。`DesCrypt` 已删除。两种旧密文都没有本库提供的解密或迁移入口；部署前如有持久化旧密文，需要在旧版本环境中自行处理。Lab 示例里默认关闭、且没有模型实际使用的 RSA + 3DES 请求绑定器也已移除。
+原先的 `AesCrypt.Encrypt(string key, string content, bool autoHandle)` 与对应解密重载已删除。新方法接受 `ReadOnlySpan<byte>` 密钥，旧的字符串密钥调用会在编译期报错。`DesCrypt` 已删除。两种旧密文都没有本库提供的解密或迁移入口；部署前如有持久化旧密文，需要在旧版本环境中自行处理。旧 RSA + 3DES 请求绑定器已停用；替代的可选 [MVC 加密模型绑定](../../../MS.Microservice.AspNetCore/docs/encrypted-model-binding.md) 只接受 RSA-OAEP + AES-GCM 新格式。
 
 RSA 和 HMAC 辅助方法不属于本次密文格式修改。Lab 的旧密码验证仍使用 HMAC，以便用户登录后升级已有密码哈希；它没有被改造成通用加密 API。
 
