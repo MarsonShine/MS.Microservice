@@ -19,6 +19,7 @@ using MS.Microservice.Messaging.Wolverine;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Persistence;
 using Npgsql;
+using MS.Microservice.Reference.Web.HttpIdempotency;
 
 namespace MS.Microservice.Reference.Web;
 
@@ -63,7 +64,6 @@ public static class ReferenceHost
             builder.Services.AddScoped(services => new EfCoreIdempotencyStore<ReferenceDbContext>(
                 services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<TimeProvider>()));
             builder.Services.AddSingleton<IIdempotencyActorScope, ReferenceIdempotencyActorScope>();
-            builder.Services.AddScoped<IIdempotencyLookup, ReferenceLegacyProfileIdempotencyLookup>();
             builder.Services.AddScoped<ReferenceHttpIdempotencyExecutor>();
             builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
         }
@@ -133,8 +133,13 @@ public static class ReferenceHost
             if (rateLimiting) api.RequireRateLimiting(ApiRateLimitPolicy);
             if (requestTimeouts) api.WithRequestTimeout(ApiTimeoutPolicy);
             ProfileEndpoints.Map(api);
+            OrderEndpoints.Map(api);
         }
-        else ProfileEndpoints.Map(app);
+        else
+        {
+            ProfileEndpoints.Map(app);
+            OrderEndpoints.Map(app);
+        }
     }
 
     private static bool Enabled(IConfiguration configuration, string key)

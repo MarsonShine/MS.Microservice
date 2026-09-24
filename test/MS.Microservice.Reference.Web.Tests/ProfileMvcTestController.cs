@@ -4,7 +4,7 @@ using System.Text.Json;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Idempotency.Mvc;
 using MS.Microservice.Reference.Application;
-using MS.Microservice.Reference.Web;
+using MS.Microservice.Reference.Web.HttpIdempotency;
 
 namespace MS.Microservice.Reference.Web.Tests;
 

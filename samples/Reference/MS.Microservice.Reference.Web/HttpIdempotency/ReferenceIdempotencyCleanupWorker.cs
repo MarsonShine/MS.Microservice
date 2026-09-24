@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Idempotency.EFCore;
 using MS.Microservice.Reference.Persistence;
 
-namespace MS.Microservice.Reference.Web;
+namespace MS.Microservice.Reference.Web.HttpIdempotency;
 
 internal sealed class ReferenceIdempotencyCleanupWorker(
     IServiceScopeFactory scopes,
