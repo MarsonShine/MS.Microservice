@@ -9,6 +9,7 @@
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
     <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
+    <Project Path="src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
     <Project Path="src/MS.Microservice.HealthChecks.Redis/MS.Microservice.HealthChecks.Redis.csproj" />
     <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
