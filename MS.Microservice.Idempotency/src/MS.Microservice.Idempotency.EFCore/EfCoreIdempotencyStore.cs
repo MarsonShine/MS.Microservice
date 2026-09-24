@@ -19,7 +19,7 @@ public sealed class EfCoreIdempotencyStore<TContext>(TContext context, TimeProvi
         if (record is null) return new(IdempotencyLookupKind.Missing, null);
         if (!string.Equals(record.RequestHash, request.RequestHash, StringComparison.Ordinal))
             return new(IdempotencyLookupKind.DifferentRequest, null);
-        if (record.CompletedAtUtcTicks is null || record.StatusCode is null || record.ContentType is null || record.Body is null)
+        if (record.CompletedAtUtcTicks is null || record.StatusCode is null || record.Body is null)
             throw new InvalidOperationException("A committed idempotency record has no completed response.");
         return new(IdempotencyLookupKind.Replay,
             new IdempotencyResponse(record.StatusCode.Value, record.ContentType, record.Body, record.Location));

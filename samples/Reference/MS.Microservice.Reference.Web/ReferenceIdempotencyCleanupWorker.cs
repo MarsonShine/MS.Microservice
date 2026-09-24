@@ -12,7 +12,7 @@ internal sealed class ReferenceIdempotencyCleanupWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(ProfileIdempotencyHandler.CleanupInterval, clock);
+        using var timer = new PeriodicTimer(ReferenceHttpIdempotencyExecutor.CleanupInterval, clock);
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))

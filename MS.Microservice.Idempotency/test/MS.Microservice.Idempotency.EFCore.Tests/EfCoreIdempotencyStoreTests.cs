@@ -45,6 +45,64 @@ public sealed class EfCoreIdempotencyStoreTests
     }
 
     [Fact]
+    public async Task NoContentResponseWithoutContentTypeIsCommittedAndReplayed()
+    {
+        await using var database = await Database.OpenAsync();
+        var request = Request("first");
+        var calls = 0;
+        await using (var context = database.CreateContext())
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var response = await new EfCoreIdempotencyStore<TestContext>(context, new ManualClock())
+                .ClaimAndExecuteAsync(request, TimeSpan.FromHours(1), _ =>
+                {
+                    calls++;
+                    return Task.FromResult(new IdempotencyResponse(204, null, []));
+                });
+            Assert.Equal(204, response.StatusCode);
+            Assert.Null(response.ContentType);
+            Assert.Empty(response.Body.ToArray());
+            await transaction.CommitAsync();
+        }
+
+        await using (var context = database.CreateContext())
+        {
+            var record = await context.Set<IdempotencyRecord>().SingleAsync();
+            Assert.NotNull(record.CompletedAtUtcTicks);
+            Assert.Null(record.ContentType);
+            Assert.Empty(record.Body!);
+
+            var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
+            var replay = await store.FindAsync(request);
+            Assert.Equal(IdempotencyLookupKind.Replay, replay.Kind);
+            Assert.Equal(204, replay.Response!.StatusCode);
+            Assert.Null(replay.Response.ContentType);
+            Assert.Null(replay.Response.Location);
+            Assert.Empty(replay.Response.Body.ToArray());
+            Assert.Equal(IdempotencyLookupKind.DifferentRequest, (await store.FindAsync(Request("changed"))).Kind);
+        }
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task IncompleteNoContentRecordStillCannotReplay()
+    {
+        await using var database = await Database.OpenAsync();
+        var request = Request("incomplete");
+        await SaveAsync(database, request);
+        await using var context = database.CreateContext();
+        var record = await context.Set<IdempotencyRecord>().SingleAsync();
+        record.CompletedAtUtcTicks = null;
+        record.StatusCode = 204;
+        record.ContentType = null;
+        record.Body = [];
+        await context.SaveChangesAsync();
+
+        var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.FindAsync(request));
+    }
+
+    [Fact]
     public async Task SameKeyWithDifferentRequestCannotReadStoredResponse()
     {
         await using var database = await Database.OpenAsync();
@@ -193,6 +251,7 @@ public sealed class EfCoreIdempotencyStoreTests
         Assert.Throws<ArgumentOutOfRangeException>(() => IdempotencyRequest.Create("profiles.create", "actor", "key",
             new byte[IdempotencyRequest.MaximumRequestBytes + 1]));
         Assert.Throws<ArgumentOutOfRangeException>(() => new IdempotencyResponse(500, "application/json", "x"u8));
+        Assert.Throws<ArgumentException>(() => new IdempotencyResponse(204, " ", []));
         Assert.Throws<ArgumentOutOfRangeException>(() => new IdempotencyResponse(200, "application/json",
             new byte[IdempotencyResponse.MaximumBodyBytes + 1]));
 

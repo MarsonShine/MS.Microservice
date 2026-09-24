@@ -1,42 +1,49 @@
 # MVC Action 如何接入 HTTP 幂等
 
-MVC 的 `[RequireHttpIdempotency<ProfileCreateMvcIdempotencyFilter>]` 标记只决定哪个 Action 使用哪个 DI Filter。`MS.Microservice.Idempotency.Mvc` 不读取请求体、不管理事务，也不保存响应。单靠标记无法让一个写入接口幂等：幂等记录必须和业务数据、Outbox、可重放响应在同一个数据库事务内提交。
+旧示例要求每种业务操作写一个 Action Filter。创建档案的 Filter 从已绑定的 `CreateProfile` 参数取值，转而调用 `ProfileIdempotencyHandler`，带键请求根本不执行 MVC Action。假如后来只修改了 Action 的业务判断或返回内容，带键请求仍会走旧处理器，两条路径便可能得到不同结果。逐个编写 Filter 是这套接入方式造成的，不是请求哈希或 MVC 的要求。
 
-## 当前示例在哪里
+现在 Reference 使用同一个 `ReferenceHttpIdempotencyExecutor` 处理请求键、指纹、存储、事务和响应快照。Minimal API 和 MVC 各负责把所标记端点的执行过程交给它。`MS.Microservice.Idempotency.Mvc` 只提供选择 Filter 的 Attribute；共用 Filter 和执行器目前仍在 Reference.Web，并非引用 MVC 包后任意 Controller 就自动具备幂等能力。
 
-Reference.Web 的正式宿主只映射 Minimal API。MVC 创建档案 Action 位于 `test/MS.Microservice.Reference.Web.Tests/ProfileMvcTestController.cs`，只在该测试的 TestServer 中注册和映射；Lab 的现有 Controller 没有标记。测试宿主使用以下方式接入：
+## 标记 Action
+
+Reference 的正式宿主只有 Minimal API。下面的 MVC Controller 位于 `test/MS.Microservice.Reference.Web.Tests/ProfileMvcTestController.cs`，只在非 AOT 的 TestServer 中映射：
 
 ```csharp
 builder.Services.AddControllers().AddApplicationPart(typeof(ProfileMvcTestController).Assembly);
-builder.Services.AddScoped<ProfileCreateMvcIdempotencyFilter>();
-// 构建宿主并映射 Reference 的 Minimal API 后：
+builder.Services.AddScoped<ReferenceHttpIdempotencyResourceFilter>();
+var app = builder.Build();
+ReferenceHost.MapApplication(app);
 app.MapControllers();
 ```
 
-Action 只需声明它选用的 Filter：
-
 ```csharp
 [HttpPost]
-[RequireHttpIdempotency<ProfileCreateMvcIdempotencyFilter>]
+[RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.create")]
 public Task<IActionResult> Create([FromBody] CreateProfile request) => CreateCoreAsync(request);
 ```
 
-Attribute 实现 `IFilterFactory`，从当前请求的 DI 作用域取得 `ProfileCreateMvcIdempotencyFilter`。它只装在这个 Action 上；同一测试 Controller 中未标记的 `Plain` Action 不调用该 Filter。使用方须注册所选 Filter，且该 Filter 必须实现 `IAsyncActionFilter`。全局 `Http:Idempotency:Enabled` 仍由宿主控制幂等存储和清理任务的注册，Attribute 不会替宿主注册这些服务。
+`profiles.create` 是稳定的操作名。同一个 Filter 也用于测试 Controller 的 `Alternate` 和 `Echo` Action，它们各有自己的操作名；未标记的 `Plain` Action 不经过该 Filter。Attribute 通过 DI 取得指定 Filter，要求它实现 `IAsyncResourceFilter`。使用方仍须为自己的宿主注册持久化存储、工作单元和 Filter；全局 `Http:Idempotency:Enabled` 只控制基础设施是否启用。
 
-## 请求实际怎样执行
+## 一次带键请求怎样执行
 
-`ProfileCreateMvcIdempotencyFilter` 先检查全局开关和 `Idempotency-Key`。全局关闭或没有请求头时，它调用 `next()`，MVC Action 按原流程执行。全局开启且带键时，Filter 从已绑定的 `CreateProfile request` 参数取值，调用 Reference 原有的 `ProfileIdempotencyHandler.CreateAsync`，并将其 `IResult` 交给 MVC 写出；**这条带键路径不会执行 Action 方法体**。
+全局开关关闭，或请求没有 `Idempotency-Key` 时，Filter 直接继续 MVC 流程。全局开启且 Action 已标记、请求也带键时，它在模型绑定之前调用共用执行器。执行器读取并回卷 Body，因此 MVC 仍能正常绑定 `[FromBody]` 参数。它把操作名与已认证身份、请求键用于定位记录；请求指纹包含 Method、Path、QueryString、完整的 Content-Type 和 Body 的表示。UTF-8 JSON 直接解析；标为 `charset=utf-16` 的 JSON 先按 UTF-16 解码。随后递归按字段名排序每层对象；字符串之外的 JSON 空白不参与比较，数组元素仍保持原顺序。非 JSON Body 按原始字节比较。各部分分别带长度写入哈希，避免字段拼接歧义。一个 JSON 对象中若字段名重复，**包括只差大小写**的 `displayName` 与 `DisplayName`，在模型绑定前返回 `400`，不占用键。
 
-该处理器先用已验证的用户身份、操作名、请求键和源码生成的 JSON 请求表示查记录。未命中时，它通过消息 `IUnitOfWork` 开启外层事务，在事务内占用键、调用 `ProfileService.CreateAsync`、保存响应快照，并把档案和 Outbox 一起提交。服务内部的工作单元加入外层事务。首次响应和后续重放使用同一份快照，因此断线发生在提交后、响应送达前时，重试仍能得到原来的 `201`、`Location` 和正文。相同键对应不同请求会返回 `409`；业务拒绝、异常或取消不会留下占位记录。
+例如，第一次发送 `POST /test/mvc/profiles`、键 `K1` 和下面的正文，创建成功返回 `201`：
 
-测试 Action 在无键时也用 `ApplicationErrorResults` 映射业务错误，并通过 `HttpResultActionResult` 执行生成的 `IResult`；带键路径直接执行同一个错误映射。这样同一个业务冲突不会只因是否有键而变成两种公开响应。测试对比了两条路径的状态、内容类型、`code` 和 `title`。
+```json
+{"issuer":"https://issuer.example","subject":"mvc-subject","displayName":"first","roles":["reader","editor"]}
+```
 
-这里没有在 Action 结束后读取 MVC 的 `IActionResult` 再写幂等表。那时业务服务可能已经提交，随后保存响应失败就会留下“业务成功、却没有可重放响应”的窗口。Filter 直接复用现有处理器，是为了让首次带键请求沿用已经建立的事务边界。它也带来一个维护约束：如果以后修改 MVC Action 的业务规则或返回格式，须同时核对带键路径的 `ProfileIdempotencyHandler`，避免有键与无键请求出现不同业务结果。
+同一身份以 `K1` 重试完全相同的请求，Filter 不再执行 Action，而是返回首次保存的状态码、`Location` 和正文字节。只把正文调换为 `{"roles":["reader","editor"],"displayName":"first","subject":"mvc-subject","issuer":"https://issuer.example"}`，或改变对象字段间的空白，仍视为同一请求，重放首次的 `201`。如果把 `roles` 数组调换为 `["editor","reader"]`，同一个键会返回 `409`。路径、查询字符串或完整的 `Content-Type` 字符串变化（包括 `charset` 参数）也会改变指纹；不同操作名可以各自使用 `K1`。无关的 `X-Request-Id` 请求头不参与比较。
 
-## 范围和验证
+首次请求查不到记录时，共用执行器在消息 `IUnitOfWork` 的外层事务内先占用键，再调用 MVC 的余下管线。`IAsyncResourceFilter` 包围模型绑定、Action、结果序列化和结果 Filter，所以它能在响应发送前取得实际状态码和字节。创建档案的服务在内层调用同一个工作单元，档案、Outbox 和成功响应快照一起提交。事务提交后，才把缓冲的响应写给客户端。相比旧 Filter，带键请求现在确实执行 Action；无键和带键路径不再分别维护业务调用。
 
-这个 Filter 只接受名为 `request` 的 `CreateProfile` 参数，并只用于创建档案。给另一个 Action 加同一个 Attribute 类型参数，不会自动获得正确的操作名、请求指纹或响应规则；新操作需要自己的专用 Filter 和同事务处理路径。Lab 的现有 Action 使用不同的持久化与事务方式，不能直接套用这个 Filter。事务外的邮件、网络调用或其他独立提交也不在保证范围内。
+业务校验或冲突返回 `4xx` 时，外层事务回滚占键，再把这次错误送给客户端；修正请求后可复用该键。异常、取消和 `5xx` 也不保存记录。**Reference 执行器只保存 `2xx` 响应**；`Content-Type` 可以为空。测试中的 `ReturnNoContent` Action 首次返回无正文、无 `Content-Type` 的 `204`，同键重试仍返回 `204`。底层 `IdempotencyResponse` 可表示 `200–499`，但本接入层没有启用错误响应的重放。
 
-`ReferenceHostTests` 中的 MVC TestServer 用例检查了全局关闭、未标记 Action、无键请求、无效键、首次响应与重放字节一致、业务拒绝后复用键，以及服务器异常时档案、Outbox 和幂等记录一起回滚。它们使用 SQLite；真实 PostgreSQL 并发、Wolverine 原生 Outbox 和进程崩溃恢复仍需相应环境验证。当前没有 MVC 接入前后的 Benchmark 数据，不能据此声称延迟或分配降低。
+## 接入边界与验证
 
-泛型 Attribute 本身没有引入业务代码的运行时反射；它通过 DI 按类型取出已注册的 Filter。但 **使用 Attribute 不等于 MVC 获得 Native AOT 支持**。[ASP.NET Core 的 .NET 10 兼容性表](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/native-aot?view=aspnetcore-10.0)仍将 MVC 列为不支持。Reference 正式宿主没有启用 MVC，测试示例运行在非 AOT 的 TestServer。需要 Native AOT 的 HTTP 宿主应继续使用 Minimal API 接入，并分别验证其依赖与发布链路。
+带键请求的 Body 最多 1 MiB；超过时返回 `413`，Action 不执行。响应暂存流也限制在 64 KiB：写出超过上限时立即失败，整个事务回滚，不会继续缓存更大的正文。快照只保存状态码、可为空的 `Content-Type`、`Location` 和正文；依赖其他响应头或流式输出的 Action 不应直接标记。业务写入和 Outbox 必须参加执行器开启的同一个数据库事务；事务外的邮件或网络调用不在此保证内。
+
+旧 `profiles.create` 记录的指纹来自绑定后的 `CreateProfile` JSON，现有记录不会改写。新指纹查询遇到冲突时，Reference 会仅对这个操作名按旧规则绑定并序列化 `CreateProfile`，再查询一次：若旧指纹匹配，直接重放旧响应；若仍不匹配，返回 `409`。这是让旧记录在 24 小时保留期内继续处理重试的过渡逻辑，记录实际清理前仍可能重放。其他操作名不尝试旧格式匹配，新的接口不能把这段兼容逻辑当作长期 API 契约。
+
+SQLite TestServer 测试覆盖多个 Action 共用 Filter、UTF-16 JSON 字段重排、`200` 和 `204` 重放、旧创建档案记录重放、不同操作名、查询变化、业务拒绝后复用键，以及异常和大小限制的回滚。这些测试不能证明其他字符集、真实 PostgreSQL 并发或 Wolverine 原生 Outbox 的行为；本次也没有延迟和分配的前后测量，不能宣称性能收益。MVC 示例未进行 Native AOT 发布验证。需要了解 Reference 的配置、Minimal API 接入及迁移行为，可读[创建档案时如何处理重复 HTTP 请求](../../../samples/Reference/MS.Microservice.Reference.Web/idempotent-profile-create.md)。

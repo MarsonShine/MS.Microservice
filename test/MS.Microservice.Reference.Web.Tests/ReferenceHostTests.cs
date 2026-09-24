@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -121,6 +122,8 @@ public sealed class ReferenceHostTests
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType == typeof(EfCoreIdempotencyStore<ReferenceDbContext>)));
         Assert.Equal(enabled, builder.Services.Any(descriptor =>
+            descriptor.ServiceType.Name == "ReferenceHttpIdempotencyExecutor"));
+        Assert.Equal(enabled, builder.Services.Any(descriptor =>
             descriptor.ServiceType == typeof(IHostedService)
             && descriptor.ImplementationType?.Name == "ReferenceIdempotencyCleanupWorker"));
     }
@@ -135,7 +138,7 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
-    public async Task KeyedProfileCreationReplaysTheExactCreatedResponseWithoutAnotherWrite()
+    public async Task KeyedProfileCreationReplaysExactBytesAfterReorderingJson()
     {
         await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
         fixture.Authenticate("profiles.manage");
@@ -151,6 +154,16 @@ public sealed class ReferenceHostTests
         Assert.Equal(created.Content.Headers.ContentType, replay.Content.Headers.ContentType);
         Assert.Equal(firstBody, await replay.Content.ReadAsByteArrayAsync());
 
+        using var changedHeader = new HttpRequestMessage(HttpMethod.Post, "/api/v1/profiles")
+        {
+            Content = JsonContent.Create(request)
+        };
+        changedHeader.Headers.TryAddWithoutValidation("X-Request-Id", "another-attempt");
+        changedHeader.Headers.TryAddWithoutValidation("Idempotency-Key", "create-123");
+        using var headerReplay = await fixture.Client.SendAsync(changedHeader);
+        Assert.Equal(HttpStatusCode.Created, headerReplay.StatusCode);
+        Assert.Equal(firstBody, await headerReplay.Content.ReadAsByteArrayAsync());
+
         using var reordered = new HttpRequestMessage(HttpMethod.Post, "/api/v1/profiles")
         {
             Content = new StringContent("""
@@ -158,10 +171,145 @@ public sealed class ReferenceHostTests
                 """, Encoding.UTF8, "application/json")
         };
         reordered.Headers.TryAddWithoutValidation("Idempotency-Key", "create-123");
-        using var canonicalReplay = await fixture.Client.SendAsync(reordered);
-        Assert.Equal(HttpStatusCode.Created, canonicalReplay.StatusCode);
-        Assert.Equal(firstBody, await canonicalReplay.Content.ReadAsByteArrayAsync());
+        using var reorderedReplay = await fixture.Client.SendAsync(reordered);
+        Assert.Equal(HttpStatusCode.Created, reorderedReplay.StatusCode);
+        Assert.Equal(created.Headers.Location, reorderedReplay.Headers.Location);
+        Assert.Equal(firstBody, await reorderedReplay.Content.ReadAsByteArrayAsync());
         Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task NestedJsonObjectsIgnorePropertyOrderButArraysKeepTheirOrder()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+
+        using var first = await PostRawKeyedAsync("""
+            {"items":[{"a":1,"b":2},{"a":3,"b":4}],"label":"one"}
+            """);
+        using var reordered = await PostRawKeyedAsync("""
+            { "label": "one", "items": [ {"b":2,"a":1}, {"b":4,"a":3} ] }
+            """);
+        using var changedArray = await PostRawKeyedAsync("""
+            {"label":"one","items":[{"b":4,"a":3},{"b":2,"a":1}]}
+            """);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, reordered.StatusCode);
+        Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await reordered.Content.ReadAsByteArrayAsync());
+        Assert.Equal(HttpStatusCode.Conflict, changedArray.StatusCode);
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+
+        async Task<HttpResponseMessage> PostRawKeyedAsync(string json)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/test/mvc/profiles/json")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", "nested-json-key");
+            return await fixture.Client.SendAsync(request);
+        }
+    }
+
+    [Fact]
+    public async Task KeyedMvcJsonAcceptsUtf16JustLikeTheUnkeyedAction()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+
+        using var unkeyed = await PostUtf16Async("{\"a\":1,\"b\":2}", null);
+        using var first = await PostUtf16Async("{\"a\":1,\"b\":2}", "utf16-key");
+        using var reordered = await PostUtf16Async("{\"b\":2,\"a\":1}", "utf16-key");
+
+        Assert.Equal(HttpStatusCode.OK, unkeyed.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, reordered.StatusCode);
+        Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await reordered.Content.ReadAsByteArrayAsync());
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+
+        async Task<HttpResponseMessage> PostUtf16Async(string json, string? key)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/test/mvc/profiles/json")
+            {
+                Content = new StringContent(json, Encoding.Unicode, "application/json")
+            };
+            if (key is not null) request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            return await fixture.Client.SendAsync(request);
+        }
+    }
+
+    [Fact]
+    public async Task DuplicateJsonPropertyIsRejectedBeforeCreatingAClaim()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        foreach (var json in new[]
+        {
+            "{\"name\":1,\"name\":2}",
+            "{\"displayName\":\"A\",\"DisplayName\":\"B\"}",
+            "{\"DisplayName\":\"B\",\"displayName\":\"A\"}"
+        })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/test/mvc/profiles/json")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", "duplicate-property-key");
+
+            using var response = await fixture.Client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            await AssertProblemCodeAsync(response, "validation");
+        }
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task AProfileClaimFromTheOldFingerprintCanStillReplay()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
+        fixture.Authenticate("profiles.manage");
+        var profile = new CreateProfile("https://issuer.example", "old-claim", "first", ["reader"]);
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var actorBytes = JsonSerializer.SerializeToUtf8Bytes(
+            new AuditActor("https://issuer.example", "test-admin"), options);
+        var actorHash = Convert.ToHexString(SHA256.HashData(actorBytes));
+        var key = "legacy-key";
+        var legacyResponse = Encoding.UTF8.GetBytes("{\"legacy\":true}");
+        await fixture.SeedIdempotencyAsync(new IdempotencyRecord
+        {
+            ScopeHash = Hash($"profiles.create\0{actorHash}"),
+            KeyHash = Hash(key),
+            RequestHash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(profile, options))),
+            ExpiresAtUtcTicks = DateTime.UtcNow.AddHours(1).Ticks,
+            CompletedAtUtcTicks = DateTime.UtcNow.Ticks,
+            StatusCode = 201,
+            ContentType = "application/json; charset=utf-8",
+            Location = "/api/v1/profiles/old",
+            Body = legacyResponse
+        });
+
+        using var replay = await PostKeyedAsync(fixture.Client, profile, key);
+        using var utf16Request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/profiles")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(profile, options), Encoding.Unicode,
+                "application/json")
+        };
+        utf16Request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+        using var utf16Replay = await fixture.Client.SendAsync(utf16Request);
+        using var changed = await PostKeyedAsync(fixture.Client,
+            profile with { DisplayName = "second" }, key);
+
+        Assert.Equal(HttpStatusCode.Created, replay.StatusCode);
+        Assert.Equal("/api/v1/profiles/old", replay.Headers.Location?.OriginalString);
+        Assert.Equal(legacyResponse, await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal(HttpStatusCode.Created, utf16Replay.StatusCode);
+        Assert.Equal(legacyResponse, await utf16Replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+
+        static string Hash(string text) =>
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
 
     [Fact]
@@ -225,6 +373,102 @@ public sealed class ReferenceHostTests
         Assert.Equal(first.StatusCode, replay.StatusCode);
         Assert.Equal(first.Headers.Location, replay.Headers.Location);
         Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task MvcActionsShareOneFilterButHaveSeparateOperationScopes()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "mvc-first", "first", []);
+
+        using var first = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", request, "shared-key");
+        using var second = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/alternate",
+            request with { Subject = "mvc-second" }, "shared-key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        Assert.Equal((2, 2, 2), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task SharedMvcFilterReplaysOkResponseWithoutInventingLocation()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "mvc-echo", "echo", []);
+
+        using var first = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/echo", request, "echo-key");
+        using var replay = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/echo", request, "echo-key");
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(first.StatusCode, replay.StatusCode);
+        Assert.Null(first.Headers.Location);
+        Assert.Null(replay.Headers.Location);
+        Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task SharedMvcFilterReplaysNoContentResponse()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "mvc-empty", "empty", []);
+
+        using var first = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/empty", request, "empty-key");
+        using var replay = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/empty", request, "empty-key");
+
+        Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+        Assert.Equal(first.StatusCode, replay.StatusCode);
+        Assert.Null(replay.Content.Headers.ContentType);
+        Assert.Empty(await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal((0, 0, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task OversizedResponseRollsBackTheIdempotencyClaim()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+
+        using var response = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/echo",
+            new CreateProfile("https://issuer.example", "mvc-large-response", new string('x', 70_000), []),
+            "large-response-key");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task OversizedKeyedRequestIsRejectedBeforeTheAction()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+
+        using var response = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/echo",
+            new CreateProfile("https://issuer.example", "mvc-large-request", new string('x', 1_048_576), []),
+            "large-request-key");
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task SameKeyAndBodyWithDifferentQueryIsAConflict()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "mvc-query", "first", []);
+
+        using var first = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles?mode=first",
+            request, "query-key");
+        using var differentQuery = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles?mode=second",
+            request, "query-key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, differentQuery.StatusCode);
         Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
     }
 
@@ -953,7 +1197,7 @@ public sealed class ReferenceHostTests
             if (mvcEndpoints)
             {
                 builder.Services.AddControllers().AddApplicationPart(typeof(ProfileMvcTestController).Assembly);
-                builder.Services.AddScoped<ProfileCreateMvcIdempotencyFilter>();
+                builder.Services.AddScoped<ReferenceHttpIdempotencyResourceFilter>();
             }
             configureServices?.Invoke(builder.Services);
             var app = builder.Build();
@@ -1005,6 +1249,14 @@ public sealed class ReferenceHostTests
             await using var scope = app.Services.CreateAsyncScope();
             return await scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>()
                 .Profiles.CountAsync();
+        }
+
+        public async Task SeedIdempotencyAsync(IdempotencyRecord record)
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
+            context.Set<IdempotencyRecord>().Add(record);
+            await context.SaveChangesAsync();
         }
 
         public async Task<bool> HasIdempotencyTableAsync()
