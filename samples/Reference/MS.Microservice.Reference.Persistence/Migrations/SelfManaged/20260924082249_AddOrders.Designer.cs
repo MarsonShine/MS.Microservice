@@ -3,6 +3,7 @@ using System;
 using MS.Microservice.Reference.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MS.Microservice.Reference.Persistence.Migrations.SelfManaged
 {
     [DbContext(typeof(SelfManagedReferenceDbContext))]
-    partial class SelfManagedReferenceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260924082249_AddOrders")]
+    partial class AddOrders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

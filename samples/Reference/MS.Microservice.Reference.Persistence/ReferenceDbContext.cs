@@ -11,6 +11,7 @@ public abstract class ReferenceDbContext(DbContextOptions options) : DbContext(o
     public const string Schema = "reference";
     public DbSet<UserProfile> Profiles => Set<UserProfile>();
     public DbSet<ProfileAuditEntry> Audit => Set<ProfileAuditEntry>();
+    public DbSet<Order> Orders => Set<Order>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -46,6 +47,16 @@ public abstract class ReferenceDbContext(DbContextOptions options) : DbContext(o
         audit.Property(x => x.OccurredAtUtc).HasConversion(value => value.UtcTicks,
             ticks => new DateTimeOffset(ticks, TimeSpan.Zero));
         audit.HasIndex(x => new { x.ProfileId, x.ProfileVersion, x.Consumer }).IsUnique();
+
+        var order = model.Entity<Order>();
+        order.ToTable("Orders");
+        order.HasKey(x => x.Id);
+        order.Property(x => x.Id).ValueGeneratedNever();
+        order.Property(x => x.Sku).HasMaxLength(64);
+        order.Property(x => x.OwnerIssuer).HasMaxLength(512);
+        order.Property(x => x.OwnerSubject).HasMaxLength(255);
+        order.Property(x => x.CreatedAtUtc).HasConversion(value => value.UtcTicks,
+            ticks => new DateTimeOffset(ticks, TimeSpan.Zero));
     }
 }
 

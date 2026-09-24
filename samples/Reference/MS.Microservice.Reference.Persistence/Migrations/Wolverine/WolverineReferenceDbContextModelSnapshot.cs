@@ -66,6 +66,37 @@ namespace MS.Microservice.Reference.Persistence.Migrations.Wolverine
                     b.ToTable("HttpIdempotency", "reference");
                 });
 
+            modelBuilder.Entity("MS.Microservice.Reference.Domain.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CreatedAtUtc")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OwnerIssuer")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("OwnerSubject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Orders", "reference");
+                });
+
             modelBuilder.Entity("MS.Microservice.Reference.Domain.ProfileAuditEntry", b =>
                 {
                     b.Property<Guid>("MessageId")

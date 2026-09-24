@@ -119,7 +119,7 @@ public sealed class ProfilePersistenceTests
             Assert.Equal(64, entity.FindProperty("RequestHash")!.GetMaxLength());
             Assert.Contains(entity.GetIndexes(), index =>
                 index.Properties.Count == 1 && index.Properties[0].Name == "ExpiresAtUtcTicks");
-            Assert.Equal(2, context.Database.GetMigrations().Count());
+            Assert.Equal(3, context.Database.GetMigrations().Count());
             var script = context.GetService<IMigrator>().GenerateScript();
             Assert.Contains("CREATE TABLE", script);
             Assert.Contains("HttpIdempotency", script);

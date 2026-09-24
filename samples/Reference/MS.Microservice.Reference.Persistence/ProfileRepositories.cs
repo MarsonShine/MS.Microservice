@@ -43,6 +43,8 @@ public static class ReferencePersistenceExtensions
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<IProfileAuditRepository, ProfileAuditRepository>();
         services.AddScoped<ProfileService>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<OrderService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }
