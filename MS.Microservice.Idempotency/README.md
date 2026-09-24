@@ -33,4 +33,4 @@
 
 ## MVC Action 接入
 
-MVC 可以在单个 Action 上使用 `[RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.create")]`。Attribute 只通过 DI 选择 Filter，并携带稳定操作名；Reference 的多个测试 Action 共用这个 `IAsyncResourceFilter` 和 `ReferenceHttpIdempotencyExecutor`，不再为每个 Action 编写业务 Filter。共用执行器仍在 Reference.Web，其他宿主需要提供自己的事务和身份接入。为了让旧创建档案记录继续重放，Reference 在 `profiles.create` 的新指纹查到冲突时，会在旧记录保留窗口内按原 `CreateProfile` 规则再查一次；其他操作没有这项兼容。它是过渡处理，不是本组件的长期请求指纹契约。当前 MVC 示例只在 Reference.Web.Tests 的非 AOT TestServer 中映射，详见 [MVC Action 如何接入 HTTP 幂等](src/MS.Microservice.Idempotency.Mvc/README.md)。
+MVC 可以在单个 Action 上使用 `[RequireHttpIdempotency<ReferenceHttpIdempotencyResourceFilter>("profiles.create")]`。Attribute 只通过 DI 选择 Filter，并携带稳定操作名；Reference 的多个测试 Action 共用这个 `IAsyncResourceFilter` 和 `ReferenceHttpIdempotencyExecutor`，不再为每个 Action 编写业务 Filter。共用执行器仍在 Reference.Web，其他宿主需要提供自己的事务和身份接入。为了让旧创建档案记录继续重放，Reference 只在原正式路由 `/api/v1/profiles` 的 `profiles.create` 新指纹查到冲突时，按原 `CreateProfile` 规则再查一次；其他操作和路径没有这项兼容。它是过渡处理，不是本组件的长期请求指纹契约。当前 MVC 示例只在 Reference.Web.Tests 的非 AOT TestServer 中映射，详见 [MVC Action 如何接入 HTTP 幂等](src/MS.Microservice.Idempotency.Mvc/README.md)。

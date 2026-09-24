@@ -14,9 +14,10 @@ namespace MS.Microservice.Reference.Web;
 
 internal sealed class ReferenceHttpIdempotencyExecutor(
     EfCoreIdempotencyStore<ReferenceDbContext> store,
+    IIdempotencyLookup lookup,
     IUnitOfWork unit,
     IServiceScopeFactory scopes,
-    ExternalIdentityOptions identity)
+    IIdempotencyActorScope actorScope)
 {
     internal const string HeaderName = "Idempotency-Key";
     private static readonly TimeSpan Retention = TimeSpan.FromHours(24);
@@ -32,14 +33,12 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
             return false;
         }
 
-        var actor = ProfileEndpoints.Actor(http.User, identity);
-        if (string.IsNullOrEmpty(actor.Issuer) || string.IsNullOrEmpty(actor.Subject))
+        var actorHash = actorScope.Resolve(http.User);
+        if (actorHash is null)
         {
             http.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return false;
         }
-        var actorBytes = JsonSerializer.SerializeToUtf8Bytes(actor, ReferenceIdempotencyJsonContext.Default.AuditActor);
-        var actorHash = Convert.ToHexString(SHA256.HashData(actorBytes));
 
         if (http.Request.ContentLength > IdempotencyRequest.MaximumRequestBytes)
         {
@@ -80,7 +79,7 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         http.Request.Body = body;
         try
         {
-            var existing = await FindWithLegacyProfileAsync(store, request, operation, actorHash, key,
+            var existing = await lookup.FindAsync(request, operation, http.Request.Path.Value ?? "", actorHash, key,
                 http.Request.ContentType, bodyBytes, http.RequestAborted);
             if (existing.Kind == IdempotencyLookupKind.Replay)
             {
@@ -120,8 +119,8 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
             {
                 RestoreResponse(http, originalStatus, originalHeaders);
                 await using var scope = scopes.CreateAsyncScope();
-                var freshStore = scope.ServiceProvider.GetRequiredService<EfCoreIdempotencyStore<ReferenceDbContext>>();
-                var winner = await FindWithLegacyProfileAsync(freshStore, request, operation, actorHash, key,
+                var freshLookup = scope.ServiceProvider.GetRequiredService<IIdempotencyLookup>();
+                var winner = await freshLookup.FindAsync(request, operation, http.Request.Path.Value ?? "", actorHash, key,
                     http.Request.ContentType, bodyBytes, http.RequestAborted);
                 if (winner.Kind == IdempotencyLookupKind.Replay)
                 {
@@ -168,41 +167,6 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         }
     }
 
-    private static async Task<IdempotencyLookup> FindWithLegacyProfileAsync(
-        EfCoreIdempotencyStore<ReferenceDbContext> store, IdempotencyRequest request,
-        string operation, string actorHash, string key, string? contentType,
-        ReadOnlyMemory<byte> body, CancellationToken token)
-    {
-        var found = await store.FindAsync(request, token);
-        if (found.Kind != IdempotencyLookupKind.DifferentRequest ||
-            operation != "profiles.create" || !IsJson(MediaType(contentType))) return found;
-
-        // Records created before the shared executor used the bound CreateProfile DTO as their fingerprint.
-        // Keep replaying those records during their 24-hour retention window.
-        try
-        {
-            using var document = ParseJson(body, contentType);
-            var profile = document.RootElement.Deserialize(ReferenceIdempotencyJsonContext.Default.CreateProfile);
-            if (profile is null) return found;
-            var legacyBody = JsonSerializer.SerializeToUtf8Bytes(profile,
-                ReferenceIdempotencyJsonContext.Default.CreateProfile);
-            try
-            {
-                var legacyRequest = IdempotencyRequest.Create(operation, actorHash, key, legacyBody);
-                var legacy = await store.FindAsync(legacyRequest, token);
-                return legacy.Kind == IdempotencyLookupKind.Replay ? legacy : found;
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(legacyBody);
-            }
-        }
-        catch (JsonException)
-        {
-            return found;
-        }
-    }
-
     private static byte[] Fingerprint(HttpRequest request, ReadOnlyMemory<byte> body)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -232,7 +196,7 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         return hash.GetHashAndReset();
     }
 
-    private static ReadOnlySpan<char> MediaType(string? contentType)
+    internal static ReadOnlySpan<char> MediaType(string? contentType)
     {
         var mediaType = contentType.AsSpan();
         var separator = mediaType.IndexOf(';');
@@ -240,13 +204,13 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         return mediaType.Trim();
     }
 
-    private static bool IsJson(ReadOnlySpan<char> mediaType)
+    internal static bool IsJson(ReadOnlySpan<char> mediaType)
     {
         return mediaType.Equals("application/json".AsSpan(), StringComparison.OrdinalIgnoreCase) ||
             mediaType.EndsWith("+json".AsSpan(), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static JsonDocument ParseJson(ReadOnlyMemory<byte> body, string? contentType)
+    internal static JsonDocument ParseJson(ReadOnlyMemory<byte> body, string? contentType)
     {
         if (System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(contentType, out var mediaType) &&
             string.Equals(mediaType.CharSet, "utf-16", StringComparison.OrdinalIgnoreCase))

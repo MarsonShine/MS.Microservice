@@ -62,6 +62,8 @@ public static class ReferenceHost
         {
             builder.Services.AddScoped(services => new EfCoreIdempotencyStore<ReferenceDbContext>(
                 services.GetRequiredService<ReferenceDbContext>(), services.GetRequiredService<TimeProvider>()));
+            builder.Services.AddSingleton<IIdempotencyActorScope, ReferenceIdempotencyActorScope>();
+            builder.Services.AddScoped<IIdempotencyLookup, ReferenceLegacyProfileIdempotencyLookup>();
             builder.Services.AddScoped<ReferenceHttpIdempotencyExecutor>();
             builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
         }
