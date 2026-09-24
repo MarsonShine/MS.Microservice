@@ -212,6 +212,144 @@ public sealed class ReferenceHostTests
     }
 
     [Fact]
+    public async Task MarkedMvcActionReplaysTheCreatedResponseWithoutAnotherWrite()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "mvc-subject", "first", ["reader"]);
+
+        using var first = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", request, "mvc-key");
+        using var replay = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", request, "mvc-key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(first.StatusCode, replay.StatusCode);
+        Assert.Equal(first.Headers.Location, replay.Headers.Location);
+        Assert.Equal(await first.Content.ReadAsByteArrayAsync(), await replay.Content.ReadAsByteArrayAsync());
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task UnmarkedMvcActionIgnoresKeysWhenInfrastructureIsEnabled()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+        var request = new CreateProfile("https://issuer.example", "mvc-plain-one", "first", []);
+
+        using var invalid = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/plain", request, "bad,key");
+        using var multiple = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/plain",
+            request with { Subject = "mvc-plain-two" }, "one", "two");
+        using var valid = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles/plain",
+            request with { Subject = "mvc-plain-three" }, "safe-key");
+
+        Assert.Equal(HttpStatusCode.Created, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, multiple.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, valid.StatusCode);
+        Assert.Equal(3, await fixture.CountProfilesAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
+    public async Task MarkedMvcActionUsesThePlainPathWhenInfrastructureIsDisabled()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: false, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+        var request = new CreateProfile("https://issuer.example", "mvc-disabled", "first", []);
+
+        using var first = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", request, "bad,key");
+        using var duplicate = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", request, "bad,key");
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Equal(1, await fixture.CountProfilesAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
+    public async Task MarkedMvcActionWithoutKeyDoesNotUseIdempotencyStorage()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        await fixture.ExecuteSqlAsync("DROP TABLE HttpIdempotency");
+        var request = new CreateProfile("https://issuer.example", "mvc-unkeyed", "first", []);
+
+        using var unkeyed = await fixture.Client.PostAsJsonAsync("/test/mvc/profiles", request);
+        using var invalid = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles",
+            request with { Subject = "mvc-invalid" }, "bad,key");
+        using var multiple = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles",
+            request with { Subject = "mvc-multiple" }, "one", "two");
+
+        Assert.Equal(HttpStatusCode.Created, unkeyed.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, multiple.StatusCode);
+        Assert.Equal(1, await fixture.CountProfilesAsync());
+        Assert.False(await fixture.HasIdempotencyTableAsync());
+    }
+
+    [Fact]
+    public async Task MarkedMvcActionRollsBackRejectedKeyAndRejectsChangedRequest()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var invalidRequest = new CreateProfile("https://issuer.example", "mvc-reusable", "first", ["invalid"]);
+
+        using var rejected = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", invalidRequest, "mvc-key");
+        using var created = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles",
+            invalidRequest with { Roles = ["reader"] }, "mvc-key");
+        using var changed = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles",
+            invalidRequest with { Roles = ["reader"], DisplayName = "changed" }, "mvc-key");
+
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, changed.StatusCode);
+        Assert.Equal((1, 1, 1), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task MvcBusinessConflictHasTheSamePublicErrorWithAndWithoutKey()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true);
+        fixture.Authenticate("profiles.manage");
+        var request = new CreateProfile("https://issuer.example", "mvc-conflict", "first", []);
+        using var created = await fixture.Client.PostAsJsonAsync("/test/mvc/profiles", request);
+
+        using var unkeyed = await fixture.Client.PostAsJsonAsync("/test/mvc/profiles", request);
+        using var keyed = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles", request, "mvc-conflict-key");
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, unkeyed.StatusCode);
+        Assert.Equal(unkeyed.StatusCode, keyed.StatusCode);
+        Assert.Equal(unkeyed.Content.Headers.ContentType, keyed.Content.Headers.ContentType);
+        using var unkeyedBody = JsonDocument.Parse(await unkeyed.Content.ReadAsStringAsync());
+        using var keyedBody = JsonDocument.Parse(await keyed.Content.ReadAsStringAsync());
+        Assert.Equal("conflict", unkeyedBody.RootElement.GetProperty("code").GetString());
+        Assert.Equal(unkeyedBody.RootElement.GetProperty("code").GetString(),
+            keyedBody.RootElement.GetProperty("code").GetString());
+        Assert.Equal(unkeyedBody.RootElement.GetProperty("title").GetString(),
+            keyedBody.RootElement.GetProperty("title").GetString());
+        Assert.Equal((1, 1, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
+    public async Task MarkedMvcActionRollsBackOnServerFailure()
+    {
+        await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true, mvcEndpoints: true,
+            configureServices: services =>
+            {
+                services.RemoveAll<IIntegrationEventPublisher>();
+                services.AddSingleton<IIntegrationEventPublisher>(new FailingPublisher(new IOException("publisher failed")));
+            });
+        fixture.Authenticate("profiles.manage");
+
+        using var response = await PostKeyedToAsync(fixture.Client, "/test/mvc/profiles",
+            new CreateProfile("https://issuer.example", "mvc-failure", "first", []), "mvc-key");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal((0, 0, 0), await fixture.CountWritesAsync());
+    }
+
+    [Fact]
     public async Task KeyedRequestWithDifferentPayloadReturnsConflictWithoutReplayingPrivateResponse()
     {
         await using var fixture = await Fixture.CreateAsync(httpIdempotencyEnabled: true);
@@ -703,10 +841,14 @@ public sealed class ReferenceHostTests
         Assert.Throws<ArgumentException>(() => ReferenceHost.AddServices(builder));
     }
 
-    private static async Task<HttpResponseMessage> PostKeyedAsync(HttpClient client, CreateProfile body,
+    private static Task<HttpResponseMessage> PostKeyedAsync(HttpClient client, CreateProfile body,
+        params string[] keys)
+        => PostKeyedToAsync(client, "/api/v1/profiles", body, keys);
+
+    private static async Task<HttpResponseMessage> PostKeyedToAsync(HttpClient client, string path, CreateProfile body,
         params string[] keys)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/profiles")
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
         {
             Content = JsonContent.Create(body)
         };
@@ -755,7 +897,7 @@ public sealed class ReferenceHostTests
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
             int? apiPermitLimit = null, int apiWindowSeconds = 60, int? apiTimeoutSeconds = null, bool storageAvailable = true,
             Action<IServiceCollection>? configureServices = null, bool? httpIdempotencyEnabled = null,
-            bool onlyIdempotencyMigrationPending = false)
+            bool onlyIdempotencyMigrationPending = false, bool mvcEndpoints = false)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -808,9 +950,15 @@ public sealed class ReferenceHostTests
             }
             else brokerFactory.CreateConnectionAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException<IConnection>(new IOException("offline")));
             builder.Services.AddSingleton(brokerFactory);
+            if (mvcEndpoints)
+            {
+                builder.Services.AddControllers().AddApplicationPart(typeof(ProfileMvcTestController).Assembly);
+                builder.Services.AddScoped<ProfileCreateMvcIdempotencyFilter>();
+            }
             configureServices?.Invoke(builder.Services);
             var app = builder.Build();
             ReferenceHost.MapApplication(app);
+            if (mvcEndpoints) app.MapControllers();
             await using (var scope = app.Services.CreateAsyncScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<SelfManagedReferenceDbContext>();
