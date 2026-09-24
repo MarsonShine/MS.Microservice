@@ -12,7 +12,7 @@
 
 `ApplicationErrorResults.ToProblem` maps stable application error codes to public ProblemDetails and hides unknown 500 details. The Reference host also uses .NET 10 source-generated validation for HTTP query ranges while keeping domain rules in its application layer. See [应用错误映射到 HTTP](docs/application-errors.md) for the mapping and the observed `[AsParameters]` binding limitation.
 
-`AddApiDecryptModelBinding` optionally binds versioned RSA-OAEP + AES-GCM request envelopes to explicitly registered MVC DTOs. See [加密请求模型绑定](docs/encrypted-model-binding.md) for its wire format, configuration and scope.
+The separate [ASP.NET Core encryption adapter](../MS.Microservice.AspNetCore.Encryption/README.md) optionally binds versioned RSA-OAEP + AES-GCM request envelopes to explicitly registered MVC DTOs. The base host package does not reference this MVC adapter or Core cryptology.
 
 `AddExternalIdentity` validates JWTs through the host's OIDC Authority and Audience. It never issues tokens or maintains passwords. Production metadata requires HTTPS. Configure subject, role and permission claim names under `Authentication`; the reference policies use case-sensitive OAuth scopes `profiles.manage` and `messaging.manage`. A missing or empty subject cannot access protected resources.
 

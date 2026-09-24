@@ -2,7 +2,9 @@
 
 提交 `1009cc3` 停用了旧 AES/3DES 密文时，也删除了 Lab 的 `IApiEncrypt` 模型绑定器。旧绑定器把一次性密钥的 RSA 解密、正文的 3DES 解密和 MVC 绑定写在一起，因此不能在删除 3DES 后照原样保留。但直接删除绑定器也让“客户端发送密文，Action 收到已绑定 DTO”这项能力消失；只有新的 AES-GCM 加解密方法，并不能替代 HTTP 入口。
 
-现在加密原语仍在 Core，MVC 绑定器位于 `MS.Microservice.AspNetCore.Encryption`。Core 不需要引用 MVC；Lab 只登记演示 DTO 并开启或关闭功能。其他 ASP.NET Core 宿主可以引用该组件，而不必复制 Lab 代码。
+现在加密原语仍在 Core，MVC 绑定器位于独立的 `MS.Microservice.AspNetCore.Encryption` 组件。Core 不需要引用 MVC；通用 `MS.Microservice.AspNetCore` 也不必为未使用加密绑定的宿主引入 Core。Lab 只登记演示 DTO 并开启或关闭功能。其他 ASP.NET Core 宿主可以单独引用该组件，而不必复制 Lab 代码。
+
+这项拆分还有一个可重复的 AOT 原因：Core 中已有 `Microsoft.System.Collection` 命名空间。若通用 AspNetCore 直接引用 Core，AOT Web 的配置绑定源码生成代码会把 `System.*` 错误解析为 `Microsoft.System.*`，原生发布出现 `CS0234`。可选组件独立后，未使用 MVC 加密绑定的原生宿主不会引用这条依赖。当前 MVC 本身不支持 Native AOT；此处保留的是通用宿主的原生发布能力，而不是宣称 MVC 绑定器可原生发布。
 
 ## 新请求格式
 
