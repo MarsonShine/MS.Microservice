@@ -1,0 +1,34 @@
+{
+  "modelId": "RapidAI/PP-OCRv5-mobile@v3.9.2",
+  "publisherRevision": "095232a4c94f7f0e6600ba5bba1177010ad696d4",
+  "license": "Apache-2.0",
+  "publisherLicense": "https://github.com/RapidAI/RapidOCR/blob/095232a4c94f7f0e6600ba5bba1177010ad696d4/LICENSE",
+  "publisherModelLicense": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/README.md",
+  "conversionRecord": "https://rapidai.github.io/RapidOCRDocs/latest/en/blog/2025/05/30/rapidocr-%E9%9B%86%E6%88%90-pp-ocrv5_rec-%E6%A8%A1%E5%9E%8Bmobileserver%E8%AE%B0%E5%BD%95/",
+  "conversionToolLicense": "https://github.com/PaddlePaddle/Paddle2ONNX/blob/develop/LICENSE",
+  "upstreamLicense": "https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE",
+  "artifacts": [
+    {
+      "file": "ch_PP-OCRv5_det_mobile.onnx",
+      "bytes": 4819576,
+      "sha256": "4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx",
+      "upstream": "https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det"
+    },
+    {
+      "file": "ch_PP-OCRv5_rec_mobile.onnx",
+      "bytes": 16631306,
+      "sha256": "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx",
+      "upstream": "https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_rec/tree/682f20538d8c086cb2128e5cfac775e6c4904e85"
+    },
+    {
+      "file": "ppocrv5_dict.txt",
+      "bytes": 74012,
+      "sha256": "d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt"
+    }
+  ],
+  "runtime": "Python 3.12, CPUExecutionProvider; dependencies in ocr-requirements.txt",
+  "downloadPolicy": "Host installs these exact local artifacts before serving requests. Worker never downloads models or executes remote code."
+}

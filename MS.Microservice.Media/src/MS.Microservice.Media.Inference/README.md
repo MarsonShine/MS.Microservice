@@ -1,6 +1,6 @@
 # 本地媒体推理工具
 
-引用可选项目 `MS.Microservice.Media.Inference`，可自动检测图片水印、按蒙版修复图片，以及手动修复视频指定区域。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
+引用可选项目 `MS.Microservice.Media.Inference`，可自动检测图片水印、按蒙版修复图片、手动修复视频指定区域，以及识别图片文字。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
 
 ## 自动检测并修复
 
@@ -78,6 +78,40 @@ var videoResult = await videoRemover.RemoveAsync("input.mp4", "new-result-direct
 仅支持 RGB8 SDR、方形像素及标准直角旋转。保留 VFR 时间间隔，输出量化到 1 ms；负时间戳、碰撞、无法确定末帧长度或音轨存在时间跳变时会拒绝处理。音频转为 float32 PCM，保留实际样本和通道顺序，源扬声器角色另行记录，播放器不保证恢复角色。超过两声道且角色未知的音轨不支持。
 
 宿主应限制同时运行及排队的任务数，保持输入文件稳定。取消或验证失败不发布结果；发布后的暂存清理错误可能在完整目录已存在时报告，应核对目标再处理。流程、时间线和质量边界见[视频区域修复设计](../../docs/video-watermark-removal.md)。
+
+## 图片文字识别
+
+提前安装发布目录 `media-inference/ocr-requirements.txt` 中的依赖，并将 [OCR 模型清单](worker/ocr-modelmanifest.json) 中的两个固定 ONNX 文件和字典放入同一可信目录。运行接口不下载模型；文件大小和 SHA-256 必须匹配清单。
+
+```csharp
+using MS.Microservice.Media.Inference.Ocr;
+
+var ocr = new OcrProcessor(new OcrOptions
+{
+    PythonExecutablePath = pythonPath,
+    ModelDirectory = modelDirectory,
+    TemporaryDirectory = scratchDirectory
+});
+await using var document = File.OpenRead("document.png");
+var recognized = await ocr.RecognizeAsync(document, cancellationToken);
+foreach (var region in recognized.Regions)
+    Console.WriteLine(region.Text);
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `PythonExecutablePath` / `ModelDirectory` | 必填 | 已部署 Python 的绝对路径及模型目录 |
+| `TemporaryDirectory` | 系统临时目录 | 已存在、由宿主可信管理的暂存目录 |
+| `Limits` | 16,384 单边 / 40M 像素 / 64 MiB 输入 | 静态图片的尺寸及编码大小上限 |
+| `MaximumIntermediateBytes` | 128 MiB | 规范化 PNG 的独立大小上限 |
+| `DetectionMaximumSide` / `MaximumRecognitionWidth` | 1280 / 2048 | 检测最长边及识别行宽度上限 |
+| `MaximumRegions` / `MaximumTextCharacters` | 128 / 16,384 | 区域数和全部文字的 UTF-16 单元上限；超额报错 |
+| `DetectionThreshold` / `BoxThreshold` / `MinimumConfidence` | 0.3 / 0.5 / 0.5 | 检测像素、文字框和识别结果的过滤门限 |
+| `CpuThreads` / `Timeout` | `min(4, CPU数)` / 2 分钟 | 单次 CPU worker 的线程数及进程超时 |
+
+返回 EXIF 方向校正后的尺寸、文字及四角坐标，角点顺序为左上、右上、右下、左下。适用于正常方向的横排中英文印刷体和适度倾斜文字；不提供表格结构、多栏阅读顺序、180°纠正或手写识别保证。分数未校准，空结果只表示当前配置未识别出文字，低对比度、小字或复杂背景可能漏检。
+
+输入从当前位置读取并保持打开。每次调用启动独立进程和两份模型会话，同一实例允许并发，宿主须限制并行任务数。处理流程、模型许可和边界验证见 [OCR 设计](../../docs/ocr-design.md)。
 
 ## 图片处理配置
 
