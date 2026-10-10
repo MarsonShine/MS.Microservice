@@ -7,5 +7,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MS.Microservice.Media.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.Media.Inference" />
   </ItemGroup>
 </Project>

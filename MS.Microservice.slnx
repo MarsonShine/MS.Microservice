@@ -9,6 +9,7 @@
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
     <Project Path="MS.Microservice.Media/src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
+    <Project Path="MS.Microservice.Media/src/MS.Microservice.Media.Inference/MS.Microservice.Media.Inference.csproj" />
     <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
     <Project Path="src/MS.Microservice.HealthChecks.Redis/MS.Microservice.HealthChecks.Redis.csproj" />
@@ -51,6 +52,7 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="MS.Microservice.Media/test/MS.Microservice.Media.Tests/MS.Microservice.Media.Tests.csproj" />
+    <Project Path="MS.Microservice.Media/test/MS.Microservice.Media.Inference.Tests/MS.Microservice.Media.Inference.Tests.csproj" />
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.HealthChecks.Redis.Tests/MS.Microservice.HealthChecks.Redis.Tests.csproj" />
