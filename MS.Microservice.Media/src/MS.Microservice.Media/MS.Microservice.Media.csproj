@@ -3,6 +3,7 @@
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.HarfBuzz" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="ZXing.Net" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MS.Microservice.Media.Tests" />
