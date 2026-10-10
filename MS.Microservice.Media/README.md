@@ -9,6 +9,7 @@
 | 二维码与条码 | [Codes](docs/codes.md)：八种码制、整像素生成、识别及显示坐标；复用同一图片管道 |
 | 本地蒙版修复 | [MI-GAN CPU 修复](docs/inpainting.md)：按需引用 Media.Inference，加载本地校验模型，白色选区修复、黑色保留 |
 | 视频处理 | [视频探测与编辑](docs/video.md)：信息、剪辑、裁剪、旋转、翻转、缩放和 MP4/MKV/WebM 转码；使用宿主安装的 FFmpeg 工具 |
+| 视频资源 | [截图与音轨](docs/video-assets.md)：PNG/JPEG/WebP 封面、音轨选择与 WAV/MP3/M4A/FLAC 提取 |
 
 公共 API 不暴露 Skia 类型。宿主负责输入权限、上传和保留策略、并发资源预算、结果发布；图像组件不关闭调用方流。原生 Skia 运行时需适配部署平台，本项目包含常用桌面运行时及 Linux no-dependencies 资产，实际部署仍需在目标系统验证。
 
