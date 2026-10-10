@@ -1,6 +1,6 @@
-# 通知组件：SMTP 邮件与命名模板
+# 通知组件：邮件、模板与站内通知
 
-本组件提供 SMTP 邮件发送和简单命名模板。邮件回执表示服务器已接受消息，最终送达由邮件服务的投递反馈确认；宿主负责发送任务、状态存储与重试策略。
+本组件提供 SMTP 邮件发送、简单命名模板和[本地持久化站内通知](Inbox/local-inbox.md)。邮件回执表示服务器已接受消息，最终送达由邮件服务的投递反馈确认；宿主负责发送任务、状态存储与重试策略。站内通知支持按用户查询、分页、未读数和重启后保留的已读回执。
 
 ```csharp
 var sender = new SmtpEmailSender(new SmtpEmailOptions
@@ -34,6 +34,6 @@ TLS 默认明确要求 STARTTLS；服务器不支持时失败，不降级。也�
 
 `htmlEncodeValues: true` 只对值做 HTML 编码，保留宿主编写的模板标签。这适用于 HTML 正文文本位置，不提供 JavaScript、CSS 或 URL 上下文编码，也不净化模板本身。模板在内存中生成结果，宿主应限制模板和值的总大小。
 
-SMTP 使用 [MailKit 4.18.1](https://www.nuget.org/packages/MailKit/4.18.1)，其 [MIT 许可证](https://github.com/jstedfast/MailKit/blob/master/LICENSE) 和传递依赖随 NuGet 包提供。模板仅使用 .NET 标准库，不依赖 Core、ASP.NET Core、数据库或消息中间件。
+SMTP 使用 [MailKit 4.18.1](https://www.nuget.org/packages/MailKit/4.18.1)，其 [MIT 许可证](https://github.com/jstedfast/MailKit/blob/master/LICENSE) 和传递依赖随 NuGet 包提供。模板实现只使用 .NET 标准库；站内通知通过声明的 Core 项目引用复用文件原子写入。本组件无需 ASP.NET Core、数据库或消息中间件。
 
 测试启动本地回环 SMTP 服务器验证真实协议、MIME 内容、收件人、拒绝、取消及接受后的清理失败。TLS 正向测试仅通过内部工厂将实际客户端锁定到本次临时证书的 SHA-256 指纹，验证 STARTTLS、连接即 TLS 和认证；公开构造器另测拒绝该自签名证书。测试不修改系统证书信任，也不向外部收件人发送消息。
