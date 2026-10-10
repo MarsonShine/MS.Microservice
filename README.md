@@ -76,7 +76,7 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 
 | 工具组件 | 使用说明 |
 | --- | --- |
-| 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；图片／视频自动去水印、OCR、表格和增强使用可选 Inference |
+| 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；图片／视频自动去水印、OCR、表格、抠图和增强使用可选 Inference |
 | PDF、Word 模板与 HTML 排版 | [Documents](src/MS.Microservice.Documents/README.md)；HTML 转 PDF 使用可选 Windows Rendering |
 | 文件存储、哈希与 ZIP | [Core](src/MS.Microservice.Core/README.md)；对象存储使用可选 [S3](src/MS.Microservice.Storage.S3/README.md) |
 | 音频 | [Audio](src/MS.Microservice.Audio/README.md)：剪辑、音量、淡入淡出、合并和转换 |

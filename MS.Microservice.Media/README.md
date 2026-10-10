@@ -1,6 +1,6 @@
 # 媒体处理
 
-引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片／视频自动去水印、区域修复、OCR 和超分辨率使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
+引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片／视频自动去水印、区域修复、OCR、表格、抠图和超分辨率使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
 
 | 入口 | 功能 |
 | --- | --- |
@@ -11,6 +11,7 @@
 | `MiganInpainter.InpaintAsync`（可选） | 按二值蒙版修复指定区域 |
 | `OcrProcessor.RecognizeAsync`（可选） | 本地中英文印刷体识别，返回文字及四角坐标；[接入示例](src/MS.Microservice.Media.Inference/README.md#图片文字识别) |
 | `TableRecognizer.RecognizeAsync`（可选） | 带线框表格的行列、合并跨度及单元格文字；[接入示例](src/MS.Microservice.Media.Inference/README.md#带线框表格识别) |
+| `BiRefNetBackgroundRemover.RemoveAsync`（可选） | 抠图为透明 PNG 与软蒙版，可再换纯色背景；[资源要求与示例](src/MS.Microservice.Media.Inference/README.md#抠图与换背景) |
 | `Swin2SrUpscaler.UpscaleAsync`（可选） | 本地 2 倍超分辨率，输出透明 PNG；[接入示例](src/MS.Microservice.Media.Inference/README.md#2-倍图片增强) |
 | `VideoWatermarkRemover.RemoveAsync`（可选） | 默认自动检测，支持手动蒙版／矩形关键帧，生成 FFV1 MKV 及预览包 |
 | `VideoProcessor.ProbeAsync` / `ProcessAsync` | 视频信息、剪辑、画面变换、MP4／MKV／WebM 转码 |

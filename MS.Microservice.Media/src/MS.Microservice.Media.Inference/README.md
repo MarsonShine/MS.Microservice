@@ -1,6 +1,6 @@
 # 本地媒体推理工具
 
-引用可选项目 `MS.Microservice.Media.Inference`，可自动检测并修复图片／视频水印、手动修复指定区域、识别图片文字，以及进行 2 倍图片增强。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
+引用可选项目 `MS.Microservice.Media.Inference`，可自动检测并修复图片／视频水印、手动修复指定区域、识别文字与表格、抠图，以及进行 2 倍图片增强。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
 
 ## 自动检测并修复
 
@@ -168,6 +168,44 @@ foreach (var table in recognized.Tables)
 支持轴对齐、闭合外框、至少两个基础格的直线网格，以及矩形合并单元格。默认每格横纵间距至少 40 px；降低线长可接收小格，也会增加文字或图形误检。孤立 1×1 框、无框表格、旋转和透视版面不在支持范围。完整缺失的内部边线会被解释为合并，完全消失的行列不能恢复；网格状字形也可能误识别，`ReviewRecommended` 始终为 true。
 
 行列索引从零开始，坐标属于 EXIF 校正后的图片。`Cell.RegionIndices` 引用 `recognized.Ocr.Regions`；跨格或表外文字保留在 `UnassignedRegionIndices`。单元格文字按几何顺序换行，不承诺语义阅读顺序；擦除表格线也可能影响相邻文字识别。流保持打开，并发由宿主限制。算法、唯一归属和验证矩阵见 [表格识别设计](../../docs/table-recognition-design.md)。
+
+## 抠图与换背景
+
+提前部署 [BiRefNet FP32 模型清单](worker/background-removal-modelmanifest.json) 中的固定文件，约 224 MB；此入口使用 .NET CPU 推理，无需 Python。
+
+```csharp
+using MS.Microservice.Media.Inference.BackgroundRemoval;
+using MS.Microservice.Media.Images;
+
+await using var backgroundRemover = await BiRefNetBackgroundRemover.CreateAsync(new()
+{
+    ModelPath = backgroundModelPath
+});
+await using (var portrait = File.OpenRead("portrait.jpg"))
+await using (var foreground = File.Open("cutout.png", FileMode.CreateNew, FileAccess.Write))
+await using (var softMask = File.Open("foreground-mask.png", FileMode.CreateNew, FileAccess.Write))
+{
+    var cutoutResult = await backgroundRemover.RemoveAsync(portrait, foreground, softMask, cancellationToken);
+}
+
+await using var cutout = File.OpenRead("cutout.png");
+await using var colored = File.Open("colored-background.png", FileMode.CreateNew, FileAccess.Write);
+await new ImageProcessor().ProcessAsync(cutout, colored,
+    new ImageProcessingOptions { BackgroundColor = new(240, 240, 255) }, cancellationToken);
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `ModelPath` | 必填 | 固定模型本地文件，大小与 SHA-256 须匹配清单 |
+| `CpuThreads` | `min(2, CPU数)` | 每实例 CPU 线程数 |
+| `Limits` | 4096 单边 / 4M 像素 / 32 MiB 输入 | 源静态图片预算，输出为 EXIF 校正后的相同尺寸 |
+| `softMaskPng` | 不输出 | 可选不透明灰度 PNG，其灰度值等于结果的最终 alpha |
+
+抠图输出透明 PNG，保留规范化 RGB，并把估计前景概率乘上源 alpha。软蒙版已经包含源 alpha，使用时不要再乘一次；白色为完全不透明，黑色为透明，中间值为软边缘。`ReviewRecommended` 始终为 true，复杂背景、发丝或原边缘颜色污染可能影响效果，组件不反演前景颜色。
+
+**这是高内存模型**：本机 2 线程实测单任务／复用峰值约 6.1–6.4 GiB，会话创建约 10 秒、一次人像处理约 18 秒。宿主需另留内存余量并限制全局重任务并发；权重名称中的 lite、文件大小和小源图均不表示低运行内存，也不能把这些观测当作硬上限。
+
+应复用并异步释放实例。流须不同且保持打开，PNG 编码容量由调用方管理；失败或取消可能留下部分输出，两份输出不构成事务，先写私有暂存结果再发布。预处理、alpha、取消和内存取舍见 [抠图设计](../../docs/background-removal-design.md)。
 
 ## 2 倍图片增强
 
