@@ -48,12 +48,12 @@ await processor.CombineAudioFilesAsync(
     new AudioCombineOptions { SilenceDuration = 0.5f });
 ```
 
-合并会在每个输入之后添加配置的静音，包括最后一个输入。`AudioProcessor` 的流合并入口会接管并释放输入流，返回的结果流由调用方释放；文件入口可能覆盖已有目标，需自行选择新路径。`AudioEditor` 的不覆盖保证不适用于这些旧入口。
+合并默认按文件名排序；需要按传入顺序拼接时设置 `SortByFileName = false`。每个输入之后都会添加配置的静音，包括最后一个输入。`AudioProcessor` 的流合并入口会接管并释放输入流，返回的结果流由调用方释放；文件入口可能覆盖已有目标，需自行选择新路径。`AudioEditor` 的不覆盖保证不适用于这些旧入口。
 
 ## 运行要求
 
 标准 PCM／float WAV 的编辑不需要 Windows 媒体解码器；MP3 解码、其他压缩格式和部分转换路径依赖 Windows ACM／Media Foundation。MP3 编码需要与进程架构匹配的 LAME 原生库。部署前应在目标平台验证实际使用的编解码路径。
 
-MP3 有损编码和补帧会影响解码后的末尾时长；压缩音频的定位精度受解码器限制。取消在处理块之间检查，单次原生调用无法强制中断。输出目录由宿主保持可信且稳定。
+MP3 有损编码和补帧会影响解码后的末尾时长；压缩音频的定位精度受解码器限制。`AudioEditor.EditAsync` 在处理块之间检查取消，单次原生调用无法强制中断；旧合并、混音和转换入口没有取消参数。输出目录由宿主保持可信且稳定。
 
 源码或包的引用方式见[组件消费](../../docs/components/consumption.md)。维护说明：[编辑与发布](docs/audio-editor-design.md)、[格式探测与已有基准](docs/format-detection-design.md)、[静音缓冲](docs/silence-buffer-design.md)。
