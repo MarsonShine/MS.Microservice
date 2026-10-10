@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using MS.Microservice.AspNetCore.Uploads;
 using MS.Microservice.Lab.Application.Uploads;
 using MS.Microservice.Lab.Infrastructure.Uploads;
 using MS.Microservice.Lab.Infrastructure.Labs;

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using MS.Microservice.AspNetCore.Uploads;
 using MS.Microservice.Lab.Controller;
 using MS.Microservice.Lab.Application.Uploads;
 using MS.Microservice.Lab.Infrastructure.Uploads;

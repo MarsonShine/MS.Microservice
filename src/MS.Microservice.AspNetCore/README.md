@@ -14,6 +14,8 @@
 
 The separate [ASP.NET Core encryption adapter](../MS.Microservice.AspNetCore.Encryption/README.md) optionally binds versioned RSA-OAEP + AES-GCM request envelopes to explicitly registered MVC DTOs. The base host package does not reference this MVC adapter or Core cryptology.
 
+`Uploads.FileUploadValidator` provides the image/Excel size, MIME, extension and bounded signature checks used by Lab. Hosts choose upload limits and storage policies; the validator does not decode complete files. See [HTTP upload validation](docs/uploads.md) for supported types and stream ownership.
+
 `AddExternalIdentity` validates JWTs through the host's OIDC Authority and Audience. It never issues tokens or maintains passwords. Production metadata requires HTTPS. Configure subject, role and permission claim names under `Authentication`; the reference policies use case-sensitive OAuth scopes `profiles.manage` and `messaging.manage`. A missing or empty subject cannot access protected resources.
 
 Hosts must call authentication and authorization middleware and explicitly allow anonymous access only where intended (for example, liveness). Development may use an HTTP identity provider. TestServer tests use static test signing configuration and do not require external identity services.
