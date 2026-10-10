@@ -29,6 +29,7 @@
 | Messaging | [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging/MS.Microservice.Messaging.slnx) | [说明](MS.Microservice.Messaging/docs/design.md) |
 | Persistence | [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence/MS.Microservice.Persistence.slnx) | [说明](MS.Microservice.Persistence/docs/design.md) |
 | Idempotency | [MS.Microservice.Idempotency.slnx](MS.Microservice.Idempotency/MS.Microservice.Idempotency.slnx) | [说明](MS.Microservice.Idempotency/README.md) |
+| Media | [MS.Microservice.Media.slnx](MS.Microservice.Media/MS.Microservice.Media.slnx) | [说明](MS.Microservice.Media/README.md) |
 
 Reference 是完整接入的参考应用，不是新的底层框架；使用模块不需要引用或启动它。
 项目拆分理由和代价见[Reference 说明](samples/Reference/README.md)。

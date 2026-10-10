@@ -4,6 +4,7 @@
 - Architecture.Tests：共享组件依赖边界、正式部署依赖闭包、业务消息契约隔离。
 - Lab.Tests：本地身份、实验端点、旧练习模型和持久化。
 - Audio.Tests、Excel.Tests、Observability.Tests：对应可选组件。
+- Media 模块内的 Media.Tests：图像处理与可选的真实 FFmpeg 验证。
 - Messaging.*.Tests：公开契约和适配器行为；Messaging.IntegrationTests：真实 PostgreSQL/RabbitMQ。
 - Reference.*.Tests：正式服务分层、身份、业务和迁移。
 - Samples.EducationalImages.Tests：教育图像场景；AI.*.Tests：共享 AI 组件和 Provider。
