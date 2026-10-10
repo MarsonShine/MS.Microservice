@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
 using MS.Microservice.Media.Images;
-using MS.Microservice.Media.Inference.WatermarkRemoval;
 using MS.Microservice.Media.Video;
 
 namespace MS.Microservice.Media.Inference.Ocr;
@@ -15,6 +14,7 @@ public sealed class OcrProcessor
     internal const string DictionaryFile = "ppocrv5_dict.txt";
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     private readonly OcrOptions _options;
+    internal OcrOptions Options => _options;
 
     public OcrProcessor(OcrOptions options)
     {
@@ -49,41 +49,38 @@ public sealed class OcrProcessor
     /// <summary>Reads from the current stream position and keeps the caller's stream open. Every call starts a bounded CPU worker.</summary>
     public async Task<OcrResult> RecognizeAsync(Stream inputImage, CancellationToken cancellationToken = default)
     {
-        using var image = await ImageCodec.DecodeAsync(inputImage, _options.Limits, cancellationToken).ConfigureAwait(false);
-        var workspace = new RemovalWorkspace(_options.TemporaryDirectory);
+        var image = await OcrImageWorkspace.CreateAsync(inputImage, _options, cancellationToken).ConfigureAwait(false);
         Exception? failure = null;
         try
         {
-            var normalized = Path.Combine(workspace.DirectoryPath, "normalized.png");
-            await using (var output = new ScratchStream(normalized, _options.MaximumIntermediateBytes))
-                await ImageCodec.EncodeAsync(image, output, ImageOutputFormat.Png, 100, new(255, 255, 255), cancellationToken).ConfigureAwait(false);
-            var script = Path.Combine(AppContext.BaseDirectory, "media-inference", "ocr_worker.py");
-            if (!File.Exists(script)) throw new FileNotFoundException("The packaged OCR worker is missing.", script);
-            var arguments = new List<string> { "-B", script, "--input", normalized, "--models", _options.ModelDirectory };
-            Add("--threads", _options.CpuThreads);
-            Add("--max-pixels", _options.Limits.MaximumPixels);
-            Add("--max-dimension", _options.Limits.MaximumDimension);
-            Add("--det-side", _options.DetectionMaximumSide);
-            Add("--rec-width", _options.MaximumRecognitionWidth);
-            Add("--max-regions", _options.MaximumRegions);
-            Add("--max-characters", _options.MaximumTextCharacters);
-            Add("--det-threshold", _options.DetectionThreshold);
-            Add("--box-threshold", _options.BoxThreshold);
-            Add("--min-confidence", _options.MinimumConfidence);
+            var arguments = CreateWorkerArguments("ocr_worker.py", image.ImagePath);
             var json = await new MediaProcessRunner(_options.Timeout).RunAsync(_options.PythonExecutablePath, arguments, cancellationToken).ConfigureAwait(false);
             var result = JsonSerializer.Deserialize<OcrResult>(json, JsonOptions) ?? throw new InvalidDataException("The OCR worker returned no result.");
             ValidateResult(result, image.Width, image.Height, _options);
             cancellationToken.ThrowIfCancellationRequested();
             return result with { Regions = Array.AsReadOnly(result.Regions.Select(region => region with { Corners = Array.AsReadOnly(region.Corners.ToArray()) }).ToArray()) };
-
-            void Add(string name, IFormattable value) { arguments.Add(name); arguments.Add(value.ToString(null, CultureInfo.InvariantCulture)); }
         }
         catch (Exception error) { failure = error; throw; }
-        finally
-        {
-            try { workspace.Delete(); }
-            catch (Exception cleanup) when (failure is not null) { throw new AggregateException("OCR failed and its temporary workspace could not be removed.", failure, cleanup); }
-        }
+        finally { image.Delete(failure); }
+    }
+
+    internal List<string> CreateWorkerArguments(string scriptName, string inputPath)
+    {
+        var script = Path.Combine(AppContext.BaseDirectory, "media-inference", scriptName);
+        if (!File.Exists(script)) throw new FileNotFoundException("The packaged image inference worker is missing.", script);
+        var arguments = new List<string> { "-B", script, "--input", inputPath, "--models", _options.ModelDirectory };
+        Add("--threads", _options.CpuThreads);
+        Add("--max-pixels", _options.Limits.MaximumPixels);
+        Add("--max-dimension", _options.Limits.MaximumDimension);
+        Add("--det-side", _options.DetectionMaximumSide);
+        Add("--rec-width", _options.MaximumRecognitionWidth);
+        Add("--max-regions", _options.MaximumRegions);
+        Add("--max-characters", _options.MaximumTextCharacters);
+        Add("--det-threshold", _options.DetectionThreshold);
+        Add("--box-threshold", _options.BoxThreshold);
+        Add("--min-confidence", _options.MinimumConfidence);
+        return arguments;
+        void Add(string name, IFormattable value) { arguments.Add(name); arguments.Add(value.ToString(null, CultureInfo.InvariantCulture)); }
     }
 
     internal static void ValidateResult(OcrResult result, int width, int height, OcrOptions options)
@@ -105,18 +102,4 @@ public sealed class OcrProcessor
 
     private static bool Probability(double value) => double.IsFinite(value) && value is >= 0 and <= 1;
 
-    private sealed class ScratchStream(string path, int maximumBytes) : FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, true)
-    {
-        private void Check(int count)
-        {
-            if (Position > (long)maximumBytes - count)
-                throw new InvalidDataException("The normalized OCR PNG exceeds the intermediate byte budget.");
-        }
-        public override void Write(byte[] buffer, int offset, int count) { Check(count); base.Write(buffer, offset, count); }
-        public override void Write(ReadOnlySpan<byte> buffer) { Check(buffer.Length); base.Write(buffer); }
-        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        { Check(count); return base.WriteAsync(buffer, offset, count, cancellationToken); }
-        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
-        { Check(buffer.Length); return base.WriteAsync(buffer, cancellationToken); }
-    }
 }

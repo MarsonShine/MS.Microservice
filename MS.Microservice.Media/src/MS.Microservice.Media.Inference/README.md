@@ -131,6 +131,44 @@ foreach (var region in recognized.Regions)
 
 输入从当前位置读取并保持打开。每次调用启动独立进程和两份模型会话，同一实例允许并发，宿主须限制并行任务数。处理流程、模型许可和边界验证见 [OCR 设计](../../docs/ocr-design.md)。
 
+## 带线框表格识别
+
+复用 OCR 的 Python 环境与三个固定模型文件，无需另外部署表格模型。
+
+```csharp
+using MS.Microservice.Media.Inference.Tables;
+using MS.Microservice.Media.Inference.Ocr;
+
+var tables = new TableRecognizer(new TableRecognitionOptions
+{
+    Ocr = new OcrOptions
+    {
+        PythonExecutablePath = pythonPath,
+        ModelDirectory = modelDirectory,
+        TemporaryDirectory = scratchDirectory
+    }
+});
+await using var tableImage = File.OpenRead("table.png");
+var recognized = await tables.RecognizeAsync(tableImage, cancellationToken);
+foreach (var table in recognized.Tables)
+    foreach (var cell in table.Cells)
+        Console.WriteLine($"({cell.Row},{cell.Column}) {cell.RowSpan}×{cell.ColumnSpan}: {cell.Text}");
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `Ocr` | 必填 | 沿用 OCR 的本地模型、图片、推理、暂存和输出预算 |
+| `MinimumLineLength` | 40 px | 最短线段及每个基础格横／纵间距下限，范围 8–512 |
+| `LineTolerance` | 3 px | 线位置聚类容差，范围 1–8 |
+| `MinimumBoundaryCoverage` | 0.9 | 单元格边界所需线覆盖率，范围 0.75–1 |
+| `MaximumTables` | 8 | 表格数上限 |
+| `MaximumRows` / `MaximumColumns` | 64 / 64 | 每表行列数上限 |
+| `MaximumGridCells` | 512 | 全部表格合并前基础格总数；超额报错 |
+
+支持轴对齐、闭合外框、至少两个基础格的直线网格，以及矩形合并单元格。默认每格横纵间距至少 40 px；降低线长可接收小格，也会增加文字或图形误检。孤立 1×1 框、无框表格、旋转和透视版面不在支持范围。完整缺失的内部边线会被解释为合并，完全消失的行列不能恢复；网格状字形也可能误识别，`ReviewRecommended` 始终为 true。
+
+行列索引从零开始，坐标属于 EXIF 校正后的图片。`Cell.RegionIndices` 引用 `recognized.Ocr.Regions`；跨格或表外文字保留在 `UnassignedRegionIndices`。单元格文字按几何顺序换行，不承诺语义阅读顺序；擦除表格线也可能影响相邻文字识别。流保持打开，并发由宿主限制。算法、唯一归属和验证矩阵见 [表格识别设计](../../docs/table-recognition-design.md)。
+
 ## 2 倍图片增强
 
 提前部署 [Swin2SR 模型清单](worker/super-resolution-modelmanifest.json) 中的固定 ONNX 文件；此入口使用 .NET CPU 推理，无需 Python。
