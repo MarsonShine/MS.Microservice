@@ -1,3 +1,5 @@
+using MS.Microservice.Media.Inference.WatermarkRemoval;
+
 namespace MS.Microservice.Media.Inference.VideoWatermarkRemoval;
 
 public sealed record VideoRepairLimits
@@ -52,6 +54,7 @@ public sealed record VideoWatermarkRemovalOptions
     public TimeSpan ProcessTimeout { get; init; } = TimeSpan.FromMinutes(10);
     public VideoRepairLimits Limits { get; init; } = new();
     public VideoFlowOptions Flow { get; init; } = new();
+    public VideoWatermarkDetectorOptions? Detector { get; init; }
 
     internal void Validate()
     {
@@ -67,6 +70,23 @@ public sealed record VideoWatermarkRemovalOptions
             throw new ArgumentException("Use 1–64 CPU threads and a finite positive process timeout.");
         Limits.Validate();
         Flow.Validate();
+        Detector?.Validate();
+    }
+}
+
+public sealed record VideoWatermarkDetectorOptions
+{
+    public required string ModelPath { get; init; }
+    public WatermarkNormalization Normalization { get; init; } = WatermarkNormalization.RgbZeroToOne;
+    public double Threshold { get; init; } = 0.5;
+    internal string Profile => Normalization == WatermarkNormalization.RgbZeroToOne ? "rgb_0_1" : "imagenet";
+
+    internal void Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ModelPath);
+        if (!File.Exists(ModelPath)) throw new FileNotFoundException("The configured repeated-text detector checkpoint does not exist.", ModelPath);
+        if (!Enum.IsDefined(Normalization) || !double.IsFinite(Threshold) || Threshold is <= 0 or >= 1)
+            throw new ArgumentException("Use a valid normalization profile and a finite detector threshold strictly between zero and one.");
     }
 }
 
@@ -127,7 +147,11 @@ internal sealed record VideoMaskKeyframeSnapshot(long TimeTicks, VideoMaskRectan
 /// <summary>Samples preserve interleaved channel order; source speaker roles are recorded here because Matroska PCM may omit layout labels.</summary>
 public sealed record VideoAudioResult(int StreamIndex, string SourceCodec, int SampleRate, string Layout, int Channels,
     IReadOnlyList<string> ChannelRoles, long Samples, double FirstSeconds, string Float32Sha256);
+/// <summary>Detector probabilities are uncalibrated scores; per-frame observations are in frame-metadata.json.</summary>
+public sealed record VideoWatermarkDetectionResult(string ModelId, string Sha256, string Profile, double Threshold,
+    int FrameCount, double MaximumProbability, double MeanProbability, double InferenceSeconds, string Runtime);
 public sealed record VideoWatermarkRemovalResult(string OriginalPath, string OriginalSha256, string OutputDirectory,
     int Width, int Height, int FrameCount, long SelectedPixelCount, long EditedPixelCount, long FlowContributedPixelCount,
     double FirstVideoSeconds, double VideoDurationSeconds, long OutputBytes, IReadOnlyList<VideoAudioResult> Audio,
-    bool ReviewRecommended, IReadOnlyList<string> Warnings);
+    bool ReviewRecommended, IReadOnlyList<string> Warnings, WatermarkRemovalMode Mode = WatermarkRemovalMode.Manual,
+    VideoWatermarkDetectionResult? Detection = null);

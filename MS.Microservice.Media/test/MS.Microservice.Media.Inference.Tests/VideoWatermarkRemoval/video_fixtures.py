@@ -5,11 +5,12 @@ from fractions import Fraction
 from pathlib import Path
 import av
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 parser = argparse.ArgumentParser()
 parser.add_argument("directory")
 parser.add_argument("--extended", action="store_true")
+parser.add_argument("--automatic-fixtures", type=Path)
 args = parser.parse_args()
 directory = Path(args.directory)
 directory.mkdir(exist_ok=True)
@@ -67,6 +68,48 @@ for name, shape, pts, durations, audio in [
                     output.mux(packet)
             for packet in sound.encode(None):
                 output.mux(packet)
+
+if args.automatic_fixtures:
+    assets = args.automatic_fixtures
+    background = np.asarray(Image.open(assets / "negative-scene.png").convert("RGB"))
+    fixed = np.asarray(Image.open(assets / "positive-repeated.png").convert("RGB"))
+    subtitle = np.asarray(Image.open(assets / "negative-subtitle.png").convert("RGB"))
+    font_path = "C:/Windows/Fonts/arial.ttf" if Path("C:/Windows/Fonts/arial.ttf").exists() else "DejaVuSans.ttf"
+    font = ImageFont.truetype(font_path, 24)
+    points, durations = [0, 40, 140, 300], [40, 100, 160, 80]
+    for name in ["moving", "fixed", "subtitle", "scene"]:
+        with av.open(str(directory / f"auto-{name}.mkv"), "w", format="matroska") as output:
+            stream = output.add_stream("ffv1", rate=25)
+            stream.height, stream.width, stream.pix_fmt = 384, 512, "bgr0"
+            stream.time_base = stream.codec_context.time_base = Fraction(1, 1000)
+            stream.codec_context.thread_count = 1
+            sound = output.add_stream("pcm_s16le", rate=48000)
+            sound.layout = "mono"
+            for index, (tick, duration) in enumerate(zip(points, durations)):
+                image = fixed if name == "fixed" else subtitle if name == "subtitle" else background
+                if name == "moving":
+                    overlay = Image.new("RGBA", (512, 384))
+                    ImageDraw.Draw(overlay).text((20 + 40 * index, 155 + 3 * (index % 3)), "SAMPLE OWNER", font=font, fill=(255, 255, 255, 150))
+                    image = np.asarray(Image.alpha_composite(Image.fromarray(np.roll(background, 2 * index, axis=1)).convert("RGBA"), overlay).convert("RGB"))
+                frame = av.VideoFrame.from_ndarray(image, format="rgb24")
+                frame.pts, frame.time_base, frame.duration = tick, Fraction(1, 1000), duration
+                for packet in stream.encode(frame):
+                    packet.duration = duration
+                    output.mux(packet)
+            for packet in stream.encode(None):
+                output.mux(packet)
+            samples = (np.sin(np.arange(24000) * 2 * np.pi * 880 / 48000) * 9000).astype(np.int16)
+            for offset in range(0, len(samples), 1024):
+                frame = av.AudioFrame.from_ndarray(samples[None, offset:offset + 1024].copy(), format="s16", layout="mono")
+                frame.sample_rate, frame.time_base, frame.pts = 48000, Fraction(1, 48000), offset + 1200
+                for packet in sound.encode(frame):
+                    output.mux(packet)
+            for packet in sound.encode(None):
+                output.mux(packet)
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(directory / "auto-fixed.mkv"), "-c:v", "png", "-threads", "1",
+                    "-c:a", "pcm_s16le", "-fps_mode", "passthrough", str(directory / "auto-fixed.mov")], check=True, timeout=20)
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-display_rotation:v:0", "90", "-i", str(directory / "auto-fixed.mov"), "-c", "copy",
+                    str(directory / "auto-rotation90.mov")], check=True, timeout=20)
 
 if args.extended:
     def ffmpeg(*arguments):

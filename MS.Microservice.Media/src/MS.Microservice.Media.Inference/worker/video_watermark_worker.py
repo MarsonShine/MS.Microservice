@@ -219,7 +219,20 @@ def prepare(job, manifest):
                       + selected.duration * selected.time_base) if selected.duration is not None and selected.duration > 0 else None
         if first_time < 0:
             raise ValueError("Negative video presentation timestamps are unsupported")
-        mask_at = masks(job["request"], (height, width))
+        mode = job.get("mode", "manual")
+        if mode not in ["manual", "automatic"]:
+            raise ValueError("Invalid video removal mode")
+        detector = None
+        if mode == "automatic":
+            from watermark_model import read_verified_checkpoint, WatermarkDetector
+            settings = job["detector"]
+            detector = WatermarkDetector(read_verified_checkpoint(settings["modelPath"]), settings["profile"], settings["threshold"], job["cpuThreads"])
+            detection = {"modelId": detector.manifest["modelId"], "sha256": detector.manifest["sha256"], "profile": detector.profile,
+                         "threshold": detector.threshold, "frameCount": 0, "maximumProbability": 0, "meanProbability": 0,
+                         "inferenceSeconds": 0, "runtime": detector.runtime}
+        else:
+            mask_at = masks(job["request"], (height, width))
+            detection = None
         audio = audio_info(job["inputPath"], limits, first_time)
         video = stack.enter_context(av.open(str(directory / "video-only.mkv"), "w", format="matroska", options={"avoid_negative_ts": "disabled"}))
         preview = stack.enter_context(av.open(str(directory / "mask-preview.mkv"), "w", format="matroska", options={"avoid_negative_ts": "disabled"}))
@@ -230,6 +243,7 @@ def prepare(job, manifest):
                    "flowContributedPixelCount": 0, "firstVideoSeconds": float(first_time), "videoDurationSeconds": 0, "audio": audio,
                    "miganModelId": manifest["modelId"], "miganSha256": manifest["sha256"], "method": "image-MI-GAN-plus-gated-optical-flow",
                    "runtime": {name: importlib.metadata.version(name) for name in ["av", "onnxruntime", "opencv-python"]}}
+        summary.update({"mode": mode, "detection": detection})
         previous, current, previous_tick, read_count = None, None, None, 0
         timeline_hash = hashlib.sha256()
 
@@ -248,9 +262,18 @@ def prepare(job, manifest):
             read_count += 1
             if read_count > limits["maximumFrames"] or read_count * width * height > limits["maximumTotalPixels"] or float(seconds - first_time) > limits["maximumDurationSeconds"]:
                 raise ValueError("Video frame, cumulative pixel or duration budget exceeded")
-            mask = mask_at(seconds - first_time)
+            observed = None
+            if detector is not None:
+                mask, observed = detector.predict(Image.fromarray(image))
+                detection["frameCount"] += 1
+                detection["maximumProbability"] = max(detection["maximumProbability"], observed["maximumProbability"])
+                detection["meanProbability"] += observed["meanProbability"]
+                detection["inferenceSeconds"] += observed["inferenceSeconds"]
+            else:
+                mask = mask_at(seconds - first_time)
             return {"image": image, "mask": mask, "repair": repair(session, image, mask), "pts": tick, "sourcePts": frame.pts,
-                    "sourceTimeBase": str(frame.time_base), "seconds": seconds, "sourceDuration": frame.duration * frame.time_base}
+                    "sourceTimeBase": str(frame.time_base), "seconds": seconds, "sourceDuration": frame.duration * frame.time_base,
+                    "detection": observed}
 
         def output(current, following):
             duration = current["sourceDuration"]
@@ -274,6 +297,8 @@ def prepare(job, manifest):
                 Image.fromarray(result).save(directory / "result-frame.png")
             record = {"sourcePts": current["sourcePts"], "sourceTimeBase": current["sourceTimeBase"], "outputPtsMilliseconds": current["pts"],
                       "outputDurationMilliseconds": duration_tick, "selectedPixels": int(current["mask"].sum()), "editedPixels": changed, "neighbors": diagnostics}
+            if current["detection"] is not None:
+                record["detection"] = {key: current["detection"][key] for key in ["maximumProbability", "meanProbability", "inferenceSeconds", "selectedPixelCount"]}
             if summary["frameCount"]:
                 metadata.write(",")
             json.dump(record, metadata, separators=(",", ":"))
@@ -294,6 +319,8 @@ def prepare(job, manifest):
             output(current, following)
             previous, current = current, following
         output(current, None)
+        if detection is not None:
+            detection["meanProbability"] /= detection["frameCount"]
         summary["timelineSha256"] = timeline_hash.hexdigest()
         for container, stream in [(video, video_output), (preview, mask_output)]:
             for packet in stream.encode(None):

@@ -1,6 +1,6 @@
 # 本地媒体推理工具
 
-引用可选项目 `MS.Microservice.Media.Inference`，可自动检测图片水印、按蒙版修复图片、手动修复视频指定区域，以及识别图片文字。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
+引用可选项目 `MS.Microservice.Media.Inference`，可自动检测并修复图片／视频水印、手动修复指定区域、识别图片文字，以及进行 2 倍图片增强。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
 
 ## 自动检测并修复
 
@@ -44,6 +44,24 @@ var result = await inpainter.InpaintAsync(image, mask, output, cancellationToken
 蒙版须是严格不透明的二值灰度图：**白色编辑，黑色保留**，尺寸与各自 EXIF 校正后的图片一致。中间灰度、颜色、透明或尺寸不符均报错，不自动缩放或猜阈值。修复输出固定 PNG，保留规范化解码基准中的蒙版外像素和全部 alpha。非空修复要求宽高至少为 3；空蒙版直接输出规范化身份 PNG。
 
 自动模式返回二值 PNG 蒙版；`RemoveAsync` 手动模式返回蒙版的原编码和方向元数据，不能一律声明为 PNG。要继续裁剪、压缩或转格式，再调用基础 `ImageProcessor`。
+
+## 自动视频去水印
+
+```csharp
+using MS.Microservice.Media.Inference.VideoWatermarkRemoval;
+
+await using var videoRemover = new VideoWatermarkRemover(new VideoWatermarkRemovalOptions
+{
+    PythonExecutablePath = pythonPath,
+    MiganModelPath = repairModelPath,
+    Detector = new VideoWatermarkDetectorOptions { ModelPath = detectorModelPath }
+});
+var videoResult = await videoRemover.RemoveAsync("input.mp4", "new-auto-result-directory", cancellationToken);
+```
+
+不传手动请求时默认自动检测，必须配置 `Detector`。检测器与图片自动模式共用固定 repeated-text 权重，`Normalization` 默认 `RgbZeroToOne`、`Threshold` 默认 0.5；CPU、进程超时和视频预算使用下表配置。除 `video-requirements.txt` 外，还需部署图片检测的 Torch、SMP／timm 依赖。
+
+模型可能漏选水印，也会误删普通字幕、文字和场景 Logo。`ReviewRecommended` 始终为 true，应保留原片、检查蒙版和结果，再用手动入口纠正。输出为下述 FFV1 MKV 预览包；资源实测、分数含义和真实负样本见 [自动视频检测设计](../../docs/automatic-video-watermarks.md)。
 
 ## 手动视频区域修复
 
@@ -180,9 +198,9 @@ Linux/macOS 使用相应 venv 的 `bin/python`。锁定依赖为 `segmentation-m
 
 MI-GAN [代码](https://github.com/Picsart-AI-Research/MI-GAN/blob/2b793c5ece43f4253e32d4afc257120a5deed6f5/LICENSE)与[权重](https://github.com/Picsart-AI-Research/MI-GAN/blob/2b793c5ece43f4253e32d4afc257120a5deed6f5/LICENSE-WEIGHTS)为 MIT，检测权重的[模型卡](https://huggingface.co/christophernavas/watermark-remover/blob/509fb6833823f4e9c519f8e4f87a9053567c779c/README.md)声明 Apache-2.0；分发时保留相应通知。修复运行库为 ONNX Runtime CPU 1.31.0，需验证目标平台的原生运行库。
 
-## 结果和失败边界
+## 图片修复的结果和失败边界
 
-修复生成合理背景，不能还原被遮挡的真实像素，边缘可能有痕迹，错误蒙版会损伤正常内容。当前接口只处理图片，不能以逐帧调用推断视频连续性质量。
+修复生成合理背景，不能还原被遮挡的真实像素，边缘可能有痕迹，错误蒙版会损伤正常内容。图片入口的逐帧调用不保证视频连续性，视频应使用前述专用入口并检查结果。
 
 输入输出从当前位置读写并保持打开。失败、取消或结果校验错误可能留下部分输出，两份输出不构成事务；宿主应先写私有临时结果，全部成功后再发布。输入字节预算也适用于生成蒙版，过低的预算可能容纳压缩原图却容纳不了蒙版；输出 PNG 容量由调用方管理。
 

@@ -1,6 +1,6 @@
 # 媒体处理
 
-引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片自动去水印与图片／视频手动修复使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
+引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片／视频自动去水印、区域修复、OCR 和超分辨率使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
 
 | 入口 | 功能 |
 | --- | --- |
@@ -11,7 +11,7 @@
 | `MiganInpainter.InpaintAsync`（可选） | 按二值蒙版修复指定区域 |
 | `OcrProcessor.RecognizeAsync`（可选） | 本地中英文印刷体识别，返回文字及四角坐标；[接入示例](src/MS.Microservice.Media.Inference/README.md#图片文字识别) |
 | `Swin2SrUpscaler.UpscaleAsync`（可选） | 本地 2 倍超分辨率，输出透明 PNG；[接入示例](src/MS.Microservice.Media.Inference/README.md#2-倍图片增强) |
-| `VideoWatermarkRemover.RemoveAsync`（可选） | 手动蒙版／矩形关键帧视频修复，生成 FFV1 MKV 及预览包 |
+| `VideoWatermarkRemover.RemoveAsync`（可选） | 默认自动检测，支持手动蒙版／矩形关键帧，生成 FFV1 MKV 及预览包 |
 | `VideoProcessor.ProbeAsync` / `ProcessAsync` | 视频信息、剪辑、画面变换、MP4／MKV／WebM 转码 |
 | `AddTextWatermarkAsync` / `AddLogoWatermarkAsync` | 视频水印及显示时间范围 |
 | `ConcatenateAsync` | 按顺序拼接不同尺寸、帧率、编码和音轨的视频 |
@@ -127,11 +127,11 @@ await video.ExtractAudioAsync("joined.mp4", "audio.wav", cancellationToken: canc
 
 截图选择不早于指定时刻的第一帧，末尾没有后续帧时会报错。音轨提取保留源采样率和声道，MP3 仅接受单／双声道；所选编码器不支持该采样率时失败，可改用 WAV／FLAC。
 
-## 图片自动去水印
+## 图片／视频自动去水印
 
-选装 [Media.Inference](src/MS.Microservice.Media.Inference/README.md) 后，`RemoveAsync` 默认自动检测并修复，同时返回可调整蒙版；手动模式接受白色编辑、黑色保留的二值蒙版。需要本地模型和 Python 环境，运行时不下载权重或上传图片。
+选装 [Media.Inference](src/MS.Microservice.Media.Inference/README.md) 后，图片和视频的 `RemoveAsync` 默认自动检测并修复，同时生成可检查的蒙版；手动模式接受白色编辑、黑色保留的二值蒙版，视频另支持矩形关键帧。需要本地模型和 Python 环境，运行时不下载权重或上传图片。
 
-当前检测模型针对重复文字水印，会误选正常文字、字幕或场景 Logo。结果始终建议人工检查，应保留原图、展示蒙版并允许手动纠正。每次自动调用有独立 Python 冷启动和模型加载开销，应按后台任务规划；修复生成的是合理内容，不能恢复被遮挡的真实像素。当前入口只处理图片，不代表已提供视频去水印。
+当前检测模型针对重复文字水印，会误选正常文字、字幕或场景 Logo，也可能漏选水印。结果始终建议人工检查，应保留原片、展示蒙版并允许手动纠正。每次自动调用有独立 Python 冷启动和模型加载开销，应按后台任务规划；修复生成的是合理内容，不能恢复被遮挡的真实像素。视频结果包含 FFV1 MKV、蒙版预览和逐帧记录，可再明确转码为 MP4。
 
 ## 所有权与维护
 

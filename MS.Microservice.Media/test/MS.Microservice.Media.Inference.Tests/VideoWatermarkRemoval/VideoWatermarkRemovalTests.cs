@@ -120,6 +120,8 @@ public sealed class VideoWatermarkRemovalTests
         var result = await remover.RemoveAsync(source, output, new() { StaticMaskPath = Path.Combine(root.Path, "mask.png") });
 
         Assert.Equal(5, result.FrameCount);
+        Assert.Equal(MS.Microservice.Media.Inference.WatermarkRemoval.WatermarkRemovalMode.Manual, result.Mode);
+        Assert.Null(result.Detection);
         Assert.Equal(128, result.Width);
         Assert.Equal(96, result.Height);
         Assert.True(result.EditedPixelCount > 0);
@@ -311,7 +313,7 @@ public sealed class VideoWatermarkRemovalTests
     };
     private static Task Fixtures(string directory, bool extended = false, [CallerFilePath] string sourceFile = "") =>
         TestPython(Path.Combine(Path.GetDirectoryName(sourceFile)!, "video_fixtures.py"), extended ? [directory, "--extended"] : [directory]);
-    private static async Task TestPython(string script, params string[] arguments)
+    internal static async Task TestPython(string script, params string[] arguments)
     {
         var start = new ProcessStartInfo(Environment.GetEnvironmentVariable(VideoModelFactAttribute.PythonVariable)!)
         {

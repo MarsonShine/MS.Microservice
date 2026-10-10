@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Runtime.CompilerServices;
 using MS.Microservice.Media.Inference.WatermarkRemoval;
 using MS.Microservice.Media.Video;
 
@@ -18,21 +19,38 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
-        _options = options with { MiganModelPath = Path.GetFullPath(options.MiganModelPath) };
+        _options = options with { MiganModelPath = Path.GetFullPath(options.MiganModelPath),
+            Detector = options.Detector is { } detector ? detector with { ModelPath = Path.GetFullPath(detector.ModelPath) } : null };
     }
 
+    /// <summary>Detects watermarks automatically, then performs the same model repair and validated bundle publication as manual requests.</summary>
+    [OverloadResolutionPriority(-1)]
+    public Task<VideoWatermarkRemovalResult> RemoveAsync(string inputVideoPath, string outputDirectory, CancellationToken cancellationToken = default) =>
+        RemoveCoreAsync(inputVideoPath, outputDirectory, null, cancellationToken);
+
     /// <summary>Requires a new output directory and stable regular input files. No result directory is published on cancellation or validation failure.</summary>
-    public async Task<VideoWatermarkRemovalResult> RemoveAsync(string inputVideoPath, string outputDirectory,
+    public Task<VideoWatermarkRemovalResult> RemoveAsync(string inputVideoPath, string outputDirectory,
         VideoWatermarkRemovalRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return RemoveCoreAsync(inputVideoPath, outputDirectory, request, cancellationToken);
+    }
+
+    private async Task<VideoWatermarkRemovalResult> RemoveCoreAsync(string inputVideoPath, string outputDirectory,
+        VideoWatermarkRemovalRequest? request, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputVideoPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
-        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeRequested) != 0, this);
+        var automatic = request is null;
+        if (automatic && _options.Detector is null)
+            throw new InvalidOperationException("Automatic video removal requires a configured local repeated-text detector checkpoint; use an explicit manual request for mask-based repair.");
         var input = Path.GetFullPath(inputVideoPath);
         var output = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outputDirectory));
         var parent = Path.GetDirectoryName(output) ?? throw new ArgumentException("The output must have a parent directory.");
         if (File.Exists(output) || Directory.Exists(output)) throw new IOException("The output directory must not already exist.");
-        var maskRequest = request.Snapshot(_options.Limits);
+        var maskRequest = request?.Snapshot(_options.Limits);
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         RemovalWorkspace? workspace = null;
         var failed = false;
@@ -52,7 +70,7 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
             if ((originalInfo.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
                 throw new ArgumentException("The video must be a regular file rather than a directory or symbolic link.");
             var originalHash = await SnapshotAsync(source, workspace.ImagePath, _options.Limits.MaximumInputBytes, cancellationToken).ConfigureAwait(false);
-            if (request.StaticMaskPath is not null)
+            if (request?.StaticMaskPath is not null)
             {
                 await using var mask = File.OpenRead(Path.GetFullPath(request.StaticMaskPath));
                 await SnapshotAsync(mask, workspace.MaskPath, _options.Limits.MaximumInputBytes, cancellationToken).ConfigureAwait(false);
@@ -60,7 +78,8 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
             }
             var jobPath = Path.Combine(workspace.DirectoryPath, "job.json");
             var job = new { InputPath = workspace.ImagePath, OutputDirectory = bundle, ModelPath = _options.MiganModelPath,
-                _options.CpuThreads, _options.Limits, _options.Flow, Request = maskRequest };
+                _options.CpuThreads, _options.Limits, _options.Flow, Request = maskRequest, Mode = automatic ? "automatic" : "manual",
+                Detector = automatic ? new { _options.Detector!.ModelPath, _options.Detector.Profile, _options.Detector.Threshold } : null };
             await File.WriteAllTextAsync(jobPath, JsonSerializer.Serialize(job, JsonOptions), cancellationToken).ConfigureAwait(false);
             var runner = new MediaProcessRunner(_options.ProcessTimeout);
             await runner.RunAsync(_options.PythonExecutablePath, [script, "prepare", jobPath], cancellationToken).ConfigureAwait(false);
@@ -74,12 +93,14 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
                 Path.Combine(bundle, "result.mkv")], cancellationToken).ConfigureAwait(false);
             var json = await runner.RunAsync(_options.PythonExecutablePath, [script, "validate", jobPath], cancellationToken).ConfigureAwait(false);
             var summary = JsonSerializer.Deserialize<WorkerSummary>(json, JsonOptions) ?? throw new InvalidDataException("The video worker returned no result.");
+            ValidateDetection(summary.Mode, summary.Detection, summary.FrameCount, automatic);
             if (summary.MiganModelId != MiganInpainter.ModelId || !string.Equals(summary.MiganSha256, MiganInpainter.ModelSha256, StringComparison.OrdinalIgnoreCase)
                 || summary.Width < 1 || summary.Height < 1 || (long)summary.Width * summary.Height > _options.Limits.MaximumFramePixels
                 || summary.FrameCount < 1 || summary.FrameCount > _options.Limits.MaximumFrames
                 || (long)summary.Width * summary.Height * summary.FrameCount > _options.Limits.MaximumTotalPixels
                 || summary.SelectedPixelCount < 0 || summary.SelectedPixelCount > (long)summary.Width * summary.Height * summary.FrameCount
                 || summary.EditedPixelCount < 0 || summary.EditedPixelCount > summary.SelectedPixelCount
+                || summary.FlowContributedPixelCount < 0 || summary.FlowContributedPixelCount > 2 * summary.SelectedPixelCount
                 || summary.Audio is null || summary.Audio.Length > _options.Limits.MaximumAudioTracks
                 || !double.IsFinite(summary.FirstVideoSeconds) || summary.FirstVideoSeconds < 0
                 || !double.IsFinite(summary.VideoDurationSeconds) || summary.VideoDurationSeconds <= 0 || summary.VideoDurationSeconds > _options.Limits.MaximumDurationSeconds)
@@ -99,8 +120,9 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
                 bytes, Array.AsReadOnly(summary.Audio), true, Array.AsReadOnly(new[] {
                     "MI-GAN synthesizes selected content; optical flow can worsen repair despite reliability gates. Review original, mask and result.",
                     "Output is lossless RGB8 FFV1 Matroska with audio decoded to float32 PCM; timestamps are quantized to 1 ms.",
-                    "Audio samples preserve channel order. Source speaker roles are recorded in the manifest; Matroska PCM playback may omit those roles."
-                }));
+                    "Audio samples preserve channel order. Source speaker roles are recorded in the manifest; Matroska PCM playback may omit those roles.",
+                    automatic ? "Automatic repeated-text masks can select ordinary text, subtitles or scene logos and miss watermark ink; review masks before accepting the result." : "Manual masks define the selected region; inspect synthesized content before accepting the result."
+                }), automatic ? WatermarkRemovalMode.Automatic : WatermarkRemovalMode.Manual, summary.Detection);
         }
         catch { failed = true; throw; }
         finally
@@ -109,6 +131,20 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
             catch when (failed) { }
             finally { _gate.Release(); }
         }
+    }
+
+    private void ValidateDetection(string mode, VideoWatermarkDetectionResult? detection, int frames, bool automatic)
+    {
+        if (mode != (automatic ? "automatic" : "manual") || !automatic && detection is not null)
+            throw new InvalidDataException("The video worker changed the requested manual/automatic mode.");
+        if (!automatic) return;
+        var configured = _options.Detector!;
+        if (detection is null || detection.ModelId != WatermarkRemover.DetectorModelId || detection.Sha256 != WatermarkRemover.DetectorSha256
+            || detection.Profile != configured.Profile || detection.Threshold != configured.Threshold || detection.FrameCount != frames
+            || !double.IsFinite(detection.MaximumProbability) || detection.MaximumProbability is < 0 or > 1
+            || !double.IsFinite(detection.MeanProbability) || detection.MeanProbability is < 0 or > 1
+            || !double.IsFinite(detection.InferenceSeconds) || detection.InferenceSeconds < 0)
+            throw new InvalidDataException("The detector returned invalid fixed model, profile or uncalibrated probability metadata.");
     }
 
     internal static long BundleBytes(string path) => Directory.EnumerateFiles(path).Sum(file => new FileInfo(file).Length);
@@ -139,5 +175,6 @@ public sealed class VideoWatermarkRemover : IAsyncDisposable
     }
 
     private sealed record WorkerSummary(int Width, int Height, int FrameCount, long SelectedPixelCount, long EditedPixelCount,
-        long FlowContributedPixelCount, double FirstVideoSeconds, double VideoDurationSeconds, VideoAudioResult[] Audio, string MiganModelId, string MiganSha256);
+        long FlowContributedPixelCount, double FirstVideoSeconds, double VideoDurationSeconds, VideoAudioResult[] Audio, string MiganModelId, string MiganSha256,
+        string Mode, VideoWatermarkDetectionResult? Detection);
 }
