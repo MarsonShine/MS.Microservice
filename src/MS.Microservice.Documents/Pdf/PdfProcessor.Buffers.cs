@@ -1,6 +1,7 @@
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using System.Text;
+using MS.Microservice.Documents.Internal;
 
 namespace MS.Microservice.Documents.Pdf;
 
@@ -80,7 +81,7 @@ public sealed partial class PdfProcessor
         if (!input.CanRead) throw new ArgumentException("Input must be readable.", nameof(input));
         cancellationToken.ThrowIfCancellationRequested();
         var maximumBytes = (int)Math.Min(limits.MaximumInputBytes, remainingMergeBytes ?? limits.MaximumInputBytes);
-        using var data = new BoundedBuffer(maximumBytes);
+        using var data = new BoundedBuffer(maximumBytes, "PDF");
         var buffer = new byte[(int)Math.Min(81920L, (long)maximumBytes + 1)];
         int read;
         while ((read = await input.ReadAsync(buffer.AsMemory(0,
@@ -101,7 +102,7 @@ public sealed partial class PdfProcessor
             document.SecuritySettings.UserPassword = options.OutputUserPassword;
             document.SecuritySettings.OwnerPassword = options.OutputOwnerPassword!;
         }
-        using var output = new BoundedBuffer(options.Limits.MaximumOutputBytes);
+        using var output = new BoundedBuffer(options.Limits.MaximumOutputBytes, "PDF");
         var expectedPages = document.PageCount;
         document.Save(output, closeStream: false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -159,24 +160,4 @@ public sealed partial class PdfProcessor
         }
     }
 
-    private sealed class BoundedBuffer(int maximumBytes) : MemoryStream
-    {
-        private void Reserve(int count)
-        {
-            if (count > maximumBytes - Position) throw new InvalidDataException("PDF data exceeds the configured byte limit.");
-            var required = (int)(Position + count);
-            if (required > Capacity)
-                Capacity = (int)Math.Min(maximumBytes, Math.Max(required, Math.Max(256L, Capacity * 2L)));
-        }
-        public override void Write(byte[] buffer, int offset, int count) { Reserve(count); base.Write(buffer, offset, count); }
-        public override void Write(ReadOnlySpan<byte> buffer) { Reserve(buffer.Length); base.Write(buffer); }
-        public override void WriteByte(byte value) { Reserve(1); base.WriteByte(value); }
-        public override void SetLength(long value)
-        {
-            if (value > maximumBytes) throw new InvalidDataException("PDF data exceeds the configured byte limit.");
-            if (value > Capacity)
-                Capacity = (int)Math.Min(maximumBytes, Math.Max(value, Math.Max(256L, Capacity * 2L)));
-            base.SetLength(value);
-        }
-    }
 }

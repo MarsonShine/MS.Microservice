@@ -1,6 +1,6 @@
 # 文档处理
 
-`MS.Microservice.Documents` 提供 PDF 页面处理、文本提取和 PNG 渲染。引用项目或包即可使用；[源码与包接入方式](../../docs/components/consumption.md)。
+`MS.Microservice.Documents` 提供 PDF 页面处理、文本提取、PNG 渲染和 DOCX 内容控件模板填充。引用项目或包即可使用；[源码与包接入方式](../../docs/components/consumption.md)。
 
 | 功能 | 方法 | 结果 |
 | --- | --- | --- |
@@ -48,3 +48,36 @@ await processor.SelectPagesAsync(input, output, [1], cancellationToken: cancella
 - 透明 PNG 会拉伸到整页可见区域。文字／Logo 可先用 [Media 水印接口](../../MS.Microservice.Media/README.md)生成透明叠加图，再传给 `AddOverlayAsync`。
 
 实现、资源生命周期和密码验证规则见 [PDF 设计](docs/pdf-design.md)。
+
+## 填充 Word 模板
+
+在 Word 的「开发工具」中插入纯文本或富文本内容控件，并将控件属性的 **标记（Tag）** 设为字段名。正文、表格单元格、页眉和页脚中的控件都可以填充；块级控件只支持单个段落。
+
+```csharp
+using MS.Microservice.Documents.Word;
+
+var templates = new WordTemplateProcessor();
+await using var template = File.OpenRead("contract-template.docx");
+await using var filled = new FileStream("contract.docx", FileMode.CreateNew);
+var result = await templates.FillAsync(template, filled,
+    new Dictionary<string, string?> { ["CustomerName"] = "张三", ["Address"] = "上海市" },
+    cancellationToken: cancellationToken);
+```
+
+Tag 区分大小写，同名控件全部填充。`null` 替换为空文本，无标记控件保持原样，多余字典键忽略。新文本沿用控件首个 run 的格式；控件外的文字、样式与非目标内容保持原样。换行和制表符会写成 Word 节点，单行纯文本控件拒绝换行。
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `WordTemplateOptions.MissingValue` | `Throw` | 缺少带 Tag 控件的值时失败；`KeepOriginal` 保留该控件 |
+| `MaximumInputBytes` | `64 MiB` | 输入 DOCX 编码大小 |
+| `MaximumOutputBytes` | `128 MiB` | 自有工作副本及输出编码大小，须能容纳输入副本 |
+| `MaximumExpandedBytes` | `128 MiB` | ZIP 条目展开后的累计字节数，输入和输出均检查 |
+| `MaximumXmlCharactersPerPart` | `16M` | 每个 XML 部件的字符上限 |
+| `MaximumEntries` | `1024` | ZIP 条目数量上限 |
+| `MaximumReplacementCharacters` | `16M` | 实际替换文本的 UTF-16 字符总数，重复控件分别计入 |
+
+后六项位于 `WordTemplateOptions.Limits`。组件仅支持未签名、未启用文档保护的 Transitional DOCX。不能填充嵌套控件、数据绑定、图片、日期、选择框、内容锁定控件，或包含域、绘图等复杂内容的目标控件。脚注、尾注和文本框不作为模板填充入口；这不是 Word 渲染器，也不提供 Word 转 PDF。
+
+输入从当前位置读取，调用方流保持打开。先完成自有副本及验证，再从目标当前位置写入；复制期间 I/O 错误或取消仍可能留下部分输出，文件原子发布由宿主负责。输入输出不能共用同一流或底层文件。DOCX 会载入内存，应限制文件大小与并发；XML 校验不保证 Word 的分页或视觉布局。
+
+控件替换规则、包验证和资源边界见 [Word 模板设计](docs/word-template-design.md)。
