@@ -1,6 +1,6 @@
-# 本地图片去水印与区域修复
+# 本地媒体推理工具
 
-引用可选项目 `MS.Microservice.Media.Inference`，可自动检测图片水印后修复，也可用人工二值蒙版修复指定区域。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
+引用可选项目 `MS.Microservice.Media.Inference`，可自动检测图片水印、按蒙版修复图片，以及手动修复视频指定区域。基础图片编辑、加水印和视频工具见[Media README](../../README.md)。
 
 ## 自动检测并修复
 
@@ -45,7 +45,41 @@ var result = await inpainter.InpaintAsync(image, mask, output, cancellationToken
 
 自动模式返回二值 PNG 蒙版；`RemoveAsync` 手动模式返回蒙版的原编码和方向元数据，不能一律声明为 PNG。要继续裁剪、压缩或转格式，再调用基础 `ImageProcessor`。
 
-## 配置
+## 手动视频区域修复
+
+```csharp
+using MS.Microservice.Media.Inference.VideoWatermarkRemoval;
+
+await using var videoRemover = new VideoWatermarkRemover(new VideoWatermarkRemovalOptions
+{
+    PythonExecutablePath = pythonPath,
+    MiganModelPath = repairModelPath
+});
+var videoResult = await videoRemover.RemoveAsync("input.mp4", "new-result-directory",
+    new VideoWatermarkRemovalRequest { StaticMaskPath = "mask.png" }, cancellationToken);
+```
+
+提前安装 `media-inference/video-requirements.txt` 中的 Python 依赖并准备同一个 MI-GAN 模型。此入口需要 PyAV、OpenCV、Python ONNX Runtime 和 FFmpeg；只做手动图片修复时仍无需 Python。
+
+| 参数组 | 默认值／要求 |
+| --- | --- |
+| `StaticMaskPath` / `RectangleKeyframes` | 二选一；静态二值 PNG，或从零开始、同索引线性插值的矩形关键帧 |
+| 坐标 | 视频显示方向校正后的像素，矩形须完整位于画面内 |
+| `FfmpegExecutablePath` / `CpuThreads` / `ProcessTimeout` | `ffmpeg` / 最多默认 4 线程 / 每个进程 10 分钟 |
+| `Limits.MaximumInputBytes` / `MaximumOutputBytes` | 每份输入 256 MiB / 完整结果包 512 MiB |
+| `MaximumFrames` / `MaximumDurationSeconds` | 300 帧 / 120 秒 |
+| `MaximumFramePixels` / `MaximumFrameDimension` / `MaximumTotalPixels` | 1920×1080 / 8192 / 256M |
+| `MaximumAudioTracks` / `MaximumAudioSampleValues` | 8 条 / 50M 样本值 |
+| `MaximumMaskKeyframes` / `MaximumRectanglesPerKeyframe` / `MaximumMaskRectangles` | 512 / 128 / 65,536，复制请求前检查 |
+| `Flow` | 相邻帧光流可靠性门限；调整门限不保证质量提升 |
+
+输出目录必须不存在。结果为 FFV1 MKV、蒙版预览视频、逐帧 JSON 和首帧原图／蒙版／结果 PNG；整包校验后发布，可再用 `VideoProcessor.ProcessAsync` 明确转为 MP4。该入口是图片模型加光流辅助，不能恢复被遮挡的真实内容，结果需要人工复核。
+
+仅支持 RGB8 SDR、方形像素及标准直角旋转。保留 VFR 时间间隔，输出量化到 1 ms；负时间戳、碰撞、无法确定末帧长度或音轨存在时间跳变时会拒绝处理。音频转为 float32 PCM，保留实际样本和通道顺序，源扬声器角色另行记录，播放器不保证恢复角色。超过两声道且角色未知的音轨不支持。
+
+宿主应限制同时运行及排队的任务数，保持输入文件稳定。取消或验证失败不发布结果；发布后的暂存清理错误可能在完整目录已存在时报告，应核对目标再处理。流程、时间线和质量边界见[视频区域修复设计](../../docs/video-watermark-removal.md)。
+
+## 图片处理配置
 
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |

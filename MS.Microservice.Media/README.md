@@ -1,6 +1,6 @@
 # 媒体处理
 
-引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片自动去水印和手动修复另需可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
+引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片自动去水印与图片／视频手动修复使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
 
 | 入口 | 功能 |
 | --- | --- |
@@ -9,6 +9,7 @@
 | `CodeProcessor.GenerateAsync` / `DecodeAsync` | 八种二维码／条码生成及多码识别 |
 | `WatermarkRemover.RemoveAsync`（可选） | 默认自动检测并修复图片，也可提供手动蒙版 |
 | `MiganInpainter.InpaintAsync`（可选） | 按二值蒙版修复指定区域 |
+| `VideoWatermarkRemover.RemoveAsync`（可选） | 手动蒙版／矩形关键帧视频修复，生成 FFV1 MKV 及预览包 |
 | `VideoProcessor.ProbeAsync` / `ProcessAsync` | 视频信息、剪辑、画面变换、MP4／MKV／WebM 转码 |
 | `AddTextWatermarkAsync` / `AddLogoWatermarkAsync` | 视频水印及显示时间范围 |
 | `ConcatenateAsync` | 按顺序拼接不同尺寸、帧率、编码和音轨的视频 |
