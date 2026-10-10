@@ -23,6 +23,7 @@
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Notifications/MS.Microservice.Notifications.csproj" />
     <Project Path="src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+    <Project Path="src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
@@ -66,6 +67,7 @@
     <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
     <Project Path="test/MS.Microservice.Notifications.Tests/MS.Microservice.Notifications.Tests.csproj" />
     <Project Path="test/MS.Microservice.Documents.Tests/MS.Microservice.Documents.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Storage.S3.Tests/MS.Microservice.Storage.S3.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.DatabaseMigrator.Tests/MS.Microservice.Reference.DatabaseMigrator.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
