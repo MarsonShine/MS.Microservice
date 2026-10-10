@@ -43,7 +43,10 @@ await new ImageProcessor().ProcessAsync(input, output,
 | `FlipHorizontal` / `FlipVertical` | `false` | 在旋转后画面上翻转 |
 | `Format` / `Quality` | PNG / 90 | 质量范围 0–100；PNG 无损，质量参数不控制其文件大小 |
 | `JpegBackground` | 白色 | JPEG 的不透明合成底色；PNG／WebP 保留透明度 |
+| `BackgroundColor` | 不设置 | 为 PNG／JPEG／WebP 合成不透明纯色底；设置时优先于 `JpegBackground` |
 | `Limits` | 16,384 单边 / 40M 像素 / 64 MiB 输入 | 输入和输出画布均受尺寸、像素预算约束 |
+
+为透明图片换纯色背景时，设置 `BackgroundColor = new ImageColor(255, 255, 255)` 并选择输出格式；底色必须不透明，最终画布没有透明像素。未设置时，PNG／WebP 继续保留 alpha，JPEG 使用 `JpegBackground`。
 
 添加图片水印时，传入 `TextWatermark` 或 Logo 流。文字的 `FontSize` 默认 32，颜色默认白色；中文应指定已部署的 `FontFile`。默认字体缺字会报错，不会悄悄换字体。Logo 可用 `ImageSize` 指定等比例适配框。
 

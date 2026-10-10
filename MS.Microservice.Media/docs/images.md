@@ -8,7 +8,9 @@
 
 裁剪矩形用长整型和宽高校验，避免 `X + Width` 的整数溢出。裁剪、EXIF 和直角变换采用最近邻采样；缩放采用双线性采样。Contain 按较小比例适配目标框，尺寸使用 `Math.Round` 并至少保留一像素；Cover 以较大比例计算居中的源区域；Stretch 直接使用目标宽高。Contain 不创建留白画布，Cover 则确实裁掉边缘内容。
 
-PNG／WebP 保留 alpha，JPEG 先在不透明底色上合成。输出重新编码，不复制 EXIF、文本或其他原始元数据。质量参数不能保证文件变小，PNG 的无损编码也不以该参数控制大小。
+默认 PNG／WebP 保留 alpha，JPEG 先在 `JpegBackground` 上合成。显式 `BackgroundColor` 对三种格式生效，并优先于 JPEG 兼容参数；所有几何变换结束后，在编码层创建同尺寸不透明底图，再以原 alpha 绘制前景。不进行前景颜色反演或透明度估计，背景选择不能消除源颜色中已有的白边污染。
+
+共享编码器保留旧的六参数方法签名，以空背景委托给新的显式背景重载，避免已编译的 Inference 包在独立更新 Media 时找不到内部调用方法。输出重新编码，不复制 EXIF、文本或其他原始元数据。质量参数不能保证文件变小，PNG 的无损编码也不以该参数控制大小。
 
 ## 解码验收与预算
 
@@ -16,7 +18,7 @@ PNG／WebP 保留 alpha，JPEG 先在不透明底色上合成。输出重新编�
 
 预算作用于原图、方向校正及每次新画布；用户给定的目标框也先校验。实现另外限制 RGBA 字节数不超过 `int.MaxValue`。检查不能拖到绘制完成后，否则低压缩比或超大尺寸素材已消耗内存。
 
-编码输入先进入托管内存，再复制到 native `SKData`；变换最多同时持有当前及下一张栅格，JPEG 合成另需一张，编码结果也暂存在 native 内存。40M 像素的一张 RGBA 栅格约占 160 MB，输入文件很小不代表工作内存很小。`ImageLimits` 是局部资源边界，不是进程内存硬配额。
+编码输入先进入托管内存，再复制到 native `SKData`；变换最多同时持有当前及下一张栅格，显式底色或 JPEG 合成另需一张，编码结果也暂存在 native 内存。40M 像素的一张 RGBA 栅格约占 160 MB，输入文件很小不代表工作内存很小。`ImageLimits` 是局部资源边界，不是进程内存硬配额。
 
 ## 所有权与取消
 
@@ -27,5 +29,7 @@ PNG／WebP 保留 alpha，JPEG 先在不透明底色上合成。输出重新编�
 ## 回归与升级
 
 [ImageProcessorTests](../test/MS.Microservice.Media.Tests/Images/ImageProcessorTests.cs) 使用实际像素、编码头和手工 EXIF fixture，覆盖八方向、组合变换、透明合成、预算边界、动画拒绝、分段读取、取消及调用方流所有权。透明像素验收应以 alpha 和规范化像素为准，不能要求保留原文件隐藏 RGB。
+
+[背景合成测试](../test/MS.Microservice.Media.Tests/Images/ImageBackgroundTests.cs) 对三种输出格式分别验证全透明、半透明和不透明输入、默认 alpha 保留、JPEG 参数优先级、旋转与缩放后画布，以及无效底色在输入读取前失败。
 
 Skia 升级时复核采样、编码与 `GetPixels` 状态，保留“可恢复容器缺失”和“像素不完整”两类用例；不要增加只为某个文件通过的 footer 判断。

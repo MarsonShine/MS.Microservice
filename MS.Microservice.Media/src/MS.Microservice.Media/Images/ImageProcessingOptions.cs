@@ -25,5 +25,7 @@ public sealed record ImageProcessingOptions
     public bool FlipHorizontal { get; init; }
     public bool FlipVertical { get; init; }
     public ImageColor JpegBackground { get; init; } = new(255, 255, 255);
+    /// <summary>Optional opaque background for every output format; otherwise PNG/WebP retain alpha and JPEG uses JpegBackground.</summary>
+    public ImageColor? BackgroundColor { get; init; }
     public ImageLimits Limits { get; init; } = new();
 }

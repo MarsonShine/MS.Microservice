@@ -16,8 +16,8 @@ public sealed class ImageProcessor
         ArgumentNullException.ThrowIfNull(options.JpegBackground);
         if (!Enum.IsDefined(options.Format) || !Enum.IsDefined(options.ResizeMode)
             || options.Quality is < 0 or > 100 || options.RotationDegrees is not (0 or 90 or 180 or 270)
-            || options.JpegBackground.Alpha != 255)
-            throw new ArgumentException("Invalid image format, resize mode, quality, quarter-turn or JPEG background.", nameof(options));
+            || options.JpegBackground.Alpha != 255 || options.BackgroundColor is { Alpha: not 255 })
+            throw new ArgumentException("Invalid image format, resize mode, quality, quarter-turn or opaque background.", nameof(options));
         if (options.Resize is { } target)
             ImageCodec.CheckDimensions(target.Width, target.Height, options.Limits);
         var current = await ImageCodec.DecodeAsync(input, options.Limits, cancellationToken).ConfigureAwait(false);
@@ -68,7 +68,7 @@ public sealed class ImageProcessor
             }
 
             await ImageCodec.EncodeAsync(current, output, options.Format, options.Quality,
-                options.JpegBackground, cancellationToken).ConfigureAwait(false);
+                options.JpegBackground, cancellationToken, options.BackgroundColor).ConfigureAwait(false);
             return new(current.Width, current.Height, options.Format);
         }
         finally { current.Dispose(); }

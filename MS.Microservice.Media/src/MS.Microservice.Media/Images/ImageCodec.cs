@@ -52,24 +52,30 @@ internal static class ImageCodec
         catch { decoded.Dispose(); throw; }
     }
 
-    internal static async Task EncodeAsync(
+    internal static Task EncodeAsync(
         SKBitmap bitmap, Stream output, ImageOutputFormat format, int quality,
         ImageColor jpegBackground, CancellationToken cancellationToken)
+        => EncodeAsync(bitmap, output, format, quality, jpegBackground, cancellationToken, null);
+
+    internal static async Task EncodeAsync(
+        SKBitmap bitmap, Stream output, ImageOutputFormat format, int quality,
+        ImageColor jpegBackground, CancellationToken cancellationToken, ImageColor? background)
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(jpegBackground);
         if (!output.CanWrite) throw new ArgumentException("Output must be writable.", nameof(output));
-        if (!Enum.IsDefined(format) || quality is < 0 or > 100 || jpegBackground.Alpha != 255)
+        if (!Enum.IsDefined(format) || quality is < 0 or > 100 || jpegBackground.Alpha != 255 || background is { Alpha: not 255 })
             throw new ArgumentException("Choose a supported format, quality from 0 to 100 and an opaque JPEG background.");
         cancellationToken.ThrowIfCancellationRequested();
         SKBitmap? flattened = null;
         try
         {
-            if (format == ImageOutputFormat.Jpeg)
+            if (format == ImageOutputFormat.Jpeg || background is not null)
             {
+                var color = background ?? jpegBackground;
                 flattened = new SKBitmap(bitmap.Width, bitmap.Height, SKColorType.Rgba8888, SKAlphaType.Opaque);
                 using var canvas = new SKCanvas(flattened);
-                canvas.Clear(new SKColor(jpegBackground.Red, jpegBackground.Green, jpegBackground.Blue));
+                canvas.Clear(new SKColor(color.Red, color.Green, color.Blue));
                 using var foreground = SKImage.FromBitmap(bitmap);
                 canvas.DrawImage(foreground, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest));
             }
