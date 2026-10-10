@@ -1,7 +1,7 @@
 namespace MS.Microservice.Core.IO;
 
 /// <summary>Saves streams under generated names in a caller-selected local directory.</summary>
-public sealed class LocalFileStorage
+public sealed class LocalFileStorage : IFileStorage
 {
     private readonly string _directory;
 
@@ -21,19 +21,26 @@ public sealed class LocalFileStorage
         string extension,
         CancellationToken cancellationToken = default)
     {
+        var key = StoredFileKey.Create(extension);
+        await WriteNewAsync(key, content, cancellationToken).ConfigureAwait(false);
+        return key;
+    }
+
+    public async Task WriteNewAsync(string key, Stream content, CancellationToken cancellationToken = default)
+    {
+        StoredFileKey.Validate(key);
         ArgumentNullException.ThrowIfNull(content);
         if (!content.CanRead)
         {
             throw new ArgumentException("The content stream must be readable.", nameof(content));
         }
 
-        var suffix = NormalizeExtension(extension);
         cancellationToken.ThrowIfCancellationRequested();
+        var outputPath = Path.Combine(_directory, key);
+        if (File.Exists(outputPath) || Directory.Exists(outputPath)) throw new IOException("The stored file already exists.");
         Directory.CreateDirectory(_directory);
         var id = Guid.NewGuid().ToString("N");
-        var fileName = id + suffix;
         var temporaryPath = Path.Combine(_directory, "." + id + ".tmp");
-        var outputPath = Path.Combine(_directory, fileName);
 
         // Open outside the cleanup scope: a failed CreateNew never grants ownership of that path.
         var output = new FileStream(
@@ -49,7 +56,6 @@ public sealed class LocalFileStorage
 
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, outputPath, overwrite: false);
-            return fileName;
         }
         catch
         {
@@ -58,17 +64,34 @@ public sealed class LocalFileStorage
         }
     }
 
-    private static string NormalizeExtension(string extension)
+    public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(extension)
-            || extension.Length is < 2 or > 10
-            || extension[0] != '.'
-            || extension.AsSpan(1).ContainsAnyExcept(
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"))
+        StoredFileKey.Validate(key);
+        cancellationToken.ThrowIfCancellationRequested();
+        try
         {
-            throw new ArgumentException("Use a dot followed by 1 to 9 ASCII letters or digits.", nameof(extension));
+            Stream stream = new FileStream(Path.Combine(_directory, key), FileMode.Open, FileAccess.Read,
+                FileShare.Read | FileShare.Delete, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            return Task.FromResult(stream);
         }
+        catch (DirectoryNotFoundException error)
+        { throw new FileNotFoundException("The stored file does not exist.", key, error); }
+    }
 
-        return extension.ToLowerInvariant();
+    public Task<StoredFileMetadata?> GetMetadataAsync(string key, CancellationToken cancellationToken = default)
+    {
+        StoredFileKey.Validate(key);
+        cancellationToken.ThrowIfCancellationRequested();
+        var file = new FileInfo(Path.Combine(_directory, key));
+        return Task.FromResult(file.Exists ? new StoredFileMetadata(key, file.Length, new(file.LastWriteTimeUtc)) : null);
+    }
+
+    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    {
+        StoredFileKey.Validate(key);
+        cancellationToken.ThrowIfCancellationRequested();
+        try { File.Delete(Path.Combine(_directory, key)); }
+        catch (DirectoryNotFoundException) { }
+        return Task.CompletedTask;
     }
 }
