@@ -60,6 +60,8 @@ module-manifest.json 记录源提交、文件 SHA-256 和项目闭包。
 | Idempotency.EFCore | 在业务 DbContext 注册模型并应用迁移；由同一工作单元提交业务和响应记录，安排过期清理 |
 | AI.* | Provider 凭据、模型能力、超时、配额与成本报告 |
 | Audio / Excel / EventSourcing | 平台限制、输入文件、资源所有权；事件溯源存储示例在 Lab |
+| Media / Media.Inference | FFmpeg、原生库、字体及可选本地模型；输入权限、并发预算与结果发布 |
+| Documents | PDF 输入密码与输出保护、文件大小和并发；目标平台 PDFium／Skia 运行时 |
 | Notifications | SMTP 地址和凭据、发送任务与投递反馈；站内通知的私有目录、所属用户授权与历史保留期 |
 
 教育图像场景的源码复制需包含 samples/AI 中的场景类库及其共享依赖；

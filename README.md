@@ -22,7 +22,7 @@
 多项目模块把 docs、src、test 和独立解决方案放在同一目录；小型独立组件暂留根 src/test。
 根解决方案覆盖全仓库，日常维护可以只打开对应模块：
 
-| 模块 | 独立解决方案 | 设计入口 |
+| 模块 | 独立解决方案 | 模块说明 |
 |---|---|---|
 | AI | [MS.Microservice.AI.slnx](MS.Microservice.AI/MS.Microservice.AI.slnx) | [说明](MS.Microservice.AI/docs/design.md) |
 | Logging | [MS.Microservice.Logging.slnx](MS.Microservice.Logging/MS.Microservice.Logging.slnx) | [说明](MS.Microservice.Logging/docs/design.md) |
@@ -74,6 +74,10 @@ Lab 与正式 Host 是两个独立程序集。实验 Controller 只在 Lab 中�
 
 Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、Idempotency、EFCore、SqlSugar、EventSourcing、Audio、Excel 和 AI 按需接入。具体依赖与平台限制以模块文档为准；参考业务模型不作为通用组件的依赖。
 
-[Notifications](src/MS.Microservice.Notifications/README.md) 提供 SMTP 邮件、命名模板和本地持久化站内通知，宿主负责通知任务、所属用户授权和送达状态。
+| 工具组件 | 使用说明 |
+| --- | --- |
+| 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；自动图片去水印使用可选 Inference 组件 |
+| PDF | [Documents](src/MS.Microservice.Documents/README.md)：合并、选页、拆分、文字提取和图片渲染 |
+| 邮件、模板与站内通知 | [Notifications](src/MS.Microservice.Notifications/README.md) |
 
 数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。

@@ -1,18 +1,29 @@
-# 通知组件：邮件、模板与站内通知
+# 通知组件
 
-本组件提供 SMTP 邮件发送、简单命名模板和[本地持久化站内通知](Inbox/local-inbox.md)。邮件回执表示服务器已接受消息，最终送达由邮件服务的投递反馈确认；宿主负责发送任务、状态存储与重试策略。站内通知支持按用户查询、分页、未读数和重启后保留的已读回执。
+提供 SMTP 邮件、命名模板和本地持久化站内通知。引用 `MS.Microservice.Notifications` 项目或包即可使用，无需启动单独服务；[源码与包接入方式](../../docs/components/consumption.md)。
+
+| 功能 | 入口 | 用途 |
+| --- | --- | --- |
+| 邮件 | `SmtpEmailSender.SendAsync` | 发送纯文本或 HTML 邮件，支持 To、Cc、Bcc |
+| 模板 | `NamedTokenTemplate.Render` | 将 `{{Name}}` 或 `{{User.Name}}` 替换为字典值 |
+| 站内通知 | `LocalNotificationInbox` | 按用户发布、分页查询、统计未读数、标记已读 |
+
+## 发送邮件
 
 ```csharp
+using MS.Microservice.Notifications.Email;
+using MS.Microservice.Notifications.Templates;
+
 var sender = new SmtpEmailSender(new SmtpEmailOptions
 {
     Host = "smtp.example.com",
-    Port = 587,
-    TlsMode = SmtpTlsMode.RequireStartTls,
     UserName = configuredUserName,
     Password = configuredPassword
 });
-
-var body = NamedTokenTemplate.Render("你好，{{User.Name}}。", values);
+var body = NamedTokenTemplate.Render("你好，{{Name}}。", new Dictionary<string, string?>
+{
+    ["Name"] = "张三"
+});
 var accepted = await sender.SendAsync(new EmailMessage
 {
     From = new("sender@example.com", "应用通知"),
@@ -22,18 +33,46 @@ var accepted = await sender.SendAsync(new EmailMessage
 }, cancellationToken);
 ```
 
-公开类型不暴露 MailKit/MimeKit。发送支持 From、To、Cc、Bcc、纯文本、HTML 或两种正文的 MIME alternative；传输遵循 MIME/SMTP 换行规则，单一正文在接收端可能带有末尾 CRLF。至少一个收件人和一种正文必须存在；允许仅有 Bcc，Bcc 进入 SMTP 信封但不会进入发送的 MIME 头。邮箱须是单一 mailbox，显示名独立传入；主题和地址头不允许 CR、LF 或 NUL。服务器决定地址是否可投递。
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `Host` | 必填 | SMTP 服务器 |
+| `Port` | `587` | SMTP 端口 |
+| `TlsMode` | `RequireStartTls` | 要求 STARTTLS；也可选择连接即 TLS |
+| `UserName` / `Password` | 不认证 | 使用时须成对提供，且必须启用 TLS |
+| `TimeoutMilliseconds` | `30000` | 客户端 I/O 等待超时 |
+| `DisconnectTimeoutMilliseconds` | `2000` | 发送成功后的断开等待上限 |
 
-TLS 默认明确要求 STARTTLS；服务器不支持时失败，不降级。也可选择连接即 TLS，或明确的无 TLS 模式。验证使用系统默认服务器证书规则，不接受所有证书；凭据仅允许随 TLS 配置使用，库不记录密码，配置类型没有输出密码的自动 record 字符串。认证通过 MailKit 支持的用户名/密码机制，凭据由宿主提供。邮件组件没有 OAuth token 获取、附件或 MIME 自定义接口。
+`EmailMessage` 至少需要一个收件人及 `TextBody`、`HtmlBody` 中的一种正文。显示名单独传入 `EmailAddress.DisplayName`。当前接口不提供附件或 OAuth token 获取。
 
-每次发送使用独立客户端，不共享连接和并发状态。返回 `SmtpAcceptanceReceipt` 表示收到服务器对消息的成功 SMTP 响应，包含本地 Message-Id、原始响应和接受时间；该响应不证明邮箱送达、用户读取或所有后续转发成功。
+返回回执只表示 SMTP 服务器已接受，最终送达需邮件服务的投递反馈确认。组件不自动重试；超时或网络中断时，远端是否已接受可能无法确定，应先核对发送状态再决定重发。
 
-接受后使用独立、可配置的有限超时尽力断开连接。QUIT 失败、断开超时或此时调用方取消均不会把已接受邮件变成发送失败，应用不应据此重发。MailKit 本身会容忍 QUIT 的部分网络和协议错误，回执不保证收到 QUIT 确认，也不包含用于应用决策的清理状态。接受前的连接、认证、收件人、消息拒绝或取消异常直接传播，清理异常不覆盖原错误。网络中断或等待最终接受响应时取消，远端是否已接受可能无法确定；组件不自动重试，宿主应明确重复发送策略，不仅凭异常就假定邮件未发送。`TimeoutMilliseconds` 控制客户端 I/O 等待，调用方取消控制整个发送操作。
+模板缺少变量会报错，不执行模板中的代码。生成 HTML 文本时可设置 `htmlEncodeValues: true`；它只编码替换值，不能用于 JavaScript、CSS 或 URL 上下文，也不净化模板本身。
 
-模板使用 `{{User.Name}}` 形式的点分 ASCII 标识符。每个名称必须有值，缺失抛出 `KeyNotFoundException`，不完整或非法 token 抛出 `FormatException`。替换只扫描模板一次，值中的 `{{other}}` 按字面保留，不递归、不执行代码。null 值替换为空字符串，名称比较遵循传入字典。普通单花括号保持不变；双花括号保留为 token 语法，需作为字面内容时可通过值传入。
+## 站内通知
 
-`htmlEncodeValues: true` 只对值做 HTML 编码，保留宿主编写的模板标签。这适用于 HTML 正文文本位置，不提供 JavaScript、CSS 或 URL 上下文编码，也不净化模板本身。模板在内存中生成结果，宿主应限制模板和值的总大小。
+```csharp
+using MS.Microservice.Notifications.Inbox;
 
-SMTP 使用 [MailKit 4.18.1](https://www.nuget.org/packages/MailKit/4.18.1)，其 [MIT 许可证](https://github.com/jstedfast/MailKit/blob/master/LICENSE) 和传递依赖随 NuGet 包提供。模板实现只使用 .NET 标准库；站内通知通过声明的 Core 项目引用复用文件原子写入。本组件无需 ASP.NET Core、数据库或消息中间件。
+var inbox = new LocalNotificationInbox(configuredPrivateDirectory);
+var message = await inbox.PublishAsync(userId, "文件处理完成", "输出已生成。",
+    "/tools/jobs/123", cancellationToken);
+var page = await inbox.ListAsync(userId, take: 20, cancellationToken: cancellationToken);
+await inbox.MarkReadAsync(userId, message.Id, cancellationToken);
+```
 
-测试启动本地回环 SMTP 服务器验证真实协议、MIME 内容、收件人、拒绝、取消及接受后的清理失败。TLS 正向测试仅通过内部工厂将实际客户端锁定到本次临时证书的 SHA-256 指纹，验证 STARTTLS、连接即 TLS 和认证；公开构造器另测拒绝该自签名证书。测试不修改系统证书信任，也不向外部收件人发送消息。
+| 参数或结果 | 默认值 | 说明 |
+| --- | --- | --- |
+| `owner` | 必填 | 由宿主从已验证身份取得，所有操作都须检查所属用户权限 |
+| `subject` / `body` | 必填 | 纯文本；标题最多 200、正文最多 16,000 个 UTF-16 单元 |
+| `actionPath` | 无 | 应用内以 `/` 开始的路径，最多 2048 个 UTF-16 单元 |
+| `skip` / `take` | `0` / `50` | 按创建时间和 Id 倒序分页，默认每页最多 100 条 |
+| `MaximumNotificationBytes` | `64 KiB` | 单份通知或已读回执的编码大小上限 |
+| `MaximumScanEntries` / `MaximumScanBytes` | `10000` / `32 MiB` | 一次查询的通知数和累计读取上限 |
+| `TotalCount` / `UnreadCount` | — | 本次查询扫描到的总数和未读数 |
+
+通知和已读时间保存在指定目录，重启后可继续读取。目录需由应用可信管理，内容不加密；宿主负责历史保留期。查询超出扫描预算会报错，持续大量通知应使用数据库后端。并发插入时 offset 翻页可能重复或跳项，可按 Id 去重或重新加载。
+
+## 实现说明
+
+- [SMTP、模板与异常处理](docs/email-and-templates-design.md)
+- [站内通知的持久化与并发规则](docs/local-inbox-design.md)

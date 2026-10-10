@@ -1,37 +1,107 @@
 # ASP.NET Core host components
 
-`ServiceHost.CreateBuilder(args)` loads deployed settings from the application directory. `AddPlatformHttp` / `UsePlatformHttp` supply trace-correlated ProblemDetails, metadata-only exception logging, explicit proxy trust and an opt-in CORS origin allowlist.
+Provides HTTP error handling, trace IDs, proxy/CORS configuration, optional rate limits, request deadlines, health checks, external JWT validation and upload screening.
 
-`AddPlatformRateLimiting` / `UsePlatformRateLimiting` optionally add ASP.NET Core's built-in rate limiter. Hosts can attach named policies to endpoints or configure a global limiter. The Reference host applies one fixed-window policy to its API routes while leaving health routes outside that policy. Configuration, middleware order and operational limits are explained in [HTTP 入口限流](docs/rate-limiting.md).
+| Capability | Entry point | Reference |
+| --- | --- | --- |
+| HTTP defaults | `AddPlatformHttp` / `UsePlatformHttp` | ProblemDetails and trace-correlated errors |
+| Rate limits | `AddPlatformRateLimiting` / `UsePlatformRateLimiting` | [Policies and limits](docs/rate-limiting.md) |
+| Request deadlines | `AddPlatformRequestTimeouts` / `UsePlatformRequestTimeouts` | [Cancellation behavior](docs/request-timeouts.md) |
+| Health checks | `AddPlatformHealthChecks` / `MapPlatformHealthChecks` | [Liveness and readiness](docs/health-checks.md) |
+| Database readiness | `AddDbConnectionCheck` | [Connection probe](docs/db-health-checks.md) |
+| Application errors | `ApplicationErrorResults.ToProblem` | [Error-code mapping](docs/application-errors.md) |
+| Request validation | .NET 10 generated validation | [Binding limitations](docs/minimal-api-validation.md) |
+| Upload screening | `FileUploadValidator` | [Implementation and tests](docs/uploads.md) |
+| External identity | `AddExternalIdentity` | [Permission semantics](docs/permission-check-design.md) |
 
-`AddPlatformRequestTimeouts` / `UsePlatformRequestTimeouts` optionally add ASP.NET Core request deadlines. The Reference host can apply one policy to its API routes while keeping health routes outside it. Cancellation behavior and configuration are explained in [HTTP 请求超时](docs/request-timeouts.md).
+## Host setup
 
-`AddPlatformHealthChecks` / `MapPlatformHealthChecks` expose liveness and readiness endpoints backed by ASP.NET Core health checks. Hosts register dependency probes with the `ready` tag; readiness stops accepting traffic when the host begins stopping. The [health check design](docs/health-checks.md) explains status handling and the Reference host's dependency probes.
+```csharp
+using MS.Microservice.AspNetCore;
+using MS.Microservice.AspNetCore.Uploads;
 
-`AddDbConnectionCheck` is an optional database readiness probe for an explicitly supplied `DbConnection` factory. See [database readiness checks](docs/db-health-checks.md) for its behavior and scope.
+var builder = ServiceHost.CreateBuilder(args);
+builder.Services.AddPlatformHttp(builder.Configuration);
+builder.Services.AddScoped<FileUploadValidator>();
+builder.Services.AddControllers();
+var app = builder.Build();
+app.UsePlatformHttp();
+app.MapControllers();
+app.Run();
+```
 
-`ApplicationErrorResults.ToProblem` maps stable application error codes to public ProblemDetails and hides unknown 500 details. The Reference host also uses .NET 10 source-generated validation for HTTP query ranges while keeping domain rules in its application layer. See [应用错误映射到 HTTP](docs/application-errors.md) for the mapping and the observed `[AsParameters]` binding limitation.
+| Configuration | Meaning |
+| --- | --- |
+| Application settings | Loaded from the deployed application directory |
+| `Http:KnownProxies` | Explicit trusted proxy IP addresses |
+| `Cors:Origins` | Origin allowlist; an empty list does not grant cross-origin access |
+| Optional policies | Hosts supply rate-limit and timeout policies, then enable their middleware |
 
-The separate [ASP.NET Core encryption adapter](../MS.Microservice.AspNetCore.Encryption/README.md) optionally binds versioned RSA-OAEP + AES-GCM request envelopes to explicitly registered MVC DTOs. The base host package does not reference this MVC adapter or Core cryptology.
+Unhandled 500 responses hide internal details. Default exception logs contain metadata rather than request bodies or exception messages. Readiness probes use the `ready` tag; explicitly allow anonymous access only to endpoints intended to be public.
 
-`Uploads.FileUploadValidator` provides the image/Excel size, MIME, extension and bounded signature checks used by Lab. Hosts choose upload limits and storage policies; the validator does not decode complete files. See [HTTP upload validation](docs/uploads.md) for supported types and stream ownership.
+## External JWT validation
 
-`AddExternalIdentity` validates JWTs through the host's OIDC Authority and Audience. It never issues tokens or maintains passwords. Production metadata requires HTTPS. Configure subject, role and permission claim names under `Authentication`; the reference policies use case-sensitive OAuth scopes `profiles.manage` and `messaging.manage`. A missing or empty subject cannot access protected resources.
+Configure `Authentication:Authority` and `Authentication:Audience`, then register and enable authentication before protected endpoints:
 
-Hosts must call authentication and authorization middleware and explicitly allow anonymous access only where intended (for example, liveness). Development may use an HTTP identity provider. TestServer tests use static test signing configuration and do not require external identity services.
+```csharp
+builder.Services.AddExternalIdentity(builder.Configuration, builder.Environment);
+// After app.UsePlatformHttp():
+app.UseAuthentication();
+app.UseAuthorization();
+```
 
-## Permission check cost
+| Parameter / policy | Default or requirement |
+| --- | --- |
+| `Authority`, `Audience` | Required; production Authority uses HTTPS |
+| `SubjectClaimType` | `sub`; exactly one distinct, non-empty subject is required |
+| `RoleClaimType`, `PermissionClaimType` | `roles`, `scope` |
+| `Manage` policy | Whole scope token `profiles.manage` |
+| `MessagingOperations` policy | Whole scope token `messaging.manage` |
+| Permission matching | Ordinal and case-sensitive; claims can contain space-separated scopes |
 
-The `Manage` and `MessagingOperations` policies call `HasPermission` during authorization. Previously it called `FindAll`, then used LINQ and `string.Split(' ', RemoveEmptyEntries)` for every permission claim. Splitting creates an array and may create substrings even when the requested permission is absent. A claim may contain several space-separated scopes, and permissions must match a whole token with ordinal case sensitivity.
+The component validates external tokens and does not issue tokens or store passwords. Its fallback policy protects endpoints unless they explicitly allow anonymous access. Development may use an HTTP identity provider.
 
-`HasPermission` now scans each claim value with `ReadOnlySpan<char>`, without creating tokens. It still uses `ClaimsPrincipal.FindAll` so claim type matching and searches across identities retain their existing semantics. No reflection or dynamic code was added. A direct walk over identities could remove more allocations, but that would need separate semantic and workload evidence.
+## Upload validation
 
-The included [microbenchmark](../../benchmarks/MS.Microservice.AspNetCore.Benchmarks/Program.cs) calls the public method on prebuilt principals. The "before" run used commit `7b1c78a`; the "after" run used this change. Results below are median values from five rounds of 200,000 calls per case, in a Release build on Windows x64 with .NET 10.0.12. They measure the permission method, not end-to-end HTTP throughput.
+Use this action in a host configured with MVC and authentication as above:
 
-| Claim scenario | Before | After | Allocation before | Allocation after |
-| --- | ---: | ---: | ---: | ---: |
-| One claim, match | 342.8 ns/op | 259.9 ns/op | 344 B/op | 216 B/op |
-| Two claims, match in last claim | 620.3 ns/op | 315.4 ns/op | 592 B/op | 216 B/op |
-| Two claims, no match | 313.3 ns/op | 130.3 ns/op | 584 B/op | 216 B/op |
+```csharp
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using MS.Microservice.AspNetCore.Uploads;
 
-Run with `dotnet run --project benchmarks/MS.Microservice.AspNetCore.Benchmarks/MS.Microservice.AspNetCore.Benchmarks.csproj -c Release`. The remaining allocation includes the `FindAll` path; its exact sources were not profiled. If authorization becomes an observed production bottleneck, profile real requests before changing claim enumeration or caching parsed scopes.
+[ApiController, Route("uploads"), Authorize]
+public sealed class UploadsController(FileUploadValidator validator) : ControllerBase
+{
+    [HttpPost("image"), RequestSizeLimit(6 * 1024 * 1024)]
+    public async Task<IActionResult> ValidateImage(IFormFile file, CancellationToken cancellationToken)
+    {
+        var result = await validator.ValidateAsync(file, UploadFileKind.Image,
+            maximumBytes: 5 * 1024 * 1024, cancellationToken: cancellationToken);
+        if (!result.IsValid) return StatusCode(result.StatusCode, result.Message);
+        return Ok(new { result.Extension });
+    }
+}
+```
+
+| Input / result | Rule |
+| --- | --- |
+| `kind` | `Image` or `Excel` |
+| `maximumBytes` | Host-selected positive per-file limit; the exact boundary is allowed |
+| Missing / empty / oversized | 400 / 400 / 413 |
+| Type or signature mismatch | 415 |
+| Success | 200, empty message and lowercase extension |
+| Stream | Validator disposes the stream it opens; reopen the file for later processing |
+
+| Kind | Extension | Content-Type |
+| --- | --- | --- |
+| Image | `.jpg`, `.jpeg` | `image/jpeg` |
+| Image | `.png` | `image/png` |
+| Image | `.webp` | `image/webp` |
+| Excel | `.xls` | `application/vnd.ms-excel` |
+| Excel | `.xlsx` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+
+Extension and MIME comparisons ignore case and must agree. This is a header check, not complete image/workbook validation: an ordinary ZIP can pass the XLSX signature. Later processors must decode or parse the content. The size check trusts `IFormFile.Length`; request-body limits must separately allow multipart overhead while bounding the whole request. The host owns authorization, storage paths, file names and retention. Cancellation and I/O errors propagate.
+
+The separate [MVC encryption adapter](../MS.Microservice.AspNetCore.Encryption/README.md) handles explicitly registered request envelopes and is an optional dependency.

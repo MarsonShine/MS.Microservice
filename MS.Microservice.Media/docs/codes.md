@@ -1,31 +1,25 @@
-# 二维码与条形码
+# 二维码的矩阵生成与坐标还原
 
-`CodeProcessor` 直接放在现有 Media 的 `Codes` 命名空间，使用 [ZXing.Net 0.16.11](https://www.nuget.org/packages/ZXing.Net/0.16.11) 编解码，并复用 SkiaSharp 和 `ImageCodec` 的图片限制、EXIF 方向处理及 PNG 输出。ZXing.Net 为 Apache-2.0 授权，不需要 System.Drawing 或额外图像绑定包。
+调用和参数见 [Media README](../README.md)。`CodeProcessor` 使用 [ZXing.Net 0.16.11](https://www.nuget.org/packages/ZXing.Net/0.16.11)，图像解码与 PNG 编码复用 `ImageCodec`；无需 System.Drawing 或额外图像绑定包。ZXing.Net 许可为 Apache-2.0。
 
-```csharp
-var codes = new CodeProcessor();
-await codes.GenerateAsync("你好，微服务", output, new CodeGenerationOptions
-{
-    Format = CodeFormat.Qr,
-    Width = 256,
-    Height = 256,
-    QrErrorCorrection = QrErrorCorrection.High
-}, cancellationToken);
+## 编码与静区
 
-IReadOnlyList<DecodedCode> found = await codes.DecodeAsync(input,
-    new CodeReadingOptions { Formats = [CodeFormat.Qr, CodeFormat.Code128] }, cancellationToken);
-```
+先验证完整 UTF-16，再交给码制编码器，防止孤立代理项被悄悄替换；有效代理对和用户实际输入的 U+FFFD 均保留。QR 使用 UTF-8，数字码的长度、校验位和其他格式的字符范围由引擎负责，例如 EAN13 的 12 位输入可补校验位，13 位输入须已有正确校验位。
 
-生成支持 QR、Code128、EAN13、EAN8、UPC-A、Code39、DataMatrix 和 PDF417。所有格式先验证字符串是完整的 UTF-16，拒绝孤立代理项，不允许编码器悄悄替换内容；有效代理对和用户实际传入的 `U+FFFD` 均保留。QR 使用 UTF-8，支持四档纠错。数字码的长度、校验位、Code128／Code39 的字符范围等约束由 ZXing 验证；例如 EAN13 可以传 12 位数字让引擎补校验位，13 位输入必须包含正确校验位。其他格式的可编码字符范围以引擎支持为准。
+输出按整数码元直接绘制为不透明深色前景与浅色背景。引擎矩阵大于目标画布时拒绝，不能裁剪或平滑缩放码元来满足尺寸；较小矩阵居中补背景。低对比度、静区不足和过密内容仍可能无法识别。
 
-输出是指定尺寸的 PNG，只有不透明的深色前景和浅色背景。引擎按格式选择模块尺寸及留白；`Margin = null` 为 DataMatrix 添加所需的一模块静区（引擎默认为零），其他格式保留引擎默认值。显式值沿用 ZXing 的格式语义（QR 和 DataMatrix 按模块，普通条码按像素），不能假定所有格式单位相同；显式零值仍保留，但可能无法识别。输出按整像素绘制，不做平滑缩放。引擎需要比指定尺寸更大的矩阵时直接失败，不裁剪或压缩码元；较小矩阵居中补背景。低对比度、自定义过小留白、过密编码及劣质拍摄都可能降低识别率。
+DataMatrix 在默认 margin 下补一模块静区，因为引擎默认零。显式 margin 保留 ZXing 的格式语义：QR／DataMatrix 按模块，一维条码通常按像素。显式零值不被擅自改写，但其识别风险必须由调用方承担。
 
-识别支持同一图片中的多个码，默认尝试全部支持格式、旋转及反色；可以缩小格式范围。正常图片中未找到码返回空集合，损坏或超限图片抛出对应读取错误。透明像素合成到白底后识别。返回文本、引擎实际识别的格式及定位点；UPC-A 与前导零的 EAN13 可能表示同一码，返回值保留引擎判定和对应文本，不强行改成生成时的格式。定位点针对 EXIF 校正后的输入图片。
+## 识别坐标
 
-组件自行管理检测时的四个旋转方向，并将定位点逆变换回显示坐标，避免 [ZXing 0.16.11 通用自动旋转接口](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/BarcodeReaderGeneric.cs)返回旋转后坐标。识别采用引擎的首次成功方向结果；多个码混合不同角度、遮挡或复杂背景时，识别仍是尽力而为。关闭 `AutoRotate` 会同时禁用一维读取器的隐式旋转，但 QR 等格式本身的方向容忍能力仍保留。
+透明输入先合成白底，再生成 RGB／灰度读取缓冲。组件自行遍历四个旋转方向，把定位点逆变换回 EXIF 校正后的显示坐标，避免[通用自动旋转接口](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/BarcodeReaderGeneric.cs)直接返回旋转后坐标。
 
-同一读取边界还适配 [PDF417 的内部旋转坐标](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/pdf417/PDF417Reader.cs)，在多码递归裁剪之前按其检测器旋转角度还原。该元数据规则仅适用于 PDF417；一维码扫描反向时的同名元数据含义不同，不能重复转换。升级 ZXing 时应保留跨格式旋转和坐标回归测试，并重新评估这些兼容处理。
+[PDF417](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/pdf417/PDF417Reader.cs)还会在内部旋转检测；必须在多码递归裁剪前，按其元数据把坐标还原。该规则只适用于 PDF417，一维码扫描反向的同名元数据不能重复应用。
 
-输入从流的当前位置读取，输出写到当前位置，不关闭调用者流。限制包括 `ImageLimits` 的压缩输入字节数、像素数和尺寸，以及默认 4096 个 UTF-16 字符的编码内容上限。识别时还有 RGB 与灰度工作缓冲区，应按宿主内存预算设置图片上限。取消在输入输出、像素处理及引擎调用前后检查，ZXing 的同步编解码过程本身不能中途打断。写出异常或取消可能留下部分输出，由调用者丢弃该流或文件。
+读取采用首次成功方向的结果，混合不同角度的多个码、遮挡和复杂背景仍是尽力识别。关闭 `AutoRotate` 同时关闭一维读取器的隐式旋转，但 QR 自身的方向容忍能力仍在。UPC-A 和前导零 EAN13 可能是同一数据的两种表示，结果保留引擎实际格式和文本，不强制改回生成时的格式。正常图像未命中返回空集合，损坏或超限图像继续抛出解码错误。
 
-批量处理由应用逐个调用同一无状态组件；这里不引入后台任务或调度框架。编码矩阵及通用 RGB 读取接口见 [ZXing 官方项目](https://github.com/micjahn/ZXing.Net)。
+## 资源与回归
+
+编码文本、输入编码字节、图片尺寸／像素以及工作缓冲均有各自约束；识别另有 RGB 和灰度缓冲，宿主需按并发量配置图片预算。调用方流保持打开，取消在像素处理、I/O 和同步 ZXing 调用前后观察；引擎内部不能被中途打断。
+
+[CodeProcessorTests](../test/MS.Microservice.Media.Tests/Codes/CodeProcessorTests.cs) 的跨格式旋转与定位点回归是升级 ZXing 的必要检查。还应保留整像素矩阵、默认／零静区、UTF-16 边界、EAN/UPC 等价格式和多码结果用例。批量调用由应用编排，不在该无状态组件中增加调度框架。

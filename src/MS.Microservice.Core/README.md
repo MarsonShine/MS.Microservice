@@ -1,55 +1,122 @@
-# Core：通用代码辅助
+# Core 通用工具
 
-Core 提供跨业务可复用的函数式结果、规格、集合、序列化、HTTP 等辅助能力。
-它依赖 Domain.Primitives 的小契约，不依赖 Reference、Lab、具体数据库或业务 User/Order 模型。
+提供文件存储、摘要与 ZIP、文本与 JSON、函数式结果、集合、规格及 HTTP 辅助。引用本项目会同时引用 Domain.Primitives；不需要具体业务模型、数据库或 Lab 宿主。
 
-它不是所有基础设施的总入口。消息、AI、日志和 ORM 有各自模块；
-只有确实需要这些通用类型的项目才引用 Core，不能为了目录“统一”制造额外依赖。
+| 能力 | 主要入口 | 实现与边界 |
+| --- | --- | --- |
+| 本地文件生命周期 | `IFileStorage`、`LocalFileStorage`、`StoredFileKey` | [存储设计](docs/local-file-storage-design.md) |
+| 文件摘要与重复候选 | `FileHashHelper` | [摘要设计](docs/file-hashing-design.md) |
+| ZIP 压缩与解压 | `ZipArchiveHelper` | [归档设计](docs/zip-archives-design.md) |
+| 文本差异、编码、JSON | `TextDiff`、`TextEncodingConverter`、`JsonText` | [文本工具设计](docs/text-tools-design.md) |
+| HTTP 调用与日志 | `LogHttpClient`、`LoggingHttpClientHandler` | [正文日志行为](Net/Http/body-logging.md) |
+| 函数式结果与查询规格 | `Functional`、`Specification` | 公共类型注释；数据库执行由持久化组件提供 |
 
-## 阅读思路
-
-- Functional 中的 Option/Either/Result 表达缺失值和业务失败，避免把所有分支都变成异常控制流。
-- Specification 表达可复用查询意图；数据库 Provider 的翻译与执行属于持久化模块。
-- Net/Http 负责请求编码、生命周期和异常语义，不能替调用方决定业务重试或授权。
-- Domain.Primitives 中的实体/审计契约可单独使用；具体聚合根与规则属于应用 Domain。
-
-公共契约的注释说明用法与限制，非直观分支附近说明原因。
-更高层取舍见[总体架构](../../docs/Architecture-Overview.md)；
-复制或包引用需要包含声明的依赖，见[组件消费](../../docs/components/consumption.md)。
-
-`IO.LocalFileStorage` 将调用方流保存为随机文件名，先写临时文件再发布，且不关闭输入流。宿主继续负责目录、上传策略和文件记录；详见[本地流保存](IO/local-file-storage.md)。
-
-`IO.FileHashHelper` 流式计算 SHA-256，并对显式提供的稳定文件按长度和摘要发现重复候选，不维护索引或删除文件；详见[文件摘要与重复发现](IO/file-hashing.md)。
-
-`IO.ZipArchiveHelper` 保留目录结构进行 ZIP 压缩，并在校验路径、实际输出限额及条目长度/CRC 后发布解压目录；详见[ZIP 压缩与解压](IO/zip-archives.md)。
-
-`Text.TextDiff` 提供保留换行符的逐行差异，`Text.TextEncodingConverter` 流式转换编码，`Serialization.JsonText` 排版 JSON 而不应用业务序列化策略；详见[文本工具](Text/text-tools.md)。
-
-对称加密只接受调用方提供的 32 字节密钥，并使用带版本号的 AES-256-GCM 密文；旧 AES-ECB 和 3DES 格式已停用。原因、格式和密钥使用方式见[对称加密格式](Security/Cryptology/authenticated-encryption.md)。
-
-`HmacSha256` 要求调用方明确传入密钥。旧密码哈希的固定密钥只保留在 Lab 的[旧密码验证说明](../../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)所述登录升级路径中。
-
-RSA 新密文使用 OAEP-SHA256 和版本前缀；无前缀的 PKCS#1 v1.5 密文仍可读取。密文长度限制、兼容边界和旧分支退出条件见[RSA 密文格式](Security/Cryptology/rsa-oaep.md)。
-
-### HTTP 请求辅助
-
-LogHttpClient 的 GET 参数可为公开可读属性对象或 IDictionary；null 值省略，空字符串保留，
-集合展开为同名参数，数值使用 invariant culture，日期使用往返格式。键和值分别 URL 编码，
-追加参数时保留已有查询串和片段。POST 使用 UTF-8 application/json。
-传入的请求头仅属于本次请求，不修改 HttpClient.DefaultRequestHeaders。
-
-取消、HTTP 状态失败和 JSON 解析失败分别保留 OperationCanceledException、
-HttpRequestException、JsonException；调用方应更新旧的“统一解析异常”捕获逻辑。
-默认日志不记录 URL、参数、正文及异常消息。
-
-`LoggingHttpClientHandler` 是另一种可选的 `DelegatingHandler`。Information 日志关闭时，它直接转发原始 `HttpContent`；开启时，默认异步读取并记录完整 URI、请求和响应正文。正文缓存在原 `HttpContent` 内，Handler 不再替换内容对象。宿主需要只记录元数据时，可显式开启 `EnableRedaction`：
+## 文件存储
 
 ```csharp
-services.Configure<LoggingHttpClientHandlerOptions>(options => options.EnableRedaction = true);
+using MS.Microservice.Core.IO;
+
+IFileStorage storage = new LocalFileStorage(storageDirectory);
+var key = StoredFileKey.Create(".png");
+await storage.WriteNewAsync(key, input, cancellationToken);
+var metadata = await storage.GetMetadataAsync(key, cancellationToken);
+
+await using (var saved = await storage.OpenReadAsync(key, cancellationToken))
+    await saved.CopyToAsync(output, cancellationToken);
+
+await storage.DeleteAsync(key, cancellationToken);
+```
+
+只需保存并获得新 key 时，可用 `new LocalFileStorage(storageDirectory).SaveAsync(input, ".png", cancellationToken)`。
+
+| 参数／结果 | 规则 |
+| --- | --- |
+| `storageDirectory` | 可信、稳定、由宿主管理的目录；按需创建 |
+| 扩展名 | 点加 1–9 个 ASCII 字母或数字；输出转为小写 |
+| `key` | `StoredFileKey.Create` 生成的规范 key；不能传路径或大小写别名 |
+| 输入流 | 从当前位置读取，不复位、不关闭 |
+| 下载流 | 调用者释放；缺失抛出 `FileNotFoundException` |
+| 元数据／删除 | 缺失元数据返回 `null`；删除缺失文件成功 |
+
+写入不覆盖已有 key，失败不会发布部分文件。清理再次失败可能留下暂存文件，并以 `AggregateException` 保留原错误。取消不撤销已完成的发布或删除。本组件不校验上传类型／大小，也不负责用户权限、文件记录或过期清理；key 本身不是授权证明。
+
+## 文件摘要与重复候选
+
+```csharp
+var sha256 = await FileHashHelper.ComputeSha256Async(filePath, cancellationToken);
+var groups = await FileHashHelper.FindDuplicatesAsync(filePaths, cancellationToken);
+```
+
+摘要是 64 个大写十六进制字符。流重载读取当前位置至末尾并保持流打开。`filePaths` 是明确提供的稳定文件路径；结果按长度和 SHA-256 分组，不遍历目录、不自动删除，也不进行额外逐字节比较。检测到文件变化会失败，但这些检查不提供文件系统快照。
+
+## ZIP
+
+```csharp
+await using (var destination = new FileStream("export.zip", FileMode.CreateNew, FileAccess.Write))
+    await ZipArchiveHelper.CreateZipAsync("data", destination,
+        cancellationToken: cancellationToken);
+
+await using var archive = File.OpenRead("export.zip");
+await ZipArchiveHelper.ExtractZipAsync(archive, "extracted",
+    new ZipExtractionOptions { MaxEntries = 10_000 }, cancellationToken);
+```
+
+| 参数 | 默认／要求 |
+| --- | --- |
+| 压缩源目录 | 保留内部目录和空目录；输出必须在源目录外，不跟随链接 |
+| 解压输入 | 可读、可定位；调用者释放 |
+| 解压目标 | 必须不存在，父目录必须已存在；不覆盖 |
+| `MaxEntries` | 10,000；允许零 |
+| `MaxEntryBytes` | 512 MiB，按实际读取量检查 |
+| `MaxTotalBytes` | 1 GiB，按实际读取量检查 |
+
+路径、重复／冲突条目、链接和内容校验失败不会发布解压目录。调用者仍需限制归档文件大小并保持目录可信；CRC 不能证明来源真实性。压缩失败可能留下部分输出流，调用者应丢弃。只恢复内容和目录，不恢复权限、时间戳或链接。
+
+## 文本与 JSON
+
+```csharp
+using System.Text;
+using MS.Microservice.Core.Text;
+using MS.Microservice.Core.Serialization;
+
+var changes = TextDiff.Compare(original, updated);
+await TextEncodingConverter.ConvertAsync(input, output,
+    new UTF8Encoding(true, true),
+    new UnicodeEncoding(false, false, true), cancellationToken);
+var prettyJson = JsonText.Format(json);
+var compactJson = JsonText.Format(json, indented: false);
+```
+
+| 入口／参数 | 行为与限制 |
+| --- | --- |
+| `TextDiff.Compare` | 精确比较行，保留空白及换行符；替换表示为删除和新增 |
+| `maximumComparisonWork` | 默认 4,000,000，必须为正；不是输入长度上限 |
+| 两个 `Encoding` | 明确决定编码、BOM 及回退策略，不自动检测；严格编码会拒绝无效字符 |
+| 编码转换流 | 从当前位置处理并保持打开；不得原地转换；失败可能有部分输出 |
+| `JsonText.Format` | 一个完整 JSON 值；不使用业务序列化策略；非法 JSON 抛出 `JsonException` |
+
+JSON 排版和文本差异保留输入与结果在内存中，宿主应限制输入大小。编码转换采用缓冲处理；源编码匹配的 preamble 会消费，目标 BOM 按目标编码和输出位置决定。规范化标题与字段脱敏分别使用已有 `Common.TextNormalizer`、`Security.SecretField`，这些工具不自动替换它们。
+
+## HTTP 与加密
+
+`LogHttpClient.GetAsync` 支持属性对象或字典查询参数，省略 null、保留空字符串、展开集合；POST 使用 UTF-8 JSON。取消、状态错误和 JSON 错误分别保留原异常类型。每次请求的头不改动共享默认头。
+
+`LoggingHttpClientHandler` 开启 Information 日志时默认读取完整 URI 和正文。只需要元数据日志时，显式配置：
+
+```csharp
+using MS.Microservice.Core.Net.Http;
+
+services.Configure<LoggingHttpClientHandlerOptions>(o => o.EnableRedaction = true);
 services.AddTransient<LoggingHttpClientHandler>();
 services.AddHttpClient("remote-api").AddHttpMessageHandler<LoggingHttpClientHandler>();
 ```
 
-开启后，该 Handler 只记录方法、不含查询字符串的路径、响应状态或失败类型、耗时。它不读取或记录请求与响应正文；HTTP 内容和异常仍原样交给调用方。路径本身可能包含业务标识，调用方仍应避免把凭据放进路径。没有开启该设置的客户端维持完整正文日志行为。两种模式的读取、缓冲与资源所有权见[正文日志实现说明](Net/Http/body-logging.md)。
+该模式仍记录不含查询串的路径，路径也应避免放凭据。日志读取与缓冲行为见[实现说明](Net/Http/body-logging.md)。
 
-缓存与 HTTP JSON 辅助方法复用固定的序列化配置；原因、格式差异与分配数据见[JSON 配置复用说明](Serialization/json-configuration-reuse.md)。
+| 加密入口 | 使用限制 |
+| --- | --- |
+| [AES-256-GCM](Security/Cryptology/authenticated-encryption.md) | 调用者提供 32 字节密钥；旧 AES-ECB／3DES 已停用 |
+| [RSA](Security/Cryptology/rsa-oaep.md) | 新密文使用 OAEP-SHA256 和版本前缀；保留无前缀旧密文读取 |
+| `HmacSha256` | 显式提供密钥；普通 SHA-256 摘要不替代消息认证 |
+
+依赖与复制方式见[组件消费](../../docs/components/consumption.md)，JSON 对象序列化配置见[配置说明](Serialization/json-configuration-reuse.md)。

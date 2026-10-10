@@ -1,31 +1,27 @@
-# 视频截图、封面与音轨提取
+# 截图与音轨提取的验收边界
 
-功能继续放在现有 `VideoProcessor`，复用 FFmpeg 进程管理、视频探测和临时文件原子发布，不需要新项目。
+调用和格式见 [Media README](../README.md)。两个入口复用视频探测、进程管理和暂存发布；普通音频编辑仍由 Audio 组件承担。
 
-```csharp
-var video = new VideoProcessor();
-await video.CaptureFrameAsync("input.mp4", "cover.jpg", TimeSpan.FromSeconds(2),
-    cancellationToken: cancellationToken);
+## 截图
 
-AudioExtractionResult audio = await video.ExtractAudioAsync("input.mp4", "speech.wav",
-    new AudioExtractionOptions
-    {
-        AudioTrackIndex = 0,
-        Start = TimeSpan.FromSeconds(1),
-        Duration = TimeSpan.FromSeconds(10)
-    }, cancellationToken);
-```
+时间须落在已知容器时长的 `[0, duration)`，但容器可能比视频轨更长，所以检查通过仍可能无帧。FFmpeg 精确寻址选不早于请求时刻的第一帧；末尾没有后续帧时返回读取错误，不根据平均帧率猜测或向前夹取。
 
-截图输出由 `.png`、`.jpg`／`.jpeg`、`.webp` 扩展名确定。不传图片选项时自动选择对应格式；传入 `ImageProcessingOptions` 时，其 `Format` 必须与扩展名一致。裁剪、缩放、旋转、翻转、质量和 JPEG 背景复用 `ImageProcessor`。先检查方向校正后视频尺寸及图片像素限制，再让 FFmpeg 输出一帧无损 PNG；同一临时文件经图片处理后替换成最终格式，不发生 JPEG 二次有损编码。
+先校验方向校正后的画面与图片预算，再让 FFmpeg 写无损 PNG，交 `ImageProcessor` 裁剪、缩放和编码到目标格式。这样 JPEG 只发生最后一次有损编码。显式图片选项的格式必须与目标扩展名相同。
 
-时间戳从零开始，必须落在已知时长的半开区间 `[0, duration)`。采用 FFmpeg 精确寻址，选择不早于请求时刻的第一帧；靠近结尾且后面没有帧时返回读取错误，不凭平均帧率猜测或向前夹取一帧。容器总时长可能比视频轨道长，因此时间检查通过仍可能没有可用帧。
+中间 PNG 解码也受压缩字节预算约束，高噪声大图可能在像素预算内却超过该限额。检查并不硬限制 FFmpeg 的全部 native 内存或磁盘写量；错误时只删除本次暂存文件。
 
-中间 PNG 重新解码时也受 `ImageLimits.MaximumEncodedBytes` 限制。大幅面、高噪声帧可能在像素限制内但超出该压缩字节预算，此时失败并清理临时文件；宿主需要按内存与磁盘预算设置限制。这不是对 FFmpeg 原生内存或全部磁盘写入量的硬配额。图片处理及编码仍使用现有的内存缓冲。
+## 音轨
 
-音轨按音频流自身的零基索引选择，不是文件中的绝对流索引。`.wav` 输出有符号 16 位 PCM，`.mp3` 使用 MP3，`.m4a` 使用 AAC，`.flac` 使用 FLAC；显式固定源采样率和声道，输出探测后再次核对，避免 FFmpeg 暗中重采样或混音。MP3／AAC 默认请求 192 kbps。MP3 只接受单声道或立体声；编码器不支持源采样率时失败，可以改用 WAV 或 FLAC。所需编码器由宿主 FFmpeg 构建提供，缺失时返回进程错误。
+`AudioTrackIndex` 是音频集合中的零基索引，不是容器绝对 stream index。先探测所选轨的采样率、声道和可用时长，编码命令显式指定该采样率／声道，输出再探测核对，避免隐式重采样或混音。
 
-音频 `Start` 必须非负并早于已知的所选音轨结束时刻；`Duration` 必须为正，超过余下时长时自然截至结尾。源轨道时长未知时使用容器时长作为可用检查信息。输出再经 ffprobe 解码计数，确认存在可解码音频帧后才发布；该验证会读取输出音频。返回实际编码、采样率、声道数和可获得的时长。无音轨、轨道不存在、纯音频输入都会明确失败；本入口用于视频音轨提取，普通音频编辑继续由已有 Audio 模块承担。
+WAV 输出 PCM16，MP3／M4A 请求 192 kbps，FLAC 用无损编码；MP3 只支持单／双声道。保持采样率不等于所有编码器都接受该采样率，缺失编码器或不支持参数会按进程失败处理。
 
-输入输出必须是不同的本地路径，已有目标文件或目录不会覆盖。只有完整生成并通过探测／图片处理后，才将本次唯一临时文件移动为目标；失败或取消仅删除本次临时文件。父目录可能按需创建，失败时不递归删除父目录。参数使用 `ArgumentList`，含中文、空格或引号的路径不会被拼成 shell 命令。取消、超时及清理错误规则与现有视频处理一致。
+时间起点与结束检查优先所选音轨时长，未知时回退容器时长；超过余下部分的 Duration 自然截到尾部。输出使用 ffprobe 解码计数，必须存在可解码帧才发布，这会额外读取输出。返回实际编码、采样率、声道和可得到的时长，不能把有损编码时长当作逐样本精度证明。
 
-实际集成测试需要设置 `RUN_MEDIA_FFMPEG_TESTS=true`，并安装支持 PNG、JPEG、WebP、PCM、MP3、AAC、FLAC 和测试用 FFV1 的 FFmpeg／ffprobe。
+无音轨、轨道不存在和纯音频输入均失败；该入口先要求视频轨，不能用它代替一般音频转换。
+
+## 生命周期与回归
+
+两个路径都先生成独占暂存文件，完整处理和验收后才不覆盖地发布。父目录可按需创建，失败不递归删除它；进程、取消、超时、诊断和聚合清理异常遵循[共享视频生命周期](video.md)。
+
+[VideoAssetsTests](../test/MS.Microservice.Media.Tests/Video/VideoAssetsTests.cs) 检查实际截图像素、所选音轨、编码／采样率／声道、空帧和时间边界、错误格式、取消及目标保护。真实测试需 `RUN_MEDIA_FFMPEG_TESTS=true`，并提供 PNG/JPEG/WebP、PCM、MP3、AAC、FLAC 及 fixture 用 FFV1 编解码支持。

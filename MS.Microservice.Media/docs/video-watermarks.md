@@ -1,23 +1,27 @@
-# 视频文字和 Logo 水印
+# 视频水印的画布与时间范围
 
-`VideoProcessor.AddTextWatermarkAsync` 和 `AddLogoWatermarkAsync` 复用图片的 `ImageWatermarker`，渲染与旋转元数据一致的完整画布透明 PNG，再通过本地 FFmpeg 叠加到视频。文字字体覆盖、整形、旋转、九宫格位置、透明度和平铺限制遵循 [图片水印](watermarks.md)。Logo 从调用者流当前位置读取，保持流打开。
+使用入口见 [Media README](../README.md)。视频水印复用 `ImageWatermarker` 产生完整画布的透明 PNG，字体、字形、定位、旋转、平铺与 alpha 只在[图片水印层](watermarks.md)定义一套规则。
 
-```csharp
-await new VideoProcessor().AddTextWatermarkAsync("input.mp4", "output.mp4",
-    new TextWatermark("内部资料") { FontFile = fontFile, FontSize = 28 },
-    new VideoWatermarkOptions
-    {
-        Start = TimeSpan.FromSeconds(2), End = TimeSpan.FromSeconds(10),
-        Placement = new WatermarkPlacement { Anchor = WatermarkAnchor.BottomRight, Opacity = 0.4 }
-    }, cancellationToken);
-```
+## 画布与过滤图
 
-时间范围为 `[Start, End)`，默认从零到视频结束；超过视频结束的 End 不延长视频。时间依据 FFmpeg 默认归一化后的输入时间轴，保留视频帧时间间隔；不使用 `copyts`，不承诺保留原始容器的绝对时间戳。源旋转元数据应用到像素，输出旋转归零；奇数边长在右侧或下侧补齐一像素，以符合 YUV420 编码要求。非方形像素按源视频的像素栅格定位水印。
+先探测方向校正后的像素栅格，再校验画布和偶数补齐后的尺寸。PNG 与画布同尺寸，FFmpeg 以 `overlay=0:0` 合成；非方形像素仍按源栅格定位，不能把 SAR 显示尺寸当作该 PNG 的像素宽高。
 
-输出支持 MP4/MKV 的 H.264/AAC 和 WebM 的 VP9/Opus。映射第一条非封面视频和所有音轨；无音轨保持无音轨。视频和音频会重新编码，结果属于有损处理，颜色、像素值和编码延迟可能变化；字幕、数据轨和附件不保留。高位深/HDR 不作色调映射保证，选用专门的色彩管理流程处理这类素材。
+时间启用表达式为 `gte(t, Start) * lt(t, End)`，没有 End 时只检查下界。半开区间避免边界帧重复延长，超出源末尾的 End 不创建新帧。过滤图不使用 copyts，时间基于 FFmpeg 默认归一化输入；passthrough 不强制固定帧率，不承诺原容器绝对时间戳。
 
-不覆盖既有文件，也不接受输入路径作为输出。像素和边长预算在渲染前检查；原生进程使用参数数组、并行排空有界输出、可配置超时和取消后终止进程树。完整画布 PNG 和视频暂存文件位于输出目录，仅清理本次创建的文件。编码和结果检查通过、PNG 清理成功后才原子发布视频；失败时已有输入和目标不变。每个调用的内存随画布大小增长，调用方应控制并发。
+overlay 后按 YUV420 补齐偶数边长，删除已应用的 DISPLAYMATRIX 并清空 rotate tag。只设置 tag 为零不足以防止复杂图传播旧矩阵；该处理与编辑、拼接保持一致。
 
-真实 FFmpeg 集成测试覆盖三种容器、区间边界逐帧检查、声音保留、文字/Logo、透明水印、三种非零直角旋转元数据、预算、错误字体/编码器、取消和既有文件保护。方向规范化后的各编码滤镜统一移除已应用的显示矩阵，防止复杂图输出被播放器再次旋转。开启方式与 [视频基础](video.md) 相同：`RUN_MEDIA_FFMPEG_TESTS=true`；旋转测试的样本生成使用 FFmpeg 6 及以上的 `-display_rotation` 参数。
+主视频取第一条非封面轨，映射所有音轨，无音轨时仍无音轨。输出重新编码为 H.264/AAC 或 VP9/Opus，不能按声音存在性检查推断样本、编码延迟或颜色无损。字幕、数据和附件不映射；高位深／HDR 不提供色调映射保证。
 
-滤镜时间范围与叠加语义参考 [FFmpeg 官方滤镜文档](https://www.ffmpeg.org/ffmpeg-filters.html#overlay)。
+## 两个暂存资源
+
+视频与完整画布 PNG 均在目标目录创建，分别记录本次创建所有权。PNG 必须在编码和结果校验后成功清理，才允许统一发布方法移动视频；PNG 清理失败时不能把已写好的视频视为成功发布。
+
+处理与 PNG 清理同时失败保留两者。进程取消／超时先终止进程树，外层再处理文件；已有输入和目标始终不被本次清理删除。每调用的图像内存随画布增长，预算不能替代并发控制。
+
+Logo 流从当前位置读并保持打开。字体错误或 Logo 解码失败在 PNG 阶段传播，不回退成空水印；输出已存在时在启动前拒绝。
+
+## 回归
+
+[VideoWatermarkTests](../test/MS.Microservice.Media.Tests/Video/VideoWatermarkTests.cs) 覆盖三种容器、区间边界逐帧检查、文字／Logo、透明度、声音存在性、三种非零直角元数据、预算、错误编码器、取消及既有目标保护。旋转 fixture 使用 FFmpeg 6 及以上的 `-display_rotation`。
+
+真实工具的开启方式见[视频进程说明](video.md)。过滤语义以 [FFmpeg overlay 文档](https://www.ffmpeg.org/ffmpeg-filters.html#overlay)为准，升级后应重新检查帧边界与矩阵传播。

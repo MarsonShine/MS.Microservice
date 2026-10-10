@@ -1,23 +1,40 @@
-# 视频信息与进程生命周期
+# 视频探测、过滤与进程管理
 
-`VideoProcessor.ProbeAsync` 使用宿主安装的 ffprobe，读取本地文件中第一个非封面视频轨道的尺寸、编码、帧率、时长与音轨存在性。宽高考虑元数据中的 90/270 度旋转；未知时长和帧率保留为 null，不虚构零值。尺寸是旋转后的像素栅格尺寸，尚未乘以非正方形像素的 SAR。
+调用、配置和输出格式见 [Media README](../README.md)。本页维护 `ProbeAsync`、编辑过滤链及所有视频入口共用的进程／发布边界。
 
-`FfmpegOptions` 配置可信的 ffmpeg/ffprobe 可执行文件和单次进程超时，默认命令名及 30 分钟。可设 `Timeout.InfiniteTimeSpan` 取消时间限制。组件不下载或捆绑 FFmpeg；所选构建需提供实际使用的编解码器，分发条件取决于该构建。
+## 探测模型
 
-启动使用 `ProcessStartInfo.ArgumentList`，不经过命令行 shell。标准输出和错误并行读取，各自限制 262,144 字符，避免死锁和无限诊断缓存。取消、超时或输出限额失败时终止本次子进程树并等待其退出。调用方取消保留取消异常，进程超时为 `TimeoutException`，非零退出为带退出码和受限诊断的 `MediaProcessException`。诊断可能包含文件路径，日志记录由宿主决定。
+ffprobe 返回的第一条非封面视频轨作为主画面，保留未知时长和平均帧率为 null。帧率按分子／分母解析，不先截成整数。优先使用 side data 的 rotation，缺失时才读 rotate tag；90／270 度交换像素宽高，SAR 不折算进返回的栅格尺寸。
 
-单元测试验证元数据边界。实际 FFmpeg 验证须显式设置 `RUN_MEDIA_FFMPEG_TESTS=true` 并安装相应工具；未启用时集成用例跳过，不能视为运行验证通过。
+当前 `VideoInfo` 读取的是旋转标量，不验证完整 DISPLAYMATRIX，不能据此断言没有翻转、缩放或其他仿射变换。需要严格矩阵约束的上层流程应独立验证完整矩阵，不复用一个角度字段代替。
 
-## 剪辑、变换与转码
+时长优先取容器，再回退视频轨；数值须有限、非负并可由 `TimeSpan` 表示。缺少有效视频轨或尺寸时报错，不用封面图片或虚构零值满足结果类型。
 
-`VideoProcessor.ProcessAsync(inputFile, outputFile, options, token)` 支持 MP4、MKV 和 WebM。MP4/MKV 使用 H.264/AAC，WebM 使用 VP9/Opus，所选 FFmpeg 构建须提供这些编码器。CRF 范围为 0–51，编码速度为 Fast、Balanced、Slow；质量和文件大小由编码器及内容决定。
+## 过滤链与编码
 
-操作顺序为自动应用输入方向元数据 → 按时间剪辑 → 裁剪 → 直角旋转 → 翻转 → 缩放 → 编码。时间从零开始，起点必须在已知文件末尾之前，时长必须为正，超过剩余部分时由 FFmpeg 截至末尾。容器时长与轨道时长可能不同，编码后仍须存在有效视频轨道才发布。
+编辑顺序为 FFmpeg 自动应用输入方向 → 时间剪辑 → exact 裁剪 → 显式直角旋转 → 翻转 → 缩放 → 偶数补齐 → 编码。裁剪在方向校正后的栅格内检查，`exact=1` 防止奇数位置被悄悄舍弃。
 
-裁剪在方向校正后的整数像素栅格中进行，必须完全位于画面内，使用 exact 裁剪而不隐式舍弃奇数位置。缩放使用与图片相同的 Contain/Cover/Stretch 概念：适配边界框、中心裁剪填满、直接拉伸。未指定缩放时保留源像素宽高比；指定目标尺寸后使用方形像素，非方形像素素材的视觉比例应由调用方选择合适目标尺寸。
+Contain 适配边界框，Cover 放大后居中裁剪，Stretch 直接拉伸。无缩放时保留源 SAR；指定目标尺寸后设 `setsar=1`，视觉比例需由调用方选择合适目标。YUV420 要求偶数宽高，右侧／底部只补一像素，不裁原边缘；目标框及补齐尺寸均在编码前检查，结果探测后再核对预算。
 
-YUV420 编码要求偶数宽高，最终仅在右侧或底部补至偶数，不裁掉原有边缘像素。因此奇数目标尺寸会多出最多一个像素；目标框及补齐后的外框都需符合 `MaximumDimension` / `MaximumPixels`，在编码前检查，输出探测后再次核对。默认单边 16,384、总计 40M 像素；这不是所有 FFmpeg 线程和原生缓存的硬内存配额。
+MP4／MKV 使用 libx264、AAC，WebM 使用 libvpx-vp9、Opus。视频选择 `0:V:0`，音轨映射 `0:a?`；视频 `fps_mode=passthrough` 不主动转为 CFR，但重新编码和封装不保证原始像素、色彩采样或绝对时间戳不变。超过剩余时长的截取交给 FFmpeg，最终仍须能探测有效画面。
 
-保留输入的非封面视频轨道与可用音轨，视频帧时间使用 passthrough，不强制改成固定帧率。媒体会重新编码，不保证原始字节、色彩采样或有损像素不变；宿主需保留源文件。
+复杂过滤图可能把输入 DISPLAYMATRIX 继续传到输出。像素已完成自动方向变换后，过滤链统一删除该 side data 并清空 rotate tag，防止播放器再次旋转；升级或新增编码图不能只在普通编辑路径清理。
 
-输入输出必须是不同本地路径，输出不得存在。先在同目录创建本次拥有的临时文件，完整编码并通过 ffprobe 验证后，以不覆盖目标的移动发布。失败、取消或竞争者创建目标时只清理本次临时结果。目录须可信且稳定，进程被强制终止后的临时文件由宿主按保留期清理。
+## 进程生命周期
+
+`MediaProcessRunner` 使用 `ArgumentList` 与 `UseShellExecute=false`，参数不拼接成 shell。stdout／stderr 并行读取，各自最多 262,144 个字符；达到限额会终止操作，不能等待写满管道的子进程自行退出。
+
+取消、超时或读取错误时终止本次进程树、等待退出并观察两个读取任务，保留原失败。调用方取消保留取消异常；只有自身 deadline 到期才转换为 `TimeoutException`。非零退出产生含退出码和受限 stderr 的 `MediaProcessException`，诊断可能包含路径，由宿主决定如何记录。
+
+## 发布与回归
+
+统一发布方法先在目标目录 `CreateNew` 创建独占暂存文件，编码／后处理和探测成功后再次检查取消，再不覆盖地移动到目标。处理期间目标被竞争者创建也不覆盖。仅清理本次文件；处理与清理同时失败时保留两者，不删除父目录。该规则依赖可信稳定目录，不覆盖崩溃后的保留期清理。
+
+[VideoProbeTests](../test/MS.Microservice.Media.Tests/Video/VideoProbeTests.cs) 和 [VideoEditingTests](../test/MS.Microservice.Media.Tests/Video/VideoEditingTests.cs) 覆盖元数据、真实编码、旋转、VFR、预算及发布失败。集成用例需显式启用：
+
+```powershell
+$env:RUN_MEDIA_FFMPEG_TESTS = 'true'
+dotnet test MS.Microservice.Media/test/MS.Microservice.Media.Tests/MS.Microservice.Media.Tests.csproj
+```
+
+未启用时真实工具用例跳过。所选 FFmpeg 构建须具备测试及调用使用的编码器；本组件不安装工具，分发条件随构建而异。
