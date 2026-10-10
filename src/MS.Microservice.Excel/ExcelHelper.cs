@@ -205,10 +205,12 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return ImportAsync<T>("unknown.xlsx", data, cancellationToken);
     }
 
-    private int[] RentColumnIndexMap(ExcelTypeMeta meta, out int columnCount)
+    private int[] RentColumnIndexMap(ExcelTypeMeta meta, out int columnCount, bool allowEmptyHeader = false)
     {
         var titleRow = sheet?.GetRow(titleRowIndex) ?? throw new InvalidOperationException("未找到标题行");
         columnCount = titleRow.LastCellNum;
+        if (allowEmptyHeader)
+            columnCount = Math.Max(columnCount, 0);
         int[] columnIndexMap = ArrayPool<int>.Shared.Rent(columnCount);
         Array.Fill(columnIndexMap, -1, 0, columnCount);
 
@@ -241,12 +243,22 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
 
     private List<T> ReadBody<T>(ExcelTypeMeta meta, int[] columnIndexMap, int columnCount, DataFormatter formatter, IFormulaEvaluator evaluator)
     {
+        var list = new List<T>(Math.Max(sheet!.LastRowNum - contentRowIndex + 1, 0));
+        ReadRows<T>(meta, columnIndexMap, columnCount, formatter, evaluator, (_, value) => list.Add(value));
+        return list;
+    }
+
+    private void ReadRows<T>(ExcelTypeMeta meta, int[] columnIndexMap, int columnCount,
+        DataFormatter formatter, IFormulaEvaluator evaluator, Action<int, T> acceptRow,
+        List<ExcelImportError>? errors = null, Func<T, IEnumerable<ExcelRowValidationError>>? validateRow = null,
+        CancellationToken cancellationToken = default)
+    {
         var targetSheet = sheet ?? throw new InvalidOperationException("未找到工作表");
         var slots = meta.Slots;
         var factory = meta.Factory;
-        var list = new List<T>(Math.Max(targetSheet.LastRowNum - contentRowIndex + 1, 0));
         for (int i = contentRowIndex; i <= targetSheet.LastRowNum; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             IRow? row = targetSheet.GetRow(i);
             if (row == null)
             {
@@ -254,8 +266,10 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             }
 
             T obj = (T)factory();
+            var errorCount = errors?.Count ?? 0;
             for (int j = 0; j < columnCount; j++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var propertyLocation = columnIndexMap[j];
                 if (propertyLocation == -1)
                 {
@@ -263,34 +277,51 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                 }
 
                 ICell? cell = row.GetCell(j);
-                if (cell == null)
-                {
-                    continue;
-                }
-
                 var slot = slots[propertyLocation];
-
-                // Fast path: try direct cell-type-based reading (avoids string allocation)
-                if (TryReadCellDirectly(cell, slot.TargetTypeCode, slot.TargetType, evaluator, out object? directValue))
+                object? value = null;
+                CellReadStatus status;
+                try
                 {
-                    slot.Setter(obj!, directValue);
-                    continue;
+                    status = ReadCellValue(cell, slot, formatter, evaluator, errors is not null, out value);
                 }
-
-                // Fallback: DataFormatter string path
-                var value = formatter.FormatCellValue(cell, evaluator);
-                if (string.IsNullOrWhiteSpace(value))
+                catch (Exception ex) when (errors is not null && ex is FormatException or OverflowException)
                 {
-                    continue;
+                    status = CellReadStatus.Invalid;
                 }
-
-                SetPropertyValue(obj!, slot, value);
+                if (status == CellReadStatus.Success)
+                {
+                    // Keep user setters outside conversion-error handling.
+                    slot.Setter(obj!, value);
+                }
+                else if (errors is not null && (status == CellReadStatus.Invalid || slot.Required))
+                {
+                    var kind = status == CellReadStatus.Invalid ? ExcelImportErrorKind.Conversion : ExcelImportErrorKind.Required;
+                    var message = kind == ExcelImportErrorKind.Required ? "必填值不能为空。" : $"无法转换为 {slot.TargetType.Name}。";
+                    errors.Add(CreateImportError(kind, i, j, slot, message, cell?.ToString()));
+                }
             }
 
-            list.Add(obj);
+            if (errors is not null && errors.Count != errorCount)
+                continue;
+            if (validateRow is not null)
+            {
+                var validationErrors = validateRow(obj)
+                    ?? throw new InvalidOperationException("行校验回调不能返回 null。");
+                foreach (var error in validationErrors)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    ArgumentNullException.ThrowIfNull(error);
+                    var slotIndex = Array.FindIndex(slots, slot => slot.PropertyName == error.PropertyName);
+                    int? column = null;
+                    for (var j = 0; j < columnCount; j++)
+                        if (columnIndexMap[j] == slotIndex && slotIndex >= 0) { column = j; break; }
+                    errors!.Add(CreateImportError(ExcelImportErrorKind.BusinessValidation, i, column,
+                        slotIndex < 0 ? null : slots[slotIndex], error.Message, propertyName: error.PropertyName));
+                }
+            }
+            if (errors is null || errors.Count == errorCount)
+                acceptRow(i + 1, obj);
         }
-
-        return list;
     }
 
     public List<T> Import<T>(string fileName, byte[] data)
@@ -307,6 +338,39 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
     }
 
     public List<T> Import<T>(string fileName, Stream stream)
+        => ImportCore<T, List<T>>(fileName, stream, ReadBody<T>);
+
+    /// <summary>Collects located data errors while preserving the original row numbers.</summary>
+    public ExcelImportReport<T> ImportWithReport<T>(string fileName, Stream stream,
+        Func<T, IEnumerable<ExcelRowValidationError>>? validateRow = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ImportCore<T, ExcelImportReport<T>>(fileName, stream, (meta, map, count, formatter, evaluator) =>
+        {
+            var rows = new List<ExcelImportRow<T>>();
+            var errors = ValidateReportColumns(meta, map, count);
+            if (errors.Count == 0)
+                ReadRows<T>(meta, map, count, formatter, evaluator,
+                    (number, value) => rows.Add(new(number, value)), errors, validateRow, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(rows.AsReadOnly(), errors.AsReadOnly());
+        }, wrapErrors: false);
+    }
+
+    public async ValueTask<ExcelImportReport<T>> ImportWithReportAsync<T>(string fileName, Stream stream,
+        Func<T, IEnumerable<ExcelRowValidationError>>? validateRow = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (stream.CanSeek)
+            return ImportWithReport(fileName, stream, validateRow, cancellationToken);
+        using var buffered = new MemoryStream();
+        await stream.CopyToAsync(buffered, cancellationToken).ConfigureAwait(false);
+        return ImportWithReport(fileName, buffered, validateRow, cancellationToken);
+    }
+
+    private TResult ImportCore<T, TResult>(string fileName, Stream stream,
+        Func<ExcelTypeMeta, int[], int, DataFormatter, IFormulaEvaluator, TResult> readRows, bool wrapErrors = true)
     {
         int[]? columnIndexMap = null;
         try
@@ -332,12 +396,12 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             var evaluator = workbook.GetCreationHelper().CreateFormulaEvaluator();
 
             BeginDiagnosticPhase("import-title-map");
-            columnIndexMap = RentColumnIndexMap(meta, out int columnCount);
+            columnIndexMap = RentColumnIndexMap(meta, out int columnCount, allowEmptyHeader: !wrapErrors);
 
             BeginDiagnosticPhase("import-row-read");
-            return ReadBody<T>(meta, columnIndexMap, columnCount, formatter, evaluator);
+            return readRows(meta, columnIndexMap, columnCount, formatter, evaluator);
         }
-        catch (Exception ex) when (ex is not InvalidOperationException && ex is not ArgumentNullException)
+        catch (Exception ex) when (wrapErrors && ex is not InvalidOperationException && ex is not ArgumentNullException)
         {
             throw new InvalidOperationException("模板解析错误，请确认导入的模板格式", ex);
         }
@@ -459,7 +523,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
 
         PrepareStreamForRead(fileStream);
 
-        IWorkbook currentWorkbook = WorkbookFactory.Create(fileStream);
+        IWorkbook currentWorkbook = WorkbookFactory.Create(new LeaveOpenReadStream(fileStream));
         ISheet sheetAt = ResolveSheet(currentWorkbook);
         return new DynamicExcelBuilder<T>(currentWorkbook, sheetAt, source);
     }
@@ -500,9 +564,27 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
 
     private static IWorkbook CreateWorkbookForRead(string fileName, Stream stream)
     {
+        var input = new LeaveOpenReadStream(stream);
         return fileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)
-            ? new HSSFWorkbook(stream)
-            : new XSSFWorkbook(stream);
+            ? new HSSFWorkbook(input)
+            : new XSSFWorkbook(input);
+    }
+
+    // NPOI closes supplied input streams while loading a workbook; their ownership stays with callers.
+    private sealed class LeaveOpenReadStream(Stream source) : Stream
+    {
+        public override bool CanRead => source.CanRead;
+        public override bool CanSeek => source.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => source.Length;
+        public override long Position { get => source.Position; set => source.Position = value; }
+        public override int Read(byte[] buffer, int offset, int count) => source.Read(buffer, offset, count);
+        public override int Read(Span<byte> buffer) => source.Read(buffer);
+        public override long Seek(long offset, SeekOrigin origin) => source.Seek(offset, origin);
+        public override void Flush() { }
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        protected override void Dispose(bool disposing) { }
     }
 
     private static async ValueTask WriteWorkbookAsync(IWorkbook currentWorkbook, Stream destination, CancellationToken cancellationToken)
@@ -541,7 +623,10 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                         item.Accessor.GetValue!,
                         item.Accessor.SetValue ?? SkipWrite,
                         targetType,
-                        Type.GetTypeCode(targetType));
+                        Type.GetTypeCode(targetType),
+                        item.Accessor.Name,
+                        item.Attribute?.Required == true,
+                        item.Accessor.SetValue is not null);
                 })
                 .ToArray();
 
@@ -562,15 +647,75 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
     /// <summary>属性不可写（如 <c>init</c> 或只读计算属性）时占位，保持写入路径无分支。</summary>
     private static readonly Action<object, object?> SkipWrite = static (_, _) => { };
 
-    private static void SetPropertyValue<T>(T target, ExcelPropertySlot slot, string value)
-    {
-        if (!TryConvertValue(value, slot.TargetTypeCode, slot.TargetType, out object? convertedValue))
-        {
-            return;
-        }
+    private enum CellReadStatus { Empty, Success, Invalid }
 
-        slot.Setter(target!, convertedValue);
+    private static CellReadStatus ReadCellValue(ICell? cell, ExcelPropertySlot slot,
+        DataFormatter formatter, IFormulaEvaluator evaluator, bool strict, out object? value)
+    {
+        value = null;
+        if (cell is null)
+            return CellReadStatus.Empty;
+        if (TryReadCellDirectly(cell, slot.TargetTypeCode, slot.TargetType, evaluator, out value))
+            return CellReadStatus.Success;
+
+        var evaluated = strict && cell.CellType == CellType.Formula ? evaluator.Evaluate(cell) : null;
+        if (strict && (cell.CellType == CellType.Error || evaluated?.CellType == CellType.Error))
+            return CellReadStatus.Invalid;
+
+        string text;
+        if (strict && slot.TargetTypeCode is not (TypeCode.DateTime or TypeCode.String) &&
+            (cell.CellType == CellType.Numeric || evaluated?.CellType == CellType.Numeric))
+            text = (evaluated?.NumberValue ?? cell.NumericCellValue).ToString("R", CultureInfo.InvariantCulture);
+        else
+            text = formatter.FormatCellValue(cell, evaluator);
+        if (string.IsNullOrWhiteSpace(text))
+            return CellReadStatus.Empty;
+        return TryConvertValue(text, slot.TargetTypeCode, slot.TargetType, out value)
+            ? CellReadStatus.Success : CellReadStatus.Invalid;
     }
+
+    private List<ExcelImportError> ValidateReportColumns(ExcelTypeMeta meta, int[] map, int count)
+    {
+        var errors = new List<ExcelImportError>();
+        var comparer = meta.NameToSlotIndex.Comparer;
+        foreach (var group in meta.Slots.GroupBy(slot => slot.ColumnName, comparer).Where(group => group.Skip(1).Any()))
+        {
+            int? column = null;
+            for (var index = 0; index < count; index++)
+                if (map[index] >= 0 && comparer.Equals(meta.Slots[map[index]].ColumnName, group.Key))
+                { column = index; break; }
+            errors.Add(CreateImportError(ExcelImportErrorKind.DuplicateColumn, titleRowIndex, column,
+                group.First(), "多个模型属性使用相同列名，无法唯一映射。"));
+        }
+        var mapped = new HashSet<int>();
+        for (var column = 0; column < count; column++)
+        {
+            if (map[column] < 0)
+                continue;
+            var slot = meta.Slots[map[column]];
+            if (!mapped.Add(map[column]))
+                errors.Add(CreateImportError(ExcelImportErrorKind.DuplicateColumn, titleRowIndex, column, slot, "标题重复映射到同一属性。"));
+            if (!slot.CanWrite)
+                errors.Add(CreateImportError(ExcelImportErrorKind.UnwritableProperty, titleRowIndex, column, slot, "导入属性必须可写。"));
+        }
+        for (var index = 0; index < meta.Slots.Length; index++)
+            if (meta.Slots[index].Required && !mapped.Contains(index))
+                errors.Add(CreateImportError(ExcelImportErrorKind.MissingColumn, titleRowIndex, null, meta.Slots[index], "缺少必填列。"));
+        return errors;
+    }
+
+    private ExcelImportError CreateImportError(ExcelImportErrorKind kind, int row, int? column,
+        ExcelPropertySlot? slot, string message, string? rawValue = null, string? propertyName = null) => new()
+    {
+        SheetName = sheet!.SheetName,
+        RowNumber = row + 1,
+        ColumnNumber = column + 1,
+        ColumnName = slot?.ColumnName,
+        PropertyName = propertyName ?? slot?.PropertyName,
+        Kind = kind,
+        Message = message,
+        RawValue = rawValue
+    };
 
     [Conditional("MS_Microservice_DIAGNOSTICS")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -929,7 +1074,9 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         }
     }
 
-    private sealed record ExcelPropertySlot(string ColumnName, Func<object, object?> Getter, Action<object, object?> Setter, Type TargetType, TypeCode TargetTypeCode);
+    private sealed record ExcelPropertySlot(string ColumnName, Func<object, object?> Getter,
+        Action<object, object?> Setter, Type TargetType, TypeCode TargetTypeCode,
+        string PropertyName, bool Required, bool CanWrite);
 
     private sealed record ExcelTypeMeta(
         Func<object> Factory,

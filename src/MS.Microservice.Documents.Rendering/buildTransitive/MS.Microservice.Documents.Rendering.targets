@@ -1,0 +1,10 @@
+<Project>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../tools/net10.0/MS.Microservice.Documents.Rendering.runtimeconfig.json;$(MSBuildThisFileDirectory)../tools/net10.0/MS.Microservice.Documents.Rendering.deps.json"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" Pack="false" />
+  </ItemGroup>
+  <Target Name="RejectUnsupportedRenderingConsumerPublish" BeforeTargets="PrepareForPublish"
+          Condition="'$(PublishSingleFile)' == 'true' Or '$(PublishTrimmed)' == 'true' Or '$(PublishAot)' == 'true'">
+    <Error Code="MSRND001" Text="Documents.Rendering requires separate worker, dependency and Playwright driver files; single-file, trimmed and Native AOT publishing are unsupported." />
+  </Target>
+</Project>

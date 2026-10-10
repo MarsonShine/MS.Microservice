@@ -25,6 +25,7 @@ public sealed class ComponentBoundaryTests
     [InlineData("MS.Microservice.Logging")]
     [InlineData("MS.Microservice.Messaging")]
     [InlineData("MS.Microservice.Persistence")]
+    [InlineData("MS.Microservice.Media")]
     public void ModuleSolutionContainsOwnedProjectsAndTheirCompleteDependencyGraph(string module)
     {
         var root = RepositoryRoot();

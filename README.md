@@ -22,13 +22,14 @@
 多项目模块把 docs、src、test 和独立解决方案放在同一目录；小型独立组件暂留根 src/test。
 根解决方案覆盖全仓库，日常维护可以只打开对应模块：
 
-| 模块 | 独立解决方案 | 设计入口 |
+| 模块 | 独立解决方案 | 模块说明 |
 |---|---|---|
 | AI | [MS.Microservice.AI.slnx](MS.Microservice.AI/MS.Microservice.AI.slnx) | [说明](MS.Microservice.AI/docs/design.md) |
 | Logging | [MS.Microservice.Logging.slnx](MS.Microservice.Logging/MS.Microservice.Logging.slnx) | [说明](MS.Microservice.Logging/docs/design.md) |
 | Messaging | [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging/MS.Microservice.Messaging.slnx) | [说明](MS.Microservice.Messaging/docs/design.md) |
 | Persistence | [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence/MS.Microservice.Persistence.slnx) | [说明](MS.Microservice.Persistence/docs/design.md) |
 | Idempotency | [MS.Microservice.Idempotency.slnx](MS.Microservice.Idempotency/MS.Microservice.Idempotency.slnx) | [说明](MS.Microservice.Idempotency/README.md) |
+| Media | [MS.Microservice.Media.slnx](MS.Microservice.Media/MS.Microservice.Media.slnx) | [说明](MS.Microservice.Media/README.md) |
 
 Reference 是完整接入的参考应用，不是新的底层框架；使用模块不需要引用或启动它。
 项目拆分理由和代价见[Reference 说明](samples/Reference/README.md)。
@@ -71,6 +72,17 @@ Lab 与正式 Host 是两个独立程序集。实验 Controller 只在 Lab 中�
 
 ## 可选组件
 
-Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、Idempotency、EFCore、SqlSugar、EventSourcing、Audio、Excel 和 AI 按需接入。具体依赖与平台限制以模块文档为准；参考业务模型不作为通用组件的依赖。
+Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、Idempotency、EFCore、SqlSugar、EventSourcing、Audio、Excel、Documents、Notifications、Media 和 AI 按需接入。S3、媒体推理和 HTML 排版作为可选组件引用；具体依赖与平台限制以模块文档为准。参考业务模型不作为通用组件的依赖。
+
+| 工具组件 | 使用说明 |
+| --- | --- |
+| 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；图片／视频自动去水印、OCR、表格、抠图和增强使用可选 Inference |
+| PDF、Word 模板与 HTML／DOCX 排版 | [Documents](src/MS.Microservice.Documents/README.md)；HTML／DOCX 转 PDF 使用可选 Windows [Rendering](src/MS.Microservice.Documents.Rendering/README.md) |
+| 文件存储、哈希与 ZIP | [Core](src/MS.Microservice.Core/README.md)；对象存储使用可选 [S3](src/MS.Microservice.Storage.S3/README.md) |
+| 音频 | [Audio](src/MS.Microservice.Audio/README.md)：剪辑、音量、淡入淡出、合并和转换 |
+| Excel 与 CSV | [Excel](src/MS.Microservice.Excel/README.md)：导入、导出和定位错误报告 |
+| 文本、编码与 JSON | [Core](src/MS.Microservice.Core/README.md) |
+| 邮件、短信、模板与站内通知 | [Notifications](src/MS.Microservice.Notifications/README.md) |
+| 后台图片批处理 | [Lab](samples/Lab/MS.Microservice.Lab/README.md#图片后台批处理)：上传、进度、取消、重试和私有下载 |
 
 数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。

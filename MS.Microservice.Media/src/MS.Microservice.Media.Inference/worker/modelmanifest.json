@@ -1,0 +1,11 @@
+{
+  "modelId": "UNet++/efficientnet-b4/repeated-text@509fb6833823f4e9c519f8e4f87a9053567c779c",
+  "repository": "christophernavas/watermark-remover",
+  "revision": "509fb6833823f4e9c519f8e4f87a9053567c779c",
+  "filename": "segmenter_repeated_text.pth",
+  "bytes": 84036934,
+  "sha256": "bfd26cffb00d49541438b66e5723edaa733b60e61b09bf6abca9a5ba1b738d0e",
+  "license": "Apache-2.0",
+  "segmentation-models-pytorch": "0.5.0",
+  "timm": "1.0.22"
+}

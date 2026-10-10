@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
+    <ProjectReference Include="../MS.Microservice.Media/MS.Microservice.Media.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Media.Inference.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="worker/*" Link="media-inference/%(Filename)%(Extension)"
+      CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+      Pack="true" PackagePath="contentFiles/any/any/media-inference/%(Filename)%(Extension)" PackageCopyToOutput="true" />
+  </ItemGroup>
+</Project>

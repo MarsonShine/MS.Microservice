@@ -1,0 +1,12 @@
+{
+  "modelId": "onnx-community/BiRefNet_lite-ONNX@de15b22ba131738a16dff04aab8bdf8dc32e3ac1",
+  "file": "birefnet-lite.onnx",
+  "bytes": 224005088,
+  "sha256": "5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333",
+  "url": "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/resolve/de15b22ba131738a16dff04aab8bdf8dc32e3ac1/onnx/model.onnx",
+  "modelCard": "https://huggingface.co/onnx-community/BiRefNet_lite-ONNX/blob/de15b22ba131738a16dff04aab8bdf8dc32e3ac1/README.md",
+  "upstream": "https://huggingface.co/ZhengPeng7/BiRefNet_lite",
+  "license": "MIT",
+  "runtime": ".NET ONNX Runtime CPU; fixed FP32 1024 input; no Python dependency",
+  "downloadPolicy": "Host installs this exact local model. Runtime never downloads weights or remote code."
+}

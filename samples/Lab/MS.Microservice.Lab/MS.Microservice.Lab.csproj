@@ -19,6 +19,7 @@
     <None Remove="BackgroundWork\**" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Lab.Tests" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="Dapper.SqlBuilder" />
@@ -31,6 +32,7 @@
     <PackageReference Include="WolverineFx" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../../../MS.Microservice.Media/src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.AspNetCore;
+using MS.Microservice.AspNetCore.Uploads;
 using MS.Microservice.Core.Ceching;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;

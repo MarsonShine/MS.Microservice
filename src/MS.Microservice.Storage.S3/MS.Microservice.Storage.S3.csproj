@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <PackageReference Include="AWSSDK.S3" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+{
+  "modelId": "Xenova/swin2SR-lightweight-x2-64@92a21aca5713f20faf9a87590cdfbdce2e34112c",
+  "file": "swin2sr-x2.onnx",
+  "bytes": 8078888,
+  "sha256": "c2abbfe0cc8e685b5e11964970f8ebe3d24072e904fd5545a30ac31ec1e110db",
+  "url": "https://huggingface.co/Xenova/swin2SR-lightweight-x2-64/resolve/92a21aca5713f20faf9a87590cdfbdce2e34112c/onnx/model.onnx",
+  "conversionCard": "https://huggingface.co/Xenova/swin2SR-lightweight-x2-64/blob/92a21aca5713f20faf9a87590cdfbdce2e34112c/README.md",
+  "upstream": "https://huggingface.co/caidas/swin2SR-lightweight-x2-64/blob/07e8e61492ce6daf4f34c651622960faf110c17f/README.md",
+  "upstreamLicense": "Apache-2.0",
+  "runtime": ".NET ONNX Runtime CPU; no Python or Transformers dependency",
+  "downloadPolicy": "Host installs this exact local model before constructing the processor. Runtime never downloads models."
+}

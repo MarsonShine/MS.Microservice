@@ -1,0 +1,8 @@
+{
+  "modelId": "MI-GAN-512-Places2/pipeline-v2@406830d0fa60666da0071c342ad2fbc8f30c5c64",
+  "sha256": "6f1f3530a1a2324b19752018ce756088b07973cda8d7d890034ace5c8a48c40b",
+  "bytes": 28079181,
+  "av": "15.1.0",
+  "onnxruntime": "1.20.1",
+  "opencv-python": "4.13.0.92"
+}

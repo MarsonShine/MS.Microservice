@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using MS.Microservice.Core.IO;
 
 namespace MS.Microservice.Lab.Infrastructure.Uploads;
 
@@ -26,35 +27,9 @@ public sealed class LocalUploadStorage(
         string extension,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(content);
-        if (!content.CanRead)
-        {
-            throw new ArgumentException("上传内容流必须可读。", nameof(content));
-        }
-
-        var normalizedExtension = NormalizeExtension(extension);
         var storageRoot = ResolveStorageRoot();
-        Directory.CreateDirectory(storageRoot);
-        var storedFileName = $"{Guid.NewGuid():N}{normalizedExtension}";
-        var storedFilePath = Path.Combine(storageRoot, storedFileName);
-
-        try
-        {
-            await using var output = new FileStream(
-                storedFilePath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 81920,
-                useAsync: true);
-            await content.CopyToAsync(output, cancellationToken);
-        }
-        catch
-        {
-            System.IO.File.Delete(storedFilePath);
-            throw;
-        }
-
+        var storedFileName = await new LocalFileStorage(storageRoot)
+            .SaveAsync(content, extension, cancellationToken);
         return new StoredUpload(storedFileName);
     }
 
@@ -72,16 +47,4 @@ public sealed class LocalUploadStorage(
         return storageRoot;
     }
 
-    private static string NormalizeExtension(string extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension)
-            || extension.Length > 10
-            || extension[0] != '.'
-            || extension.Skip(1).Any(character => !char.IsAsciiLetterOrDigit(character)))
-        {
-            throw new ArgumentException("上传文件扩展名无效。", nameof(extension));
-        }
-
-        return extension.ToLowerInvariant();
-    }
 }

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
+  <ItemGroup><PackageReference Include="MailKit" /></ItemGroup>
+  <ItemGroup><PackageReference Include="AlibabaCloud.SDK.Dysmsapi20170525" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" /></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="MS.Microservice.Notifications.Tests" /></ItemGroup>
+</Project>

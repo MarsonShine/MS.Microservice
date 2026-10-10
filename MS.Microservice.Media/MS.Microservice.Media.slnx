@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
+    <Project Path="src/MS.Microservice.Media.Inference/MS.Microservice.Media.Inference.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Media.Tests/MS.Microservice.Media.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Media.Inference.Tests/MS.Microservice.Media.Inference.Tests.csproj" />
+  </Folder>
+</Solution>

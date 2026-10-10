@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace MS.Microservice.Lab.Infrastructure.Uploads;
+namespace MS.Microservice.AspNetCore.Uploads;
 
 public enum UploadFileKind
 {
