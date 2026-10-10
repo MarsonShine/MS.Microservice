@@ -8,7 +8,7 @@
 | 添加水印 | [文字与 Logo 水印](docs/watermarks.md)：锚点、大小、透明度、旋转、平铺及透明叠加图；文字使用 HarfBuzz 塑形 |
 | 二维码与条码 | [Codes](docs/codes.md)：八种码制、整像素生成、识别及显示坐标；复用同一图片管道 |
 | 本地蒙版修复 | [MI-GAN CPU 修复](docs/inpainting.md)：按需引用 Media.Inference，加载本地校验模型，白色选区修复、黑色保留 |
-| 视频信息 | [视频探测](docs/video.md)：尺寸、帧率、旋转、音轨、进程超时和取消；使用宿主安装的 FFmpeg 工具 |
+| 视频处理 | [视频探测与编辑](docs/video.md)：信息、剪辑、裁剪、旋转、翻转、缩放和 MP4/MKV/WebM 转码；使用宿主安装的 FFmpeg 工具 |
 
 公共 API 不暴露 Skia 类型。宿主负责输入权限、上传和保留策略、并发资源预算、结果发布；图像组件不关闭调用方流。原生 Skia 运行时需适配部署平台，本项目包含常用桌面运行时及 Linux no-dependencies 资产，实际部署仍需在目标系统验证。
 
