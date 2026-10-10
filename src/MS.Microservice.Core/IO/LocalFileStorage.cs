@@ -57,9 +57,13 @@ public sealed class LocalFileStorage : IFileStorage
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, outputPath, overwrite: false);
         }
-        catch
+        catch (Exception primary)
         {
-            File.Delete(temporaryPath);
+            try { File.Delete(temporaryPath); }
+            catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
+            {
+                throw new AggregateException("File publication and staging cleanup both failed.", primary, cleanup);
+            }
             throw;
         }
     }
