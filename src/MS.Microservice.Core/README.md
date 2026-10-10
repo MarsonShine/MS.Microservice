@@ -17,6 +17,8 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 更高层取舍见[总体架构](../../docs/Architecture-Overview.md)；
 复制或包引用需要包含声明的依赖，见[组件消费](../../docs/components/consumption.md)。
 
+`IO.LocalFileStorage` 将调用方流保存为随机文件名，先写临时文件再发布，且不关闭输入流。宿主继续负责目录、上传策略和文件记录；详见[本地流保存](IO/local-file-storage.md)。
+
 对称加密只接受调用方提供的 32 字节密钥，并使用带版本号的 AES-256-GCM 密文；旧 AES-ECB 和 3DES 格式已停用。原因、格式和密钥使用方式见[对称加密格式](Security/Cryptology/authenticated-encryption.md)。
 
 `HmacSha256` 要求调用方明确传入密钥。旧密码哈希的固定密钥只保留在 Lab 的[旧密码验证说明](../../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)所述登录升级路径中。
