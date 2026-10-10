@@ -3,6 +3,9 @@ using NAudio.Wave;
 
 namespace MS.Microservice.Infrastructure.Common.NAudio;
 
+/// <summary>
+/// 用于音频片段裁剪、音量调整和淡入淡出处理，支持输出 WAV、MP3 格式，原始音频文件不会被修改。
+/// </summary>
 public sealed class AudioEditor
 {
     /// <summary>

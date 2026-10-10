@@ -2,6 +2,13 @@ using System.Text;
 
 namespace MS.Microservice.Core.Text;
 
+/// <summary>
+/// 将输入流中的文本从源编码转换为目标编码，并写入输出流。
+/// 从两个流的当前位置开始处理，采用缓冲区分段转换，支持不可定位流。
+/// 不自动检测编码，BOM 和无效字符处理遵循指定 Encoding 的配置。
+/// 不关闭输入输出流，也不支持原地转换。
+/// 转换失败时直接抛出异常，输出流可能包含部分已转换内容。
+/// </summary>
 public static class TextEncodingConverter
 {
     /// <summary>

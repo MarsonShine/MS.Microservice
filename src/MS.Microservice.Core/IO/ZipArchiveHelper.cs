@@ -274,6 +274,9 @@ public static class ZipArchiveHelper
             {
                 if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
                     throw new IOException("Filesystem links and reparse points are unsupported.");
+                // 上面方法等价于下面的写法
+                //if(File.GetAttributes(current).HasFlag(FileAttributes.ReparsePoint))
+                //    throw new IOException("Filesystem links and reparse points are unsupported.");
             }
             catch (FileNotFoundException) { }
             catch (DirectoryNotFoundException) { }
