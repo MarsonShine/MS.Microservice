@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
+  <ItemGroup><PackageReference Include="MailKit" /></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="MS.Microservice.Notifications.Tests" /></ItemGroup>
+</Project>
