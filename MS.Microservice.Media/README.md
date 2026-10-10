@@ -140,6 +140,6 @@ await video.ExtractAudioAsync("joined.mp4", "audio.wav", cancellationToken: canc
 
 ## 所有权与维护
 
-图片、二维码和修复接口从当前位置读写流并保持打开；失败或取消可能留下部分输出，宿主应先写临时结果再发布。图片编码输出大小没有按输入文件大小保证，并发、总内存和保留策略由宿主控制。Skia／HarfBuzz 原生库及字体须适配目标系统，像素预算不等于进程内存硬配额。
+图片、二维码和修复接口从当前位置读写流并保持打开，输入输出须使用不同底层资源；仅创建不同流对象不能保证文件不同。失败或取消可能留下部分输出，宿主应先写临时结果再发布。图片编码输出大小没有按输入文件大小保证，并发、总内存和保留策略由宿主控制。Skia／HarfBuzz 原生库及字体须适配目标系统，像素预算不等于进程内存硬配额。
 
 使用者接入见[组件消费](../docs/components/consumption.md)。实现与回归说明：[图片管道](docs/images.md)、[图片水印](docs/watermarks.md)、[Codes 坐标](docs/codes.md)、[视频进程与编辑](docs/video.md)、[视频水印](docs/video-watermarks.md)、[截图与音轨](docs/video-assets.md)、[视频拼接](docs/video-concatenation.md)。

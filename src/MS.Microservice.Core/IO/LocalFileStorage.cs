@@ -13,8 +13,8 @@ public sealed class LocalFileStorage : IFileStorage
     }
 
     /// <summary>
-    /// Copies from the current input position and returns the generated file name after publication.
-    /// Leaves the input open. Failed or cancelled copies do not publish an output file.
+    /// Copies from the current position, leaving input open, and returns a generated name after publication.
+    /// Failed or cancelled copies do not publish an output file.
     /// </summary>
     public async Task<string> SaveAsync(
         Stream content,

@@ -4,7 +4,7 @@ using MS.Microservice.Media.Video;
 
 namespace MS.Microservice.Media.Inference.WatermarkRemoval;
 
-/// <summary>Default automatic detection followed by actual MI-GAN repair; originals are never overwritten.</summary>
+/// <summary>Detects repeated-text watermarks by default and repairs selected regions with MI-GAN. Callers retain originals and supply separate output resources.</summary>
 public sealed class WatermarkRemover : IAsyncDisposable
 {
     public const string DetectorModelId = "UNet++/efficientnet-b4/repeated-text@509fb6833823f4e9c519f8e4f87a9053567c779c";

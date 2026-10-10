@@ -41,9 +41,8 @@ public sealed class MiganInpainter : IAsyncDisposable
     }
 
     /// <summary>
-    /// White mask pixels select edits, black keeps; opaque binary grayscale mask dimensions must match
-    /// the oriented image. Writes lossless PNG, preserving normalized decoded RGBA outside the mask
-    /// and alpha everywhere. Caller streams remain open. Failure/cancellation can leave partial output.
+    /// Repairs white regions of a matching opaque binary mask, writing PNG with alpha and unselected normalized pixels preserved.
+    /// Caller streams must use distinct resources and remain open; failure or cancellation may leave partial output.
     /// </summary>
     public async Task<InpaintingResult> InpaintAsync(
         Stream inputImage, Stream grayscaleMask, Stream outputPng, CancellationToken cancellationToken = default)

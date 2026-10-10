@@ -6,8 +6,7 @@ public static class TextEncodingConverter
 {
     /// <summary>
     /// Converts remaining input using the supplied encodings and fallback policies, leaving both streams open.
-    /// Matching source preambles are consumed; target preamble emission follows StreamWriter semantics.
-    /// Output can be partial on cancellation or failure.
+    /// Configured encoding markers are honored; output may be partial on failure or cancellation.
     /// </summary>
     public static async Task ConvertAsync(
         Stream source,

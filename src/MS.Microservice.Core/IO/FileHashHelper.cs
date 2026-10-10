@@ -13,8 +13,8 @@ public static class FileHashHelper
         : StringComparer.Ordinal;
 
     /// <summary>
-    /// Computes an uppercase hexadecimal SHA-256 digest from the current position to the end.
-    /// Leaves the stream open and does not restore its position. Supports non-seekable streams.
+    /// Computes uppercase SHA-256 from the current position to the end, including on non-seekable streams.
+    /// Keeps the stream open at its consumed position.
     /// </summary>
     public static async Task<string> ComputeSha256Async(Stream stream, CancellationToken cancellationToken = default)
     {
@@ -29,8 +29,8 @@ public static class FileHashHelper
     }
 
     /// <summary>
-    /// Computes the digest of a stable file. Throws if a length or modification-time change is observed.
-    /// The metadata checks do not provide a filesystem snapshot.
+    /// Computes a stable file's digest, rejecting observed length or modification-time changes.
+    /// Metadata checks do not provide a filesystem snapshot.
     /// </summary>
     public static Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken = default)
     {
@@ -40,11 +40,8 @@ public static class FileHashHelper
     }
 
     /// <summary>
-    /// Finds same-length SHA-256 matches among explicit file paths, hashing only length groups with
-    /// multiple files. Paths are normalized and deduplicated using Windows case-insensitive or other
-    /// platforms' ordinal comparison; links and hard links are not resolved to physical identities.
-    /// Missing files, metadata/read errors and detected changes fail without partial results.
-    /// The caller must keep the files stable for the duration of the operation.
+    /// Finds SHA-256 matches among distinct normalized paths; callers must keep files stable.
+    /// Errors return no partial groups, and links are not resolved to physical file identities.
     /// </summary>
     public static async Task<IReadOnlyList<FileDuplicateGroup>> FindDuplicatesAsync(
         IEnumerable<string> paths, CancellationToken cancellationToken = default)

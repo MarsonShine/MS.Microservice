@@ -65,9 +65,8 @@ public static class ZipArchiveHelper
     }
 
     /// <summary>
-    /// Extracts into a new directory and publishes it only after all entries succeed. Requires a
-    /// readable, seekable source to avoid ZipArchive buffering a non-seekable input in memory.
-    /// Leaves the source open. Existing destinations and links are rejected.
+    /// Extracts a readable, seekable ZIP into a new directory, publishing only after all entries succeed.
+    /// Keeps the source open and rejects existing destinations and filesystem links.
     /// </summary>
     public static async Task ExtractZipAsync(Stream source, string destinationDirectory,
         ZipExtractionOptions? options = null, CancellationToken cancellationToken = default)

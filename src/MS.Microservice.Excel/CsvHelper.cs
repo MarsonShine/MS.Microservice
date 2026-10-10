@@ -18,9 +18,8 @@ public sealed class CsvFormatException(string message, long rowNumber, int colum
 public static class CsvHelper
 {
     /// <summary>
-    /// Reads from the current position, preserving field text and embedded newline characters.
-    /// Accepts CRLF, LF and CR record endings and consumes at most one initial encoding marker.
-    /// Uses the explicit encoding without guessing it; the stream remains open, including on errors.
+    /// Reads from the current position using the specified encoding, preserving field text and embedded newlines.
+    /// Accepts CRLF/LF/CR and one initial encoding marker, keeping the caller stream open.
     /// </summary>
     public static async IAsyncEnumerable<CsvRow> ReadAsync(
         Stream source, CsvOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -148,9 +147,8 @@ public static class CsvHelper
     }
 
     /// <summary>
-    /// Writes records lazily, quoting delimiters, quotes and newlines. Null fields become empty fields;
-    /// empty records are rejected. The encoding controls the BOM, and the stream remains open.
-    /// Cancellation or failure may leave partial output; callers own publication and rollback.
+    /// Writes records lazily with CSV quoting; null fields become empty and zero-field records are rejected.
+    /// Uses the configured encoding marker and keeps the stream open; failed or cancelled output may be partial.
     /// </summary>
     public static async Task WriteAsync(
         Stream destination, IEnumerable<IReadOnlyList<string?>> rows, CsvOptions? options = null, CancellationToken cancellationToken = default)
