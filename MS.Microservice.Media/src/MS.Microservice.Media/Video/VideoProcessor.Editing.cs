@@ -33,15 +33,7 @@ public sealed partial class VideoProcessor
         if (options.Duration is { } duration) arguments.AddRange(["-t", Seconds(duration)]);
         arguments.AddRange(["-map", "0:V:0", "-map", "0:a?", "-vf", filters,
             "-metadata:s:v:0", "rotate=0", "-pix_fmt", "yuv420p", "-fps_mode", "passthrough"]);
-        var crf = options.ConstantRateFactor.ToString(CultureInfo.InvariantCulture);
-        if (extension == ".webm")
-            arguments.AddRange(["-c:v", "libvpx-vp9", "-crf", crf, "-b:v", "0", "-cpu-used",
-                options.Speed switch { VideoEncodingSpeed.Fast => "4", VideoEncodingSpeed.Balanced => "2", _ => "0" }, "-c:a", "libopus"]);
-        else
-            arguments.AddRange(["-c:v", "libx264", "-crf", crf, "-preset",
-                options.Speed switch { VideoEncodingSpeed.Fast => "veryfast", VideoEncodingSpeed.Balanced => "medium", _ => "slow" },
-                "-c:a", "aac", "-b:a", "192k"]);
-        if (extension == ".mp4") arguments.AddRange(["-movflags", "+faststart"]);
+        AddVideoEncodingArguments(arguments, extension, options.ConstantRateFactor, options.Speed);
 
         return await PublishFileAsync(output, extension, async temporary =>
         {
@@ -51,6 +43,20 @@ public sealed partial class VideoProcessor
             CheckVideoDimensions(result.Width, result.Height, options);
             return result;
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void AddVideoEncodingArguments(List<string> arguments, string extension,
+        int constantRateFactor, VideoEncodingSpeed speed)
+    {
+        var crf = constantRateFactor.ToString(CultureInfo.InvariantCulture);
+        if (extension == ".webm")
+            arguments.AddRange(["-c:v", "libvpx-vp9", "-crf", crf, "-b:v", "0", "-cpu-used",
+                speed switch { VideoEncodingSpeed.Fast => "4", VideoEncodingSpeed.Balanced => "2", _ => "0" }, "-c:a", "libopus"]);
+        else
+            arguments.AddRange(["-c:v", "libx264", "-crf", crf, "-preset",
+                speed switch { VideoEncodingSpeed.Fast => "veryfast", VideoEncodingSpeed.Balanced => "medium", _ => "slow" },
+                "-c:a", "aac", "-b:a", "192k"]);
+        if (extension == ".mp4") arguments.AddRange(["-movflags", "+faststart"]);
     }
 
     private static void ValidateEditOptions(VideoEditOptions options)
@@ -108,6 +114,7 @@ public sealed partial class VideoProcessor
         }
         // YUV420 encoders need even dimensions; retain edge pixels by padding, never cropping them off.
         filters.Add("pad=ceil(iw/2)*2:ceil(ih/2)*2");
+        filters.Add(ClearAppliedRotationFilter);
         return string.Join(',', filters);
     }
 

@@ -6,6 +6,8 @@ namespace MS.Microservice.Media.Video;
 /// <summary>Inspects and processes local media using installed FFmpeg tools.</summary>
 public sealed partial class VideoProcessor
 {
+    // Complex graphs may propagate the input display matrix after autorotation; encoded pixels are already oriented.
+    private const string ClearAppliedRotationFilter = "sidedata=mode=delete:type=DISPLAYMATRIX";
     private readonly FfmpegOptions _options;
     private readonly MediaProcessRunner _runner;
 
