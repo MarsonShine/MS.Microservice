@@ -23,6 +23,8 @@ Core 提供跨业务可复用的函数式结果、规格、集合、序列化、
 
 `IO.ZipArchiveHelper` 保留目录结构进行 ZIP 压缩，并在校验路径、实际输出限额及条目长度/CRC 后发布解压目录；详见[ZIP 压缩与解压](IO/zip-archives.md)。
 
+`Text.TextDiff` 提供保留换行符的逐行差异，`Text.TextEncodingConverter` 流式转换编码，`Serialization.JsonText` 排版 JSON 而不应用业务序列化策略；详见[文本工具](Text/text-tools.md)。
+
 对称加密只接受调用方提供的 32 字节密钥，并使用带版本号的 AES-256-GCM 密文；旧 AES-ECB 和 3DES 格式已停用。原因、格式和密钥使用方式见[对称加密格式](Security/Cryptology/authenticated-encryption.md)。
 
 `HmacSha256` 要求调用方明确传入密钥。旧密码哈希的固定密钥只保留在 Lab 的[旧密码验证说明](../../samples/Lab/MS.Microservice.Lab/Application/Identity/legacy-password-verification.md)所述登录升级路径中。
