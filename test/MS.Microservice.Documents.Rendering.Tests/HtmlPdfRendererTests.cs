@@ -9,6 +9,7 @@ using Xunit;
 
 namespace MS.Microservice.Documents.Rendering.Tests;
 
+[Collection("Rendering native")]
 public sealed class HtmlPdfRendererTests : IDisposable
 {
     private readonly string _temporary = Path.Combine(Path.GetTempPath(), "ms-render-tests-" + Guid.NewGuid().ToString("N"));

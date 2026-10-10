@@ -78,7 +78,7 @@ Tag 区分大小写，同名控件全部填充。`null` 替换为空文本，无
 | `MaximumEntries` | `1024` | ZIP 条目数量上限 |
 | `MaximumReplacementCharacters` | `16M` | 实际替换文本的 UTF-16 字符总数，重复控件分别计入 |
 
-后六项位于 `WordTemplateOptions.Limits`。组件仅支持未签名、未启用文档保护的 Transitional DOCX。不能填充嵌套控件、数据绑定、图片、日期、选择框、内容锁定控件，或包含域、绘图等复杂内容的目标控件。脚注、尾注和文本框不作为模板填充入口；这不是 Word 渲染器，也不提供 Word 转 PDF。
+后六项位于 `WordTemplateOptions.Limits`。组件仅支持未签名、未启用文档保护的 Transitional DOCX。不能填充嵌套控件、数据绑定、图片、日期、选择框、内容锁定控件，或包含域、绘图等复杂内容的目标控件。脚注、尾注和文本框不作为模板填充入口。需要将填充后的 DOCX 排版为 PDF 时，可使用 [可选 Rendering 组件](../MS.Microservice.Documents.Rendering/README.md#docx-转-pdf)，该功能需要宿主提供 LibreOffice。
 
 输入从当前位置读取，调用方流保持打开。先完成自有副本及验证，再从目标当前位置写入；复制期间 I/O 错误或取消仍可能留下部分输出，文件原子发布由宿主负责。输入输出不能共用同一流或底层文件。DOCX 会载入内存，应限制文件大小与并发；XML 校验不保证 Word 的分页或视觉布局。
 

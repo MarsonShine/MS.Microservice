@@ -1,10 +1,10 @@
-# HTML 转 PDF（Windows，可选）
+# 文档排版与 PDF 转换（Windows，可选）
 
-`MS.Microservice.Documents.Rendering` 用已安装的 Edge／Chrome 将静态 HTML 和 CSS 排版为 PDF，支持中文、图片、字体和 CSS 分页。它是独立的可选组件，普通 [Documents](../MS.Microservice.Documents/README.md) 使用者无需携带浏览器驱动；[源码与包接入方式](../../docs/components/consumption.md)。
+`MS.Microservice.Documents.Rendering` 用已安装的 Edge／Chrome 排版静态 HTML，用已安装的 LibreOffice 将 DOCX 转为 PDF。它是独立的可选组件，普通 [Documents](../MS.Microservice.Documents/README.md) 使用者无需携带浏览器驱动；[源码与包接入方式](../../docs/components/consumption.md)。
 
-当前只支持 Windows，需要可用的 `dotnet` 主机和已安装的 Chromium 浏览器。组件不会下载或安装浏览器，不使用用户登录配置，浏览器沙箱必须可用。Playwright 依赖包约 203.6 MiB，本机 Windows 驱动复制约 102.2 MiB；发布时须保留驱动目录及 worker 文件。
+当前只支持 Windows，需要可用的 `dotnet` 主机，以及对应功能的排版引擎。组件不会下载或安装浏览器、LibreOffice，不使用用户登录或 Office 配置。HTML 转换要求浏览器沙箱可用。Playwright 依赖包约 203.6 MiB，本机 Windows 驱动复制约 102.2 MiB；发布时须保留驱动目录及 worker 文件。
 
-## 使用
+## HTML 转 PDF
 
 ```csharp
 using MS.Microservice.Documents.Rendering;
@@ -38,12 +38,56 @@ var result = await renderer.RenderAsync(
 
 `Maximum*` 参数位于 `HtmlPdfOptions.Limits`。超时或取消后，进程树退出和临时目录清理另有最多 **10 秒**预算；整个调用不承诺 30 秒硬上限。目标流复制遵从调用方取消令牌，其 I/O 时长由目标流决定。
 
-## 必要限制
+### HTML 限制
 
 - 禁用页面 JavaScript、Service Worker、下载和网络访问；只加载精确匹配 `Assets` 的额外资源。远程 URL、`file:` 和 HTML 内的 `data:` 资源不会加载，系统已安装字体仍可使用。
 - 内嵌框架（iframe）内容会清空，iframe 及被阻止图片的布局盒仍可能占空间或增加空页。缺失资源、字体回退和浏览器版本差异可能改变排版，应检查输出；中文需要宿主提供相应字体。
-- 成功前会完成 PDF 验证和自有资源清理。验证失败时不写目标；最终复制失败或取消仍可能留下部分 PDF。清理失败会保留主异常及残留目录位置。
-- 编码、像素与时间预算不是浏览器进程的内存硬配额，应由宿主限制并发及系统资源。
-- 不支持 Linux／macOS、单文件、裁剪或 Native AOT 部署，也不提供 Word 转 PDF。正常项目引用、NuGet 和目录发布会复制 worker 元数据及 `.playwright`；不要只分发一个 DLL。
 
-流程、进程所有权、打包规则和验证证据见 [渲染设计](docs/html-rendering-design.md)。
+HTML 流程、浏览器约束及验证见 [HTML 渲染设计](docs/html-rendering-design.md)。
+
+## DOCX 转 PDF
+
+`libreOfficeExecutablePath` 由可信宿主配置为已安装或完整便携 LibreOffice 的绝对 `program/soffice.com` 路径。仅使用 DOCX 转换时不需要安装浏览器；组件不会自动安装 LibreOffice 或修改系统注册表。
+
+```csharp
+using MS.Microservice.Documents.Rendering;
+
+var converter = new WordPdfConverter(new()
+{
+    LibreOfficeExecutablePath = libreOfficeExecutablePath,
+    TemporaryDirectory = Path.Combine(Path.GetTempPath(), "my-app-rendering")
+});
+await using var input = File.OpenRead("contract.docx");
+await using var output = new FileStream("contract.pdf", FileMode.CreateNew);
+var result = await converter.ConvertAsync(input, output, cancellationToken: cancellationToken);
+```
+
+支持普通、未签名、未启用保护的 Transitional DOCX，包含正文、表格、页眉、页脚、分页及现代 DrawingML 内嵌 PNG／JPEG。支持 `PAGE`、`NUMPAGES`、`SECTION`、`SECTIONPAGES` 页码类字段及常用通用格式开关；跨 run 的字段也可识别。
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `WordPdfOptions.Timeout` | `60 s` | worker 处理期限，包含 DOCX 检查、引擎启动、转换、PDF 校验和结果传输；最多 10 分钟 |
+| `MaximumInputBytes` | `64 MiB` | 从输入当前位置读取的 DOCX 编码大小 |
+| `MaximumEntries` | `1024` | ZIP 条目数量 |
+| `MaximumExpandedBytes` | `128 MiB` | ZIP 实际展开的累计字节数 |
+| `MaximumXmlCharactersPerPart` | `16M` | 每个 XML 部件的字符上限 |
+| `MaximumImagePixels` | `20M` | 每幅内嵌 PNG／JPEG 的像素上限 |
+| `MaximumPdfBytes` / `MaximumPages` | `32 MiB` / `100` | PDF 编码大小和页数；超限失败，不返回截断 PDF |
+
+`Maximum*` 参数位于 `WordPdfOptions.Limits`。DOCX 检查和转换在独立进程内完成；输入源不修改，输入和目标流从当前位置使用并保持打开，不能共用同一流或底层文件。
+
+### DOCX 限制
+
+- 只处理可信文档。组件会拒绝宏、Strict DOCX、签名、保护、全部外部关系（包括普通超链接）、VML、矢量图片、OLE／嵌入包、altChunk 及非支持字段，但这些检查和独立进程不是文件或网络沙箱。
+- 禁用宏和链接更新仍不能保证 LibreOffice 不读取宿主文件；例如本地图片外链会在该配置下被读取，因此入口会拒绝外部关系。不得把此组件当作任意不可信 Office 文件的隔离服务。
+- 排版由 LibreOffice 完成，不保证与 Microsoft Word 逐像素一致。字体、引擎版本和文档特性会影响换行与分页，中文需要宿主字体，应检查输出。已用 LibreOffice 26.8.1.1 验证真实转换。
+- 完整引擎目录和其运行依赖由宿主维护；不能只复制 `soffice.com`。便携分发须保留 `program`、`share`、`presets` 及许可文件，遵守 [LibreOffice 许可](https://www.libreoffice.org/licenses/)。
+
+字段语法、包验证、进程生命周期及实际转换测试见 [DOCX 渲染设计](docs/word-rendering-design.md)。
+
+## 部署与输出约束
+
+- 成功前会完成 PDF 验证和自有资源清理。验证失败时不写目标；最终复制失败或取消仍可能留下部分 PDF。清理失败会保留主异常及残留目录位置。
+- worker 期限之后，进程树退出和临时目录清理另有最多 **10 秒**预算；输入读取及最终目标复制遵从调用方取消令牌，其 I/O 时长由流决定。整个调用不承诺固定总时长。
+- 编码、展开、像素和时间预算不是原生进程的内存或磁盘硬配额，应由宿主限制并发及系统资源。
+- 不支持 Linux／macOS、单文件、裁剪或 Native AOT 部署。正常项目引用、NuGet 和目录发布会复制 worker 元数据及 `.playwright`；不要只分发一个 DLL。

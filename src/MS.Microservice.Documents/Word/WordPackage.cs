@@ -9,10 +9,12 @@ namespace MS.Microservice.Documents.Word;
 
 internal static class WordPackage
 {
-    internal static OpenSettings Settings(WordTemplateLimits limits) => new()
+    internal static OpenSettings Settings(WordTemplateLimits limits) => Settings(limits.MaximumXmlCharactersPerPart);
+
+    internal static OpenSettings Settings(long maximumXmlCharactersPerPart) => new()
     {
         AutoSave = false,
-        MaxCharactersInPart = limits.MaximumXmlCharactersPerPart
+        MaxCharactersInPart = maximumXmlCharactersPerPart
     };
 
     internal static void Validate(WordprocessingDocument document, CancellationToken cancellationToken)
@@ -27,7 +29,10 @@ internal static class WordPackage
         if (error is not null) throw new InvalidDataException($"Invalid DOCX: {error.Description}");
     }
 
-    internal static async Task CheckAsync(MemoryStream data, WordTemplateLimits limits, CancellationToken cancellationToken)
+    internal static Task CheckAsync(MemoryStream data, WordTemplateLimits limits, CancellationToken cancellationToken) =>
+        CheckAsync(data, new WordPackageLimits(limits.MaximumEntries, limits.MaximumExpandedBytes, limits.MaximumXmlCharactersPerPart), cancellationToken);
+
+    internal static async Task CheckAsync(MemoryStream data, WordPackageLimits limits, CancellationToken cancellationToken)
     {
         data.Position = 0;
         using var archive = new ZipArchive(data, ZipArchiveMode.Read, leaveOpen: true);
@@ -83,7 +88,7 @@ internal static class WordPackage
         data.Position = 0;
     }
 
-    private static XmlReaderSettings XmlSettings(WordTemplateLimits limits) => new()
+    private static XmlReaderSettings XmlSettings(WordPackageLimits limits) => new()
     {
         Async = true,
         DtdProcessing = DtdProcessing.Prohibit,
@@ -91,3 +96,5 @@ internal static class WordPackage
         MaxCharactersInDocument = limits.MaximumXmlCharactersPerPart
     };
 }
+
+internal readonly record struct WordPackageLimits(int MaximumEntries, long MaximumExpandedBytes, long MaximumXmlCharactersPerPart);

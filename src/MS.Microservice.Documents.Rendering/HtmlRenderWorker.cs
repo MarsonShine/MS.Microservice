@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Runtime.ExceptionServices;
 using Microsoft.Playwright;
 using MS.Microservice.Documents.Pdf;
-using SkiaSharp;
 
 namespace MS.Microservice.Documents.Rendering;
 
@@ -17,14 +16,7 @@ internal static class HtmlRenderWorker
         var request = HtmlPdfRenderer.Snapshot(raw.Html, raw.Browser, raw.Options);
         foreach (var asset in request.Options.Assets.Values.Where(asset => asset.ContentType.StartsWith("image/", StringComparison.Ordinal)))
         {
-            using var stream = new SKMemoryStream(asset.Content);
-            using var codec = SKCodec.Create(stream);
-            if (codec is null || codec.Info.Width < 1 || codec.Info.Height < 1
-                || (long)codec.Info.Width * codec.Info.Height > request.Options.Limits.MaximumImagePixels || codec.FrameCount > 1)
-                throw new InvalidDataException("An image asset is invalid, animated, or exceeds the pixel limit.");
-            if (asset.ContentType != codec.EncodedFormat switch
-                { SKEncodedImageFormat.Png => "image/png", SKEncodedImageFormat.Jpeg => "image/jpeg", SKEncodedImageFormat.Webp => "image/webp", _ => string.Empty })
-                throw new InvalidDataException("An image asset does not match its MIME type.");
+            RenderImageValidator.Validate(asset.Content, asset.ContentType, request.Options.Limits.MaximumImagePixels);
         }
         IPlaywright? playwright = null;
         IBrowser? browser = null;

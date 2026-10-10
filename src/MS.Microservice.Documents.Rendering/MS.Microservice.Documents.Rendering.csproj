@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <UseAppHost>false</UseAppHost>
     <IsPackable>true</IsPackable>
-    <Description>Optional Windows HTML-to-PDF rendering with an isolated Chromium worker and owned process-job supervision.</Description>
+    <Description>Optional Windows HTML and DOCX to PDF rendering with installed Chromium or LibreOffice and owned process-job supervision.</Description>
     <RollForward>Major</RollForward>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeRenderingWorkerMetadata</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
