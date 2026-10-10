@@ -21,6 +21,7 @@ using MS.Microservice.Lab.Infrastructure.Labs;
 using MS.Microservice.Lab.Infrastructure.Mediator.Behaviors;
 using MS.Microservice.AspNetCore.Encryption;
 using MS.Microservice.Lab.Infrastructure.Encryption;
+using MS.Microservice.Lab.Application.Tools;
 using System.Text.Json;
 using Wolverine;
 
@@ -134,5 +135,12 @@ public static class PlatformWebHost
             FluentValidation.CascadeMode.Stop;
 
         builder.Services.AddCoreServices(builder.Configuration);
+        if (enableLabEndpoints)
+        {
+            builder.Services.AddOptions<ImageBatchOptions>().Bind(builder.Configuration.GetSection("ImageBatches"));
+            builder.Services.AddSingleton<IImageBatchOperation, ImageBatchOperation>();
+            builder.Services.AddSingleton<ImageBatchJobs>();
+            builder.Services.AddHostedService(provider => provider.GetRequiredService<ImageBatchJobs>());
+        }
     }
 }

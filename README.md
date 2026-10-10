@@ -72,12 +72,17 @@ Lab 与正式 Host 是两个独立程序集。实验 Controller 只在 Lab 中�
 
 ## 可选组件
 
-Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、Idempotency、EFCore、SqlSugar、EventSourcing、Audio、Excel 和 AI 按需接入。具体依赖与平台限制以模块文档为准；参考业务模型不作为通用组件的依赖。
+Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience、Idempotency、EFCore、SqlSugar、EventSourcing、Audio、Excel、Documents、Notifications、Media 和 AI 按需接入。S3、媒体推理和 HTML 排版作为可选组件引用；具体依赖与平台限制以模块文档为准。参考业务模型不作为通用组件的依赖。
 
 | 工具组件 | 使用说明 |
 | --- | --- |
-| 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；自动图片去水印使用可选 Inference 组件 |
-| PDF | [Documents](src/MS.Microservice.Documents/README.md)：合并、选页、拆分、文字提取和图片渲染 |
-| 邮件、模板与站内通知 | [Notifications](src/MS.Microservice.Notifications/README.md) |
+| 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；图片／视频自动去水印、OCR、表格和增强使用可选 Inference |
+| PDF、Word 模板与 HTML 排版 | [Documents](src/MS.Microservice.Documents/README.md)；HTML 转 PDF 使用可选 Windows Rendering |
+| 文件存储、哈希与 ZIP | [Core](src/MS.Microservice.Core/README.md)；对象存储使用可选 [S3](src/MS.Microservice.Storage.S3/README.md) |
+| 音频 | [Audio](src/MS.Microservice.Audio/README.md)：剪辑、音量、淡入淡出、合并和转换 |
+| Excel 与 CSV | [Excel](src/MS.Microservice.Excel/README.md)：导入、导出和定位错误报告 |
+| 文本、编码与 JSON | [Core](src/MS.Microservice.Core/README.md) |
+| 邮件、短信、模板与站内通知 | [Notifications](src/MS.Microservice.Notifications/README.md) |
+| 后台图片批处理 | [Lab](samples/Lab/MS.Microservice.Lab/README.md#图片后台批处理)：上传、进度、取消、重试和私有下载 |
 
 数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。
