@@ -2,6 +2,8 @@
 
 `MS.Microservice.Documents` 提供 PDF 页面处理、文本提取、PNG 渲染和 DOCX 内容控件模板填充。引用项目或包即可使用；[源码与包接入方式](../../docs/components/consumption.md)。
 
+HTML 转 PDF 位于可选的 [Documents.Rendering](../MS.Microservice.Documents.Rendering/README.md) 组件，目前支持 Windows；普通 PDF／DOCX 使用者无需引用它。
+
 | 功能 | 方法 | 结果 |
 | --- | --- | --- |
 | 元数据 | `InspectAsync` | 标题、作者、加密状态、页尺寸与旋转 |

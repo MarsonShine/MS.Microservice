@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <IsPackable>true</IsPackable>
+    <Description>Optional Windows HTML-to-PDF rendering with an isolated Chromium worker and owned process-job supervision.</Description>
+    <RollForward>Major</RollForward>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeRenderingWorkerMetadata</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="SkiaSharp" />
+    <None Include="buildTransitive/MS.Microservice.Documents.Rendering.targets" Pack="true" PackagePath="buildTransitive/" />
+  </ItemGroup>
+  <Target Name="RenderingWorkerMetadataForProjectReference" BeforeTargets="GetCopyToOutputDirectoryItems"
+          DependsOnTargets="GenerateBuildDependencyFile;GenerateBuildRuntimeConfigurationFiles">
+    <Error Code="MSRND001" Condition="'$(PublishSingleFile)' == 'true' Or '$(PublishTrimmed)' == 'true' Or '$(PublishAot)' == 'true'" Text="Documents.Rendering requires separate worker files and does not support single-file, trimmed or Native AOT publishing." />
+    <ItemGroup>
+      <None Remove="$(TargetDir)$(AssemblyName).runtimeconfig.json;$(TargetDir)$(AssemblyName).deps.json" />
+      <None Include="$(TargetDir)$(AssemblyName).runtimeconfig.json;$(TargetDir)$(AssemblyName).deps.json"
+               Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Pack="false" />
+    </ItemGroup>
+  </Target>
+  <Target Name="IncludeRenderingWorkerMetadata">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetDir)$(AssemblyName).runtimeconfig.json;$(TargetDir)$(AssemblyName).deps.json" PackagePath="tools/$(TargetFramework)/" />
+    </ItemGroup>
+  </Target>
+  <Target Name="RejectUnsupportedRenderingPublish" BeforeTargets="PrepareForPublish"
+          Condition="'$(PublishSingleFile)' == 'true' Or '$(PublishTrimmed)' == 'true' Or '$(PublishAot)' == 'true'">
+    <Error Code="MSRND001" Text="Documents.Rendering requires separate worker, dependency and Playwright driver files; single-file, trimmed and Native AOT publishing are unsupported." />
+  </Target>
+</Project>
