@@ -1,10 +1,11 @@
 # 通知组件
 
-提供 SMTP 邮件、命名模板和本地持久化站内通知。引用 `MS.Microservice.Notifications` 项目或包即可使用，无需启动单独服务；[源码与包接入方式](../../docs/components/consumption.md)。
+提供 SMTP 邮件、阿里云模板短信、命名模板和本地持久化站内通知。引用 `MS.Microservice.Notifications` 项目或包即可使用，无需启动单独服务；[源码与包接入方式](../../docs/components/consumption.md)。
 
 | 功能 | 入口 | 用途 |
 | --- | --- | --- |
 | 邮件 | `SmtpEmailSender.SendAsync` | 发送纯文本或 HTML 邮件，支持 To、Cc、Bcc |
+| 短信 | `AliyunSmsSender.SendAsync` | 通过阿里云发送单个号码的已审核模板短信 |
 | 模板 | `NamedTokenTemplate.Render` | 将 `{{Name}}` 或 `{{User.Name}}` 替换为字典值 |
 | 站内通知 | `LocalNotificationInbox` | 按用户发布、分页查询、统计未读数、标记已读 |
 
@@ -48,6 +49,37 @@ var accepted = await sender.SendAsync(new EmailMessage
 
 模板缺少变量会报错，不执行模板中的代码。生成 HTML 文本时可设置 `htmlEncodeValues: true`；它只编码替换值，不能用于 JavaScript、CSS 或 URL 上下文，也不净化模板本身。
 
+## 发送短信
+
+```csharp
+using MS.Microservice.Notifications.Sms;
+
+var sms = new AliyunSmsSender(new AliyunSmsOptions
+{
+    AccessKeyId = configuredAccessKeyId,
+    AccessKeySecret = configuredAccessKeySecret
+});
+var accepted = await sms.SendAsync(new SmsMessage("13900000000", "已审核签名", "SMS_123456")
+{
+    TemplateParameters = new Dictionary<string, string> { ["code"] = "012345" },
+    OutId = "job-123"
+});
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `AccessKeyId` / `AccessKeySecret` | 必填 | 从宿主安全配置读取，不放入请求或源码 |
+| `SecurityToken` | 无 | 使用临时 STS 凭证时提供；凭证过期后由宿主更新实例 |
+| `TimeoutMilliseconds` | 30,000 | SDK 一次 HTTP 请求的总等待预算，范围 1–100,000 ms |
+| `MaximumTemplateBytes` | 16 KiB | 序列化后模板变量 JSON 的大小上限 |
+| `PhoneNumber` / `SignName` / `TemplateCode` | 必填 | 单个号码、已审核签名、`SMS_` 模板编码 |
+| `TemplateParameters` | 无 | 最多 32 个字符串变量，变量名须与模板一致 |
+| `OutId` | 无 | 业务关联标识，不提供发送去重保证 |
+
+组件通过官方 SDK 调用中国站 `SendSms` HTTPS 接口。号码接受 6–20 个 ASCII 数字和可选前导 `+`；实际号码、国家／地区、签名、模板和发送频率仍由服务商校验。当前不提供批量发送、国际短信专用接口或投递状态回调。
+
+返回 `RequestId`、`BizId` 和本地记录的接受时间，表示服务商接受请求，不表示手机收到短信。业务拒绝抛出 `SmsRejectedException`；其他 SDK 或网络异常直接传播。组件不自动重试，超时后发送状态可能不确定，应核对状态再决定重发。SDK 没有在途取消接口，因此此方法没有 `CancellationToken` 参数；请求超时不包括调用前的本地准备。
+
 ## 站内通知
 
 ```csharp
@@ -75,4 +107,5 @@ await inbox.MarkReadAsync(userId, message.Id, cancellationToken);
 ## 实现说明
 
 - [SMTP、模板与异常处理](docs/email-and-templates-design.md)
+- [短信协议、超时与回执](docs/aliyun-sms-design.md)
 - [站内通知的持久化与并发规则](docs/local-inbox-design.md)
