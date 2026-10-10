@@ -209,7 +209,9 @@ await new ImageProcessor().ProcessAsync(cutout, colored,
 
 ## 2 倍图片增强
 
-提前部署 [Swin2SR 模型清单](worker/super-resolution-modelmanifest.json) 中的固定 ONNX 文件；此入口使用 .NET CPU 推理，无需 Python。
+本功能用已训练的 Swin2SR 模型将图片宽高各放大 2 倍，例如 640×480 变为 1280×960，像素数变为 4 倍。输出纹理由模型预测，不能保证还原原图缺失的真实细节。
+
+提前部署 [Swin2SR 模型清单](worker/super-resolution-modelmanifest.json) 中的固定 ONNX 文件；此入口通过 ONNX Runtime 的 C# 接口在本机 CPU 上执行模型，无需 Python、GPU 或自行训练。模型须由宿主提前下载，运行接口不会下载。
 
 ```csharp
 using MS.Microservice.Media.Inference.SuperResolution;
@@ -233,7 +235,7 @@ var enhanced = await upscaler.UpscaleAsync(lowResolution, enlarged, cancellation
 
 输出为宽高各两倍的 PNG，原图 alpha 用双线性插值放大。模型可能合成原图没有的纹理、扭曲文字或产生分块接缝，不能作为真实细节恢复；`ReviewRecommended` 始终为 true。半透明边缘可能受白底合成影响。
 
-应复用并异步释放实例，每实例串行处理，多实例并发由宿主控制。流从当前位置读写并保持打开，输出编码大小由调用方管理；失败或取消可能留下部分输出，先写暂存文件再发布。分块、透明度与取消实现见 [超分辨率设计](../../docs/super-resolution-design.md)。
+`CreateAsync` 加载模型并创建可复用会话，`UpscaleAsync` 使用该会话处理图片；应复用并异步释放实例，每实例串行处理，多实例并发由宿主控制。流从当前位置读写并保持打开，输出编码大小由调用方管理；失败或取消可能留下部分输出，先写暂存文件再发布。模型、张量等概念与代码的对应关系，以及分块、透明度和取消实现，见 [超分辨率设计](../../docs/super-resolution-design.md)。
 
 ## 图片处理配置
 
