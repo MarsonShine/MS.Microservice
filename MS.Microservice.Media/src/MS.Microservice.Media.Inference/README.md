@@ -113,6 +113,34 @@ foreach (var region in recognized.Regions)
 
 输入从当前位置读取并保持打开。每次调用启动独立进程和两份模型会话，同一实例允许并发，宿主须限制并行任务数。处理流程、模型许可和边界验证见 [OCR 设计](../../docs/ocr-design.md)。
 
+## 2 倍图片增强
+
+提前部署 [Swin2SR 模型清单](worker/super-resolution-modelmanifest.json) 中的固定 ONNX 文件；此入口使用 .NET CPU 推理，无需 Python。
+
+```csharp
+using MS.Microservice.Media.Inference.SuperResolution;
+
+await using var upscaler = await Swin2SrUpscaler.CreateAsync(new Swin2SrOptions
+{
+    ModelPath = superResolutionModelPath
+});
+await using var lowResolution = File.OpenRead("small.png");
+await using var enlarged = File.Open("enhanced.png", FileMode.CreateNew, FileAccess.Write);
+var enhanced = await upscaler.UpscaleAsync(lowResolution, enlarged, cancellationToken);
+```
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `ModelPath` | 必填 | 已部署的固定 2 倍 Swin2SR 模型，大小和哈希须匹配清单 |
+| `CpuThreads` | `min(4, CPU数)` | 每实例 CPU 线程数 |
+| `Limits` | 4096 单边 / 4M 像素 / 32 MiB 输入 | 静态图片输入预算 |
+| `MaximumOutputDimension` / `MaximumOutputPixels` | 8192 / 16M | 方向校正后两倍画布的预算 |
+| `TileSize` / `ContextPixels` | 128 / 16 | 核心块边长及邻域，均为 8 的倍数；较大值增加计算和内存 |
+
+输出为宽高各两倍的 PNG，原图 alpha 用双线性插值放大。模型可能合成原图没有的纹理、扭曲文字或产生分块接缝，不能作为真实细节恢复；`ReviewRecommended` 始终为 true。半透明边缘可能受白底合成影响。
+
+应复用并异步释放实例，每实例串行处理，多实例并发由宿主控制。流从当前位置读写并保持打开，输出编码大小由调用方管理；失败或取消可能留下部分输出，先写暂存文件再发布。分块、透明度与取消实现见 [超分辨率设计](../../docs/super-resolution-design.md)。
+
 ## 图片处理配置
 
 | 参数 | 默认值 | 说明 |

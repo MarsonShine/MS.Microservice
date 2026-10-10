@@ -10,6 +10,7 @@
 | `WatermarkRemover.RemoveAsync`（可选） | 默认自动检测并修复图片，也可提供手动蒙版 |
 | `MiganInpainter.InpaintAsync`（可选） | 按二值蒙版修复指定区域 |
 | `OcrProcessor.RecognizeAsync`（可选） | 本地中英文印刷体识别，返回文字及四角坐标；[接入示例](src/MS.Microservice.Media.Inference/README.md#图片文字识别) |
+| `Swin2SrUpscaler.UpscaleAsync`（可选） | 本地 2 倍超分辨率，输出透明 PNG；[接入示例](src/MS.Microservice.Media.Inference/README.md#2-倍图片增强) |
 | `VideoWatermarkRemover.RemoveAsync`（可选） | 手动蒙版／矩形关键帧视频修复，生成 FFV1 MKV 及预览包 |
 | `VideoProcessor.ProbeAsync` / `ProcessAsync` | 视频信息、剪辑、画面变换、MP4／MKV／WebM 转码 |
 | `AddTextWatermarkAsync` / `AddLogoWatermarkAsync` | 视频水印及显示时间范围 |
