@@ -114,8 +114,19 @@ public sealed class ImageWatermarker
             run.Positions[index] = shaped.Points[index];
         }
 
+        // Blob bounds include conservative typeface extents; size the stamp from the shaped glyphs instead.
+        var glyphBounds = new SKRect[shaped.Codepoints.Length];
+        font.GetGlyphWidths(run.Glyphs, Span<float>.Empty, glyphBounds);
+        var bounds = SKRect.Empty;
+        for (var index = 0; index < glyphBounds.Length; index++)
+        {
+            var glyph = glyphBounds[index];
+            if (glyph.IsEmpty) continue;
+            glyph.Offset(shaped.Points[index]);
+            bounds = bounds.IsEmpty ? glyph : SKRect.Union(bounds, glyph);
+        }
+        if (bounds.IsEmpty) throw new ArgumentException("Text has no drawable glyphs.", nameof(text));
         using var blob = builder.Build() ?? throw new ArgumentException("Text has no drawable glyphs.", nameof(text));
-        var bounds = blob.Bounds;
         var width = BoundedDimension(bounds.Width + 4, limits);
         var height = BoundedDimension(bounds.Height + 4, limits);
         var stamp = ImageCodec.CreateBitmap(width, height, limits);
