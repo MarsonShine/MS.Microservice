@@ -61,7 +61,7 @@ internal static class MediaToolParameters
 {
     internal static readonly ImageLimits Limits = new()
     {
-        MaximumDimension = 4096, MaximumPixels = 4_000_000,
+        MaximumDimension = 4096, MaximumPixels = 400_000_000,
         MaximumEncodedBytes = ToolDemoFiles.MaximumFileBytes
     };
 

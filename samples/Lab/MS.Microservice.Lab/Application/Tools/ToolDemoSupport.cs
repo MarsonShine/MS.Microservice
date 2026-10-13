@@ -9,7 +9,6 @@ using MS.Microservice.Media.Video;
 
 namespace MS.Microservice.Lab.Application.Tools;
 
-[Authorize]
 [ApiController]
 [ServiceFilter(typeof(ToolDemoExceptionFilter))]
 [RequestSizeLimit(ToolDemoFiles.MaximumRequestBytes)]

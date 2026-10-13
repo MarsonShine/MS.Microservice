@@ -7,7 +7,7 @@ using MS.Microservice.Media.Images;
 
 namespace MS.Microservice.Lab.Controller;
 
-[LabOnly, Authorize, ApiController]
+[LabOnly, ApiController]
 [Route("api/lab/tools/images")]
 [RequestSizeLimit(ToolDemoFiles.MaximumRequestBytes)]
 [RequestFormLimits(MultipartBodyLengthLimit = ToolDemoFiles.MaximumRequestBytes)]
