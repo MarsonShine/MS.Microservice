@@ -129,9 +129,9 @@ public sealed class MediaToolsApiTests
     [Theory]
     [InlineData("1")]
     [InlineData("512")]
-    public async Task ValidFontBoundsProceedToExplicitHostDependencyCheck(string size)
+    public async Task ValidFontBoundsStillRejectExplicitMissingFont(string size)
     {
-        using var host = new ToolDemoTestHost(new Dictionary<string, string?> { ["ToolDemos:FontFilePath"] = "" });
+        using var host = new ToolDemoTestHost(new Dictionary<string, string?> { ["ToolDemos:FontFilePath"] = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".ttf") });
         using var form = new MultipartFormDataContent();
         form.Add(Png(8, 8, canvas => canvas.Clear(SKColors.Red)), "File", "source.png");
         Add(form, "FontSize", size, "Text", "A");
@@ -152,6 +152,28 @@ public sealed class MediaToolsApiTests
         using var response = await host.Client.PostAsync("/api/lab/tools/images/process", form);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task TextWatermarkUsesSystemFontWithoutAConfiguredPath(string? fontPath)
+    {
+        using var host = new ToolDemoTestHost(new Dictionary<string, string?> { ["ToolDemos:FontFilePath"] = fontPath });
+        using var form = new MultipartFormDataContent();
+        form.Add(Png(256, 96, canvas => canvas.Clear(SKColors.Black)), "File", "source.png");
+        Add(form, "Text", OperatingSystem.IsWindows() ? "演示水印" : "Demo", "FontSize", "16", "Opacity", "1", "Anchor", "0", "MarginX", "2", "MarginY", "2");
+
+        using var response = await host.Client.PostAsync("/api/lab/tools/images/watermarks/text", form);
+
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        using var result = SKBitmap.Decode(await response.Content.ReadAsByteArrayAsync());
+        Assert.NotNull(result);
+        Assert.Equal(256, result.Width);
+        Assert.Equal(96, result.Height);
+        Assert.Contains(result.Pixels, color => color.Red > 128 && color.Green > 128 && color.Blue > 128);
+        Assert.Equal(SKColors.Black, result.GetPixel(255, 95));
     }
 
     private static ByteArrayContent Png(int width, int height, Action<SKCanvas> draw)

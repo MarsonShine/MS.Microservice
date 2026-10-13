@@ -94,7 +94,10 @@ public sealed class VideoToolsApiTests
     [MediaDemoFfmpegFact]
     public async Task TextWatermarkAppearsInsideItsConfiguredVideoTimeWindow()
     {
-        using var host = new ToolDemoTestHost(new Dictionary<string, string?> { ["ToolDemos:FontFilePath"] = FontPath() });
+        using var host = new ToolDemoTestHost(new Dictionary<string, string?>
+        {
+            ["ToolDemos:FfmpegExecutablePath"] = "", ["ToolDemos:FfprobeExecutablePath"] = "   "
+        });
         var source = await SourceAsync(host.Root);
         using var form = VideoForm(source);
         Add(form, "Text", "DEMO", "FontSize", "16", "Anchor", "4", "MarginX", "2", "MarginY", "2", "Opacity", "1", "StartSeconds", "0.5", "EndSeconds", "1.5");

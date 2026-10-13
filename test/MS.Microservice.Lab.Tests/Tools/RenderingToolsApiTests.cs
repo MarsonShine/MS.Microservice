@@ -13,7 +13,7 @@ public sealed class RenderingToolsApiTests
     [LabHtmlRenderingFact]
     public async Task Rendering_InstalledBrowserProducesTwoPageChinesePdf()
     {
-        var configuration = new Dictionary<string, string?>();
+        var configuration = new Dictionary<string, string?> { ["ToolDemos:HtmlBrowserChannel"] = "   " };
         if (Environment.GetEnvironmentVariable("HTML_RENDERING_BROWSER_PATH") is { Length: > 0 } browser)
             configuration["ToolDemos:HtmlExecutablePath"] = browser;
         using var host = new ToolDemoTestHost(configuration);

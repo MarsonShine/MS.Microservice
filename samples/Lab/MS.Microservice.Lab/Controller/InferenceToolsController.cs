@@ -184,7 +184,7 @@ public sealed class InferenceToolsController(ToolDemoFiles files, ToolInferenceR
             var options = new VideoWatermarkRemovalOptions
             {
                 PythonExecutablePath = runtime.RequiredFile("PythonExecutablePath"), MiganModelPath = runtime.RequiredFile("MiganModelPath"),
-                FfmpegExecutablePath = configuration["ToolDemos:FfmpegExecutablePath"] ?? "ffmpeg", CpuThreads = Math.Min(2, Environment.ProcessorCount),
+                FfmpegExecutablePath = ToolDemoDefaults.Value(configuration, "FfmpegExecutablePath") ?? "ffmpeg", CpuThreads = Math.Min(2, Environment.ProcessorCount),
                 Limits = new() { MaximumInputBytes = ToolDemoFiles.MaximumFileBytes, MaximumOutputBytes = ToolDemoFiles.MaximumOutputBytes,
                     MaximumFrames = 120, MaximumDurationSeconds = 20, MaximumFramePixels = 1_000_000, MaximumTotalPixels = 40_000_000 },
                 Detector = form.Mask is null ? new() { ModelPath = runtime.RequiredFile("WatermarkDetectorModelPath") } : null

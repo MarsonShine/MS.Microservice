@@ -17,8 +17,8 @@ public sealed class VideoToolsController(ToolDemoFiles files, IConfiguration con
     private static readonly string[] InputExtensions = [".mp4", ".mkv", ".webm"];
     private readonly VideoProcessor _processor = new(new()
     {
-        FfmpegPath = configuration["ToolDemos:FfmpegExecutablePath"] ?? "ffmpeg",
-        FfprobePath = configuration["ToolDemos:FfprobeExecutablePath"] ?? "ffprobe",
+        FfmpegPath = ToolDemoDefaults.Value(configuration, "FfmpegExecutablePath") ?? "ffmpeg",
+        FfprobePath = ToolDemoDefaults.Value(configuration, "FfprobeExecutablePath") ?? "ffprobe",
         Timeout = TimeSpan.FromMinutes(2)
     });
 
@@ -125,7 +125,7 @@ public sealed class VideoToolsController(ToolDemoFiles files, IConfiguration con
     }
 
     /// <summary>在视频指定时间范围添加文字水印。</summary>
-    /// <remarks>需ffmpeg/ffprobe及ToolDemos:FontFilePath字体文件。支持位置、透明度、旋转和平铺；不指定结束时间则显示至结尾。输入画面最多400万像素，编码使用CRF23/Fast，结果最多64MiB，每次原生命令最多2分钟。</remarks>
+    /// <remarks>需已安装ffmpeg/ffprobe，默认从PATH查找；文字使用系统字体，Windows优先微软雅黑，可用ToolDemos:FontFilePath覆盖。支持位置、透明度、旋转和平铺；不指定结束时间则显示至结尾。输入画面最多400万像素，编码使用CRF23/Fast，结果最多64MiB，每次原生命令最多2分钟。</remarks>
     [HttpPost("watermarks/text"), Consumes("multipart/form-data")]
     [Produces("video/mp4", "video/x-matroska", "video/webm")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]

@@ -69,15 +69,17 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 
 | 功能 | 必要配置／环境 |
 | --- | --- |
-| 图片文字水印、视频文字水印 | `FontFilePath` 指向包含目标字形的字体文件 |
+| 图片文字水印、视频文字水印 | 无需填写字体路径；Windows优先微软雅黑，其次黑体／宋体，否则使用平台默认字体。`FontFilePath` 可覆盖默认字体，字体须包含目标字形 |
 | 视频基础处理 | `FfmpegExecutablePath`／`FfprobeExecutablePath`，默认使用 PATH 中的 `ffmpeg`／`ffprobe` |
 | OCR、表格 | `PythonExecutablePath`、`OcrModelDirectory`；[OCR 依赖与模型清单](../../../MS.Microservice.Media/src/MS.Microservice.Media.Inference/README.md#图片文字识别) |
 | 图片自动去水印 | Python、`MiganModelPath`、`WatermarkDetectorModelPath` 及检测依赖；手动图片修复只需 MI-GAN |
 | 视频去水印／修复 | Python、FFmpeg、MI-GAN 和视频依赖；自动模式另需水印检测模型 |
 | 抠图、两倍增强 | `BackgroundRemovalModelPath`／`SuperResolutionModelPath`；使用 .NET 推理，无需 Python |
 | HTML → PDF | Windows，已安装 Edge／Chrome；`HtmlBrowserChannel` 默认 `MicrosoftEdge`，也可指定 `HtmlExecutablePath` |
-| DOCX → PDF | Windows，`LibreOfficeExecutablePath` 指向完整 LibreOffice 的 `program/soffice.com` |
+| DOCX → PDF | Windows，安装完整 LibreOffice 后自动查找 PATH、Program Files；非标准位置填写 `LibreOfficeExecutablePath`，指向 `program/soffice.com` |
 | SMTP、短信、S3 | 分别配置 `Smtp`、`Sms`、`S3` 子节并显式设置 `Enabled=true`；密钥不作为 API 参数传入 |
+
+上述具备默认值或可自动查找的配置，留空即可使用默认行为。显式填写的无效路径仍会报错；系统字体缺少所需字形时，请安装相应字体或设置 `FontFilePath`。
 
 缺少配置的功能返回 `503` 和对应配置键，其他工具仍可使用。PDF PNG 渲染依赖部署包内的 PDFium 原生库；部分音频编解码依赖 Windows 或原生 LAME。完整组件限制见 [Audio](../../../src/MS.Microservice.Audio/README.md)、[Documents／Rendering](../../../src/MS.Microservice.Documents.Rendering/README.md) 和 [Inference](../../../MS.Microservice.Media/src/MS.Microservice.Media.Inference/README.md)。
 

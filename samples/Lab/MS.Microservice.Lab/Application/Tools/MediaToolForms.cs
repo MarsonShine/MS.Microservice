@@ -31,7 +31,7 @@ public class WatermarkDemoForm
 
 public class TextWatermarkDemoForm : WatermarkDemoForm
 {
-    /// <summary>单行水印文字，最多4096个UTF-16字符；宿主字体必须包含对应字形。</summary>
+    /// <summary>单行水印文字，最多4096个UTF-16字符；默认使用系统字体，字体须包含对应字形。</summary>
     [Required, StringLength(4096)] public string Text { get; set; } = "演示水印";
     /// <summary>字号，单位为像素。</summary>
     [Range(1d, 512d)] public float FontSize { get; set; } = 32;
@@ -40,9 +40,7 @@ public class TextWatermarkDemoForm : WatermarkDemoForm
 
     internal TextWatermark Watermark(IConfiguration configuration)
     {
-        var font = configuration["ToolDemos:FontFilePath"];
-        if (string.IsNullOrWhiteSpace(font) || !System.IO.File.Exists(font))
-            throw new ToolDependencyException("ToolDemos:FontFilePath");
+        var font = ToolDemoDefaults.FontFile(configuration);
         return new(Text) { FontFile = font, FontSize = FontSize, Color = MediaToolParameters.Color(Color) };
     }
 }

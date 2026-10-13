@@ -215,7 +215,7 @@ internal sealed class DemoFileStore
 
     internal DemoFileStore(IWebHostEnvironment environment, IConfiguration configuration)
     {
-        var configured = configuration["ToolDemos:StorageDirectory"] ?? ".tools/tool-demo-files";
+        var configured = ToolDemoDefaults.Value(configuration, "StorageDirectory") ?? ".tools/tool-demo-files";
         Root = Path.GetFullPath(Path.Combine(environment.ContentRootPath, configured));
         var webRoot = Path.GetFullPath(environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"));
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;

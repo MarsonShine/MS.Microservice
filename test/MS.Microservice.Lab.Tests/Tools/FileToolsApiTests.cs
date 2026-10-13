@@ -13,9 +13,10 @@ public sealed class FileToolsApiTests
     [Fact]
     public async Task FilesSupportUploadMetadataHashDuplicatesDownloadAndDelete()
     {
-        using var host = new ToolDemoTestHost();
+        using var host = new ToolDemoTestHost(new Dictionary<string, string?> { ["ToolDemos:StorageDirectory"] = "   " });
         var bytes = "alpha\n"u8.ToArray();
         var first = await Upload(host, "first.txt", bytes);
+        Assert.True(Directory.Exists(Path.Combine(host.Root, ".tools", "tool-demo-files")));
         var second = await Upload(host, "second.txt", bytes);
         var different = await Upload(host, "different.txt", "omega\n"u8.ToArray());
         using var metadataResponse = await host.Client.GetAsync("/api/lab/tools/files/" + first.Key);

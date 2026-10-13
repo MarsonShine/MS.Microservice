@@ -19,12 +19,12 @@ public sealed class RenderingToolsController(ToolDemoFiles files, IConfiguration
     {
         const string key = "ToolDemos:HtmlExecutablePath / ToolDemos:HtmlBrowserChannel";
         if (!OperatingSystem.IsWindows()) throw new ToolDependencyException(key);
-        var executable = configuration["ToolDemos:HtmlExecutablePath"];
+        var executable = ToolDemoDefaults.Value(configuration, "HtmlExecutablePath");
         HtmlBrowserChannel? channel = null;
         if (string.IsNullOrWhiteSpace(executable))
         {
             executable = null;
-            if (!Enum.TryParse<HtmlBrowserChannel>(configuration["ToolDemos:HtmlBrowserChannel"] ?? "MicrosoftEdge", ignoreCase: true, out var selected)
+            if (!Enum.TryParse<HtmlBrowserChannel>(ToolDemoDefaults.Value(configuration, "HtmlBrowserChannel") ?? "MicrosoftEdge", ignoreCase: true, out var selected)
                 || !Enum.IsDefined(selected)) throw new ToolDependencyException("ToolDemos:HtmlBrowserChannel");
             channel = selected;
         }
@@ -43,16 +43,15 @@ public sealed class RenderingToolsController(ToolDemoFiles files, IConfiguration
     }
 
     /// <summary>将可信普通 DOCX 转换为可下载 PDF。</summary>
-    /// <remarks>可先通过 documents/word/template-sample 和 word/fill 准备 DOCX。仅 Windows：宿主须配置 ToolDemos:LibreOfficeExecutablePath 为完整 LibreOffice 的绝对 program/soffice.com 路径，并部署 Rendering worker。仅接受可信文档，拒绝宏、外链、VML／矢量图片、嵌入对象及未知动态字段；这不是不可信 Office 文件的沙箱。</remarks>
+    /// <remarks>可先通过 documents/word/template-sample 和 word/fill 准备 DOCX。仅 Windows：自动从PATH及Program Files查找已安装的LibreOffice；非标准位置可配置ToolDemos:LibreOfficeExecutablePath为绝对program/soffice.com路径，仍需部署Rendering worker。仅接受可信文档，拒绝宏、外链、VML／矢量图片、嵌入对象及未知动态字段；这不是不可信Office文件的沙箱。</remarks>
     [HttpPost("docx-pdf"), Consumes("multipart/form-data"), Produces("application/pdf")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status503ServiceUnavailable, "application/problem+json")]
     public async Task<IActionResult> WordToPdf([FromForm] WordPdfDemoForm form)
     {
         const string key = "ToolDemos:LibreOfficeExecutablePath";
-        var executable = configuration[key];
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(executable)
-            || !Path.IsPathFullyQualified(executable) || !System.IO.File.Exists(executable)) throw new ToolDependencyException(key);
+        if (!OperatingSystem.IsWindows()) throw new ToolDependencyException(key);
+        var executable = ToolDemoDefaults.LibreOfficeExecutable(configuration);
         using var input = new MemoryStream(await Files.ReadAsync(form.File, Token), writable: false);
         using var output = new MemoryStream();
         var converter = new WordPdfConverter(new() { LibreOfficeExecutablePath = executable });

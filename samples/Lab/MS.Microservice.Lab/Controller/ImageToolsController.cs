@@ -29,7 +29,7 @@ public sealed class ImageToolsController(ToolDemoFiles files, IConfiguration con
     }
 
     /// <summary>为图片添加文字水印。</summary>
-    /// <remarks>支持九宫格锚点、透明度、旋转与平铺。宿主必须配置ToolDemos:FontFilePath，字体需覆盖所用文字；请求不能指定本地字体路径。</remarks>
+    /// <remarks>支持九宫格锚点、透明度、旋转与平铺。默认使用系统字体，Windows优先微软雅黑；可用ToolDemos:FontFilePath覆盖，字体须包含所用文字。请求无需提供字体路径。</remarks>
     [HttpPost("watermarks/text"), Consumes("multipart/form-data")]
     [Produces("image/png", "image/jpeg", "image/webp")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
