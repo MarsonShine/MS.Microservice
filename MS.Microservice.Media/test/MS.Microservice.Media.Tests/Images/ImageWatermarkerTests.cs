@@ -197,6 +197,54 @@ public sealed class ImageWatermarkerTests
         Assert.True(output.CanWrite);
     }
 
+    [Theory]
+    [InlineData("DEMO", "arial.ttf", 16f)]
+    [InlineData("水印中文", "msyh.ttc", 24f)]
+    [InlineData("لا", "arial.ttf", 24f)]
+    [InlineData("A\u0301gj", "arial.ttf", 24f)]
+    public async Task Text_VisibleGlyphsFitSmallCanvasWithoutLosingTheirPixels(string value, string fontFile, float size)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), fontFile);
+        Assert.True(File.Exists(path), path);
+        var text = new TextWatermark(value) { FontFile = path, FontSize = size, Color = new(255, 0, 0) };
+        var placement = new WatermarkPlacement { Anchor = WatermarkAnchor.TopLeft, MarginX = 2, MarginY = 2, Opacity = 1 };
+        using var referenceOutput = new MemoryStream();
+        await _watermarker.RenderTextOverlayAsync(512, 160, referenceOutput, text, placement);
+        using var reference = SKBitmap.Decode(referenceOutput.ToArray());
+        var expectedInk = InkBounds(reference);
+        using var smallOutput = new MemoryStream();
+        // Per side: 2px margin, 2px antialias padding, and 1px metric/raster rounding allowance.
+        await _watermarker.RenderTextOverlayAsync(expectedInk.Width + 10, expectedInk.Height + 10, smallOutput, text, placement);
+        using var small = SKBitmap.Decode(smallOutput.ToArray());
+        var actualInk = InkBounds(small);
+        Assert.Equal(expectedInk.Size, actualInk.Size);
+        using var expectedPixels = new SKBitmap();
+        using var actualPixels = new SKBitmap();
+        Assert.True(reference.ExtractSubset(expectedPixels, expectedInk));
+        Assert.True(small.ExtractSubset(actualPixels, actualInk));
+        Assert.Equal(Pixels(expectedPixels), Pixels(actualPixels));
+    }
+
+    [Fact]
+    public async Task Text_CanvasNarrowerThanVisibleGlyphsIsStillRejectedWithoutWriting()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
+        Assert.True(File.Exists(path), path);
+        var text = new TextWatermark("DEMO") { FontFile = path, FontSize = 16 };
+        using var referenceOutput = new MemoryStream();
+        await _watermarker.RenderTextOverlayAsync(512, 160, referenceOutput, text,
+            new() { Anchor = WatermarkAnchor.TopLeft, MarginX = 0, MarginY = 0, Opacity = 1 });
+        using var reference = SKBitmap.Decode(referenceOutput.ToArray());
+        var ink = InkBounds(reference);
+        using var rejected = new MemoryStream();
+        await Assert.ThrowsAsync<ArgumentException>(() => _watermarker.RenderTextOverlayAsync(ink.Width - 1, ink.Height + 8, rejected,
+            text, new() { Anchor = WatermarkAnchor.TopLeft, MarginX = 0, MarginY = 0, Opacity = 1 }));
+        Assert.Empty(rejected.ToArray());
+        Assert.True(rejected.CanWrite);
+    }
+
     [Fact]
     public async Task Text_ExplicitChineseFontAndHarfBuzzArabicShapingWorkOnWindows()
     {
@@ -403,6 +451,25 @@ public sealed class ImageWatermarkerTests
 
     private static SKColor[] Pixels(SKBitmap bitmap) => Enumerable.Range(0, bitmap.Height)
         .SelectMany(y => Enumerable.Range(0, bitmap.Width).Select(x => bitmap.GetPixel(x, y))).ToArray();
+
+    private static SKRectI InkBounds(SKBitmap bitmap)
+    {
+        var left = bitmap.Width;
+        var top = bitmap.Height;
+        var right = -1;
+        var bottom = -1;
+        for (var y = 0; y < bitmap.Height; y++)
+        for (var x = 0; x < bitmap.Width; x++)
+        {
+            if (bitmap.GetPixel(x, y).Alpha == 0) continue;
+            left = Math.Min(left, x);
+            top = Math.Min(top, y);
+            right = Math.Max(right, x);
+            bottom = Math.Max(bottom, y);
+        }
+        Assert.True(right >= left && bottom >= top, "Expected visible glyph pixels on the reference overlay.");
+        return new(left, top, right + 1, bottom + 1);
+    }
 
     private sealed class CancellingReadStream(byte[] bytes, CancellationTokenSource cancellation) : MemoryStream(bytes)
     {

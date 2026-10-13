@@ -33,6 +33,13 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../../MS.Microservice.Media/src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Media/src/MS.Microservice.Media.Inference/MS.Microservice.Media.Inference.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Notifications/MS.Microservice.Notifications.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />

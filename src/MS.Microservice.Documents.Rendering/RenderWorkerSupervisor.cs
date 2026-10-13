@@ -25,10 +25,11 @@ internal static class RenderWorkerSupervisor
         if (!RuntimeFeature.IsDynamicCodeSupported || string.IsNullOrEmpty(assembly)
             || !File.Exists(Path.ChangeExtension(assembly, ".runtimeconfig.json")) || !File.Exists(Path.ChangeExtension(assembly, ".deps.json")))
             throw new NotSupportedException("Deploy the Rendering assembly with its runtimeconfig/deps and Playwright driver files; AOT, trimming and single-file deployments are unsupported.");
+        var host = ResolveHostMetadata(AppContext.GetData("APP_CONTEXT_DEPS_FILES") as string);
         var job = Path.Combine(temporaryDirectory, (mode == "--html-worker" ? "ms-html-" : "ms-word-") + Guid.NewGuid().ToString("N"));
         using var timeout = new CancellationTokenSource(processingTimeout);
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-        using var process = new Process { StartInfo = StartInfo(dotnetHost, assembly, job, mode) };
+        using var process = new Process { StartInfo = StartInfo(dotnetHost, assembly, job, mode, host.RuntimeConfig, host.Dependencies) };
         var diagnostics = new StringBuilder();
         var cleanupErrors = new List<Exception>();
         WindowsProcessJob? processJob = null;
@@ -105,15 +106,30 @@ internal static class RenderWorkerSupervisor
         return (wire[4..], pages);
     }
 
-    private static ProcessStartInfo StartInfo(string dotnetHost, string assembly, string job, string mode)
+    internal static (string RuntimeConfig, string Dependencies) ResolveHostMetadata(string? dependencyFiles)
+    {
+        // The runtime exposes application deps first, followed by shared-framework deps.
+        var dependencies = dependencyFiles?.Split(';', 2)[0];
+        const string suffix = ".deps.json";
+        if (string.IsNullOrEmpty(dependencies) || !Path.IsPathFullyQualified(dependencies)
+            || !dependencies.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            throw new NotSupportedException("Rendering requires a standard consumer deployment with application dependency metadata.");
+        var runtimeConfig = dependencies[..^suffix.Length] + ".runtimeconfig.json";
+        if (!File.Exists(dependencies) || !File.Exists(runtimeConfig))
+            throw new NotSupportedException("Deploy the consumer's .deps.json and matching .runtimeconfig.json beside its application files.");
+        return (runtimeConfig, dependencies);
+    }
+
+    private static ProcessStartInfo StartInfo(string dotnetHost, string assembly, string job, string mode, string runtimeConfig, string dependencies)
     {
         var info = new ProcessStartInfo(dotnetHost)
         {
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
             RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = job
         };
-        foreach (var argument in new[] { "exec", "--runtimeconfig", Path.ChangeExtension(assembly, ".runtimeconfig.json"),
-            "--depsfile", Path.ChangeExtension(assembly, ".deps.json"), assembly, mode }) info.ArgumentList.Add(argument);
+        // Reuse the consumer's resolved package versions and frameworks, while executing only Rendering.Main.
+        foreach (var argument in new[] { "exec", "--runtimeconfig", runtimeConfig,
+            "--depsfile", dependencies, assembly, mode }) info.ArgumentList.Add(argument);
         foreach (var key in new[] { "TEMP", "TMP", "TMPDIR" }) info.Environment[key] = job;
         foreach (var key in new[] { "PLAYWRIGHT_DRIVER_SEARCH_PATH", "PLAYWRIGHT_NODEJS_PATH", "PWDEBUG", "NODE_OPTIONS", "DEBUG" }) info.Environment.Remove(key);
         return info;
