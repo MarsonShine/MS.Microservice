@@ -2,7 +2,7 @@
 
 `MS.Microservice.Documents.Rendering` 用已安装的 Edge／Chrome 排版静态 HTML，用已安装的 LibreOffice 将 DOCX 转为 PDF。它是独立的可选组件，普通 [Documents](../MS.Microservice.Documents/README.md) 使用者无需携带浏览器驱动；[源码与包接入方式](../../docs/components/consumption.md)。
 
-当前只支持 Windows，需要可用的 `dotnet` 主机，以及对应功能的排版引擎。组件不会下载或安装浏览器、LibreOffice，不使用用户登录或 Office 配置。HTML 转换要求浏览器沙箱可用。Playwright 依赖包约 203.6 MiB，本机 Windows 驱动复制约 102.2 MiB；发布时须保留驱动目录及 worker 文件。
+当前只支持 Windows，需要可用的 `dotnet` 主机，以及对应功能的排版引擎。组件不会下载或安装浏览器、LibreOffice，不使用用户登录或 Office 配置。HTML 转换要求浏览器沙箱可用，宿主运行身份及额外进程沙箱策略须允许浏览器创建上下文和页面。Playwright 依赖包约 203.6 MiB，本机 Windows 驱动复制约 102.2 MiB；发布时须保留驱动目录及 worker 文件。
 
 ## HTML 转 PDF
 
@@ -90,4 +90,4 @@ var result = await converter.ConvertAsync(input, output, cancellationToken: canc
 - 成功前会完成 PDF 验证和自有资源清理。验证失败时不写目标；最终复制失败或取消仍可能留下部分 PDF。清理失败会保留主异常及残留目录位置。
 - worker 期限之后，进程树退出和临时目录清理另有最多 **10 秒**预算；输入读取及最终目标复制遵从调用方取消令牌，其 I/O 时长由流决定。整个调用不承诺固定总时长。
 - 编码、展开、像素和时间预算不是原生进程的内存或磁盘硬配额，应由宿主限制并发及系统资源。
-- 不支持 Linux／macOS、单文件、裁剪或 Native AOT 部署。正常项目引用、NuGet 和目录发布会复制 worker 元数据及 `.playwright`；不要只分发一个 DLL。
+- 不支持 Linux／macOS、单文件、裁剪或 Native AOT 部署。正常项目引用、NuGet 和目录发布会复制 worker 元数据及 `.playwright`；宿主自身的同名 `.deps.json`／`.runtimeconfig.json` 也须保留，以便 worker 使用宿主已解析的依赖和共享框架。不要只分发一个 DLL。
