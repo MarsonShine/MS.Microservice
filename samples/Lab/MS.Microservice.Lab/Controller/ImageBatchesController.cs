@@ -11,11 +11,17 @@ namespace MS.Microservice.Lab.Controller;
 
 public sealed class ImageBatchForm
 {
+    /// <summary>待处理的 PNG、JPEG 或 WebP 图片，默认每批最多 8 份、合计 20 MiB。</summary>
     public List<IFormFile> Files { get; set; } = [];
+    /// <summary>目标宽度，须与 Height 同时填写；不填则保留尺寸。</summary>
     public int? Width { get; set; }
+    /// <summary>目标高度，须与 Width 同时填写。</summary>
     public int? Height { get; set; }
+    /// <summary>输出格式：0 PNG、1 JPEG、2 WebP，默认 PNG。</summary>
     public ImageOutputFormat Format { get; set; } = ImageOutputFormat.Png;
+    /// <summary>缩放模式：0 Contain、1 Cover、2 Stretch，默认等比例适配。</summary>
     public ImageResizeMode ResizeMode { get; set; } = ImageResizeMode.Contain;
+    /// <summary>编码质量 0–100，默认 90；PNG 不使用此值控制文件大小。</summary>
     public int Quality { get; set; } = 90;
 }
 
@@ -29,7 +35,10 @@ public sealed class ImageBatchesController(ImageBatchJobs jobs, FileUploadValida
 {
     private string? Owner => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    [HttpPost]
+    /// <summary>上传一批图片，后台缩放、转格式并返回任务地址。</summary>
+    /// <remarks>宿主须启用 ImageBatches:Enabled。创建后轮询 GET 状态，整个批次成功后通过 files/{index} 下载；任务元数据重启后丢失，文件保留直到删除。</remarks>
+    [HttpPost, Consumes("multipart/form-data")]
+    [ProducesResponseType<ImageBatchSnapshot>(202)]
     public async Task<IActionResult> Submit([FromForm] ImageBatchForm form)
     {
         if (!jobs.Enabled) return NotFound();
@@ -66,7 +75,10 @@ public sealed class ImageBatchesController(ImageBatchJobs jobs, FileUploadValida
         finally { await ImageBatchJobs.DisposeInputsAsync(inputs, failure); }
     }
 
+    /// <summary>查询本人的图片批次状态、进度和结果列表。</summary>
+    /// <remarks>state 为 0 准备、1 排队、2 处理中、3 成功、4 失败、5 取消。只有整个批次成功才可下载，其他用户的任务不可见。</remarks>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType<ImageBatchSnapshot>(200)]
     public IActionResult Get(Guid id)
     {
         if (!jobs.Enabled) return NotFound();
@@ -74,6 +86,8 @@ public sealed class ImageBatchesController(ImageBatchJobs jobs, FileUploadValida
         return jobs.Get(Owner, id) is { } result ? Ok(result) : NotFound();
     }
 
+    /// <summary>取消本人的图片批处理任务。</summary>
+    /// <remarks>排队任务立即取消；正在执行的步骤可能需要等待，继续查询 GET 状态确认结束。</remarks>
     [HttpPost("{id:guid}/cancel")]
     public IActionResult Cancel(Guid id)
     {
@@ -82,7 +96,10 @@ public sealed class ImageBatchesController(ImageBatchJobs jobs, FileUploadValida
         return jobs.Cancel(Owner, id) is { } result ? Ok(result) : NotFound();
     }
 
+    /// <summary>从失败或取消批次保留的输入创建新任务。</summary>
+    /// <remarks>返回新的任务 Id 和状态地址，不自动重试原任务；只有输入仍保留时可重试。</remarks>
     [HttpPost("{id:guid}/retry")]
+    [ProducesResponseType<ImageBatchSnapshot>(202)]
     public async Task<IActionResult> Retry(Guid id)
     {
         if (!jobs.Enabled) return NotFound();
@@ -96,7 +113,11 @@ public sealed class ImageBatchesController(ImageBatchJobs jobs, FileUploadValida
         catch (InvalidOperationException) { return Conflict("只能重试失败或取消且仍保留输入的任务。"); }
     }
 
+    /// <summary>下载本人成功批次中的一份图片。</summary>
+    /// <remarks>index 从 0 开始，对应状态返回的结果顺序；只有整个批次成功才可下载。</remarks>
     [HttpGet("{id:guid}/files/{index:int}")]
+    [Produces("image/png", "image/jpeg", "image/webp")]
+    [ProducesResponseType<FileStreamResult>(200)]
     public async Task<IActionResult> Download(Guid id, int index)
     {
         if (!jobs.Enabled) return NotFound();
@@ -105,7 +126,10 @@ public sealed class ImageBatchesController(ImageBatchJobs jobs, FileUploadValida
         return result is null ? NotFound() : File(result.Content, result.ContentType);
     }
 
+    /// <summary>删除本人已结束的图片批次和保留文件。</summary>
+    /// <remarks>进行中或正在复制以供重试的任务须先等待结束。删除后不能再下载或重试。</remarks>
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(204)]
     public IActionResult Delete(Guid id)
     {
         if (!jobs.Enabled) return NotFound();

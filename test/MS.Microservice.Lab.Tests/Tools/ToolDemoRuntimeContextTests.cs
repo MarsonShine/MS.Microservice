@@ -8,7 +8,7 @@ public sealed class ToolDemoRuntimeContextTests
     public void TestHostExposesItsConsumerDependencyAndFrameworkMetadata()
     {
         var deps = Assert.IsType<string>(AppContext.GetData("APP_CONTEXT_DEPS_FILES"));
-        var primary = deps.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)[0];
+        var primary = deps.Split(';', StringSplitOptions.RemoveEmptyEntries)[0];
         Assert.EndsWith(".deps.json", primary, StringComparison.Ordinal);
         var runtime = primary[..^".deps.json".Length] + ".runtimeconfig.json";
         Assert.True(File.Exists(primary), primary);
