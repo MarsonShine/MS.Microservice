@@ -1,6 +1,6 @@
-# 任务面板接入
+# 任务中心可视化面板
 
-`MS.Microservice.Tasks.Dashboard` 提供按 Scope 隔离的任务查询、取消／重试接口，以及 Coravel 定时计划目录。组件只依赖任务契约、ASP.NET Core 和 Coravel，不绑定 EF Core 或 Lab，不注册第二个调度器。
+`MS.Microservice.Tasks.Dashboard` 提供任务列表、状态筛选、进度、执行历史、取消／重试和 Coravel 注册计划查看。HTML、CSS、JavaScript 内嵌在组件中，引用源码或 NuGet 后即可挂载，不需要前端构建、CDN 或另一个应用服务。组件不绑定 EF Core 或 Lab，不注册第二个调度器。
 
 ```csharp
 using MS.Microservice.Tasks.Dashboard;
@@ -27,6 +27,19 @@ app.Services.UseSchedulerWithTaskDashboard(scheduler =>
 ```
 
 `ResolveScope` 必须与任务提交时使用的 Scope 一致，只从宿主认证／授权信息生成。没有 Scope 的认证用户返回 403；组件不从 URL 或请求体接受 Scope，也不返回载荷 JSON、Scope 或内部执行令牌。宿主仍负责 `IJobStore` 的注册与生命周期。
+
+打开 `/task-center/` 即可使用。Cookie 宿主沿用当前登录；JWT 宿主可设置 `AllowAnonymousShell=true`，让空页面先加载，再通过页面的“连接”输入现有 Bearer 令牌。此选项只开放页面资源，API 仍须认证。令牌不写入本地存储；断开、刷新或离开页面时清除，切换身份会清空旧任务、详情和查询输入。
+
+| 配置 | 默认行为 |
+| --- | --- |
+| `Title` | 任务中心 |
+| `AuthorizationPolicy` | 宿主默认认证策略，保护数据 API 和默认页面 |
+| `ControlAuthorizationPolicy` | 未设置时沿用基础策略；可额外限制取消／重试 |
+| `SchedulesAuthorizationPolicy` | 未设置时沿用基础策略；注册计划是宿主级目录 |
+| `ReadOnly` | `false`；设为 `true` 时隐藏并禁止控制操作 |
+| `AllowAnonymousShell` | `false`；Bearer 宿主可显式开启空页面入口 |
+
+列表默认每 5 秒刷新，页面不可见时暂停，也可手动关闭刷新。点击任务名称查看完整 ID、时间、结果引用和逐次执行历史；取消与重试会先确认。状态筛选在服务端执行，文字筛选只作用于当前列表；更早任务可按完整 ID 查看。
 
 | 接口（相对于挂载路径） | 行为 |
 | --- | --- |

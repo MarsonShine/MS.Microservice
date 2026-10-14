@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace MS.Microservice.Tasks.Dashboard;
 
 public static partial class TaskDashboardEndpoints
 {
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     /// <summary>Registers dashboard services without adding a scheduler, database provider or authentication scheme.</summary>
     public static IServiceCollection AddTaskDashboard(this IServiceCollection services, Action<TaskDashboardOptions> configure)
     {
@@ -37,6 +39,7 @@ public static partial class TaskDashboardEndpoints
             throw new ArgumentException("Use a literal path such as /task-center without a trailing slash.", nameof(path));
         var options = endpoints.ServiceProvider.GetRequiredService<TaskDashboardOptions>();
         var group = endpoints.MapGroup(path).ExcludeFromDescription();
+        MapAssets(group, options);
         var api = group.MapGroup("/api");
         Authorize(api, options.AuthorizationPolicy);
         api.AddEndpointFilter(async (context, next) =>
@@ -56,7 +59,7 @@ public static partial class TaskDashboardEndpoints
             var tokens = antiforgery.GetAndStoreTokens(context);
             var canControl = !options.ReadOnly && await Allowed(authorization, context, options.ControlAuthorizationPolicy);
             var canViewSchedules = await Allowed(authorization, context, options.SchedulesAuthorizationPolicy);
-            return Results.Ok(new { options.Title, CanControl = canControl, CanViewSchedules = canViewSchedules,
+            return Data(new { options.Title, CanControl = canControl, CanViewSchedules = canViewSchedules,
                 CsrfHeaderName = header, CsrfRequestToken = tokens.RequestToken });
         });
         api.MapGet("/jobs", async (HttpContext context, IJobStore store, JobState? state, int? take) =>
@@ -65,21 +68,21 @@ public static partial class TaskDashboardEndpoints
             if (count is < 1 or > 200 || state is { } value && !Enum.IsDefined(value))
                 return Results.BadRequest(new { detail = "take must be 1–200 and state must be a known job state." });
             var jobs = await store.ListAsync(Scope(context), state, count + 1, context.RequestAborted);
-            return Results.Ok(new { Items = jobs.Take(count).Select(DashboardJob.From), HasMore = jobs.Count > count });
+            return Data(new { Items = jobs.Take(count).Select(DashboardJob.From), HasMore = jobs.Count > count });
         });
         api.MapGet("/jobs/{jobId:guid}", async (HttpContext context, IJobStore store, Guid jobId) =>
         {
             if (jobId == Guid.Empty) return Results.NotFound();
             var job = await store.GetAsync(Scope(context), jobId, context.RequestAborted);
-            return job is null ? Results.NotFound() : Results.Ok(DashboardJob.From(job));
+            return job is null ? Results.NotFound() : Data(DashboardJob.From(job));
         });
         api.MapGet("/jobs/{jobId:guid}/attempts", async (HttpContext context, IJobStore store, Guid jobId) =>
         {
             if (jobId == Guid.Empty || await store.GetAsync(Scope(context), jobId, context.RequestAborted) is null)
                 return Results.NotFound();
-            return Results.Ok(await store.GetAttemptsAsync(Scope(context), jobId, context.RequestAborted));
+            return Data(await store.GetAttemptsAsync(Scope(context), jobId, context.RequestAborted));
         });
-        var schedules = api.MapGet("/schedules", (CoravelScheduleCatalog catalog) => Results.Ok(catalog.GetSchedules()));
+        var schedules = api.MapGet("/schedules", (CoravelScheduleCatalog catalog) => Data(catalog.GetSchedules()));
         if (options.SchedulesAuthorizationPolicy is { } schedulesPolicy)
             schedules.RequireAuthorization(schedulesPolicy);
         var controls = api.MapGroup("/jobs/{jobId:guid}");
@@ -98,6 +101,7 @@ public static partial class TaskDashboardEndpoints
         return group;
     }
 
+    private static IResult Data<T>(T value) => Results.Json(value, Json);
     private static string Scope(HttpContext context) => (string)context.Items[typeof(TaskDashboardOptions)]!;
     private static IResult Updated(JobUpdateResult result) => result switch
     {

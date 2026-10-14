@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -22,13 +23,18 @@ internal sealed class DashboardTestHost : IAsyncDisposable
     internal HttpClient Client { get; private set; } = null!;
     internal IServiceProvider Services => _app.Services;
 
-    internal static async Task<DashboardTestHost> CreateAsync(bool readOnly = false)
+    internal static async Task<DashboardTestHost> CreateAsync(bool readOnly = false, bool anonymousShell = false, string? pathBase = null)
     {
         var host = new DashboardTestHost();
         Directory.CreateDirectory(host._directory);
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        builder.Services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        });
         builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(host._directory, "keys")));
         builder.Services.AddDbContext<DashboardContext>(options => options.UseSqlite("Data Source=" + Path.Combine(host._directory, "tasks.db") + ";Pooling=false"));
         builder.Services.AddEfCoreJobStore<DashboardContext>();
@@ -38,10 +44,13 @@ internal sealed class DashboardTestHost : IAsyncDisposable
         {
             options.ResolveScope = context => context.User.FindFirstValue(ClaimTypes.NameIdentifier);
             options.ReadOnly = readOnly;
+            options.AllowAnonymousShell = anonymousShell;
             options.ControlAuthorizationPolicy = "Operators";
             options.SchedulesAuthorizationPolicy = "Operators";
         });
         host._app = builder.Build();
+        if (pathBase is not null) host._app.UsePathBase(pathBase);
+        host._app.UseRouting();
         host._app.UseAuthentication();
         host._app.UseAuthorization();
         host._app.MapTaskDashboard();

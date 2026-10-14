@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><IsPackable>true</IsPackable><PackageReadmeFile>README.md</PackageReadmeFile></PropertyGroup>
+  <PropertyGroup><IsPackable>true</IsPackable><PackageReadmeFile>README.md</PackageReadmeFile><GenerateDocumentationFile>true</GenerateDocumentationFile></PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />

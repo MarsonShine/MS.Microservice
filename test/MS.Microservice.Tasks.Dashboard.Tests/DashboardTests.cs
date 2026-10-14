@@ -13,6 +13,34 @@ namespace MS.Microservice.Tasks.Dashboard.Tests;
 public sealed class DashboardTests
 {
     [Fact]
+    public async Task EmbeddedShellHonorsAuthenticationAndWorksUnderPathBase()
+    {
+        await using (var secure = await DashboardTestHost.CreateAsync())
+        {
+            using var page = await secure.Client.GetAsync("/task-center/");
+            Assert.Equal(HttpStatusCode.Unauthorized, page.StatusCode);
+        }
+        await using var host = await DashboardTestHost.CreateAsync(anonymousShell: true, pathBase: "/ops");
+        using var redirect = await host.Client.GetAsync("/ops/task-center");
+        Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
+        Assert.Equal("/ops/task-center/", redirect.Headers.Location!.OriginalString);
+        using var html = await host.Client.GetAsync("/ops/task-center/");
+        html.EnsureSuccessStatusCode();
+        Assert.Contains("./dashboard.js", await html.Content.ReadAsStringAsync());
+        Assert.Equal("text/html", html.Content.Headers.ContentType!.MediaType);
+        Assert.Contains("script-src 'self'", Assert.Single(html.Headers.GetValues("Content-Security-Policy")));
+        Assert.DoesNotContain("unsafe-inline", Assert.Single(html.Headers.GetValues("Content-Security-Policy")));
+        foreach (var asset in new[] { "dashboard.js", "dashboard.css" })
+        {
+            using var resource = await host.Client.GetAsync("/ops/task-center/" + asset);
+            resource.EnsureSuccessStatusCode();
+            Assert.True(resource.Content.Headers.ContentLength > 100);
+        }
+        using var data = await host.Client.GetAsync("/ops/task-center/api/jobs");
+        Assert.Equal(HttpStatusCode.Unauthorized, data.StatusCode);
+    }
+
+    [Fact]
     public async Task ReadsAreAuthorizedScopedAndProjectOnlyPublicStatus()
     {
         await using var host = await DashboardTestHost.CreateAsync();
