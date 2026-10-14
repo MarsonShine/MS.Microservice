@@ -1,6 +1,6 @@
 # 任务契约
 
-`MS.Microservice.Tasks` 定义可持久保存的任务提交、状态、进度、取消和执行记录。业务代码可以依赖本包；EF Core 存储见 [Tasks.EFCore](../MS.Microservice.Tasks.EFCore/README.md)。本包不启动后台执行器，也不依赖 Coravel、数据库或业务模型。
+`MS.Microservice.Tasks` 定义可持久保存的任务提交、状态、进度、取消和执行记录，并提供单实例执行器。业务代码可以依赖本包；EF Core 存储见 [Tasks.EFCore](../MS.Microservice.Tasks.EFCore/README.md)，后台调度接入见 [Tasks.Coravel](../MS.Microservice.Tasks.Coravel/README.md)。核心依赖通用 DI 和日志接口，不依赖 Coravel、数据库或业务模型。
 
 ```csharp
 using MS.Microservice.Tasks;
@@ -38,8 +38,10 @@ JobSnapshot? current = await jobs.GetAsync(request.Scope, created.JobId, cancell
 | `Cancelled` | 排队时取消，或运行中的取消请求已在结束时生效 |
 | `Interrupted` | 执行中断，例如宿主停止；由执行方明确记录 |
 
-`CancelAsync` 对运行中的任务只记录取消请求，不会强制终止线程或进程。`RetryAsync` 只接受失败、中断或取消的任务，保留 `JobId` 和历史；用完执行次数后拒绝重试。没有自动重试或重启恢复流程，外部调用产生的副作用也不承诺只执行一次。
+`CancelAsync` 对运行中的任务只记录取消请求，不会强制终止线程或进程。`RetryAsync` 只接受失败、中断或取消的任务，保留 `JobId` 和历史；用完执行次数后拒绝重试。启用执行器后，普通失败和超时仍等待显式重试；只有注册为 `SafeToRetry` 的处理器允许中断后自动重新排队。外部调用产生的副作用不承诺只执行一次。
 
 `TryStartAsync` 返回当前执行的 `JobAttemptToken`；进度和结束更新必须携带它。进度为 0～100 的整数，同一次执行只能增加。执行入口和跨 Scope 的 `GetDueAsync` 应仅供可信后台代码调用；对外接口应从认证身份取得 Scope，再调用按 Scope 查询或控制的方法。
 
-存储模型、原子状态转换和事务边界见 [持久化设计](../MS.Microservice.Tasks.EFCore/docs/persistence-design.md)。
+宿主注册 `IJobHandler<TPayload>`，按明确名称和版本匹配任务；参数可使用普通 DTO 或 JsonElement。每次执行创建独立 DI scope，按 Queue 限制并发，观察持久取消请求并传递 CancellationToken。处理器必须配合取消，且在返回前等待自己启动的子任务结束；执行器不会提前释放仍在工作的资源槽。
+
+存储模型、原子状态转换和事务边界见 [持久化设计](../MS.Microservice.Tasks.EFCore/docs/persistence-design.md)，处理器执行及恢复见 [执行设计](docs/execution-design.md)。

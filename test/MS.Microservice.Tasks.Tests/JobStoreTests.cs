@@ -116,6 +116,8 @@ public sealed class JobStoreTests
         Assert.Equal(0, second.Job.Progress);
         Assert.NotEqual(first.Attempt.Token, second.Attempt.Token);
         Assert.False(await store.ReportProgressAsync(first.Attempt, 99));
+        Assert.Equal(JobExecutionStatus.Ended, await store.GetExecutionStatusAsync(first.Attempt));
+        Assert.Equal(JobExecutionStatus.Running, await store.GetExecutionStatusAsync(second.Attempt));
         Assert.False(await store.CompleteAsync(first.Attempt, "old-result"));
         Assert.True(await store.ReportProgressAsync(second.Attempt, 70));
         Assert.True(await store.FailAsync(second.Attempt, "renderer_failed_again"));
@@ -154,6 +156,7 @@ public sealed class JobStoreTests
         var stopping = Assert.IsType<JobSnapshot>(await store.GetAsync("owner", queued.JobId));
         Assert.Equal(JobState.Running, stopping.State);
         Assert.True(stopping.CancellationRequested);
+        Assert.Equal(JobExecutionStatus.CancellationRequested, await store.GetExecutionStatusAsync(cancelled.Attempt));
         Assert.Null(stopping.FinishedAtUtc);
         Assert.Equal(JobUpdateResult.Rejected, await store.RetryAsync("owner", queued.JobId));
         Assert.False(await store.ReportProgressAsync(cancelled.Attempt, 60));

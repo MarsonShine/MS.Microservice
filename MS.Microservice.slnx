@@ -28,6 +28,7 @@
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
     <Project Path="src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />
     <Project Path="src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />

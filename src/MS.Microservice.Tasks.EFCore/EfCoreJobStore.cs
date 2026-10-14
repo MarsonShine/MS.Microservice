@@ -129,6 +129,33 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
         });
     }
 
+    public Task<IReadOnlyList<JobExecution>> GetRunningExecutionsAsync(int take = 100,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateTake(take);
+        return IndependentlyAsync<IReadOnlyList<JobExecution>>(async context =>
+        {
+            var entries = await Jobs(context).Where(entry => entry.State == JobState.Running)
+                .OrderBy(entry => entry.CreatedAtUtcTicks).ThenBy(entry => entry.Id).Take(take).ToListAsync(cancellationToken);
+            return entries.Select(entry => new JobExecution(entry.Snapshot(),
+                new(entry.Scope, entry.Id, entry.AttemptToken
+                    ?? throw new InvalidOperationException("A running job has no execution token.")))).ToArray();
+        });
+    }
+
+    public Task<JobExecutionStatus> GetExecutionStatusAsync(JobAttemptToken attempt,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAttempt(attempt);
+        return IndependentlyAsync(async context =>
+        {
+            var requested = await Owned(context, attempt).Select(entry => (bool?)entry.CancellationRequested)
+                .SingleOrDefaultAsync(cancellationToken);
+            return requested is null ? JobExecutionStatus.Ended
+                : requested.Value ? JobExecutionStatus.CancellationRequested : JobExecutionStatus.Running;
+        });
+    }
+
     public Task<bool> ReportProgressAsync(JobAttemptToken attempt, int progress, string? message = null,
         CancellationToken cancellationToken = default)
     {
@@ -173,6 +200,9 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
 
     public Task<bool> InterruptAsync(JobAttemptToken attempt, CancellationToken cancellationToken = default)
         => FinishAsync(attempt, JobState.Interrupted, "interrupted", null, cancellationToken);
+
+    public Task<bool> RecoverAsync(JobAttemptToken attempt, bool allowRetry, CancellationToken cancellationToken = default)
+        => FinishAsync(attempt, JobState.Interrupted, "interrupted", null, cancellationToken, allowRetry);
 
     public Task<JobUpdateResult> CancelAsync(string scope, Guid jobId, CancellationToken cancellationToken = default)
     {
@@ -225,7 +255,7 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
     }
 
     private Task<bool> FinishAsync(JobAttemptToken attempt, JobState finalState, string? errorCode,
-        string? resultReference, CancellationToken cancellationToken)
+        string? resultReference, CancellationToken cancellationToken, bool requeueInterrupted = false)
     {
         ValidateAttempt(attempt);
         return IndependentlyAsync(async context =>
@@ -249,6 +279,16 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
                 .SetProperty(entry => entry.ProgressMessage, job.ProgressMessage).SetProperty(entry => entry.FinishedAtUtcTicks, now)
                 .SetProperty(entry => entry.ErrorCode, job.ErrorCode).SetProperty(entry => entry.ResultReference, job.ResultReference), cancellationToken);
             RequireAttempt(updated);
+            if (requeueInterrupted && job.State == JobState.Interrupted && job.AttemptCount < job.MaximumAttempts)
+            {
+                var hash = ScopeHash(attempt.Scope);
+                await Jobs(context).Where(entry => entry.ScopeHash == hash && entry.Id == attempt.JobId
+                        && entry.State == JobState.Interrupted).ExecuteUpdateAsync(setters => setters
+                        .SetProperty(entry => entry.State, JobState.Queued).SetProperty(entry => entry.Progress, 0)
+                        .SetProperty(entry => entry.ProgressMessage, (string?)null).SetProperty(entry => entry.ErrorCode, (string?)null)
+                        .SetProperty(entry => entry.FinishedAtUtcTicks, (long?)null).SetProperty(entry => entry.NextRunAtUtcTicks, now)
+                        .SetProperty(entry => entry.Version, entry => entry.Version + 1), cancellationToken);
+            }
             await transaction.CommitAsync(cancellationToken);
             return true;
         });

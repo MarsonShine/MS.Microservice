@@ -16,6 +16,7 @@ public sealed record JobAttemptSnapshot(int Number, JobState State, int Progress
     DateTimeOffset StartedAtUtc, DateTimeOffset? FinishedAtUtc, string? ErrorCode, string? ResultReference);
 
 public enum JobUpdateResult { Applied, NotFound, Rejected }
+public enum JobExecutionStatus { Running, CancellationRequested, Ended }
 
 /// <summary>The same scope and identity cannot represent different job requests.</summary>
 public sealed class JobSubmissionConflictException(Guid jobId)
@@ -40,6 +41,14 @@ public interface IJobStore
     Task<IReadOnlyList<JobSnapshot>> GetDueAsync(string queue = "default", int take = 100,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Reads active execution tokens across scopes for single-instance startup recovery.</summary>
+    Task<IReadOnlyList<JobExecution>> GetRunningExecutionsAsync(int take = 100,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Reads control state for the current execution without loading its payload.</summary>
+    Task<JobExecutionStatus> GetExecutionStatusAsync(JobAttemptToken attempt,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Atomically claims a due queued job and appends a new attempt, or returns null.</summary>
     Task<JobExecution?> TryStartAsync(string scope, Guid jobId, CancellationToken cancellationToken = default);
 
@@ -52,6 +61,9 @@ public interface IJobStore
         CancellationToken cancellationToken = default);
     Task<bool> FailAsync(JobAttemptToken attempt, string errorCode, CancellationToken cancellationToken = default);
     Task<bool> InterruptAsync(JobAttemptToken attempt, CancellationToken cancellationToken = default);
+
+    /// <summary>Atomically interrupts an abandoned attempt and optionally requeues it within its attempt budget.</summary>
+    Task<bool> RecoverAsync(JobAttemptToken attempt, bool allowRetry, CancellationToken cancellationToken = default);
 
     /// <summary>Cancels a queued job, or records a cooperative cancellation request for its running attempt.</summary>
     Task<JobUpdateResult> CancelAsync(string scope, Guid jobId, CancellationToken cancellationToken = default);

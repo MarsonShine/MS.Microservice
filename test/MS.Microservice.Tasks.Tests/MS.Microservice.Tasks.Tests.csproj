@@ -7,5 +7,6 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <ProjectReference Include="../../src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
   </ItemGroup>
 </Project>

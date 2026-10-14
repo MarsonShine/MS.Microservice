@@ -6,13 +6,15 @@ namespace MS.Microservice.Tasks.Tests;
 
 internal sealed class JobDatabase : IAsyncDisposable
 {
+    private Action<IServiceCollection>? _configure;
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "ms-job-store-tests-" + Guid.NewGuid().ToString("N"));
     public ServiceProvider Services { get; private set; } = null!;
     public JobClock Clock { get; } = new();
+    public string ConnectionString => "Data Source=" + Path.Combine(_directory, "jobs.db") + ";Pooling=false";
 
-    public static async Task<JobDatabase> CreateAsync()
+    public static async Task<JobDatabase> CreateAsync(Action<IServiceCollection>? configure = null)
     {
-        var fixture = new JobDatabase();
+        var fixture = new JobDatabase { _configure = configure };
         Directory.CreateDirectory(fixture._directory);
         fixture.Services = fixture.CreateProvider();
         try
@@ -34,9 +36,9 @@ internal sealed class JobDatabase : IAsyncDisposable
     {
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(Clock);
-        services.AddDbContext<JobTestContext>(options => options.UseSqlite(
-            "Data Source=" + Path.Combine(_directory, "jobs.db") + ";Pooling=false"));
+        services.AddDbContext<JobTestContext>(options => options.UseSqlite(ConnectionString));
         services.AddEfCoreJobStore<JobTestContext>();
+        _configure?.Invoke(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 

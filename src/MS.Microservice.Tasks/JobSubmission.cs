@@ -49,7 +49,7 @@ public sealed class JobSubmission
         => new(jobId, scope, handlerName, handlerVersion, JsonSerializer.Serialize(payload, serializerOptions),
             queue, maximumAttempts, notBeforeUtc);
 
-    private static void ValidateName(string value, int maximum, string parameter)
+    internal static void ValidateName(string value, int maximum, string parameter)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, parameter);
         if (value.Length > maximum || value.Any(character => !char.IsAsciiLetterOrDigit(character)
