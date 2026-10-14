@@ -24,6 +24,7 @@ using MS.Microservice.AspNetCore.Encryption;
 using MS.Microservice.Lab.Infrastructure.Encryption;
 using MS.Microservice.Lab.Application.Tools;
 using MS.Microservice.Tasks.Coravel;
+using MS.Microservice.Tasks.Dashboard;
 using System.Text.Json;
 using Wolverine;
 
@@ -99,7 +100,11 @@ public static class PlatformWebHost
         app.MapControllers();
         LabMessaging.Map(app);
         if (enableLabEndpoints)
-            app.Services.UseScheduler(scheduler => scheduler.ScheduleTaskCenter());
+        {
+            app.MapTaskDashboard();
+            app.Services.UseSchedulerWithTaskDashboard(scheduler =>
+                scheduler.ScheduleTaskCenter().WithDashboardName("持久任务派发"));
+        }
 
         await app.RunAsync();
     }

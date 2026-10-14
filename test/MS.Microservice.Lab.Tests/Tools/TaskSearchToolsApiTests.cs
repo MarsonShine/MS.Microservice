@@ -30,6 +30,11 @@ public sealed class TaskSearchToolsApiTests
             job = (await host.Client.GetFromJsonAsync<DemoJob>($"/api/lab/tools/tasks/{job.JobId}"))!;
         }
         Assert.True(job.State == JobState.Succeeded, $"{job.State}: {job.ErrorCode}");
+        var dashboardJob = (await host.Client.GetFromJsonAsync<MS.Microservice.Tasks.Dashboard.DashboardJob>($"/task-center/api/jobs/{job.JobId}"))!;
+        Assert.Equal(job.JobId, dashboardJob.JobId);
+        Assert.Equal(JobState.Succeeded, dashboardJob.State);
+        var plans = (await host.Client.GetFromJsonAsync<MS.Microservice.Tasks.Dashboard.DashboardSchedule[]>("/task-center/api/schedules"))!;
+        Assert.Equal("持久任务派发", Assert.Single(plans).Name);
         var fast = (await host.Client.GetFromJsonAsync<SearchResult>("/api/lab/tools/search?query=revenue&target=Content&snippetLength=100"))!;
         Assert.Single(fast.Items);
         Assert.Equal(SearchSort.Path, fast.Sort);

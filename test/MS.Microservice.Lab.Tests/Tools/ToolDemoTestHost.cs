@@ -14,6 +14,7 @@ using MS.Microservice.Lab.Application.Tools;
 using MS.Microservice.Lab.Controller;
 using MS.Microservice.Lab.Infrastructure.Labs;
 using MS.Microservice.Tasks.Coravel;
+using MS.Microservice.Tasks.Dashboard;
 
 namespace MS.Microservice.Lab.Tests.Tools;
 
@@ -56,7 +57,12 @@ internal sealed class ToolDemoTestHost : IDisposable
         _app.UseAuthorization();
         _app.UsePlatformSwagger();
         _app.MapControllers();
-        if (includeTaskCenter) _app.Services.UseScheduler(scheduler => scheduler.ScheduleTaskCenter());
+        if (includeTaskCenter)
+        {
+            _app.MapTaskDashboard();
+            _app.Services.UseSchedulerWithTaskDashboard(scheduler =>
+                scheduler.ScheduleTaskCenter().WithDashboardName("持久任务派发"));
+        }
         _app.StartAsync().GetAwaiter().GetResult();
         Client = _app.GetTestClient();
         Client.Timeout = TimeSpan.FromMinutes(10);

@@ -4,6 +4,7 @@ using MS.Microservice.Lab.Controller;
 using MS.Microservice.Search;
 using MS.Microservice.Tasks;
 using MS.Microservice.Tasks.Coravel;
+using MS.Microservice.Tasks.Dashboard;
 using MS.Microservice.Tasks.EFCore;
 
 namespace MS.Microservice.Lab.Application.Tools;
@@ -44,6 +45,13 @@ internal static class TaskCenterDemo
                 options.Timeout = TimeSpan.FromMinutes(10);
             });
         services.AddCoravelTaskCenter();
+        services.AddTaskDashboard(options =>
+        {
+            options.Title = "Lab 任务中心";
+            options.ResolveScope = context => context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } owner
+                ? Scope(owner) : null;
+            options.AllowAnonymousShell = true;
+        });
         return services;
     }
 

@@ -22,6 +22,8 @@ Lab 将组件的核心能力接成可观察的使用案例，复用已有类库�
 
 ## 持久任务与索引发布
 
+Lab 引用可选 `Tasks.Dashboard` 并仅在 Lab 端点启用时挂载 `/task-center`。面板与工具 API 使用相同的 OwnerTag Scope，因此同一任务不需要复制或同步。Lab 允许固定空壳匿名加载以输入现有 JWT，数据接口仍须认证；控制请求继续验证框架防伪令牌。计划通过 `UseSchedulerWithTaskDashboard` 注册到同一个 Coravel Scheduler，展示目录由观察器记录，不增加另一套调度生命周期。
+
 `TaskCenterDemo` 为 Lab 注册固定 SQLite 上下文与本地检索实例。数据库初始化 hosted service 先完成，Coravel 使用短 tick 领取持久任务；处理器注册的队列只有一个并发槽。它与已有媒体推理的全局门独立，索引提取调用 OCR 时仍须等待该推理门。数据库 Provider、DDL 和目录选择属于演示宿主；SDK 本身不创建数据库表。
 
 提交接口冻结 owner、上传 key、文档标识、版本及逻辑路径。后台不读取 HttpContext，不把逻辑路径用于磁盘访问，只按已保存的 owner 与 canonical key 打开原文件。Scope 使用与私有存储一致的 owner 哈希；查询、删除和任务状态同样从认证身份构造 Scope。
