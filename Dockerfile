@@ -1,6 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
+COPY MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/
+COPY MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.Mvc/MS.Microservice.Idempotency.Mvc.csproj MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.Mvc/
 COPY MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/
 COPY MS.Microservice.Logging/src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj MS.Microservice.Logging/src/MS.Microservice.Logging.Core/
 COPY samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj samples/Reference/MS.Microservice.Reference.Application/
