@@ -81,6 +81,7 @@
     <Project Path="test/MS.Microservice.Samples.EducationalImages.Tests/MS.Microservice.Samples.EducationalImages.Tests.csproj" />
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
     <Project Path="test/MS.Microservice.Tasks.Tests/MS.Microservice.Tasks.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Tasks.Messaging.Tests/MS.Microservice.Tasks.Messaging.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">
