@@ -43,6 +43,8 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 | `/text` | 精确逐行比较、指定编码转换、JSON 格式化与压缩 |
 | `/notifications` | 模板预览、SMTP 邮件、阿里云模板短信、本人站内通知发布／查询／已读 |
 | `/s3` | 本人命名空间下条件写入、查询、下载、删除和临时 GET 地址 |
+| `/tasks` | Coravel 持久任务：提交文档索引、查看进度／历史、取消与重试 |
+| `/search` | 文件名／逻辑路径搜索、正文检索、可选精确总数 |
 | `/image-batches` | 复用下文已有后台队列，查看批量处理进度、取消、重试与下载 |
 
 可以按以下顺序查看实际效果：
@@ -88,6 +90,35 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 私有文件与站内通知按当前用户隔离，其他用户的 key 不可访问；文件默认保存在内容根目录的 `.tools/tool-demo-files`，可通过 DELETE 清理。临时处理结果在读取完成后清理，清理失败记录到宿主日志；持久文件的容量与保留期由宿主管理。SMTP／短信成功只表示服务商接受，S3 写入异常不代表远端未提交，应使用已知 key 核对，避免盲目重试。
 
 接口组织、资源所有权与 Swagger 验证见 [工具 API 接入设计](docs/tool-demo-design.md)。
+
+## 文档后台索引与检索
+
+这些接口要求登录身份，复用 `/files` 的私有文件存储，不需要启动新服务。按下列流程体验：
+
+1. 在 Swagger 调用 `POST /api/lab/tools/files` 上传 `report.txt`，复制返回的 `key`。
+2. 调用 `POST /api/lab/tools/tasks/documents/index`，例如：
+
+   ```json
+   { "fileKey": "上传返回的 key", "documentId": "report", "version": 1,
+     "fileName": "report.txt", "logicalPath": "/finance/report.txt", "useOcr": false }
+   ```
+
+3. 用返回的 `jobId` 查询 `GET /api/lab/tools/tasks/{jobId}`；状态为 `Succeeded` 后，查询 `/api/lab/tools/search?query=report`，或正文查询 `?query=revenue&target=Content&snippetLength=200`。JSON 状态枚举默认使用数字：0 等待、1 运行、2 成功、3 失败、4 取消、5 中断。
+
+| 参数／操作 | 使用说明 |
+| --- | --- |
+| `countMode=Fast` | 默认返回前 50 条，`totalHits=null`，`hasMore` 准确；`countMode=Exact` 额外计算精确总数 |
+| `target` / `match` | `FileName`、`Path` 默认 `Contains`，可选 `Prefix`；`Content` 默认 `AllTerms`，可选 `Phrase` |
+| `sort` / `cursor` | 默认 `Path`；正文可选 `Relevance`。用 `nextCursor` 翻页，索引更新导致 409 时从第一页重查 |
+| `extension` / `directoryPrefix` | 按扩展名或逻辑目录筛选；逻辑路径不用于读取服务器文件 |
+| 更新／删除 | 同一 `documentId` 以更高 `version` 提交新文件；`DELETE /search/{documentId}?version=2` 删除索引，不删除原文件 |
+| 取消／重试 | `/tasks/{jobId}/cancel` 协作取消，`retry` 使用原参数重排队；最多执行 3 次，不撤销已写入索引的变更 |
+
+支持 UTF-8 TXT／MD／JSON／CSV、DOCX、PDF；PNG／JPEG／WebP 必须设置 `useOcr=true`。PDF 先提取文字层，仅在启用 OCR 时识别无文字页面。OCR 仍需上述 Python、依赖和本地模型，普通文本、DOCX、带文字层 PDF 无需 Python。单文件 20 MiB、PDF 50 页、正文 200 万字符；不支持密码文件或旧版 `.doc`，提取不到正文时任务失败，详细异常查看宿主日志。
+
+任务 SQLite 默认位于 `.tools/task-center/tasks.db`，检索索引位于 `.tools/document-search`；可通过 `ToolDemos:TaskCenterDirectory`、`ToolDemos:SearchIndexDirectory` 配置 webroot 之外的目录。两者跨重启保留，首版只运行一个宿主实例；Lab 自动创建自己的演示数据库，生产接入由宿主管理迁移。后台索引任务声明为可安全重试，重启保留执行历史并恢复未完成任务；版本规则阻止较旧任务覆盖更新或删除。
+
+初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../src/MS.Microservice.Tasks.Coravel/README.md)。
 
 ## 图片后台批处理
 

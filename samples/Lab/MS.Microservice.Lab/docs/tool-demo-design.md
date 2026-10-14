@@ -1,10 +1,10 @@
 # 工具 API 接入设计
 
-Lab 将组件的核心能力接成可观察的使用案例，复用已有类库和上传校验，不增加应用项目或另一套任务系统。调用和配置见 [Lab README](../README.md#工具组件-api-演示)，算法原理由各组件技术文档维护。
+Lab 将组件的核心能力接成可观察的使用案例，复用已有类库和上传校验，不增加应用项目。文档索引通过共享任务组件和 Coravel 执行；图片批处理保留原有实现。调用和配置见 [Lab README](../README.md#工具组件-api-演示)，算法原理由各组件技术文档维护。
 
 ## 接口与宿主边界
 
-每个控制器显式标记 `LabOnly`，由现有 feature provider 控制发现；该标记不继承，不能只放在公共基类上。`ToolDemoControllerBase` 统一鉴权、请求大小和错误响应，持久文件／通知从已验证身份取得 owner，不接受客户端指定 owner。新增依赖只进入 Lab 项目，正式 Reference 的依赖图不变。
+每个控制器显式标记 `LabOnly`，由现有 feature provider 控制发现；该标记不继承，不能只放在公共基类上。`ToolDemoControllerBase` 统一身份读取、请求大小和错误响应。持久任务和检索控制器显式要求认证，从身份取得 owner，不接受客户端指定 Scope。新增依赖只进入 Lab 项目，正式 Reference 的依赖图不变。
 
 表单模型用 XML 属性注释说明参数，通过 DataAnnotations 与组件校验约束真实使用。必须上传的文件标记 `Required`；仅视频修复蒙版可选，省略时使用自动模式。浮点参数的 `Range` 使用 double 重载，避免转为整数后错误放行小数边界。
 
@@ -19,6 +19,16 @@ Lab 将组件的核心能力接成可观察的使用案例，复用已有类库�
 本地持久存储复用 `LocalFileStorage` 与 canonical key，owner 单独分目录，S3 使用 owner 命名空间；缺失或属于其他用户的资源统一不可见。ZIP 解压复用 Core 的路径与展开预算保护，然后把文件保存为 owner 的私有 key，复用下载 API。
 
 `ToolInferenceRuntime` 在实例级门控下按需创建模型会话，所有模型类型共用一个门，避免不同推理接口同时争用大量内存。宿主异步释放时等待活跃调用并释放全部已创建会话；OCR 仍遵从组件的每次启动 Python 设计。基础视频、HTML／DOCX 排版各自复用组件原有进程监督，处理期限和取消语义不另行改写。
+
+## 持久任务与索引发布
+
+`TaskCenterDemo` 为 Lab 注册固定 SQLite 上下文与本地检索实例。数据库初始化 hosted service 先完成，Coravel 使用短 tick 领取持久任务；处理器注册的队列只有一个并发槽。它与已有媒体推理的全局门独立，索引提取调用 OCR 时仍须等待该推理门。数据库 Provider、DDL 和目录选择属于演示宿主；SDK 本身不创建数据库表。
+
+提交接口冻结 owner、上传 key、文档标识、版本及逻辑路径。后台不读取 HttpContext，不把逻辑路径用于磁盘访问，只按已保存的 owner 与 canonical key 打开原文件。Scope 使用与私有存储一致的 owner 哈希；查询、删除和任务状态同样从认证身份构造 Scope。
+
+索引任务先按实际字节有界读取，再调用已有 PDF、DOCX 或 OCR 提取器，最后提交版本变更并显式发布。PDF 有文字层的页面直接使用文字层，空页面才选择 OCR；不在查询期间提取或运行模型。文本不足或超预算的任务失败，异常细节留在宿主日志。取消和任务数据库不能回滚索引提交；安全重试依靠同一文档版本的幂等写入，删除保留更高版本 tombstone，防止延迟任务复活已删除文档。
+
+任务与 Lucene 索引是两个持久存储：处理器发布索引后、任务写成功前发生崩溃，恢复时重复提交相同版本；若新的版本已经生效，旧版本只记 stale。重试不会恢复到更旧文档。索引删除不隐式删除上传文件。任务终态、停止期限和恢复策略见 [执行设计](../../../../src/MS.Microservice.Tasks/docs/execution-design.md)，排序段、快速查询和精确计数见 [检索设计](../../../../src/MS.Microservice.Search/docs/search-design.md)。
 
 ## Swagger 与错误
 

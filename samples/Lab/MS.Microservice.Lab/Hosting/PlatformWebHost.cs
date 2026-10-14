@@ -1,5 +1,6 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Coravel;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ using MS.Microservice.Lab.Infrastructure.Mediator.Behaviors;
 using MS.Microservice.AspNetCore.Encryption;
 using MS.Microservice.Lab.Infrastructure.Encryption;
 using MS.Microservice.Lab.Application.Tools;
+using MS.Microservice.Tasks.Coravel;
 using System.Text.Json;
 using Wolverine;
 
@@ -96,6 +98,8 @@ public static class PlatformWebHost
         app.MapPlatformHealthChecks();
         app.MapControllers();
         LabMessaging.Map(app);
+        if (enableLabEndpoints)
+            app.Services.UseScheduler(scheduler => scheduler.ScheduleTaskCenter());
 
         await app.RunAsync();
     }
@@ -138,6 +142,7 @@ public static class PlatformWebHost
         if (enableLabEndpoints)
         {
             builder.Services.AddToolDemoApi();
+            builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
             builder.Services.AddOptions<ImageBatchOptions>().Bind(builder.Configuration.GetSection("ImageBatches"));
             builder.Services.AddSingleton<IImageBatchOperation, ImageBatchOperation>();
             builder.Services.AddSingleton<ImageBatchJobs>();
