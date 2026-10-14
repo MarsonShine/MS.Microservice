@@ -29,6 +29,7 @@
     <Project Path="src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />
     <Project Path="src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
     <Project Path="src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
+    <Project Path="src/MS.Microservice.Search/MS.Microservice.Search.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
@@ -51,6 +52,9 @@
   <Folder Name="/MS.Microservice.Persistence/test/">
     <Project Path="MS.Microservice.Persistence/test/MS.Microservice.Persistence.EFCore.Tests/MS.Microservice.Persistence.EFCore.Tests.csproj" />
     <Project Path="MS.Microservice.Persistence/test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/MS.Microservice.Search.Benchmarks/MS.Microservice.Search.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AI/">
@@ -82,6 +86,7 @@
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
     <Project Path="test/MS.Microservice.Tasks.Tests/MS.Microservice.Tasks.Tests.csproj" />
     <Project Path="test/MS.Microservice.Tasks.Messaging.Tests/MS.Microservice.Tasks.Messaging.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Search.Tests/MS.Microservice.Search.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">
