@@ -66,6 +66,19 @@ public sealed class ComponentBoundaryTests
     }
 
     [Fact]
+    public void TaskCoreDoesNotDependOnPersistenceOrAnExecutionProvider()
+    {
+        var root = RepositoryRoot();
+        var project = XDocument.Load(Path.Combine(root, "src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj"));
+        var packages = project.Descendants("PackageReference").Select(node => node.Attribute("Include")!.Value);
+        Assert.DoesNotContain(packages, name => name.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal)
+            || name.StartsWith("Coravel", StringComparison.Ordinal) || name.StartsWith("Wolverine", StringComparison.Ordinal));
+        var references = project.Descendants("ProjectReference").Select(node => node.Attribute("Include")!.Value);
+        Assert.DoesNotContain(references, name => name.Contains(".EFCore", StringComparison.Ordinal)
+            || name.Contains(".Coravel", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ReferenceDeploymentGraphContainsNoOptionalLessons()
     {
         var root = RepositoryRoot();

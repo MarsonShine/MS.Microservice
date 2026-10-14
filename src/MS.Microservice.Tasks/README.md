@@ -1,0 +1,45 @@
+# 任务契约
+
+`MS.Microservice.Tasks` 定义可持久保存的任务提交、状态、进度、取消和执行记录。业务代码可以依赖本包；EF Core 存储见 [Tasks.EFCore](../MS.Microservice.Tasks.EFCore/README.md)。本包不启动后台执行器，也不依赖 Coravel、数据库或业务模型。
+
+```csharp
+using MS.Microservice.Tasks;
+
+var request = JobSubmission.Create(
+    jobId: Guid.NewGuid(),
+    scope: "tenant-42:user-7",
+    handlerName: "report.export",
+    handlerVersion: 1,
+    payload: new { ReportId = "r-123", Format = "pdf" });
+
+JobSnapshot created = await jobs.SubmitAsync(request, cancellationToken);
+JobSnapshot? current = await jobs.GetAsync(request.Scope, created.JobId, cancellationToken);
+```
+
+`jobs` 是 `IJobStore`，由宿主选择存储实现。`Create` 立即序列化参数，后续修改原对象不会改变任务。处理器名称和版本是稳定的业务契约；参数应保存文件键、业务 ID 等必要数据，不保存 Stream、请求对象或密钥。
+
+| 参数 | 默认值／限制 | 用途 |
+|---|---|---|
+| `JobId` | 非空 GUID | 调用者生成一次并保存；重复提交沿用同一 ID |
+| `Scope` | 非空，最多 256 字符，有效 Unicode | 租户／用户等隔离边界，按原值区分大小写 |
+| `HandlerName` / `HandlerVersion` | 名称最多 128 个 ASCII 字母、数字、`.`、`-`、`_`；版本 ≥ 1 | 标识参数对应的处理器契约 |
+| `PayloadJson` | 最多 256 KiB UTF-8 JSON | 冻结的任务参数；也可以直接调用构造函数传入 JSON |
+| `Queue` | `default`，最多 64 个同上 ASCII 字符 | 供宿主区分执行资源组 |
+| `MaximumAttempts` | 3，范围 1～100 | 允许开始执行的总次数，包含首次 |
+| `NotBeforeUtc` | 空，立即可领取 | 首次可执行时间；输入会转换为 UTC |
+
+同一 `Scope + JobId` 再次提交相同请求会返回已有任务。处理器、JSON 字符串、队列、执行次数或首次调度时间不同，会抛出 `JobSubmissionConflictException`；JSON 的空白和属性顺序也参与比较。创建时间、当前状态和后来重试的时间不参与提交身份判断。
+
+| 状态 | 含义 |
+|---|---|
+| `Queued` | 已保存，等待领取 |
+| `Running` | 当前执行尚未结束，可能已请求取消 |
+| `Succeeded` / `Failed` | 本次执行成功／失败 |
+| `Cancelled` | 排队时取消，或运行中的取消请求已在结束时生效 |
+| `Interrupted` | 执行中断，例如宿主停止；由执行方明确记录 |
+
+`CancelAsync` 对运行中的任务只记录取消请求，不会强制终止线程或进程。`RetryAsync` 只接受失败、中断或取消的任务，保留 `JobId` 和历史；用完执行次数后拒绝重试。没有自动重试或重启恢复流程，外部调用产生的副作用也不承诺只执行一次。
+
+`TryStartAsync` 返回当前执行的 `JobAttemptToken`；进度和结束更新必须携带它。进度为 0～100 的整数，同一次执行只能增加。执行入口和跨 Scope 的 `GetDueAsync` 应仅供可信后台代码调用；对外接口应从认证身份取得 Scope，再调用按 Scope 查询或控制的方法。
+
+存储模型、原子状态转换和事务边界见 [持久化设计](../MS.Microservice.Tasks.EFCore/docs/persistence-design.md)。

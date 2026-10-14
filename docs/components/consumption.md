@@ -63,6 +63,7 @@ module-manifest.json 记录源提交、文件 SHA-256 和项目闭包。
 | Media / Media.Inference | FFmpeg、原生库、字体及可选本地模型；输入权限、并发预算与结果发布 |
 | Documents | PDF 输入密码与输出保护、文件大小和并发；目标平台 PDFium／Skia 运行时 |
 | Notifications | SMTP 地址和凭据、发送任务与投递反馈；站内通知的私有目录、所属用户授权与历史保留期 |
+| Tasks / Tasks.EFCore | 注册宿主 scoped DbContext、AddTaskCenter 模型和迁移；明确 Scope、稳定 JobId 和处理器版本；独立提交与现有事务内 Stage 分开使用，调度和执行由宿主负责 |
 
 教育图像场景的源码复制需包含 samples/AI 中的场景类库及其共享依赖；
 它不是 AI.Core 的默认功能。QuestionGeneration Harness 可以单独引用。
