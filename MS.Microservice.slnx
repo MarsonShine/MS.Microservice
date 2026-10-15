@@ -50,6 +50,7 @@
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/MS.Microservice.Search.Benchmarks/MS.Microservice.Search.Benchmarks.csproj" />
+    <Project Path="MS.Microservice.Persistence/benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AI/">

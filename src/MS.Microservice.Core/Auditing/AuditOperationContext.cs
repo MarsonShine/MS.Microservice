@@ -33,7 +33,7 @@ public sealed class AuditOperationContext
         }
         else
         {
-            Current = new(operationId ?? Guid.NewGuid(), scope, actor, name, correlationId);
+            Current = new(operationId ?? Guid.CreateVersion7(), scope, actor, name, correlationId);
             _sequence = 0;
         }
         return new Lease(this, ++_depth);

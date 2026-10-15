@@ -59,7 +59,7 @@ The [MVC adapter](../../../src/MS.Microservice.AspNetCore/README.md#automatic-au
 | `AuditChanges(resourceType, fields)` | 1–16 direct mapped scalar properties; resource type is 1–96 ASCII letters/digits/`.`/`-`/`_` |
 | `Begin(scope, actor, name)` | Trusted host identity; maximum lengths 256 / 255 / 128; optional correlation ID ≤256 |
 | `AuditingEnabled` | `true`; set per context before use for explicitly unaudited work |
-| `AuditCollectionOptions` | 8 KiB JSON per detail, 1,000 details and 1 MiB JSON per save; override via the context constructor |
+| `AuditCollectionOptions` | Defaults: 8 KiB JSON/detail, 1,000 details, 1 MiB JSON/save. Constructor overrides allow 64 bytes–1 MiB/detail and 1–10,000 details; batch budget must be at least the detail budget |
 | Resource identity | Known before save, ≤256 characters; composite keys supported; temporary database-generated keys rejected |
 | Selected values | Strings, booleans, numeric/date/time values, GUIDs and enums; store-generated fields and object graphs unsupported |
 | `beforeKnown` | Queried/successfully saved entities have known originals; attached entities may report unknown originals without an extra database read |
@@ -71,3 +71,5 @@ Use scoped `AddDbContext`, not `AddDbContextPool` or a pooled factory: the conte
 Run normalization and timestamp updates **before** calling the audited save; later save callbacks must not mutate tracked business entities. Raw SQL, `ExecuteUpdate`/`ExecuteDelete`, other contexts and other ORMs are outside this collector. After rolling back an outer transaction, clear or dispose its context before reuse. Scope filtering is a query helper: the host must authorize the scope, actor and audit-reading endpoint. Select only values permitted in retained audit data; request bodies, results and navigation graphs are never collected.
 
 See [capture and transaction design](../../docs/automatic-auditing.md) for implementation details and [Lab's multi-table example](../../../samples/Lab/MS.Microservice.Lab/README.md#自动业务审计示例) for the API workflow.
+
+Auditing adds persistent writes. The current [PostgreSQL measurements](../../docs/automatic-auditing-performance.md) do **not** meet the intended throughput/P95 overhead targets; validate capacity on the application's workload before enabling it in a high-throughput service.

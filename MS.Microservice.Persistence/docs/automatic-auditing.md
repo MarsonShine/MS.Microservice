@@ -18,6 +18,8 @@ EF 模型用 `AuditChanges` 声明资源名称和选定字段。表达式只在�
 
 一次审批涉及订单、两条库存和审批记录，会生成四条 `AuditRecord`。它们共享 `OperationId` 和 `SaveSequence`，避免为每张表另建操作头，也没有额外的操作头 INSERT。一次操作中多次保存使用不同序号；失败重试可能留下序号间隙，序号不是业务版本或无间隙计数。
 
+默认操作 ID 和明细 ID 使用 UUID v7，改善按这些键建立的 B-tree 索引的写入局部性。调用者也可提供自己的操作 ID。标识不代表授权、无间隙序列或严格的业务发生顺序。
+
 ## 原值可信度
 
 EF 的 OriginalValue 是跟踪快照，不必然是数据库旧值。查询得到的跟踪实体以及本上下文成功保存后的实体有可信快照；直接 Attach / Update 的实体没有这个保证。采集器用弱引用旁表记录这种来源，不为审计回查数据库。重新跟踪时先移除旧标记，因而 `ChangeTracker.Clear()` 后重用同一对象也不会错误地声称知道旧值。
@@ -52,4 +54,4 @@ EF 的 SavingChanges 回调发生在默认变更检测之前。单独放入一�
 
 宿主负责字段敏感性、访问权限、保留期、分区和清理。当前提供按 Scope+Operation、Scope+Resource+时间的索引，没有新增调度器或审计查询服务。批量 SQL、其他 ORM 和其他 DbContext 的变更不会被该上下文观察。生产发布须显式执行宿主迁移，不由组件运行 DDL。真实性防篡改、跨库聚合和审计失败的降级策略不在本版契约中；声明的审计失败会阻止相应保存。
 
-性能必须区分无审计写入和有审计写入，也应区分采集与数据库 I/O。真实 PostgreSQL 结果单独报告，不能用 SQLite 的事务测试替代性能验收。
+性能必须区分无审计写入和有审计写入，也应区分采集与数据库 I/O。[PostgreSQL 性能记录](automatic-auditing-performance.md)报告实际结果和未达到的目标；[基准程序](../benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks/README.md)提供复现入口，不能用 SQLite 的事务测试替代性能验收。

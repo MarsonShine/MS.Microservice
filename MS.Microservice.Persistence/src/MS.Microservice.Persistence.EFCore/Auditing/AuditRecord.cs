@@ -26,7 +26,7 @@ public sealed class AuditRecord
     internal AuditRecord(AuditOperationInfo operation, string scopeHash, int sequence, string resourceType, string resourceId,
         AuditChangeKind kind, long utcTicks, string changesJson)
     {
-        Id = Guid.NewGuid(); OperationId = operation.Id; SaveSequence = sequence;
+        Id = Guid.CreateVersion7(); OperationId = operation.Id; SaveSequence = sequence;
         ScopeHash = scopeHash; Actor = operation.Actor; Action = operation.Name;
         CorrelationId = operation.CorrelationId; ResourceType = resourceType; ResourceId = resourceId;
         Kind = kind; OccurredAtUtcTicks = utcTicks; ChangesJson = changesJson;

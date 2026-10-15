@@ -11,6 +11,7 @@
     dotnet test MS.Microservice.Persistence.slnx -c Release
 
 [设计说明](docs/design.md)解释为什么业务 DbContext、映射和迁移留在应用中。
+[自动审计性能记录](docs/automatic-auditing-performance.md)保留 PostgreSQL 实测结果、测量口径及尚未达到的目标。
 Dependencies 只列出通用 Core / Domain.Primitives；不需要打开整个 Lab 才能修改组件。
 
 Reference 的实际业务库位于 samples/Reference/Persistence 项目，

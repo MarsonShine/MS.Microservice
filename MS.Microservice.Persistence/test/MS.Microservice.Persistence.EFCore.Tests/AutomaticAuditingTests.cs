@@ -14,12 +14,14 @@ public sealed class AutomaticAuditingTests
     {
         await using var fixture = await Fixture.Create();
         using var context = fixture.Context();
-        using var operation = fixture.Operation.Begin("scope", "actor", "lifecycle");
+        var suppliedId = Guid.NewGuid();
+        using var operation = fixture.Operation.Begin("scope", "actor", "lifecycle", suppliedId);
         var row = new AuditStock { Id = Guid.NewGuid(), Available = 10 };
         context.Stock.Add(row); context.SaveChanges();
         row.Available = 9; context.SaveChanges();
         context.Stock.Remove(row); context.SaveChanges();
         var records = context.ForAuditScope("scope").OrderBy(value => value.SaveSequence).ToArray();
+        Assert.All(records, value => { Assert.Equal(suppliedId, value.OperationId); Assert.Equal(7, value.Id.Version); });
         Assert.Equal(new[] { AuditChangeKind.Created, AuditChangeKind.Updated, AuditChangeKind.Deleted }, records.Select(value => value.Kind));
         using var created = JsonDocument.Parse(records[0].ChangesJson);
         using var updated = JsonDocument.Parse(records[1].ChangesJson);
@@ -40,6 +42,7 @@ public sealed class AutomaticAuditingTests
         var stock = await context.Stock.SingleAsync();
         using var operation = fixture.Operation.Begin("tenant-a", "alice", "order.approve");
         var id = fixture.Operation.Current!.Id;
+        Assert.Equal(7, id.Version);
         await using (var transaction = await context.Database.BeginTransactionAsync())
         {
             using (fixture.Operation.Begin("tenant-a", "alice", "nested"))
