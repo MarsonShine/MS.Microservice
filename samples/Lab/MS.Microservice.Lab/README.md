@@ -137,7 +137,7 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 
 调用 `POST /sensitive-data/records` 创建本人记录，再用 `PUT /sensitive-data/records/{id}` 修改手机号或内部备注，最后用返回的 operationId 查询 `GET /sensitive-data/operations/{operationId}`（均在 `/api/lab/tools` 前缀下）。`Masked` 表示只保留展示掩码；`ChangedOnly` 只有字段变更事实，没有前后值。手机号从 `13800138000` 改为 `13899118000` 时掩码相同，审计仍记录真实变化。
 
-示例库位于 `.tools/sensitive-data/records.db`，与已有审计演示库分离。**业务原值仍保存在该私有库中，输出保护不是数据库加密**；请只使用虚构数据。其他用户查询记录或操作返回 404。声明方式、适用输出入口与 AOT 限制见 [Core](../../../src/MS.Microservice.Core/README.md#敏感字段)。
+示例库位于 `.tools/sensitive-data/records.db`，与已有审计演示库分离。**业务原值仍保存在该私有库中，输出保护不是数据库加密**；请只使用虚构数据。其他用户查询记录或操作返回 404。声明方式、适用输出入口与 AOT 限制见 [Core](../../../src/MS.Microservice.Core/README.md#敏感字段)；完整注册、扫描、执行流程和 Lab 代码入口见 [敏感字段的注册、扫描与执行链](../../../src/MS.Microservice.Core/docs/sensitive-data-design.md)。
 
 ## 缓存治理示例
 
