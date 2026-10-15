@@ -67,6 +67,7 @@ public static class SensitiveValues
         var fields = new List<Field>();
         foreach (var accessor in PropertyAccessors.Get(type))
         {
+            if (accessor.Property.GetMethod?.IsPublic != true || accessor.GetValue is not { } getter) continue;
             var kind = ClassificationOf(accessor.Property);
             if (kind is SensitiveKind.Phone or SensitiveKind.Email && accessor.PropertyType != typeof(string))
                 throw new InvalidOperationException("Phone and email classifications require string properties.");
@@ -74,7 +75,7 @@ public static class SensitiveValues
             if (kind == SensitiveKind.Secret || scalar.IsPrimitive || scalar.IsEnum || scalar == typeof(string)
                 || scalar == typeof(decimal) || scalar == typeof(Guid) || scalar == typeof(DateTime)
                 || scalar == typeof(DateTimeOffset) || scalar == typeof(DateOnly) || scalar == typeof(TimeOnly))
-                fields.Add(new(accessor.Name, accessor.GetValue!, kind));
+                fields.Add(new(accessor.Name, getter, kind));
         }
         return fields.ToArray();
     }

@@ -47,6 +47,7 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 | `/search` | 文件名／逻辑路径搜索、正文检索、可选精确总数 |
 | `/audits` | 自动采集订单／库存／审批变化，按操作标识查看同事务审计明细 |
 | `/cache` | 重复读取观察源读取次数，修改后失效、主动清除和用户隔离 |
+| `/sensitive-data` | JSON／日志预览、受保护 CSV、同事务审计中的掩码和变更事实 |
 | `/image-batches` | 复用下文已有后台队列，查看批量处理进度、取消、重试与下载 |
 
 可以按以下顺序查看实际效果：
@@ -129,6 +130,14 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 任务 SQLite 默认位于 `.tools/task-center/tasks.db`，检索索引位于 `.tools/document-search`；可通过 `ToolDemos:TaskCenterDirectory`、`ToolDemos:SearchIndexDirectory` 配置 webroot 之外的目录。两者跨重启保留，首版只运行一个宿主实例；Lab 自动创建自己的演示数据库，生产接入由宿主管理迁移。后台索引任务声明为可安全重试，重启保留执行历史并恢复未完成任务；版本规则阻止较旧任务覆盖更新或删除。
 
 初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/README.md)。
+
+## 敏感字段示例
+
+使用虚构数据调用 `POST /api/lab/tools/sensitive-data/preview`，查看 JSON、导出字段投影，日志可在宿主现有日志后端查看；`export` 下载受保护 CSV。Phone／Email 掩码，InternalNote 从这些输出中排除。
+
+调用 `POST /sensitive-data/records` 创建本人记录，再用 `PUT /sensitive-data/records/{id}` 修改手机号或内部备注，最后用返回的 operationId 查询 `GET /sensitive-data/operations/{operationId}`（均在 `/api/lab/tools` 前缀下）。`Masked` 表示只保留展示掩码；`ChangedOnly` 只有字段变更事实，没有前后值。手机号从 `13800138000` 改为 `13899118000` 时掩码相同，审计仍记录真实变化。
+
+示例库位于 `.tools/sensitive-data/records.db`，与已有审计演示库分离。**业务原值仍保存在该私有库中，输出保护不是数据库加密**；请只使用虚构数据。其他用户查询记录或操作返回 404。声明方式、适用输出入口与 AOT 限制见 [Core](../../../src/MS.Microservice.Core/README.md#敏感字段)。
 
 ## 缓存治理示例
 

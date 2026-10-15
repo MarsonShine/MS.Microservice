@@ -18,7 +18,7 @@ public static class SensitiveLogExtensions
         : IReadOnlyList<KeyValuePair<string, object?>>
     {
         private readonly KeyValuePair<string, object?>[] _values =
-            [new("EventName", name), .. fields, new("{OriginalFormat}", "{EventName}")];
+            [.. fields, new("{OriginalFormat}", name)];
         public int Count => _values.Length;
         public KeyValuePair<string, object?> this[int index] => _values[index];
         public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() => ((IEnumerable<KeyValuePair<string, object?>>)_values).GetEnumerator();

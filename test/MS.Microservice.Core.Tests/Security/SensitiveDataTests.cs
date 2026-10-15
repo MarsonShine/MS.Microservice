@@ -49,6 +49,25 @@ public sealed class SensitiveDataTests
         Assert.Equal("{}", JsonSerializer.Serialize(new ThrowingDto(), options));
         Assert.Empty(SensitiveValues.Project(new ThrowingDto()));
     }
+    [Fact]
+    public void BusinessEventNameDoesNotCollideWithLoggingMetadata()
+    {
+        var logger = new CaptureLogger(); logger.LogSensitive(LogLevel.Information, "operation", new { EventName = "business" });
+        Assert.Equal("business", logger.Fields!["EventName"]);
+    }
+    [Fact]
+    public void RenamedJsonPropertiesStayProtectedAndPrivateGettersStayPrivate()
+    {
+        var options = new JsonSerializerOptions(); options.UseSensitiveValues();
+        var json = JsonSerializer.Serialize(new RenamedDto(), options);
+        Assert.Contains("contact", json); Assert.DoesNotContain("13800138000", json);
+        Assert.Empty(SensitiveValues.Project(new PrivateGetterDto()));
+        Assert.Throws<InvalidOperationException>(() => JsonSerializer.Serialize(new InvalidClassification(), options));
+    }
+    public sealed class RenamedDto
+    { [System.Text.Json.Serialization.JsonPropertyName("contact"), Sensitive(SensitiveKind.Phone)] public string Phone { get; set; } = "13800138000"; }
+    public sealed class PrivateGetterDto { public string Internal { private get; set; } = "private"; }
+    public sealed class InvalidClassification { [Sensitive(SensitiveKind.Phone)] public int Value { get; set; } }
     public sealed class Sample
     {
         [Sensitive(SensitiveKind.Phone)] public string? Phone { get; set; }

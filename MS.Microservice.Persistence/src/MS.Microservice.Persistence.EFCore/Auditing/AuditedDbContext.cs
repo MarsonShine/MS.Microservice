@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using MS.Microservice.Core.Auditing;
+using MS.Microservice.Core.Security.SensitiveData;
 
 namespace MS.Microservice.Persistence.EFCore.Auditing;
 
@@ -92,7 +93,7 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
                 if (Model.FindEntityType(typeof(AuditRecord)) is null) throw new InvalidOperationException("Call AddAuditRecords in the host model.");
                 if (sequence == 0) { sequence = _operation.NextSaveSequence(); scopeHash = AuditRecord.HashScope(operation.Scope); }
                 var resourceId = ResourceId(entry, rule.Keys);
-                var json = Changes(entry, fields, oldKnown);
+                var json = Changes(entry, fields, oldKnown, rule.Protection);
                 bytes += Encoding.UTF8.GetByteCount(json);
                 if (batch.Records.Count == _limits.MaximumRecordsPerSave || bytes > _limits.MaximumBatchBytes)
                     throw new InvalidOperationException("Audit changes exceed the per-save budget.");
@@ -107,7 +108,7 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
         catch { batch.RemovePending(); batch.Dispose(); throw; }
     }
 
-    private string Changes(EntityEntry entry, IProperty[] fields, bool oldKnown)
+    private string Changes(EntityEntry entry, IProperty[] fields, bool oldKnown, Dictionary<IProperty, SensitiveKind>? protection)
     {
         var buffer = new ArrayBufferWriter<byte>();
         using var writer = new Utf8JsonWriter(buffer);
@@ -117,10 +118,15 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
             var value = entry.Property(property.Name);
             writer.WriteStartObject(); writer.WriteString("field", property.Name);
             writer.WriteBoolean("beforeKnown", oldKnown && entry.State != EntityState.Added);
-            if (oldKnown && entry.State != EntityState.Added)
-            { writer.WritePropertyName("before"); AuditScalarJson.Write(writer, value.OriginalValue, _limits.MaximumRecordBytes); }
-            if (entry.State != EntityState.Deleted)
-            { writer.WritePropertyName("after"); AuditScalarJson.Write(writer, value.CurrentValue, _limits.MaximumRecordBytes); }
+            SensitiveKind? kind = protection is not null && protection.TryGetValue(property, out var classified) ? classified : null;
+            if (kind is not null) writer.WriteString("protection", kind == SensitiveKind.Secret ? "ChangedOnly" : "Masked");
+            if (kind != SensitiveKind.Secret)
+            {
+                if (oldKnown && entry.State != EntityState.Added)
+                { writer.WritePropertyName("before"); AuditScalarJson.Write(writer, kind is { } beforeKind ? SensitiveValues.Protect((string?)value.OriginalValue, beforeKind) : value.OriginalValue, _limits.MaximumRecordBytes); }
+                if (entry.State != EntityState.Deleted)
+                { writer.WritePropertyName("after"); AuditScalarJson.Write(writer, kind is { } afterKind ? SensitiveValues.Protect((string?)value.CurrentValue, afterKind) : value.CurrentValue, _limits.MaximumRecordBytes); }
+            }
             writer.WriteEndObject();
             if (writer.BytesCommitted + writer.BytesPending > _limits.MaximumRecordBytes)
                 throw new InvalidOperationException("An audit record exceeds the byte budget.");
@@ -162,14 +168,24 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
             var fields = names.Split('|').Select(name => type.FindProperty(name)
                 ?? throw new InvalidOperationException("Audit selection must reference mapped scalar properties: " + name)).ToArray();
             var keys = type.FindPrimaryKey()?.Properties.ToArray() ?? throw new InvalidOperationException("Audited entities require a primary key.");
+            if (keys.Any(key => key.PropertyInfo is { } member && SensitiveValues.ClassificationOf(member) is not null))
+                throw new InvalidOperationException("Audited resource keys must be unclassified opaque identifiers; sensitive keys are unsupported.");
             if (fields.Any(property => !AuditScalarJson.Supports(property.ClrType) || property.ValueGenerated != ValueGenerated.Never)
                 || keys.Any(property => !AuditScalarJson.Supports(property.ClrType)))
                 throw new InvalidOperationException("Audit fields must be supported, non-generated scalar properties.");
-            result.Add(type, new((string)type.FindAnnotation(AuditModelExtensions.ResourceAnnotation)!.Value!, fields, keys));
+            Dictionary<IProperty, SensitiveKind>? protection = null;
+            foreach (var field in fields)
+            {
+                if (field.PropertyInfo is not { } member || SensitiveValues.ClassificationOf(member) is not { } kind) continue;
+                if (kind != SensitiveKind.Secret && field.ClrType != typeof(string))
+                    throw new InvalidOperationException("Phone and email classifications require string audit properties.");
+                (protection ??= new()).Add(field, kind);
+            }
+            result.Add(type, new((string)type.FindAnnotation(AuditModelExtensions.ResourceAnnotation)!.Value!, fields, keys, protection));
         }
         return result;
     }
-    private sealed record Rule(string Resource, IProperty[] Fields, IProperty[] Keys);
+    private sealed record Rule(string Resource, IProperty[] Fields, IProperty[] Keys, Dictionary<IProperty, SensitiveKind>? Protection);
     private sealed class SaveBatch(AuditedDbContext owner, bool detectChanges) : IDisposable
     {
         internal bool DetectChanges { get; } = detectChanges;

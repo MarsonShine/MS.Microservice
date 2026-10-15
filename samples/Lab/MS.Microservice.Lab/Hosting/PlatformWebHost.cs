@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MS.Microservice.Core.FeatureManager;
 using MS.Microservice.Core.Messaging;
 using MS.Microservice.Core.Serialization;
+using MS.Microservice.Core.Security.SensitiveData;
 using MS.Microservice.Domain;
 using MS.Microservice.Infrastructure.Messaging;
 using MS.Microservice.Logging.AspNetCore;
@@ -128,6 +129,7 @@ public static class PlatformWebHost
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.JsonSerializerOptions.Encoder = DefaultSerializeSetting.ChineseEncoder;
+                options.JsonSerializerOptions.UseSensitiveValues();
             })
             .AddAutomaticAuditOperations(options => options.ResolveIdentity = context =>
                 context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } owner
@@ -153,6 +155,7 @@ public static class PlatformWebHost
             builder.Services.AddToolDemoApi();
             builder.Services.AddSingleton<CacheDemo>();
             builder.Services.AddAuditDemo(builder.Environment, builder.Configuration);
+            builder.Services.AddSensitiveDataDemo(builder.Environment);
             builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
             builder.Services.AddOptions<ImageBatchOptions>().Bind(builder.Configuration.GetSection("ImageBatches"));
             builder.Services.AddSingleton<IImageBatchOperation, ImageBatchOperation>();
