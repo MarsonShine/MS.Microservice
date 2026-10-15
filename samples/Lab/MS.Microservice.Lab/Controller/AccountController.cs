@@ -1,7 +1,6 @@
 using MS.Microservice.Lab.Application.Models.AccountRequests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Distributed;
 using System.Net;
 using System.Text;
 using MS.Microservice.Domain.Services.Interfaces;
@@ -25,16 +24,13 @@ public class AccountController : ControllerBase
     private readonly ITokenGenerator _tokenGenerator;
     private readonly IUserDomainService _userDomainService;
     private readonly IUserPasswordService _userPasswordService;
-    private readonly IDistributedCache _cache;
-    public AccountController(SignInManager signInManager, ITokenGenerator tokenGenerator, IUserDomainService userDomainService, IUserPasswordService userPasswordService,
-        IDistributedCache cache)
+    public AccountController(SignInManager signInManager, ITokenGenerator tokenGenerator, IUserDomainService userDomainService, IUserPasswordService userPasswordService)
     {
         _signInManager = signInManager;
         _tokenGenerator = tokenGenerator;
         _userDomainService = userDomainService;
         _userPasswordService = userPasswordService;
 
-        _cache = cache;
     }
 
     /// <summary>

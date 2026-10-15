@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Infrastructure.Caching.Consts;
 using MS.Microservice.Lab.Application.Commands;
 using MS.Microservice.Lab.Application.Identity;
 using MS.Microservice.Lab.Application.Users;
@@ -46,7 +44,6 @@ namespace MS.Microservice.Core.Tests.Functional
         public async Task ModifyAsync_WhenPipelineIsValid_ReturnsSuccess()
         {
             var userDomainService = Substitute.For<IUserDomainService>();
-            var cache = Substitute.For<IDistributedCache>();
             var userPasswordService = Substitute.For<IUserPasswordService>();
             userPasswordService
                 .HashPassword(Arg.Any<User>(), "Password123")
@@ -76,7 +73,7 @@ namespace MS.Microservice.Core.Tests.Functional
             accessor.HttpContext.Returns(httpContext);
 
             var currentUserResolver = new CurrentUserResolver(accessor, userDomainService);
-            var service = new UserModifyAppService(userDomainService, currentUserResolver, cache, userPasswordService);
+            var service = new UserModifyAppService(userDomainService, currentUserResolver, userPasswordService);
 
             var result = await service.ModifyAsync(CreateCommand([new RoleDto { Id = 1, Name = "Admin" }]));
 
@@ -92,8 +89,6 @@ namespace MS.Microservice.Core.Tests.Functional
                     && user.Roles.Count == 1
                     && user.Roles.Single().Id == 1),
                 Arg.Any<CancellationToken>());
-            await cache.Received(1).RemoveAsync(CacheConsts.UserAccountKey + "demo-account", Arg.Any<CancellationToken>());
-            await cache.Received(1).RemoveAsync(CacheConsts.UserIdKey + 11, Arg.Any<CancellationToken>());
         }
 
         [Fact]

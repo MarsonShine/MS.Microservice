@@ -15,27 +15,19 @@ When handling a bug, failure, unexpected behavior, or edge case, do not optimize
 
 ## Anti-patch rule
 
-Do not add a hardcoded value, special case, or narrow conditional solely to make the reported example pass. A conditional is acceptable only when it represents a genuine business, domain, security, or compatibility rule and is covered by tests.
+Do not add a hardcoded value, special case, or narrow conditional solely to make the reported example pass. A conditional is acceptable only when it represents a genuine business, domain, security, or compatibility rule and has credible regression evidence.
 
 Prefer restoring the violated invariant in shared logic, data models, state transitions, normalization, validation, APIs, or architectural boundaries. Do not over-generalize or refactor unrelated code without evidence.
 
 ## Implementation and validation
 
-- Add or update a regression test that captures the violated invariant.
-- Validate a relevant case matrix, including:
-  - The original failure
-  - Variations of the original input or state
-  - Boundary cases
-  - Opposite or inverse cases when applicable
-  - Normal/common cases
-  - Previously working behavior that could regress
-  - At least three relevant unseen cases
-- Run focused tests and the appropriate broader test suite.
-- Actively identify an unseen case that could still fail.
-- If a related variant fails, stop stacking patches. Re-evaluate the root cause and fix layer.
+- Use the smallest sufficient verification for the affected contract; choose cases by root cause and impact, not fixed quotas.
+- Reuse existing checks and valid results. Add tests only for concrete regression gaps worth maintaining.
+- Preserve explicit testing requirements, established TDD, and required gates; expand checks only for concrete shared or high-risk impact.
+- Stop when evidence is sufficient. Revisit the fix layer if related cases fail; disclose unavailable checks without prolonged tooling repair.
 
 ## Completion criteria
 
-The fix is complete only when the invariant is restored, the broader failure class is handled, relevant unseen cases pass, existing valid behavior does not regress, and no case-specific workaround was introduced without a justified domain rule.
+Complete the fix when the invariant is restored and credible evidence covers the affected behavior and relevant regression risks. Disclose unverified behavior; an unavailable check is not a pass.
 
-In the final report, summarize the root cause, invariant, fix layer, changed behavior, tests performed, and any remaining uncertainty.
+Briefly report the root cause, invariant, fix layer, changed behavior, verification performed or reused, and remaining uncertainty.

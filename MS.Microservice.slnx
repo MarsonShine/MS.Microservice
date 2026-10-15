@@ -8,6 +8,8 @@
   </Folder>
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Caching/MS.Microservice.Caching.csproj" />
+    <Project Path="src/MS.Microservice.Caching.Redis/MS.Microservice.Caching.Redis.csproj" />
     <Project Path="src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
     <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
@@ -49,13 +51,17 @@
     <Project Path="MS.Microservice.Persistence/test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/MS.Microservice.Framework.Benchmarks/MS.Microservice.Framework.Benchmarks.csproj" />
     <Project Path="benchmarks/MS.Microservice.Search.Benchmarks/MS.Microservice.Search.Benchmarks.csproj" />
+    <Project Path="MS.Microservice.Persistence/benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AI/">
     <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Caching.Tests/MS.Microservice.Caching.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Caching.Redis.Tests/MS.Microservice.Caching.Redis.Tests.csproj" />
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />

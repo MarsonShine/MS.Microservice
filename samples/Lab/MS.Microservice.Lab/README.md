@@ -45,6 +45,9 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 | `/s3` | 本人命名空间下条件写入、查询、下载、删除和临时 GET 地址 |
 | `/tasks` | Coravel 持久任务：提交文档索引、查看进度／历史、取消与重试 |
 | `/search` | 文件名／逻辑路径搜索、正文检索、可选精确总数 |
+| `/audits` | 自动采集订单／库存／审批变化，按操作标识查看同事务审计明细 |
+| `/cache` | 重复读取观察源读取次数，修改后失效、主动清除和用户隔离 |
+| `/sensitive-data` | JSON／日志预览、受保护 CSV、同事务审计中的掩码和变更事实 |
 | `/image-batches` | 复用下文已有后台队列，查看批量处理进度、取消、重试与下载 |
 
 可以按以下顺序查看实际效果：
@@ -127,6 +130,53 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 任务 SQLite 默认位于 `.tools/task-center/tasks.db`，检索索引位于 `.tools/document-search`；可通过 `ToolDemos:TaskCenterDirectory`、`ToolDemos:SearchIndexDirectory` 配置 webroot 之外的目录。两者跨重启保留，首版只运行一个宿主实例；Lab 自动创建自己的演示数据库，生产接入由宿主管理迁移。后台索引任务声明为可安全重试，重启保留执行历史并恢复未完成任务；版本规则阻止较旧任务覆盖更新或删除。
 
 初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/README.md)。
+
+## 敏感字段示例
+
+使用虚构数据调用 `POST /api/lab/tools/sensitive-data/preview`，查看 JSON、导出字段投影，日志可在宿主现有日志后端查看；`export` 下载受保护 CSV。Phone／Email 掩码，InternalNote 从这些输出中排除。
+
+调用 `POST /sensitive-data/records` 创建本人记录，再用 `PUT /sensitive-data/records/{id}` 修改手机号或内部备注，最后用返回的 operationId 查询 `GET /sensitive-data/operations/{operationId}`（均在 `/api/lab/tools` 前缀下）。`Masked` 表示只保留展示掩码；`ChangedOnly` 只有字段变更事实，没有前后值。手机号从 `13800138000` 改为 `13899118000` 时掩码相同，审计仍记录真实变化。
+
+示例库位于 `.tools/sensitive-data/records.db`，与已有审计演示库分离。**业务原值仍保存在该私有库中，输出保护不是数据库加密**；请只使用虚构数据。其他用户查询记录或操作返回 404。声明方式、适用输出入口与 AOT 限制见 [Core](../../../src/MS.Microservice.Core/README.md#敏感字段)；完整注册、扫描、执行流程和 Lab 代码入口见 [敏感字段的注册、扫描与执行链](../../../src/MS.Microservice.Core/docs/sensitive-data-design.md)。
+
+## 缓存治理示例
+
+缓存示例使用 `GET /api/lab/tools/cache` 连续读取两次，观察 `sourceReads` 保持不变；`PUT` 提交 `{ "value": "已更新" }` 后再 GET，确认新值及一次源读取。`DELETE` 仅清除缓存，源数据保留。键按当前用户隔离，计数是本进程所有用户的累计数。
+
+| 配置 | 默认值 | 作用 |
+| --- | --- | --- |
+| `Caching:Enabled` | `true` | `false` 时直接读源，不要求 Redis 配置 |
+| `Caching:Backend` | `Memory` | `Memory` 只使用进程内缓存；`Redis` 添加 Redis 共享层 |
+| `ConnectionStrings:CacheRedis` | 未配置 | Redis 模式必填，使用 StackExchange.Redis 连接串 |
+| `Caching:Redis:InstanceName` | `MS.Microservice.Lab:` | Redis 键前缀；不同部署应使用不同前缀 |
+| `Caching:LocalExpirationSeconds` / `ExpirationSeconds` | `30` / `300` | 本地／共享绝对 TTL（秒）；本地 TTL 不得大于共享 TTL |
+
+例如用环境变量启用 Redis，然后按现有方式启动 Lab：
+
+```powershell
+$env:Caching__Backend = "Redis"
+$env:ConnectionStrings__CacheRedis = "localhost:6379,ssl=false"
+$env:Caching__Redis__InstanceName = "lab-demo:"
+```
+
+连接串中的凭据通过环境变量或用户机密提供。`prefix` 应写在 `InstanceName`，不要放进连接串；StackExchange.Redis 使用共享长连接，不接受其他客户端的 `poolsize` 参数。启用时未知后端、缺失连接或无效配置会在注册时失败；Redis 故障期间的读写行为见 [Redis 组件](../../../src/MS.Microservice.Caching.Redis/README.md)。连接由 Redis 缓存提供程序管理，业务 Redis 连接保持独立。
+
+Redis 模式下，本地条目过期后可从共享层取值，此时 `sourceReads` 仍保持不变。API 返回的 `sharedTtlSeconds` 是策略值，只有 Redis 模式实际存在共享层。**示例源仍在本进程内存中，重启会重置；Redis 中未过期的旧缓存可以继续返回。** 它用于体验缓存行为，不能作为跨实例共享业务数据示例。测试时先 DELETE 清除本人键；生产中应使用共享数据库，并在提交成功后失效，其他实例的本地缓存仍可能保留至本地 TTL 到期。
+
+注册、指标及其他使用方式见 [缓存组件](../../../src/MS.Microservice.Caching/README.md)。Lab RBAC 始终实时查库，角色撤销不等待缓存过期；旧 `CacheOptions` 和自制 CacheManager 已移除。
+
+## 自动业务审计示例
+
+在 Swagger 登录后按以下流程体验，不需要配置 PostgreSQL：
+
+1. `POST /api/lab/tools/audits/orders` 提交 `{ "quantity": 2 }`，创建本人订单和两条库存，各有 100 件。保留返回的 `order.id` 和 `operationId`。
+2. `POST /api/lab/tools/audits/orders/{id}/approve` 审批，状态变为 Approved，两条库存各减至 98。返回新的 `operationId`。
+3. `GET /api/lab/tools/audits/operations/{operationId}` 查看审批产生的四条明细：订单、两条库存、审批记录。它们来自三张业务表，共享一个操作标识和保存序号。
+4. `GET /api/lab/tools/audits/orders/{id}` 核对当前状态。读取不产生业务审计。
+
+入口上的 `[AuditOperation]` 自动建立身份，EF 模型声明选择字段，业务 action 只修改实体并保存。变化 JSON 的 `beforeKnown=false` 表示不知道原值，不能解释为原值为 null。审批业务和审计在同一事务中保存；已审批或并发冲突返回 409。其他用户的订单、操作明细均返回 404。
+
+演示 SQLite 保存在 `.tools/audit-demo/auditing.db`，跨重启保留；`ToolDemos:AuditStorageDirectory` 可改为 webroot 外的私有目录。Lab 启动只自动初始化自己的演示库，不连接性能测试 PostgreSQL。生产组件的迁移、字段选择与使用限制见 [EFCore 接入](../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing)，采集流程见 [技术设计](../../../MS.Microservice.Persistence/docs/automatic-auditing.md)。
 
 ## 图片后台批处理
 

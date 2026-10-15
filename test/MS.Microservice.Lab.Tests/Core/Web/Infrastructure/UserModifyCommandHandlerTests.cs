@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Infrastructure.Caching.Consts;
 using MS.Microservice.Lab.Application.Commands;
 using MS.Microservice.Lab.Application.Identity;
 using MS.Microservice.Lab.Infrastructure.Applications.Users;
@@ -16,10 +14,9 @@ namespace MS.Microservice.Core.Tests.Web.Infrastructure;
 public class UserModifyCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_WhenPasswordIsProvided_PersistsVersionedHashAndClearsCache()
+    public async Task Handle_WhenPasswordIsProvided_PersistsVersionedHash()
     {
         var userDomainService = Substitute.For<IUserDomainService>();
-        var cache = Substitute.For<IDistributedCache>();
         var userPasswordService = Substitute.For<IUserPasswordService>();
         userPasswordService
             .HashPassword(Arg.Any<User>(), "Password123")
@@ -41,7 +38,6 @@ public class UserModifyCommandHandlerTests
         var currentUserResolver = CreateCurrentUserResolver(userDomainService);
         var handler = new UserModifyCommandHandler(
             userDomainService,
-            cache,
             currentUserResolver,
             userPasswordService);
 
@@ -54,12 +50,6 @@ public class UserModifyCommandHandlerTests
                 user.Password == "versioned-password-hash"
                 && user.Salt == User.ModernPasswordSaltMarker
                 && user.HasModernPasswordHash()),
-            Arg.Any<CancellationToken>());
-        await cache.Received(1).RemoveAsync(
-            CacheConsts.UserAccountKey + "demo-account",
-            Arg.Any<CancellationToken>());
-        await cache.Received(1).RemoveAsync(
-            CacheConsts.UserIdKey + 11,
             Arg.Any<CancellationToken>());
     }
 

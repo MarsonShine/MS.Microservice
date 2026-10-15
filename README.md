@@ -76,6 +76,8 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 
 | 工具组件 | 使用说明 |
 | --- | --- |
+| 缓存治理 | [Caching](src/MS.Microservice.Caching/README.md)：类型／Scope 隔离、固定 TTL、并发回源预算及显式失效 |
+| Redis 二级缓存 | [Caching.Redis](src/MS.Microservice.Caching.Redis/README.md)：可选共享后端，复用治理 API 与指标 |
 | 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；图片／视频自动去水印、OCR、表格、抠图和增强使用可选 Inference |
 | PDF、Word 模板与 HTML／DOCX 排版 | [Documents](src/MS.Microservice.Documents/README.md)；HTML／DOCX 转 PDF 使用可选 Windows [Rendering](src/MS.Microservice.Documents.Rendering/README.md) |
 | 文件存储、哈希与 ZIP | [Core](src/MS.Microservice.Core/README.md)；对象存储使用可选 [S3](src/MS.Microservice.Storage.S3/README.md) |

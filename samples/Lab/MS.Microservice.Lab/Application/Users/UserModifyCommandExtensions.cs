@@ -2,7 +2,6 @@ using MS.Microservice.Core.Extension;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Consts;
-using MS.Microservice.Infrastructure.Caching.Consts;
 using MS.Microservice.Lab.Application.Commands;
 using MS.Microservice.Lab.Application.Identity;
 using MS.Microservice.Lab.Application.Validations;
@@ -23,7 +22,7 @@ namespace MS.Microservice.Lab.Application.Users
         IReadOnlyCollection<Role> AvailableRoles,
         User ExistingUser);
 
-    public sealed record UserModifyExecution(User User, IReadOnlyList<string> CacheKeys);
+    public sealed record UserModifyExecution(User User);
 
     public static class UserModifyCommandExtensions
     {
@@ -88,18 +87,7 @@ namespace MS.Microservice.Lab.Application.Users
                             state.Command.Roles.Select(role => new Role(role.Id, role.Name ?? string.Empty, string.Empty)));
                     }
 
-                    var cacheKeys = new List<string>
-                    {
-                        CacheConsts.UserAccountKey + state.Command.Account,
-                        CacheConsts.UserIdKey + state.ExistingUser.Id
-                    };
-
-                    if (state.ExistingUser.FzAccount.IsNotNullOrEmpty())
-                    {
-                        cacheKeys.Add(CacheConsts.UserFzAccountKey + state.ExistingUser.FzAccount);
-                    }
-
-                    return new UserModifyExecution(user, cacheKeys);
+                    return new UserModifyExecution(user);
                 }, code: "user.modify.mapping")
                 .MapLeft(error => error with { Message = "用户修改命令映射为领域对象失败" });
         }

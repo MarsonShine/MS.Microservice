@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using MS.Microservice.Core.Ceching;
+using MS.Microservice.Core.Memory;
 using MS.Microservice.Core.Common.Advance.Resilience;
 using Xunit;
 

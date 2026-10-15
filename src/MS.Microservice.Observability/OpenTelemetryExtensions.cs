@@ -54,7 +54,7 @@ public static partial class OpenTelemetryExtensions
                 })
                 .WithMetrics(configurationBuilder =>
                 {
-                    configurationBuilder.AddMeter(PlatformMetrics.MeterName, "MS.Microservice.Messaging", "Wolverine*")
+                    configurationBuilder.AddMeter(PlatformMetrics.MeterName, "MS.Microservice.Messaging", "MS.Microservice.Caching", "Wolverine*")
                         .AddRuntimeInstrumentation()
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation();

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Domain.Services.Interfaces;
@@ -47,7 +46,6 @@ public class RbacAuthorizationHandlerLifetimeTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddScoped(_ => Substitute.For<IUserDomainService>());
-        services.AddScoped(_ => Substitute.For<IDistributedCache>());
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>

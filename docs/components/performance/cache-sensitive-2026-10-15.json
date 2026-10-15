@@ -1,0 +1,122 @@
+{
+  "MeasuredAtUtc": "2026-10-15T07:28:59.2970121+00:00",
+  "Runtime": ".NET 10.0.13",
+  "OS": "Microsoft Windows 10.0.19045",
+  "ProcessorCount": 6,
+  "StopwatchFrequency": 10000000,
+  "Rounds": 7,
+  "IterationsPerRound": 100000,
+  "SampleStride": 128,
+  "ColdProjectionMs": 19.7733,
+  "Results": [
+    {
+      "Scenario": "cache.native.hit",
+      "MedianNs": 99.052,
+      "MedianBytes": 0,
+      "SampledP95Ns": 200
+    },
+    {
+      "Scenario": "cache.governed.hit",
+      "MedianNs": 112.178,
+      "MedianBytes": 0,
+      "SampledP95Ns": 300
+    },
+    {
+      "Scenario": "cache.native.miss",
+      "MedianNs": 698.327,
+      "MedianBytes": 464,
+      "SampledP95Ns": 2000
+    },
+    {
+      "Scenario": "cache.governed.miss",
+      "MedianNs": 836.342,
+      "MedianBytes": 488,
+      "SampledP95Ns": 2900
+    },
+    {
+      "Scenario": "cache.bypass",
+      "MedianNs": 16.957,
+      "MedianBytes": 0,
+      "SampledP95Ns": 100
+    },
+    {
+      "Scenario": "cache.key.create",
+      "MedianNs": 773.985,
+      "MedianBytes": 600.03024,
+      "SampledP95Ns": 1400
+    },
+    {
+      "Scenario": "sensitive.phone",
+      "MedianNs": 22.761,
+      "MedianBytes": 48.00496,
+      "SampledP95Ns": 100
+    },
+    {
+      "Scenario": "sensitive.email",
+      "MedianNs": 75.941,
+      "MedianBytes": 80.00496,
+      "SampledP95Ns": 500
+    },
+    {
+      "Scenario": "projection.manual",
+      "MedianNs": 206.707,
+      "MedianBytes": 480.0248,
+      "SampledP95Ns": 1200
+    },
+    {
+      "Scenario": "projection.attributes",
+      "MedianNs": 219.595,
+      "MedianBytes": 480.0248,
+      "SampledP95Ns": 1600
+    },
+    {
+      "Scenario": "json.preprotected",
+      "MedianNs": 301.213,
+      "MedianBytes": 176,
+      "SampledP95Ns": 1000
+    },
+    {
+      "Scenario": "json.attributes",
+      "MedianNs": 414.451,
+      "MedianBytes": 304.01984,
+      "SampledP95Ns": 1200
+    },
+    {
+      "Scenario": "log.plain.disabled",
+      "MedianNs": 34.869,
+      "MedianBytes": 32,
+      "SampledP95Ns": 100
+    },
+    {
+      "Scenario": "log.sensitive.disabled",
+      "MedianNs": 3.387,
+      "MedianBytes": 0,
+      "SampledP95Ns": 100
+    },
+    {
+      "Scenario": "log.sensitive.enabled",
+      "MedianNs": 274.188,
+      "MedianBytes": 624.03472,
+      "SampledP95Ns": 900
+    },
+    {
+      "Scenario": "cache.governed.hit.listener",
+      "MedianNs": 105.802,
+      "MedianBytes": 0,
+      "SampledP95Ns": null
+    }
+  ],
+  "AuditCapture": [
+    {
+      "Variant": "plain",
+      "MedianNs": 59700,
+      "MedianBytes": 9384
+    },
+    {
+      "Variant": "protected",
+      "MedianNs": 58400,
+      "MedianBytes": 9712
+    }
+  ],
+  "Notes": "Single-thread warm microbenchmarks. Median batch ns/op and allocated bytes/op; sampled P95 includes timestamp overhead. Cache misses include removal. Listener is not an exporter. JSON output bytes match. Audit capture stops before SQL. No Redis, PostgreSQL, HTTP or sink I/O capacity claim."
+}

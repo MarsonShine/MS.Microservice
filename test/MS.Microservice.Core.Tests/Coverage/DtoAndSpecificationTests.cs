@@ -1,4 +1,3 @@
-using MS.Microservice.Core.Ceching;
 using MS.Microservice.Core.Domain.Entity;
 using MS.Microservice.Core.Domain.Extension;
 using MS.Microservice.Core.Dto;
@@ -34,10 +33,6 @@ namespace MS.Microservice.Core.Tests.Coverage
         // ===== PagedResultDto<T> =====
         [Fact] public void PagedResultDto_Default() { var d = new PagedResultDto<int>(); Assert.Equal(0, d.TotalCount); Assert.Empty(d.Items); }
         [Fact] public void PagedResultDto_WithData() { var d = new PagedResultDto<string>(5, new System.Collections.Generic.List<string> { "a", "b" }); Assert.Equal(5, d.TotalCount); Assert.Equal(2, d.Items.Count); }
-
-        // ===== CacheOptions =====
-        [Fact] public void CacheOptions_Default() { var o = new CacheOptions(); Assert.Equal("Fz.Activation.", o.KeyPrefix); Assert.Equal(7200, o.SlidingExpirationSecond); Assert.Null(o.AbsoluteExpirationSecond); }
-        [Fact] public void CacheOptions_Custom() { var o = new CacheOptions { KeyPrefix = "test.", AbsoluteExpirationSecond = 300, SlidingExpirationSecond = 600 }; Assert.Equal("test.", o.KeyPrefix); Assert.Equal(300, o.AbsoluteExpirationSecond); }
 
         // ===== Specification<T> =====
         [Fact] public void Specification_Where() { var s = new TestSpec(); s.TestWhere(x => x.Name == "a"); Assert.NotNull(s.Criteria); }

@@ -1,9 +1,11 @@
 # 可观测性组件
 
 AddMsOpenTelemetry(configuration) 注册 HTTP/runtime 观测，并采集应用 ActivitySource、
-MS.Microservice.Messaging、Wolverine、MS.Microservice.AI。默认不启用任何导出器。
+MS.Microservice.Messaging、Wolverine、MS.Microservice.AI，并订阅 MS.Microservice.Caching 的聚合指标。默认不启用任何导出器。
 宿主通过 OpenTelemetry:ConsoleExporterEnabled 或 OtlpExporterEnabled 显式开启；
 OTLP 地址和凭据使用标准 OTEL_EXPORTER_OTLP_* 环境变量注入。
+
+缓存组件启用后发布 `cache.requests`、`cache.source.loads`、`cache.source.rejected` 和 `cache.source.duration`，按固定 region 分类。加载时长包含失败／取消的工厂，不是 HTTP 耗时；这些指标不提供逐键历史或精确层级命中率。接入示例及统计口径见 [Caching README](../MS.Microservice.Caching/README.md#监测如何读取怎样解释)。
 
 自研实现提供 messaging.operations、messaging.operation.duration 和 messaging.stored_messages。
 结果标签区分 published、consumed、duplicate、busy、dead_letter、lease_lost 等；

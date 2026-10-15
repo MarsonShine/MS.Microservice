@@ -13,6 +13,7 @@ Provides HTTP error handling, trace IDs, proxy/CORS configuration, optional rate
 | Request validation | .NET 10 generated validation | [Binding limitations](docs/minimal-api-validation.md) |
 | Upload screening | `FileUploadValidator` | [Implementation and tests](docs/uploads.md) |
 | External identity | `AddExternalIdentity` | [Permission semantics](docs/permission-check-design.md) |
+| Automatic audit operations | `AddAutomaticAuditOperations` | Trusted identity and `[AuditOperation]` actions; see below |
 
 ## Host setup
 
@@ -105,3 +106,30 @@ public sealed class UploadsController(FileUploadValidator validator) : Controlle
 Extension and MIME comparisons ignore case and must agree. This is a header check, not complete image/workbook validation: an ordinary ZIP can pass the XLSX signature. Later processors must decode or parse the content. The size check trusts `IFormFile.Length`; request-body limits must separately allow multipart overhead while bounding the whole request. The host owns authorization, storage paths, file names and retention. Cancellation and I/O errors propagate.
 
 The separate [MVC encryption adapter](../MS.Microservice.AspNetCore.Encryption/README.md) handles explicitly registered request envelopes and is an optional dependency.
+
+## Automatic audit operations
+
+Supply trusted scope/actor identifiers from the host's authentication, then tag MVC actions or controllers:
+
+```csharp
+using System.Security.Claims;
+using MS.Microservice.AspNetCore.Auditing;
+using MS.Microservice.Core.Auditing;
+
+builder.Services.AddControllers().AddAutomaticAuditOperations(options =>
+{
+    options.ResolveIdentity = http =>
+    {
+        var actor = http.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var tenant = http.User.FindFirstValue("tenant_id");
+        return actor is null || tenant is null ? null : new AuditHttpIdentity(tenant, actor);
+    };
+});
+
+// On an authenticated MVC action:
+// [AuditOperation("order.approve")]
+```
+
+The filter opens one scoped operation around a tagged action, supplies a trace correlation ID and disposes the scope on completion. Untagged actions do not create an operation; a null identity returns 403 before invoking a tagged action. The host still applies authorization, validates the claims and chooses tenant/actor semantics. Do not resolve identity from an untrusted request parameter.
+
+This adapter supplies operation identity, not entity interception. Pair it with [AuditedDbContext and field declarations](../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing). It does not inspect request/result bodies or intercept arbitrary service methods. Background jobs and non-MVC endpoints begin an `AuditOperationContext` explicitly. Register it as scoped when using only the persistence component.
