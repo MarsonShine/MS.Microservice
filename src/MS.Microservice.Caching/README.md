@@ -64,7 +64,9 @@ builder.Services.AddGovernedCaching(options =>
 
 配置变更后重启。region 使用固定业务名称和数据格式版本，例如 `products.v1`，不要从用户输入生成。
 
-共享后端由宿主选择。例如宿主自行引用 `Microsoft.Extensions.Caching.StackExchangeRedis` 后，先调用 `AddStackExchangeRedisCache`，再注册本组件即可；无须额外启动框架缓存服务。仅使用分布式内存实现不等于跨进程共享缓存。
+需要 Redis 二级缓存时，引用可选的 [`MS.Microservice.Caching.Redis`](../MS.Microservice.Caching.Redis/README.md)，调用 `AddGovernedRedisCaching` 一次即可同时注册治理层和原生 Redis 后端。L1 是进程内存，L2 才是共享 Redis；仅使用分布式内存实现不等于跨进程共享缓存。
+
+已有 `IDistributedCache` 的宿主继续调用 `AddGovernedCaching` 复用后端，不重复注册 Redis 适配器。无需额外启动框架缓存服务。
 
 ## 常见使用案例
 
