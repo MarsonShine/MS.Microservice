@@ -8,10 +8,14 @@ namespace MS.Microservice.Caching;
 
 public interface IGovernedCache
 {
+    /// <summary>Creates a typed, application- and scope-isolated key. Use a fixed, versioned region.</summary>
     CacheKey<T> CreateKey<T>(string region, string scope, string resourceId, CachePolicy? policy = null);
+    /// <summary>Reads or loads a value with the key's policy. Loaders must use their supplied token and own dependency lifetimes.</summary>
     ValueTask<T> GetOrCreateAsync<T, TState>(CacheKey<T> key, TState state,
         Func<TState, CancellationToken, ValueTask<T>> factory, CancellationToken cancellationToken = default);
+    /// <summary>Stores a value using the key's policy; disabled or bypassed caching performs no write.</summary>
     ValueTask SetAsync<T>(CacheKey<T> key, T value, CancellationToken cancellationToken = default);
+    /// <summary>Invalidates this instance and its shared backend; other instances' local copies may remain until expiration.</summary>
     ValueTask RemoveAsync<T>(CacheKey<T> key, CancellationToken cancellationToken = default);
 }
 
@@ -25,8 +29,9 @@ public static class GovernedCacheExtensions
 /// <summary>Scoped typed keys and bounded source loading over the host's HybridCache.</summary>
 public sealed class GovernedCache : IGovernedCache, IDisposable
 {
+    public const string MeterName = "MS.Microservice.Caching";
     private static readonly UTF8Encoding Utf8 = new(false, true);
-    private static readonly Meter Meter = new("MS.Microservice.Caching");
+    private static readonly Meter Meter = new(MeterName);
     private static readonly Counter<long> Loads = Meter.CreateCounter<long>("cache.source.loads");
     private static readonly Counter<long> Requests = Meter.CreateCounter<long>("cache.requests");
     private static readonly Counter<long> Rejected = Meter.CreateCounter<long>("cache.source.rejected");

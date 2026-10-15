@@ -8,6 +8,7 @@ namespace MS.Microservice.Caching;
 
 public static class CachingServiceCollectionExtensions
 {
+    /// <summary>Registers governed caching once in the host, using its optional shared cache backend.</summary>
     public static IServiceCollection AddGovernedCaching(this IServiceCollection services,
         Action<CachingOptions>? configure = null, Action<IHybridCacheBuilder>? serialization = null)
     {
