@@ -1,0 +1,42 @@
+{
+  "MeasuredAtUtc": "2026-10-15T08:26:08.9304246+00:00",
+  "Runtime": ".NET 10.0.13",
+  "OS": "Microsoft Windows 10.0.19045",
+  "ProcessorCount": 6,
+  "StopwatchFrequency": 10000000,
+  "PayloadUtf8Bytes": 1024,
+  "RawProviderPayloadBytes": 1142,
+  "L1Rounds": 5,
+  "L1Iterations": 500000,
+  "L2Rounds": 3,
+  "L2Iterations": 1000,
+  "OperationBudgetSeconds": 55,
+  "CleanupBudgetSeconds": 5,
+  "LocalResults": [
+    {
+      "Scenario": "cache.native.l1.hit",
+      "MedianNs": 83.9922,
+      "MedianBytes": 6.4E-05
+    },
+    {
+      "Scenario": "cache.governed.l1.hit",
+      "MedianNs": 104.2568,
+      "MedianBytes": 6.4E-05
+    }
+  ],
+  "SharedResults": [
+    {
+      "Scenario": "cache.native.hybrid.l2.read",
+      "MeanMs": 0.9208012666666657,
+      "P95Ms": 3.6202,
+      "Samples": 3000
+    },
+    {
+      "Scenario": "cache.native.distributed.raw.read",
+      "MeanMs": 0.8706923,
+      "P95Ms": 3.4264,
+      "Samples": 3000
+    }
+  ],
+  "Notes": "Single-thread sequential warm reads. L1 uses the same prebuilt key, immutable 1 KiB string, policy and HybridCache instance; median batch ns/op and thread allocation B/op. L2 forces local read/write off and rejects source loading. Raw IDistributedCache reads include HybridCache framing but omit its decoding; raw and Hybrid L2 results are not a measurement of governance overhead. L2 samples include client awaiting/deadline guards. No endpoint, connection, prefix or payload is recorded. This run is not a Redis capacity or failover acceptance test."
+}

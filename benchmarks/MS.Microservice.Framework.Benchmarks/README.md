@@ -1,6 +1,6 @@
-# 缓存与敏感字段的本地开销对照
+# 缓存与敏感字段的性能基准
 
-用于复测治理封装、字段保护和指标监听的增量。生产组件源码位于 Caching、Core.Security.SensitiveData 和 Persistence.EFCore；本程序不连接外部数据库或 Redis，不需要 Docker。
+用于复测治理封装、字段保护和指标监听的增量。生产组件源码位于 Caching、Core.Security.SensitiveData 和 Persistence.EFCore；默认模式不连接外部数据库或 Redis；可选 Redis 模式见下文。两种模式均不需要 Docker。
 
 ```powershell
 dotnet run --project benchmarks/MS.Microservice.Framework.Benchmarks -c Release -- artifacts/framework-component-performance.json
@@ -19,3 +19,17 @@ dotnet run --project benchmarks/MS.Microservice.Framework.Benchmarks -c Release 
 微基准预热后执行 7 轮，每轮每场景 100,000 次，轮换场景顺序。报告批次平均 ns/次的中位数、线程分配 B/次，每 128 次采样一个带计时调用的耗时，采样 P95 包含时间戳开销。审计采集单独预热 200 次、测量 2,000 次，报告中位数；SQLite 仅用于准备真实关系模型及跟踪快照。
 
 固定单线程、小字符串和简单 DTO 不代表真实大对象或并发请求；采集停止在 SQL 前，更不代表 PostgreSQL 同事务保存已通过验收。结果解释、冷启动成本和未验证范围见 [性能记录](../../docs/components/cache-sensitive-performance.md)。
+
+## Redis 模式
+
+用独立环境变量提供测试连接及键前缀；连接串遵循 StackExchange.Redis 语法，Cluster seed 可为主节点或副本。保留部署的连接发现与重试配置。
+
+~~~powershell
+$env:MS_CACHE_REDIS_TEST_CONNECTION = '<Redis 连接配置>'
+$env:MS_CACHE_REDIS_TEST_PREFIX = 'framework-cache-check:'
+dotnet run --project benchmarks/MS.Microservice.Framework.Benchmarks -c Release -- --redis
+~~~
+
+连接和前缀必填，前缀最多 95 字符。可在 `--redis` 后提供报告路径，默认 `artifacts/redis-component-performance.json`。基准只创建一个随机命名空间键，结束精确删除；不扫描或清空 Redis。
+
+分别报告原生／治理 L1 命中、强制 L2 读取和原生 `IDistributedCache` 读取。55 秒操作预算及 5 秒清理预算避免无界执行；报告不含连接参数。测量方法、结果和实库验证入口见 [Redis 性能记录](../../docs/components/redis-cache-performance.md)。

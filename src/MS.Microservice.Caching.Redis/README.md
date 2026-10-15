@@ -133,3 +133,5 @@ Lab 默认 `Caching:Backend=Memory`。改用 Redis 时，在环境变量提供 `
 登录后连续调用 `GET /api/lab/tools/cache`，再通过 `PUT` 更新和 `DELETE` 失效，观察回源次数与指标。Lab 示例源保存在进程内，重启会重置；它用于体验 API，不作为多实例共享业务源或 Redis 容量验收。更多步骤见 [Lab 缓存治理示例](../../samples/Lab/MS.Microservice.Lab/README.md#缓存治理示例)。
 
 已有[缓存微基准](../../docs/components/cache-sensitive-performance.md)衡量治理层的本地开销，不能用于推断 Redis 吞吐、网络延迟或故障恢复能力。真实部署需分别测量 L1 命中、L2 读取和回源；实现责任与性能边界见[设计文档](docs/design.md)。
+
+当前测试环境的实库验证、L1 增量与 L2 读取结果见 [Redis 性能记录](../../docs/components/redis-cache-performance.md)。

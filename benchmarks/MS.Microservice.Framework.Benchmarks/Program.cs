@@ -9,6 +9,12 @@ using Microsoft.Extensions.Logging;
 using MS.Microservice.Caching;
 using MS.Microservice.Core.Security.SensitiveData;
 
+if (args.FirstOrDefault() == "--redis")
+{
+    Environment.ExitCode = await RedisCacheBenchmark.RunAsync(args.Skip(1).FirstOrDefault());
+    return;
+}
+
 var services = new ServiceCollection(); services.AddGovernedCaching();
 using var provider = services.BuildServiceProvider();
 var cache = provider.GetRequiredService<IGovernedCache>();

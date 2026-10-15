@@ -2,6 +2,7 @@
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/MS.Microservice.Caching/MS.Microservice.Caching.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Caching.Redis/MS.Microservice.Caching.Redis.csproj" />
     <ProjectReference Include="../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <ProjectReference Include="../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/MS.Microservice.Persistence.EFCore.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
