@@ -30,7 +30,7 @@ public class WeakEvictionCache<TKey, TValue> where TValue : class
             result = value.Target!;
             if (result != null)
             {
-                // 对象被使用时尝试恢复强引用  
+                // 对象被使用时尝试恢复强引用
                 value.MakeStrong();
                 return true;
             }
@@ -54,7 +54,7 @@ public class WeakEvictionCache<TKey, TValue> where TValue : class
             }
             else
             {
-                // 清除已失效的弱引用  
+                // 清除已失效的弱引用
                 toRemove.Add(strongToWeakReference.Key);
             }
         }

@@ -11,6 +11,7 @@
 | HTTP 调用与日志 | `LogHttpClient`、`LoggingHttpClientHandler` | [正文日志行为](Net/Http/body-logging.md) |
 | 函数式结果与查询规格 | `Functional`、`Specification` | 公共类型注释；数据库执行由持久化组件提供 |
 | 业务缓存治理 | 独立的 [Caching](../MS.Microservice.Caching/README.md) 组件 | Core 不再提供分布式缓存 JSON 扩展或缓存配置；弱引用工具在 `Memory` 中 |
+| 敏感字段输出 | `SensitiveValues`、`SensitiveJson`、`LogSensitive` | [规则与适配边界](docs/sensitive-data-design.md) |
 | 审计操作上下文 | `AuditOperationContext`、`AuditOperationAttribute` | [EF 自动采集接入](../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing)；Core 仅定义操作身份，不访问数据库 |
 
 ## 敏感字段
@@ -18,12 +19,34 @@
 敏感字段使用 `MS.Microservice.Core.Security.SensitiveData`：在 DTO 属性上声明 `[Sensitive(SensitiveKind.Phone)]`、`Email` 或 `Secret`。手机号／邮箱掩码，Secret 从受保护输出中排除。规则不改变业务实体或缓存对象。
 
 ```csharp
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using MS.Microservice.Core.Security.SensitiveData;
+
+var dto = new ProfileView { Phone = "13800138000", Email = "alice@example.com", InternalNote = "仅供演示" };
 var protectedFields = SensitiveValues.Project(dto); // 日志／导出的扁平字段
 logger.LogSensitive(LogLevel.Information, "profile.changed", dto);
 var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 jsonOptions.UseSensitiveValues();
 var json = JsonSerializer.Serialize(dto, jsonOptions);
+
+public sealed class ProfileView
+{
+    [Sensitive(SensitiveKind.Phone)] public string? Phone { get; set; }
+    [Sensitive(SensitiveKind.Email)] public string? Email { get; set; }
+    [Sensitive(SensitiveKind.Secret)] public string? InternalNote { get; set; }
+}
 ```
+
+| 使用场景 | 接入及结果 |
+| --- | --- |
+| 标量处理 | `SensitiveValues.Protect("13800138000", SensitiveKind.Phone)` 返回 `138****8000`；Email 示例返回 `a***@example.com` |
+| JSON／HTTP 响应 | 对相应 JsonSerializerOptions 调用 `UseSensitiveValues()`；上例输出 Phone／Email 掩码，没有 InternalNote，反序列化仍接收原值 |
+| 结构化日志 | `LogSensitive` 在提交 ILogger 前创建受保护状态，任意后端接收相同安全字段；关闭日志级别时不读取 DTO |
+| Excel／CSV 等导出 | 将 `Project` 返回的扁平字段传给导出器，而不是直接传原 DTO；Secret 列不存在，源对象保持不变 |
+| EF 自动审计 | 在已选入 `AuditChanges` 的实体属性上声明分类；Phone／Email 保存掩码，Secret 只记变更事实，见 [接入说明](../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing) |
+
+ASP.NET Core 可通过 `services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.UseSensitiveValues())` 接入。完整查看、修改与受保护导出的流程见 [Lab 示例](../../samples/Lab/MS.Microservice.Lab/README.md#敏感字段示例)。标记不会提供完整值访问授权；需要完整值时，应由宿主提供独立授权的 DTO／入口。
 
 标记须配合这些入口或 EF 审计适配器使用。普通字符串日志、其他 JSON 配置、未接入的导出不会自动保护；嵌套对象不由 `Project` 展开。Phone 识别 8–15 位数字，可带前导 `+`；Email 识别普通本地部分与 ASCII 域名，未识别格式完整遮盖，空值保留为空。JSON 只影响写出，读入保留原值。投影复用运行时编译访问器，JSON 分类在构建类型元数据时解析；这些反射适配路径尚不支持 Native AOT／裁剪，纯标量掩码无此依赖。完整策略和限制见 [敏感字段设计](docs/sensitive-data-design.md)。
 

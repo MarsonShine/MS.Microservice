@@ -103,7 +103,7 @@ await cache.SetAsync(key, product, cancellationToken);
 var shortPolicy = new CachePolicy(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(5));
 var optionalKey = cache.CreateKey<ProductView?>("optional-products.v1", trustedTenant, productId, shortPolicy);
 var optional = await cache.GetOrCreateAsync(optionalKey,
-    token => FindProductAsync(productId, token), cancellationToken);
+    async token => await FindProductAsync(productId, token), cancellationToken);
 ~~~
 
 null 与空集合不会反复触发加载。本版一个策略的正常值与 null 共用 TTL，不按返回值动态调整；同一区域和身份应保持策略一致。源加载异常不缓存。
@@ -113,7 +113,7 @@ null 与空集合不会反复触发加载。本版一个策略的正常值与 nu
 ~~~csharp
 var liveKey = cache.CreateKey<ProductView>("live-products.v1", trustedTenant, productId, CachePolicy.Bypass);
 var current = await cache.GetOrCreateAsync(liveKey,
-    token => ReadCurrentProductAsync(productId, token), cancellationToken);
+    async token => await ReadCurrentProductAsync(productId, token), cancellationToken);
 ~~~
 
 绕过与全局关闭都直接调用源，不应用缓存回源预算；Set 不回填。Remove 仍可清除此前已缓存的内容。Lab 的 RBAC 直接查数据库，授权不依赖缓存。
@@ -190,3 +190,4 @@ Lab 默认没有共享后端，shared TTL 字段表示策略配置，不代表�
 | Core 弱引用容器 | 保留在 `Core.Memory`，作为内存生命周期工具，不承担业务缓存职责 |
 
 依赖、回源与失效流程、监测替换的完整取舍见[设计文档](docs/design.md)。
+本地热路径、指标监听和键构建的实测开销见[性能记录](../../docs/components/cache-sensitive-performance.md)，不等同于共享后端容量或完整接口延迟。
