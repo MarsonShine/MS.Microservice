@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AspNetCore.Uploads;
 using MS.Microservice.AspNetCore.Auditing;
+using MS.Microservice.Caching;
 using MS.Microservice.Lab.Application.Tools;
 using MS.Microservice.Lab.Controller;
 using MS.Microservice.Lab.Infrastructure.Labs;
@@ -46,6 +47,8 @@ internal sealed class ToolDemoTestHost : IDisposable
                 context.User.FindFirstValue(ClaimTypes.NameIdentifier) is { } owner ? new(TaskCenterDemo.Scope(owner), owner) : null);
         builder.Services.AddScoped<FileUploadValidator>();
         builder.Services.AddToolDemoApi();
+        builder.Services.AddGovernedCaching();
+        builder.Services.AddSingleton<CacheDemo>();
         if (includeAuditing) builder.Services.AddAuditDemo(builder.Environment, builder.Configuration);
         if (includeTaskCenter) builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
         builder.Services.AddAuthentication("ToolDemoTest").AddScheme<AuthenticationSchemeOptions, TestAuthentication>("ToolDemoTest", _ => { });

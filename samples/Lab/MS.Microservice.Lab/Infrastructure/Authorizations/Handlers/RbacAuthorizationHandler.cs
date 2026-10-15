@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Infrastructure.Caching.Consts;
-using MS.Microservice.Lab.Application.Models.Caching;
+using MS.Microservice.Lab.Application.Models.Authorization;
 using MS.Microservice.Lab.Infrastructure.Authorizations.Requirements;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
@@ -23,14 +21,11 @@ namespace MS.Microservice.Lab.Infrastructure.Authorizations.Handlers
     public class RbacAuthorizationHandler : AuthorizationHandler<RbacRequirement>
     {
         private readonly IUserDomainService _userDomainService;
-        private readonly IDistributedCache _cache;
 
         public RbacAuthorizationHandler(
-            IUserDomainService userDomainService,
-            IDistributedCache cache)
+            IUserDomainService userDomainService)
         {
             _userDomainService = userDomainService ?? throw new ArgumentNullException(nameof(userDomainService));
-            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
         protected override async Task HandleRequirementAsync(
@@ -58,15 +53,13 @@ namespace MS.Microservice.Lab.Infrastructure.Authorizations.Handlers
             context.Succeed(requirement);
         }
 
-        private async Task<UserCacheItem?> FindUserAsync(int userId, CancellationToken cancellationToken)
+        private async Task<UserPermissionSnapshot?> FindUserAsync(int userId, CancellationToken cancellationToken)
         {
-            return await _cache.GetAsync(CacheConsts.UserIdKey + userId, async () =>
-            {
-                var user = await _userDomainService.GetUserAsync(userId, cancellationToken);
-                return user is null || user.IsTransient() ? null : ToUserCache(user);
-            }, cancellationToken: cancellationToken);
+            var user = await _userDomainService.GetUserAsync(userId, cancellationToken);
+            return user is null || user.IsTransient() ? null : new(user.Id,
+                user.Roles.Select(role => new RolePermissionSnapshot(role.Id,
+                    role.Actions.Select(action => new ActionPermissionSnapshot(action.Path)).ToArray())).ToArray());
         }
-
         private static bool TryGetUserId(ClaimsPrincipal principal, out int userId)
         {
             var claimValue = principal.FindFirst(JwtClaimTypes.Id)?.Value;
@@ -132,7 +125,7 @@ namespace MS.Microservice.Lab.Infrastructure.Authorizations.Handlers
         }
 
         private static bool HasPermission(
-            UserCacheItem user,
+            UserPermissionSnapshot user,
             IReadOnlySet<int> claimedRoleIds,
             string permissionPath)
         {
@@ -148,23 +141,6 @@ namespace MS.Microservice.Lab.Infrastructure.Authorizations.Handlers
 
         private static string NormalizePath(string path) => path.Trim().Trim('/');
 
-        private static UserCacheItem ToUserCache(User user) => new()
-        {
-            Account = user.Account,
-            Email = user.Email,
-            FzAccount = user.FzAccount,
-            FzId = user.FzId,
-            Id = user.Id,
-            Name = user.Name,
-            Roles = user.Roles.Select(role => new RoleCacheItem
-            {
-                Id = role.Id,
-                Name = role.Name,
-                Actions = role.Actions
-                    .Select(action => new ActionCacheItem { Path = action.Path })
-                    .ToList()
-            }).ToList(),
-            Telephone = user.Telephone,
-        };
+
     }
 }

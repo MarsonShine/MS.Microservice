@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Caching.Distributed;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Domain.Aggregates.IdentityModel;
 using MS.Microservice.Domain.Services.Interfaces;
-using MS.Microservice.Lab.Application.Models.Caching;
+using MS.Microservice.Lab.Application.Models.Authorization;
 using MS.Microservice.Lab.Infrastructure.Authorizations.Handlers;
 using MS.Microservice.Lab.Infrastructure.Authorizations.Requirements;
 using NSubstitute;
@@ -16,10 +15,27 @@ namespace MS.Microservice.Core.Tests.Web.Infrastructure;
 public class RbacAuthorizationHandlerTests
 {
     [Fact]
-    public void UserCacheItem_DoesNotExposePasswordOrSalt()
+    public async Task EveryAuthorizationReadsCurrentRolesIncludingRevocationDeletionAndRestoration()
     {
-        Assert.Null(typeof(UserCacheItem).GetProperty("Password"));
-        Assert.Null(typeof(UserCacheItem).GetProperty("Salt"));
+        var (handler, users) = CreateHandler();
+        users.GetUserAsync(7, Arg.Any<CancellationToken>()).Returns(
+            Task.FromResult<User?>(CreateUser(7, 1, "User/List")),
+            Task.FromResult<User?>(CreateUser(7, 2, "User/List")),
+            Task.FromResult<User?>(null),
+            Task.FromResult<User?>(CreateUser(7, 1, "User/List")));
+        foreach (var allowed in new[] { true, false, false, true })
+        {
+            var context = CreateContext(); await handler.HandleAsync(context);
+            Assert.Equal(allowed, context.HasSucceeded);
+        }
+        await users.Received(4).GetUserAsync(7, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void UserPermissionSnapshot_DoesNotExposePasswordOrSalt()
+    {
+        Assert.Null(typeof(UserPermissionSnapshot).GetProperty("Password"));
+        Assert.Null(typeof(UserPermissionSnapshot).GetProperty("Salt"));
     }
 
     [Fact]
@@ -163,19 +179,7 @@ public class RbacAuthorizationHandlerTests
     private static (RbacAuthorizationHandler Handler, IUserDomainService UserDomainService) CreateHandler()
     {
         var userDomainService = Substitute.For<IUserDomainService>();
-        var cache = Substitute.For<IDistributedCache>();
-        cache
-            .GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<byte[]?>(null));
-        cache
-            .SetAsync(
-                Arg.Any<string>(),
-                Arg.Any<byte[]>(),
-                Arg.Any<DistributedCacheEntryOptions>(),
-                Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
-
-        return (new RbacAuthorizationHandler(userDomainService, cache), userDomainService);
+        return (new RbacAuthorizationHandler(userDomainService), userDomainService);
     }
 
     private static AuthorizationHandlerContext CreateContext(

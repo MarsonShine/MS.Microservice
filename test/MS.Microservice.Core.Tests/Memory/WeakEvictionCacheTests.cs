@@ -1,9 +1,9 @@
 using System;
 using FluentAssertions;
-using MS.Microservice.Core.Ceching;
+using MS.Microservice.Core.Memory;
 using Xunit;
 
-namespace MS.Microservice.Core.Tests.Ceching;
+namespace MS.Microservice.Core.Tests.Memory;
 
 public sealed class WeakEvictionCacheTests
 {

@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.AspNetCore.Uploads;
-using MS.Microservice.Core.Ceching;
+using MS.Microservice.Caching;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
@@ -133,39 +133,9 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
             public IServiceCollection AddApplicationCaching(IConfiguration configuration)
             {
                 ArgumentNullException.ThrowIfNull(configuration);
-
-                var section = configuration.GetSection(CacheOptions.SectionName);
-                services.AddOptions<CacheOptions>()
-                    .Bind(section)
-                    .Validate(
-                        options => options.SlidingExpirationSecond > 0,
-                        "CacheOptions:SlidingExpirationSecond must be greater than zero.")
-                    .Validate(
-                        options => options.AbsoluteExpirationSecond is null or > 0,
-                        "CacheOptions:AbsoluteExpirationSecond must be greater than zero when configured.")
-                    .ValidateOnStart();
-
-                var cacheOptions = section.Get<CacheOptions>() ?? new CacheOptions();
-                var expirationScanFrequency = TimeSpan.FromSeconds(cacheOptions.SlidingExpirationSecond);
-
-                // HybridCache is the preferred high-level API. Existing application services still
-                // consume IDistributedCache, so a replaceable compatibility backend is registered too.
-                services.AddMemoryCache(options =>
-                {
-                    options.ExpirationScanFrequency = expirationScanFrequency;
-                });
-                services.AddDistributedMemoryCache(options =>
-                {
-                    options.ExpirationScanFrequency = expirationScanFrequency;
-                });
-
-#if NET9_0_OR_GREATER
-                services.AddHybridCache();
-#endif
-
-                return services;
+                return services.AddGovernedCaching(options =>
+                    configuration.GetSection(CachingOptions.SectionName).Bind(options));
             }
-
             public IServiceCollection AddApplicationInfrastructure(IConfiguration configuration)
             {
                 services.AddMicroserviceEfCorePersistence(configuration);

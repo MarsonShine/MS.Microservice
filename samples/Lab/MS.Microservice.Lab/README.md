@@ -46,6 +46,7 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 | `/tasks` | Coravel 持久任务：提交文档索引、查看进度／历史、取消与重试 |
 | `/search` | 文件名／逻辑路径搜索、正文检索、可选精确总数 |
 | `/audits` | 自动采集订单／库存／审批变化，按操作标识查看同事务审计明细 |
+| `/cache` | 重复读取观察源读取次数，修改后失效、主动清除和用户隔离 |
 | `/image-batches` | 复用下文已有后台队列，查看批量处理进度、取消、重试与下载 |
 
 可以按以下顺序查看实际效果：
@@ -128,6 +129,10 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 任务 SQLite 默认位于 `.tools/task-center/tasks.db`，检索索引位于 `.tools/document-search`；可通过 `ToolDemos:TaskCenterDirectory`、`ToolDemos:SearchIndexDirectory` 配置 webroot 之外的目录。两者跨重启保留，首版只运行一个宿主实例；Lab 自动创建自己的演示数据库，生产接入由宿主管理迁移。后台索引任务声明为可安全重试，重启保留执行历史并恢复未完成任务；版本规则阻止较旧任务覆盖更新或删除。
 
 初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/README.md)。
+
+## 缓存治理示例
+
+缓存示例使用 `GET /api/lab/tools/cache` 连续读取两次，观察 `sourceReads` 保持不变；`PUT` 提交 `{ "value": "已更新" }` 后再 GET，确认新值及一次源读取。`DELETE` 仅清除缓存，源数据保留。示例源在内存中，重启重置；键按当前用户隔离，计数是全局累计数。注册和 TTL 使用 `Caching` 配置，见 [缓存组件](../../../src/MS.Microservice.Caching/README.md)。Lab RBAC 始终实时查库，角色撤销不等待缓存过期；旧 `CacheOptions` 和自制 CacheManager 已移除。
 
 ## 自动业务审计示例
 

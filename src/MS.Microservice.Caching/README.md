@@ -36,4 +36,4 @@ await cache.RemoveAsync(key, cancellationToken); // 数据库提交成功后
 
 Meter `MS.Microservice.Caching` 提供请求数、源加载数、回源预算拒绝数和源加载耗时，仅使用固定 region 标签；不要从用户输入生成 region。后端诊断沿用 HybridCache。源加载数／请求数反映回源比例，不等同于各缓存层的命中率。
 
-旧 `Core.Ceching` 业务缓存 API、Lab `CacheManager` 和 `CacheOptions` 配置将随存量迁移移除。实现取舍见 [设计](docs/design.md)。
+旧 `Core.Ceching` 业务缓存 API、Lab `CacheManager` 和 `CacheOptions` 配置已移除；不提供旧入口转发。配置改用上表 `Caching` 字段，旧的滑动扫描配置不再充当条目 TTL。业务调用改用 `IGovernedCache`，旧缓存字节与键不复用。弱引用容器保留在 `Core.Memory`，不承担业务缓存职责。Lab 授权每次实时查库，已删除原角色缓存及无效失效代码。实现取舍见 [设计](docs/design.md)。

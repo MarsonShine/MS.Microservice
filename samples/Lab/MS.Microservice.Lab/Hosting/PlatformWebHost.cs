@@ -151,6 +151,7 @@ public static class PlatformWebHost
         if (enableLabEndpoints)
         {
             builder.Services.AddToolDemoApi();
+            builder.Services.AddSingleton<CacheDemo>();
             builder.Services.AddAuditDemo(builder.Environment, builder.Configuration);
             builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
             builder.Services.AddOptions<ImageBatchOptions>().Bind(builder.Configuration.GetSection("ImageBatches"));

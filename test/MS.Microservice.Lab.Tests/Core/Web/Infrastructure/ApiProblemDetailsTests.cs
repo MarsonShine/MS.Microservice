@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
 using MS.Microservice.Core.Functional;
 using MS.Microservice.Core.Identity;
@@ -216,8 +215,7 @@ public class ApiProblemDetailsTests
             null!,
             null!,
             userDomainService ?? Substitute.For<IUserDomainService>(),
-            Substitute.For<IUserPasswordService>(),
-            Substitute.For<IDistributedCache>())
+            Substitute.For<IUserPasswordService>())
         {
             ControllerContext = new ControllerContext { HttpContext = CreateHttpContext() }
         };

@@ -1,6 +1,5 @@
 using MS.Microservice.Lab.Application.Validations;
 using MS.Microservice.Lab.Infrastructure.Applications.Users;
-using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Linq;
 using System.Threading;
@@ -8,7 +7,6 @@ using System.Threading.Tasks;
 using MS.Microservice.Domain.Services.Interfaces;
 using MS.Microservice.Domain.Consts;
 using MS.Microservice.Core.Extension;
-using MS.Microservice.Infrastructure.Caching.Consts;
 using MS.Microservice.Lab.Application.Identity;
 using Wolverine;
 
@@ -18,17 +16,14 @@ namespace MS.Microservice.Lab.Application.Commands
     {
         private readonly IUserDomainService _userDomainService;
         private readonly CurrentUser _currentUser;
-        private readonly IDistributedCache _cache;
         private readonly IUserPasswordService _userPasswordService;
         public UserModifyCommandHandler(
             IUserDomainService userDomainService,
-            IDistributedCache cache,
             CurrentUserResolver currentUserResolver,
             IUserPasswordService userPasswordService)
         {
             _userDomainService = userDomainService;
             _currentUser = currentUserResolver.CurrentUser() ?? throw new ArgumentException(nameof(CurrentUserResolver));
-            _cache = cache;
             _userPasswordService = userPasswordService;
         }
         public async Task<(bool, string?)> Handle(UserModifyCommand request, CancellationToken cancellationToken)
@@ -74,13 +69,6 @@ namespace MS.Microservice.Lab.Application.Commands
 
 
             await _userDomainService.UpdateUserAsync(user, cancellationToken);
-
-            //清理缓存
-            await _cache.RemoveAsync(CacheConsts.UserAccountKey + request.Account, cancellationToken);
-
-            if (exitUser.FzAccount.IsNotNullOrEmpty())
-                await _cache.RemoveAsync(CacheConsts.UserFzAccountKey + exitUser.FzAccount, cancellationToken);
-            await _cache.RemoveAsync(CacheConsts.UserIdKey + exitUser.Id, cancellationToken);
 
             return (true, null);
         }
