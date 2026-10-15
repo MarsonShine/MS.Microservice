@@ -24,7 +24,7 @@ public sealed class CacheToolsController(ToolDemoFiles files) : ToolDemoControll
     private CacheKey<string> Key => Cache.CreateKey<string>("lab.cache.v1", Scope, "sample");
 
     /// <summary>读取本人示例数据，重复调用观察缓存减少源读取。</summary>
-    /// <remarks>默认本地 30 秒、共享 300 秒。sourceReads 是本进程所有示例用户的累计源读取数；连续读取同一用户通常保持不变。示例源在内存中，重启后重置；当前用户 Scope 隔离缓存键。</remarks>
+    /// <remarks>默认使用内存后端，本地 TTL 为 30 秒；配置 Caching:Backend=Redis 后增加共享缓存，默认共享 TTL 为 300 秒。sourceReads 是本进程所有示例用户的累计源读取数；连续读取同一用户通常保持不变。示例源在内存中，重启后重置；Redis 中未过期的旧值仍可读取。当前用户 Scope 隔离缓存键。</remarks>
     [HttpGet, Produces("application/json"), ProducesResponseType<CacheDemoResult>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Get()
     {

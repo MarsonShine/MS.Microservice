@@ -141,7 +141,29 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 
 ## 缓存治理示例
 
-缓存示例使用 `GET /api/lab/tools/cache` 连续读取两次，观察 `sourceReads` 保持不变；`PUT` 提交 `{ "value": "已更新" }` 后再 GET，确认新值及一次源读取。`DELETE` 仅清除缓存，源数据保留。示例源在内存中，重启重置；键按当前用户隔离，计数是全局累计数。注册和 TTL 使用 `Caching` 配置，见 [缓存组件](../../../src/MS.Microservice.Caching/README.md)。Lab RBAC 始终实时查库，角色撤销不等待缓存过期；旧 `CacheOptions` 和自制 CacheManager 已移除。
+缓存示例使用 `GET /api/lab/tools/cache` 连续读取两次，观察 `sourceReads` 保持不变；`PUT` 提交 `{ "value": "已更新" }` 后再 GET，确认新值及一次源读取。`DELETE` 仅清除缓存，源数据保留。键按当前用户隔离，计数是本进程所有用户的累计数。
+
+| 配置 | 默认值 | 作用 |
+| --- | --- | --- |
+| `Caching:Enabled` | `true` | `false` 时直接读源，不要求 Redis 配置 |
+| `Caching:Backend` | `Memory` | `Memory` 只使用进程内缓存；`Redis` 添加 Redis 共享层 |
+| `ConnectionStrings:CacheRedis` | 未配置 | Redis 模式必填，使用 StackExchange.Redis 连接串 |
+| `Caching:Redis:InstanceName` | `MS.Microservice.Lab:` | Redis 键前缀；不同部署应使用不同前缀 |
+| `Caching:LocalExpirationSeconds` / `ExpirationSeconds` | `30` / `300` | 本地／共享绝对 TTL（秒）；本地 TTL 不得大于共享 TTL |
+
+例如用环境变量启用 Redis，然后按现有方式启动 Lab：
+
+```powershell
+$env:Caching__Backend = "Redis"
+$env:ConnectionStrings__CacheRedis = "localhost:6379,ssl=false"
+$env:Caching__Redis__InstanceName = "lab-demo:"
+```
+
+连接串中的凭据通过环境变量或用户机密提供。`prefix` 应写在 `InstanceName`，不要放进连接串；StackExchange.Redis 使用共享长连接，不接受其他客户端的 `poolsize` 参数。启用时未知后端、缺失连接或无效配置会在注册时失败；Redis 故障期间的读写行为见 [Redis 组件](../../../src/MS.Microservice.Caching.Redis/README.md)。连接由 Redis 缓存提供程序管理，业务 Redis 连接保持独立。
+
+Redis 模式下，本地条目过期后可从共享层取值，此时 `sourceReads` 仍保持不变。API 返回的 `sharedTtlSeconds` 是策略值，只有 Redis 模式实际存在共享层。**示例源仍在本进程内存中，重启会重置；Redis 中未过期的旧缓存可以继续返回。** 它用于体验缓存行为，不能作为跨实例共享业务数据示例。测试时先 DELETE 清除本人键；生产中应使用共享数据库，并在提交成功后失效，其他实例的本地缓存仍可能保留至本地 TTL 到期。
+
+注册、指标及其他使用方式见 [缓存组件](../../../src/MS.Microservice.Caching/README.md)。Lab RBAC 始终实时查库，角色撤销不等待缓存过期；旧 `CacheOptions` 和自制 CacheManager 已移除。
 
 ## 自动业务审计示例
 

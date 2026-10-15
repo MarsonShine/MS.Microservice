@@ -14,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.AspNetCore.Uploads;
 using MS.Microservice.Caching;
+using MS.Microservice.Caching.Redis;
 using MS.Microservice.Core.Identity;
 using MS.Microservice.Core.Net.Http;
 using MS.Microservice.Domain.Identity;
@@ -133,8 +134,23 @@ namespace MS.Microservice.Lab.Infrastructure.Extensions
             public IServiceCollection AddApplicationCaching(IConfiguration configuration)
             {
                 ArgumentNullException.ThrowIfNull(configuration);
-                return services.AddGovernedCaching(options =>
-                    configuration.GetSection(CachingOptions.SectionName).Bind(options));
+                var section = configuration.GetSection(CachingOptions.SectionName);
+                var backend = section["Backend"] ?? "Memory";
+                if (!section.GetValue(nameof(CachingOptions.Enabled), true)
+                    || string.Equals(backend, "Memory", StringComparison.OrdinalIgnoreCase))
+                    return services.AddGovernedCaching(options => section.Bind(options));
+
+                if (!string.Equals(backend, "Redis", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Caching:Backend must be Memory or Redis.");
+                var connection = configuration.GetConnectionString("CacheRedis");
+                if (string.IsNullOrWhiteSpace(connection))
+                    throw new InvalidOperationException("ConnectionStrings:CacheRedis is required when Caching:Backend is Redis.");
+
+                return services.AddGovernedRedisCaching(redis =>
+                {
+                    redis.Configuration = connection;
+                    redis.InstanceName = section["Redis:InstanceName"] ?? "MS.Microservice.Lab:";
+                }, options => section.Bind(options));
             }
             public IServiceCollection AddApplicationInfrastructure(IConfiguration configuration)
             {
