@@ -45,6 +45,7 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 | `/s3` | 本人命名空间下条件写入、查询、下载、删除和临时 GET 地址 |
 | `/tasks` | Coravel 持久任务：提交文档索引、查看进度／历史、取消与重试 |
 | `/search` | 文件名／逻辑路径搜索、正文检索、可选精确总数 |
+| `/audits` | 自动采集订单／库存／审批变化，按操作标识查看同事务审计明细 |
 | `/image-batches` | 复用下文已有后台队列，查看批量处理进度、取消、重试与下载 |
 
 可以按以下顺序查看实际效果：
@@ -127,6 +128,19 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 任务 SQLite 默认位于 `.tools/task-center/tasks.db`，检索索引位于 `.tools/document-search`；可通过 `ToolDemos:TaskCenterDirectory`、`ToolDemos:SearchIndexDirectory` 配置 webroot 之外的目录。两者跨重启保留，首版只运行一个宿主实例；Lab 自动创建自己的演示数据库，生产接入由宿主管理迁移。后台索引任务声明为可安全重试，重启保留执行历史并恢复未完成任务；版本规则阻止较旧任务覆盖更新或删除。
 
 初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/README.md)。
+
+## 自动业务审计示例
+
+在 Swagger 登录后按以下流程体验，不需要配置 PostgreSQL：
+
+1. `POST /api/lab/tools/audits/orders` 提交 `{ "quantity": 2 }`，创建本人订单和两条库存，各有 100 件。保留返回的 `order.id` 和 `operationId`。
+2. `POST /api/lab/tools/audits/orders/{id}/approve` 审批，状态变为 Approved，两条库存各减至 98。返回新的 `operationId`。
+3. `GET /api/lab/tools/audits/operations/{operationId}` 查看审批产生的四条明细：订单、两条库存、审批记录。它们来自三张业务表，共享一个操作标识和保存序号。
+4. `GET /api/lab/tools/audits/orders/{id}` 核对当前状态。读取不产生业务审计。
+
+入口上的 `[AuditOperation]` 自动建立身份，EF 模型声明选择字段，业务 action 只修改实体并保存。变化 JSON 的 `beforeKnown=false` 表示不知道原值，不能解释为原值为 null。审批业务和审计在同一事务中保存；已审批或并发冲突返回 409。其他用户的订单、操作明细均返回 404。
+
+演示 SQLite 保存在 `.tools/audit-demo/auditing.db`，跨重启保留；`ToolDemos:AuditStorageDirectory` 可改为 webroot 外的私有目录。Lab 启动只自动初始化自己的演示库，不连接性能测试 PostgreSQL。生产组件的迁移、字段选择与使用限制见 [EFCore 接入](../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing)，采集流程见 [技术设计](../../../MS.Microservice.Persistence/docs/automatic-auditing.md)。
 
 ## 图片后台批处理
 

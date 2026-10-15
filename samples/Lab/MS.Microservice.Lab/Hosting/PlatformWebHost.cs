@@ -21,6 +21,7 @@ using MS.Microservice.Lab.Infrastructure.HealthChecks;
 using MS.Microservice.Lab.Infrastructure.Labs;
 using MS.Microservice.Lab.Infrastructure.Mediator.Behaviors;
 using MS.Microservice.AspNetCore.Encryption;
+using MS.Microservice.AspNetCore.Auditing;
 using MS.Microservice.Lab.Infrastructure.Encryption;
 using MS.Microservice.Lab.Application.Tools;
 using MS.Microservice.Tasks.Coravel;
@@ -127,7 +128,10 @@ public static class PlatformWebHost
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.JsonSerializerOptions.Encoder = DefaultSerializeSetting.ChineseEncoder;
-            });
+            })
+            .AddAutomaticAuditOperations(options => options.ResolveIdentity = context =>
+                context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value is { } owner
+                    ? new(TaskCenterDemo.Scope(owner), owner) : null);
 
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -147,6 +151,7 @@ public static class PlatformWebHost
         if (enableLabEndpoints)
         {
             builder.Services.AddToolDemoApi();
+            builder.Services.AddAuditDemo(builder.Environment, builder.Configuration);
             builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
             builder.Services.AddOptions<ImageBatchOptions>().Bind(builder.Configuration.GetSection("ImageBatches"));
             builder.Services.AddSingleton<IImageBatchOperation, ImageBatchOperation>();

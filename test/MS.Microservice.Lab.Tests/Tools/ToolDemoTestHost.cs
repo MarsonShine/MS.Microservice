@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AspNetCore.Uploads;
+using MS.Microservice.AspNetCore.Auditing;
 using MS.Microservice.Lab.Application.Tools;
 using MS.Microservice.Lab.Controller;
 using MS.Microservice.Lab.Infrastructure.Labs;
@@ -28,7 +29,7 @@ internal sealed class ToolDemoTestHost : IDisposable
     public HttpClient Client { get; }
     public IServiceProvider Services => _app.Services;
 
-    public ToolDemoTestHost(IDictionary<string, string?>? configuration = null, bool includeLab = true, bool includeTaskCenter = false)
+    public ToolDemoTestHost(IDictionary<string, string?>? configuration = null, bool includeLab = true, bool includeTaskCenter = false, bool includeAuditing = false)
     {
         Directory.CreateDirectory(Root);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -40,9 +41,12 @@ internal sealed class ToolDemoTestHost : IDisposable
         builder.Configuration.AddInMemoryCollection(configuration ?? new Dictionary<string, string?>());
         builder.Logging.ClearProviders();
         builder.Services.AddControllers().AddApplicationPart(typeof(ToolDemoFiles).Assembly)
-            .ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new LabOnlyControllerFeatureProvider(includeLab)));
+            .ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new LabOnlyControllerFeatureProvider(includeLab)))
+            .AddAutomaticAuditOperations(options => options.ResolveIdentity = context =>
+                context.User.FindFirstValue(ClaimTypes.NameIdentifier) is { } owner ? new(TaskCenterDemo.Scope(owner), owner) : null);
         builder.Services.AddScoped<FileUploadValidator>();
         builder.Services.AddToolDemoApi();
+        if (includeAuditing) builder.Services.AddAuditDemo(builder.Environment, builder.Configuration);
         if (includeTaskCenter) builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
         builder.Services.AddAuthentication("ToolDemoTest").AddScheme<AuthenticationSchemeOptions, TestAuthentication>("ToolDemoTest", _ => { });
         builder.Services.AddAuthorization();
