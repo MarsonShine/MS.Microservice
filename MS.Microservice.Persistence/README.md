@@ -2,7 +2,7 @@
 
 持久化模块把可复用 EFCore / SqlSugar 能力及其测试放在一起，不包含具体用户或订单模型。
 
-- [EFCore](src/MS.Microservice.Persistence.EFCore/README.md)：规格查询、Include、软删除查询与 UTC 审计辅助。
+- [EFCore](src/MS.Microservice.Persistence.EFCore/README.md)：规格查询、Include、软删除查询、UTC 时间辅助与同事务自动业务审计。
 - [SqlSugar](src/MS.Microservice.Persistence.SqlSugar/README.md)：通用仓储、查询、序列化、工作单元辅助与 scoped 客户端注册。
 
 打开 [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence.slnx)，在本目录执行：
