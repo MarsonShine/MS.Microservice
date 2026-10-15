@@ -1,6 +1,6 @@
 # 文档处理
 
-`MS.Microservice.Documents` 提供 PDF 页面处理、文本提取、PNG 渲染和 DOCX 内容控件模板填充。引用项目或包即可使用；[源码与包接入方式](../../docs/components/consumption.md)。
+`MS.Microservice.Documents` 提供 PDF 页面处理、文本提取、PNG 渲染，以及 DOCX 文本提取和内容控件模板填充。引用项目或包即可使用；[源码与包接入方式](../../docs/components/consumption.md)。
 
 HTML 转 PDF 位于可选的 [Documents.Rendering](../MS.Microservice.Documents.Rendering/README.md) 组件，目前支持 Windows；普通 PDF／DOCX 使用者无需引用它。
 
@@ -50,6 +50,30 @@ await processor.SelectPagesAsync(input, output, [1], cancellationToken: cancella
 - 透明 PNG 会拉伸到整页可见区域。文字／Logo 可先用 [Media 水印接口](../../MS.Microservice.Media/README.md)生成透明叠加图，再传给 `AddOverlayAsync`。
 
 实现、资源生命周期和密码验证规则见 [PDF 设计](docs/pdf-design.md)。
+
+## 提取 Word 文本
+
+```csharp
+using MS.Microservice.Documents.Word;
+
+await using var input = File.OpenRead("report.docx");
+var text = await new WordTextExtractor().ExtractAsync(input,
+    new WordTextExtractionOptions { IncludeHeadersAndFooters = true }, cancellationToken);
+```
+
+支持 Transitional／Strict DOCX，按正文（含表格）、页眉、页脚的顺序返回纯文本；每个引用部件只提取一次，页眉／页脚分别按部件路径排序。保留段落换行、单元格及文字内制表符，适合建立全文索引。设 `IncludeHeadersAndFooters = false` 可仅提取正文。
+
+| `WordTextExtractionOptions` 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `MaximumInputBytes` | `64 MiB` | 从当前位置读取的 ZIP 编码大小 |
+| `MaximumEntries` | `1024` | ZIP 条目数量 |
+| `MaximumExpandedXmlBytes` | `128 MiB` | 本次读取的元数据、正文、页眉和页脚 XML 累计展开字节 |
+| `MaximumXmlCharactersPerPart` | `16M` | 单个读取 XML 的字符数 |
+| `MaximumTextCharacters` | `16M` | 返回文本及生成分隔符的 UTF-16 字符数 |
+
+组件保持输入流打开，不修改包，不启动 Office，不读取外部链接。签名或编辑保护不阻止只读提取；密码加密文件、旧版 `.doc`、宏文档和模板不支持。图片不执行 OCR，脚注、尾注、批注及嵌入文档不提取；域只读取已保存的文字结果，删除修订不纳入文本。结果不含页码，不保证分栏、文本框等复杂版面的视觉阅读顺序。
+
+读取策略与预算见 [Word 文本提取设计](docs/word-template-design.md#只读文本提取)。
 
 ## 填充 Word 模板
 

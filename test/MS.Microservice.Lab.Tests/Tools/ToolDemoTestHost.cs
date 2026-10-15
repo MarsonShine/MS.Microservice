@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Coravel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -12,6 +13,8 @@ using MS.Microservice.AspNetCore.Uploads;
 using MS.Microservice.Lab.Application.Tools;
 using MS.Microservice.Lab.Controller;
 using MS.Microservice.Lab.Infrastructure.Labs;
+using MS.Microservice.Tasks.Coravel;
+using MS.Microservice.Tasks.Dashboard;
 
 namespace MS.Microservice.Lab.Tests.Tools;
 
@@ -25,7 +28,7 @@ internal sealed class ToolDemoTestHost : IDisposable
     public HttpClient Client { get; }
     public IServiceProvider Services => _app.Services;
 
-    public ToolDemoTestHost(IDictionary<string, string?>? configuration = null, bool includeLab = true)
+    public ToolDemoTestHost(IDictionary<string, string?>? configuration = null, bool includeLab = true, bool includeTaskCenter = false)
     {
         Directory.CreateDirectory(Root);
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -40,6 +43,7 @@ internal sealed class ToolDemoTestHost : IDisposable
             .ConfigureApplicationPartManager(manager => manager.FeatureProviders.Add(new LabOnlyControllerFeatureProvider(includeLab)));
         builder.Services.AddScoped<FileUploadValidator>();
         builder.Services.AddToolDemoApi();
+        if (includeTaskCenter) builder.Services.AddTaskCenterDemo(builder.Environment, builder.Configuration);
         builder.Services.AddAuthentication("ToolDemoTest").AddScheme<AuthenticationSchemeOptions, TestAuthentication>("ToolDemoTest", _ => { });
         builder.Services.AddAuthorization();
         builder.Services.AddPlatformSwagger(options =>
@@ -53,6 +57,12 @@ internal sealed class ToolDemoTestHost : IDisposable
         _app.UseAuthorization();
         _app.UsePlatformSwagger();
         _app.MapControllers();
+        if (includeTaskCenter)
+        {
+            _app.MapTaskDashboard();
+            _app.Services.UseSchedulerWithTaskDashboard(scheduler =>
+                scheduler.ScheduleTaskCenter().WithDashboardName("持久任务派发"));
+        }
         _app.StartAsync().GetAwaiter().GetResult();
         Client = _app.GetTestClient();
         Client.Timeout = TimeSpan.FromMinutes(10);

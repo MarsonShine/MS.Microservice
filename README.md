@@ -84,5 +84,7 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 | 文本、编码与 JSON | [Core](src/MS.Microservice.Core/README.md) |
 | 邮件、短信、模板与站内通知 | [Notifications](src/MS.Microservice.Notifications/README.md) |
 | 后台图片批处理 | [Lab](samples/Lab/MS.Microservice.Lab/README.md#图片后台批处理)：上传、进度、取消、重试和私有下载 |
+| 统一任务中心 | [Tasks](MS.Microservice.Tasks/README.md)：持久提交、进度、取消与执行历史；[Coravel](MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/README.md) 接入分组执行与单实例恢复；[Dashboard](MS.Microservice.Tasks/src/MS.Microservice.Tasks.Dashboard/README.md) 提供可挂载 UI 与注册计划查看 |
+| 文件与正文检索 | [Search](src/MS.Microservice.Search/README.md)：持久文件名／路径和中英文正文索引，默认快速返回前 50 条、按需精确计数，路径排序优先响应、相关度排序可选 |
 
 数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。

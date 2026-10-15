@@ -23,6 +23,7 @@ public sealed class ComponentBoundaryTests
     [Theory]
     [InlineData("MS.Microservice.AI")]
     [InlineData("MS.Microservice.Logging")]
+    [InlineData("MS.Microservice.Tasks")]
     [InlineData("MS.Microservice.Messaging")]
     [InlineData("MS.Microservice.Persistence")]
     [InlineData("MS.Microservice.Media")]
@@ -63,6 +64,19 @@ public sealed class ComponentBoundaryTests
         var dependencies = typeof(ProfileService).Assembly.GetReferencedAssemblies();
         Assert.DoesNotContain(dependencies, assembly => assembly.Name!.Contains("Wolverine") || assembly.Name.Contains("SelfManaged"));
         Assert.Contains(dependencies, assembly => assembly.Name == "MS.Microservice.Messaging.Abstractions");
+    }
+
+    [Fact]
+    public void TaskCoreDoesNotDependOnPersistenceOrAnExecutionProvider()
+    {
+        var root = RepositoryRoot();
+        var project = XDocument.Load(Path.Combine(root, "MS.Microservice.Tasks/src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj"));
+        var packages = project.Descendants("PackageReference").Select(node => node.Attribute("Include")!.Value);
+        Assert.DoesNotContain(packages, name => name.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal)
+            || name.StartsWith("Coravel", StringComparison.Ordinal) || name.StartsWith("Wolverine", StringComparison.Ordinal));
+        var references = project.Descendants("ProjectReference").Select(node => node.Attribute("Include")!.Value);
+        Assert.DoesNotContain(references, name => name.Contains(".EFCore", StringComparison.Ordinal)
+            || name.Contains(".Coravel", StringComparison.Ordinal));
     }
 
     [Fact]

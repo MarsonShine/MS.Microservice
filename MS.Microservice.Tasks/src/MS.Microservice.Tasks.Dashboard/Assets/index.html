@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>任务中心</title><link rel="stylesheet" href="./dashboard.css">
+  <script src="./dashboard.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="./"><span class="brand-mark">M</span><span>MS Tasks<small>任务管理工作台</small></span></a>
+    <div class="nav-label">工作空间</div>
+    <nav aria-label="面板导航">
+      <button id="nav-jobs" class="nav-item active" aria-current="page"><span class="nav-icon">▦</span>持久任务<span id="nav-count" class="nav-count">—</span></button>
+      <button id="nav-schedules" class="nav-item"><span class="nav-icon">◷</span>定时计划<span class="readonly-tag">只读</span></button>
+    </nav>
+    <div class="sidebar-bottom"><span class="connection-dot" id="connection-dot"></span><span id="connection-label">未连接</span><small>Coravel · 单实例</small></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span data-title>任务中心</span><div class="topbar-actions"><span id="updated-at" class="muted">等待连接</span><button id="auth-open" class="button secondary">连接</button></div></header>
+    <main>
+      <div class="page-heading"><div><div class="eyebrow">BACKGROUND WORK</div><h1 id="page-title">持久任务</h1><p id="page-description">查看执行进度、处理结果与每一次重试。</p></div><div class="heading-actions"><label class="auto-refresh"><input type="checkbox" id="auto-refresh" checked>每 5 秒刷新</label><button id="refresh" class="button secondary">↻ 刷新</button></div></div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <section id="jobs-view" aria-label="持久任务">
+        <div class="section-caption">当前列表概览<span>仅统计下方最近任务</span></div>
+        <div class="stats">
+          <article class="stat-card"><span class="stat-label"><i class="status-dot running"></i>正在执行</span><strong id="stat-running">—</strong><small>包含正在响应取消的任务</small></article>
+          <article class="stat-card"><span class="stat-label"><i class="status-dot queued"></i>等待处理</span><strong id="stat-queued">—</strong><small>已持久保存，等待领取</small></article>
+          <article class="stat-card"><span class="stat-label"><i class="status-dot succeeded"></i>执行成功</span><strong id="stat-succeeded">—</strong><small>已完成当前任务</small></article>
+          <article class="stat-card"><span class="stat-label"><i class="status-dot failed"></i>执行失败</span><strong id="stat-failed">—</strong><small>可在剩余次数内重试</small></article>
+        </div>
+        <section class="panel">
+          <div class="panel-heading"><div><h2>任务列表 <span id="list-count" class="count-label">—</span></h2><p>按创建时间从新到旧排列</p></div><form id="lookup-form" class="lookup"><input id="lookup-id" aria-label="按任务 ID 查看" placeholder="按完整任务 ID 查看"><button class="button secondary" type="submit">查看</button></form></div>
+          <div class="filters"><input id="filter-text" type="search" aria-label="筛选当前列表" placeholder="筛选当前列表：处理器或任务 ID"><label>状态 <select id="state-filter"><option value="">全部状态</option><option value="Queued">等待处理</option><option value="Running">正在执行</option><option value="Succeeded">执行成功</option><option value="Failed">执行失败</option><option value="Cancelled">已取消</option><option value="Interrupted">执行中断</option></select></label><label>显示 <select id="take-filter"><option value="50">最近 50 条</option><option value="100" selected>最近 100 条</option><option value="200">最近 200 条</option></select></label></div>
+          <div class="table-wrap"><table><thead><tr><th>任务 / 标识</th><th>状态</th><th>执行进度</th><th>队列</th><th>创建时间</th><th class="right">操作</th></tr></thead><tbody id="jobs-body"></tbody></table></div>
+          <div id="jobs-empty" class="empty-state"><span class="empty-icon">▤</span><h3>连接后查看任务</h3><p>使用宿主登录身份，或输入 Bearer 令牌。</p></div>
+          <footer class="panel-footer"><span id="window-note">结果按当前登录身份隔离</span><span>时间按浏览器本地时区显示</span></footer>
+        </section>
+      </section>
+      <section id="schedules-view" hidden aria-label="注册的定时计划">
+        <div class="info-banner">查看宿主注册的 Coravel 计划配置。一次性计划执行后仍可能保留在此目录中。</div>
+        <section class="panel"><div class="panel-heading"><div><h2>注册计划 <span id="schedule-count" class="count-label">—</span></h2><p>查看频率、时区和执行约束</p></div><span class="badge neutral">只读目录</span></div><div class="table-wrap"><table><thead><tr><th>计划名称</th><th>执行规则</th><th>时区 / Worker</th><th>约束</th></tr></thead><tbody id="schedules-body"></tbody></table></div><div id="schedules-empty" class="empty-state"><span class="empty-icon">◷</span><h3>暂无注册计划</h3><p>宿主通过面板观察入口注册后即可查看。</p></div></section>
+      </section>
+      <noscript><p class="notice">任务面板需要启用 JavaScript。</p></noscript>
+    </main>
+  </div>
+  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title"><div class="detail-top"><div><div class="eyebrow">TASK DETAILS</div><h2 id="detail-title">任务详情</h2></div><button id="detail-close" class="icon-button" aria-label="关闭任务详情">×</button></div><div id="detail-content"></div></dialog>
+  <dialog id="auth-dialog" class="auth-dialog" aria-labelledby="auth-title"><div class="detail-top"><h2 id="auth-title">连接任务中心</h2><button id="auth-close" class="icon-button" aria-label="关闭连接窗口">×</button></div><p>已在宿主登录时可直接连接；使用 JWT 的宿主可在下方填写现有令牌。</p><p id="auth-error" class="notice" role="alert" hidden></p><form id="auth-form"><label class="field-label" for="bearer-token">Bearer 令牌（可选）</label><input id="bearer-token" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴令牌，不需要 Bearer 前缀"><small>令牌仅保留在当前页面内存中，刷新或断开后清除。</small><div class="dialog-actions"><button id="disconnect" class="button secondary" type="button">断开连接</button><button id="connect" class="button primary" type="submit">连接</button></div></form></dialog>
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">确认操作</h2><p id="confirm-description"></p><div class="dialog-actions"><button id="confirm-no" class="button secondary">返回</button><button id="confirm-yes" class="button primary">确认</button></div></dialog>
+</body>
+</html>

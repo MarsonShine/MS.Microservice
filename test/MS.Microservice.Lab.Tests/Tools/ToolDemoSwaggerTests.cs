@@ -60,13 +60,14 @@ public sealed class ToolDemoSwaggerTests
     }
 
     [Fact]
-    public async Task ToolsRequireAuthenticationAndAreRemovedOutsideLab()
+    public async Task PersistentTaskSearchRequireAuthenticationAndToolsAreRemovedOutsideLab()
     {
         using var host = new ToolDemoTestHost();
         host.Client.DefaultRequestHeaders.Remove("X-Test-User");
-        using var upload = new MultipartFormDataContent();
-        using var unauthenticated = await host.Client.PostAsync("/api/lab/tools/inference/ocr", upload);
+        using var unauthenticated = await host.Client.GetAsync("/api/lab/tools/tasks");
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
+        using var privateSearch = await host.Client.GetAsync("/api/lab/tools/search?query=report");
+        Assert.Equal(HttpStatusCode.Unauthorized, privateSearch.StatusCode);
         using var production = new ToolDemoTestHost(includeLab: false);
         using var response = await production.Client.GetAsync("/swagger/v1/swagger.json");
         response.EnsureSuccessStatusCode();

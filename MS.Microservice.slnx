@@ -8,22 +8,21 @@
   </Folder>
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
-    <Project Path="MS.Microservice.Media/src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
-    <Project Path="MS.Microservice.Media/src/MS.Microservice.Media.Inference/MS.Microservice.Media.Inference.csproj" />
-    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
-    <Project Path="src/MS.Microservice.HealthChecks.Redis/MS.Microservice.HealthChecks.Redis.csproj" />
+    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <Project Path="src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
+    <Project Path="src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
     <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
     <Project Path="src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
     <Project Path="src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+    <Project Path="src/MS.Microservice.HealthChecks.Redis/MS.Microservice.HealthChecks.Redis.csproj" />
     <Project Path="src/MS.Microservice.Http.Resilience/MS.Microservice.Http.Resilience.csproj" />
-    <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
     <Project Path="src/MS.Microservice.Notifications/MS.Microservice.Notifications.csproj" />
-    <Project Path="src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
-    <Project Path="src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
+    <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
+    <Project Path="src/MS.Microservice.Search/MS.Microservice.Search.csproj" />
     <Project Path="src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
   </Folder>
@@ -49,33 +48,35 @@
     <Project Path="MS.Microservice.Persistence/test/MS.Microservice.Persistence.EFCore.Tests/MS.Microservice.Persistence.EFCore.Tests.csproj" />
     <Project Path="MS.Microservice.Persistence/test/MS.Microservice.Persistence.SqlSugar.Tests/MS.Microservice.Persistence.SqlSugar.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/MS.Microservice.Search.Benchmarks/MS.Microservice.Search.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AI/">
     <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="MS.Microservice.Media/test/MS.Microservice.Media.Tests/MS.Microservice.Media.Tests.csproj" />
-    <Project Path="MS.Microservice.Media/test/MS.Microservice.Media.Inference.Tests/MS.Microservice.Media.Inference.Tests.csproj" />
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
     <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
-    <Project Path="test/MS.Microservice.HealthChecks.Redis.Tests/MS.Microservice.HealthChecks.Redis.Tests.csproj" />
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Documents.Rendering.Tests/MS.Microservice.Documents.Rendering.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Documents.Tests/MS.Microservice.Documents.Tests.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
     <Project Path="test/MS.Microservice.Excel.Tests/MS.Microservice.Excel.Tests.csproj" />
+    <Project Path="test/MS.Microservice.HealthChecks.Redis.Tests/MS.Microservice.HealthChecks.Redis.Tests.csproj" />
     <Project Path="test/MS.Microservice.Http.Resilience.Tests/MS.Microservice.Http.Resilience.Tests.csproj" />
     <Project Path="test/MS.Microservice.Lab.Tests/MS.Microservice.Lab.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
     <Project Path="test/MS.Microservice.Notifications.Tests/MS.Microservice.Notifications.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Documents.Tests/MS.Microservice.Documents.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Documents.Rendering.Tests/MS.Microservice.Documents.Rendering.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Storage.S3.Tests/MS.Microservice.Storage.S3.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.DatabaseMigrator.Tests/MS.Microservice.Reference.DatabaseMigrator.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Persistence.Tests/MS.Microservice.Reference.Persistence.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
     <Project Path="test/MS.Microservice.Samples.EducationalImages.Tests/MS.Microservice.Samples.EducationalImages.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Search.Tests/MS.Microservice.Search.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Storage.S3.Tests/MS.Microservice.Storage.S3.Tests.csproj" />
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
@@ -94,6 +95,18 @@
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.QuestionGeneration.Tests/MS.Microservice.AI.QuestionGeneration.Tests.csproj" />
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
   </Folder>
+  <Folder Name="/MS.Microservice.Tasks/" />
+  <Folder Name="/MS.Microservice.Tasks/src/">
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks.Dashboard/MS.Microservice.Tasks.Dashboard.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Tasks/test/">
+    <Project Path="MS.Microservice.Tasks/test/MS.Microservice.Tasks.Tests/MS.Microservice.Tasks.Tests.csproj" />
+    <Project Path="MS.Microservice.Tasks/test/MS.Microservice.Tasks.Messaging.Tests/MS.Microservice.Tasks.Messaging.Tests.csproj" />
+    <Project Path="MS.Microservice.Tasks/test/MS.Microservice.Tasks.Dashboard.Tests/MS.Microservice.Tasks.Dashboard.Tests.csproj" />
+  </Folder>
   <Folder Name="/MS.Microservice.Logging/" />
   <Folder Name="/MS.Microservice.Logging/src/">
     <Project Path="MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
@@ -106,6 +119,15 @@
     <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Core.Tests/MS.Microservice.Logging.Core.Tests.csproj" />
     <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.NLog.Tests/MS.Microservice.Logging.NLog.Tests.csproj" />
     <Project Path="MS.Microservice.Logging/test/MS.Microservice.Logging.Serilog.Tests/MS.Microservice.Logging.Serilog.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Media/" />
+  <Folder Name="/MS.Microservice.Media/src/">
+    <Project Path="MS.Microservice.Media/src/MS.Microservice.Media.Inference/MS.Microservice.Media.Inference.csproj" />
+    <Project Path="MS.Microservice.Media/src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Media/test/">
+    <Project Path="MS.Microservice.Media/test/MS.Microservice.Media.Inference.Tests/MS.Microservice.Media.Inference.Tests.csproj" />
+    <Project Path="MS.Microservice.Media/test/MS.Microservice.Media.Tests/MS.Microservice.Media.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.Messaging/" />
   <Folder Name="/MS.Microservice.Messaging/src/">
@@ -123,6 +145,7 @@
     <Project Path="MS.Microservice.Messaging/test/MS.Microservice.Messaging.Wolverine.Tests/MS.Microservice.Messaging.Wolverine.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.Persistence/" />
+  <Folder Name="/MS.Microservice.Idempotency/" />
   <Folder Name="/MS.Microservice.Idempotency/src/">
     <Project Path="MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj" />
     <Project Path="MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.Mvc/MS.Microservice.Idempotency.Mvc.csproj" />
