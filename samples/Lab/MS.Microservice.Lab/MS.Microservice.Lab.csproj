@@ -41,9 +41,9 @@
     <ProjectReference Include="../../../src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Notifications/MS.Microservice.Notifications.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
-    <ProjectReference Include="../../../src/MS.Microservice.Tasks.Dashboard/MS.Microservice.Tasks.Dashboard.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
+    <ProjectReference Include="../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Dashboard/MS.Microservice.Tasks.Dashboard.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Search/MS.Microservice.Search.csproj" />
     <ProjectReference Include="../../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
     <ProjectReference Include="../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />

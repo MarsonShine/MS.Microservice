@@ -97,7 +97,7 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 
 面板展示本人最近任务的状态、进度、时间和执行次数。点击任务名称查看执行历史、失败代码及结果引用；可取消排队／运行中的任务，也可在剩余次数内重试失败、中断或取消的任务。页面默认每 5 秒刷新，支持状态筛选、当前列表文字筛选和按完整任务 ID 查询。
 
-“定时计划”页展示观察入口注册的 Coravel 配置；Lab 当前显示“持久任务派发”。该目录只读，不表示当前正在运行的计划，也不推算下一次执行时间。任务及历史继续复用已有持久任务中心，没有新增调度器或应用服务。其他宿主的引用、权限和挂载方法见 [Dashboard 组件](../../../src/MS.Microservice.Tasks.Dashboard/README.md)。
+“定时计划”页展示观察入口注册的 Coravel 配置；Lab 当前显示“持久任务派发”。该目录只读，不表示当前正在运行的计划，也不推算下一次执行时间。任务及历史继续复用已有持久任务中心，没有新增调度器或应用服务。其他宿主的引用、权限和挂载方法见 [Dashboard 组件](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Dashboard/README.md)。
 
 ## 文档后台索引与检索
 
@@ -126,7 +126,7 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 
 任务 SQLite 默认位于 `.tools/task-center/tasks.db`，检索索引位于 `.tools/document-search`；可通过 `ToolDemos:TaskCenterDirectory`、`ToolDemos:SearchIndexDirectory` 配置 webroot 之外的目录。两者跨重启保留，首版只运行一个宿主实例；Lab 自动创建自己的演示数据库，生产接入由宿主管理迁移。后台索引任务声明为可安全重试，重启保留执行历史并恢复未完成任务；版本规则阻止较旧任务覆盖更新或删除。
 
-初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../src/MS.Microservice.Tasks.Coravel/README.md)。
+初次大批导入可在 SDK 中显式 `Optimize` 排序段，日常增量只发布；相关度排序、游标页和未排序新段仍需收集匹配结果，快速模式不保证所有场景耗时相同。查询只读已发布索引。使用方式及性能测量见 [Search](../../../src/MS.Microservice.Search/README.md)，任务复用见 [Coravel 接入](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/README.md)。
 
 ## 图片后台批处理
 

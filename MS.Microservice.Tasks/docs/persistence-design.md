@@ -40,6 +40,6 @@ Retry 仅接受 Failed、Cancelled、Interrupted 且尚有次数的 Job，将其
 
 当前原子更新提供执行身份和数据库版本，没有分布式租约、续租或实例失联判定。单实例执行器启动时读取 Running 的执行令牌，再调用 RecoverAsync：同事务结束旧 Attempt，并在调用者明确允许、未取消且还有次数时将 Job 重新排队。这样进程不会在“已中断但尚未重排”的提交间隙丢失恢复机会。优雅停机也使用这一原子入口，安全任务留在队列供下次启动执行。
 
-GetExecutionStatusAsync 只投影当前 Token 对应的取消状态，不加载 JSON 参数，用于持续取消观察。失效或结束的 Token 返回 Ended；调用者应停止工作。详细执行流程见 [执行设计](../../MS.Microservice.Tasks/docs/execution-design.md)。单凭数据库记录不能保证邮件、外部请求等副作用恰好发生一次。
+GetExecutionStatusAsync 只投影当前 Token 对应的取消状态，不加载 JSON 参数，用于持续取消观察。失效或结束的 Token 返回 Ended；调用者应停止工作。详细执行流程见 [执行设计](execution-design.md)。单凭数据库记录不能保证邮件、外部请求等副作用恰好发生一次。
 
 任务参数、结果引用和进度消息由宿主授权和生成。按 Scope 的读取／控制接口不会跨越该边界；跨 Scope 的候选查询和执行写入属于可信执行基础设施。组件不从用户输入解析任意 CLR 类型，也不会替宿主读取结果引用指向的文件。

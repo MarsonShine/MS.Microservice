@@ -44,4 +44,4 @@ JobSnapshot? current = await jobs.GetAsync(request.Scope, created.JobId, cancell
 
 宿主注册 `IJobHandler<TPayload>`，按明确名称和版本匹配任务；参数可使用普通 DTO 或 JsonElement。每次执行创建独立 DI scope，按 Queue 限制并发，观察持久取消请求并传递 CancellationToken。处理器必须配合取消，且在返回前等待自己启动的子任务结束；执行器不会提前释放仍在工作的资源槽。
 
-存储模型、原子状态转换和事务边界见 [持久化设计](../MS.Microservice.Tasks.EFCore/docs/persistence-design.md)，处理器执行及恢复见 [执行设计](docs/execution-design.md)。
+存储模型、原子状态转换和事务边界见 [持久化设计](../../docs/persistence-design.md)，处理器执行及恢复见 [执行设计](../../docs/execution-design.md)。

@@ -26,10 +26,6 @@
     <Project Path="src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
     <Project Path="src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
-    <Project Path="src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />
-    <Project Path="src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
-    <Project Path="src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
-    <Project Path="src/MS.Microservice.Tasks.Dashboard/MS.Microservice.Tasks.Dashboard.csproj" />
     <Project Path="src/MS.Microservice.Search/MS.Microservice.Search.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
@@ -85,9 +81,6 @@
     <Project Path="test/MS.Microservice.Reference.Web.Tests/MS.Microservice.Reference.Web.Tests.csproj" />
     <Project Path="test/MS.Microservice.Samples.EducationalImages.Tests/MS.Microservice.Samples.EducationalImages.Tests.csproj" />
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Tasks.Tests/MS.Microservice.Tasks.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Tasks.Dashboard.Tests/MS.Microservice.Tasks.Dashboard.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Tasks.Messaging.Tests/MS.Microservice.Tasks.Messaging.Tests.csproj" />
     <Project Path="test/MS.Microservice.Search.Tests/MS.Microservice.Search.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
@@ -105,6 +98,18 @@
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.OpenAI.Tests/MS.Microservice.AI.OpenAI.Tests.csproj" />
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.QuestionGeneration.Tests/MS.Microservice.AI.QuestionGeneration.Tests.csproj" />
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Tasks/" />
+  <Folder Name="/MS.Microservice.Tasks/src/">
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
+    <Project Path="MS.Microservice.Tasks/src/MS.Microservice.Tasks.Dashboard/MS.Microservice.Tasks.Dashboard.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Tasks/test/">
+    <Project Path="MS.Microservice.Tasks/test/MS.Microservice.Tasks.Tests/MS.Microservice.Tasks.Tests.csproj" />
+    <Project Path="MS.Microservice.Tasks/test/MS.Microservice.Tasks.Messaging.Tests/MS.Microservice.Tasks.Messaging.Tests.csproj" />
+    <Project Path="MS.Microservice.Tasks/test/MS.Microservice.Tasks.Dashboard.Tests/MS.Microservice.Tasks.Dashboard.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.Logging/" />
   <Folder Name="/MS.Microservice.Logging/src/">

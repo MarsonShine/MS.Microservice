@@ -62,6 +62,6 @@ var job = await jobs.SubmitAsync(request, cancellationToken);
 
 只有业务确实能幂等重跑时才开启 SafeToRetry，例如按稳定 JobId 生成结果、覆盖同一输出键。组件不能保证事务外的邮件或远程调用只发生一次。当前部署限单执行实例，不要让两个宿主同时连接同一个任务数据库并启用执行。
 
-实现流程见 [执行设计](../MS.Microservice.Tasks/docs/execution-design.md)，事务与记录原子性见 [持久化设计](../MS.Microservice.Tasks.EFCore/docs/persistence-design.md)。Coravel API 约定参考 [官方 Scheduler 文档](https://docs.coravel.net/Scheduler/)。
+实现流程见 [执行设计](../../docs/execution-design.md)，事务与记录原子性见 [持久化设计](../../docs/persistence-design.md)。Coravel API 约定参考 [官方 Scheduler 文档](https://docs.coravel.net/Scheduler/)。
 
 需要任务列表、进度、执行历史及 Coravel 注册计划查看时，可选择 [Dashboard 组件](../MS.Microservice.Tasks.Dashboard/README.md)，由现有 ASP.NET Core 宿主挂载。执行器不依赖该 UI 组件。

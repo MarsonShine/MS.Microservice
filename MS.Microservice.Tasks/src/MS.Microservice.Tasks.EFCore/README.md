@@ -67,4 +67,4 @@ await unit.ExecuteAsync(async token =>
 
 执行器的进度和控制查询使用独立短事务。SQLite 同库只允许一个写者，处理器持有业务写事务时不要同步等待进度写入；应在事务提交后汇报进度。
 
-首版部署约定为单实例，没有分布式租约和保留期清理。单独使用存储包不会自行恢复或重试；[Coravel 接入](../MS.Microservice.Tasks.Coravel/README.md)提供调度及按处理器策略恢复中断的执行。当前使用 SQLite 验证存储行为；其他关系型数据库应随宿主迁移和集成一起验证。实现细节见 [持久化设计](docs/persistence-design.md)。
+首版部署约定为单实例，没有分布式租约和保留期清理。单独使用存储包不会自行恢复或重试；[Coravel 接入](../MS.Microservice.Tasks.Coravel/README.md)提供调度及按处理器策略恢复中断的执行。当前使用 SQLite 验证存储行为；其他关系型数据库应随宿主迁移和集成一起验证。实现细节见 [持久化设计](../../docs/persistence-design.md)。

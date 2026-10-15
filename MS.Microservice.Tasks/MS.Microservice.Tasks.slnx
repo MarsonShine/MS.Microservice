@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="README.md" />
+    <File Path="docs/execution-design.md" />
+    <File Path="docs/persistence-design.md" />
+    <File Path="docs/dashboard-design.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Tasks/MS.Microservice.Tasks.csproj" />
+    <Project Path="src/MS.Microservice.Tasks.Coravel/MS.Microservice.Tasks.Coravel.csproj" />
+    <Project Path="src/MS.Microservice.Tasks.EFCore/MS.Microservice.Tasks.EFCore.csproj" />
+    <Project Path="src/MS.Microservice.Tasks.Dashboard/MS.Microservice.Tasks.Dashboard.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Tasks.Tests/MS.Microservice.Tasks.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Tasks.Messaging.Tests/MS.Microservice.Tasks.Messaging.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Tasks.Dashboard.Tests/MS.Microservice.Tasks.Dashboard.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/">
+    <Project Path="../MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <Project Path="../MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
+  </Folder>
+</Solution>

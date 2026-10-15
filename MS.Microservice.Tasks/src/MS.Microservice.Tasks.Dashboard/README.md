@@ -53,4 +53,4 @@ app.Services.UseSchedulerWithTaskDashboard(scheduler =>
 
 Coravel 6.0.2 没有公开计划枚举接口，`UseSchedulerWithTaskDashboard` 在调用原生 fluent API 时同步记录成功配置。不通过此入口注册的计划不会显示；目录记录注册配置，不表示运行状态，一次性计划执行移除后仍可能保留该配置。自定义条件不在查看时执行，不推算下一次运行，也不提供计划编辑、暂停或手动执行。
 
-任务列表和统计只覆盖当前选中状态的最近窗口，不承诺全库搜索、精确总数或分页扫描。Coravel 计划目录在内存中随宿主重新注册，任务及执行历史沿用 `IJobStore` 的持久化。实现边界见 [面板设计](docs/dashboard-design.md)。
+任务列表和统计只覆盖当前选中状态的最近窗口，不承诺全库搜索、精确总数或分页扫描。Coravel 计划目录在内存中随宿主重新注册，任务及执行历史沿用 `IJobStore` 的持久化。实现边界见 [面板设计](../../docs/dashboard-design.md)。

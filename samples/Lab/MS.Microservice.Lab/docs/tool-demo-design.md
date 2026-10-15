@@ -30,7 +30,7 @@ Lab 引用可选 `Tasks.Dashboard` 并仅在 Lab 端点启用时挂载 `/task-ce
 
 索引任务先按实际字节有界读取，再调用已有 PDF、DOCX 或 OCR 提取器，最后提交版本变更并显式发布。PDF 有文字层的页面直接使用文字层，空页面才选择 OCR；不在查询期间提取或运行模型。文本不足或超预算的任务失败，异常细节留在宿主日志。取消和任务数据库不能回滚索引提交；安全重试依靠同一文档版本的幂等写入，删除保留更高版本 tombstone，防止延迟任务复活已删除文档。
 
-任务与 Lucene 索引是两个持久存储：处理器发布索引后、任务写成功前发生崩溃，恢复时重复提交相同版本；若新的版本已经生效，旧版本只记 stale。重试不会恢复到更旧文档。索引删除不隐式删除上传文件。任务终态、停止期限和恢复策略见 [执行设计](../../../../src/MS.Microservice.Tasks/docs/execution-design.md)，排序段、快速查询和精确计数见 [检索设计](../../../../src/MS.Microservice.Search/docs/search-design.md)。
+任务与 Lucene 索引是两个持久存储：处理器发布索引后、任务写成功前发生崩溃，恢复时重复提交相同版本；若新的版本已经生效，旧版本只记 stale。重试不会恢复到更旧文档。索引删除不隐式删除上传文件。任务终态、停止期限和恢复策略见 [执行设计](../../../../MS.Microservice.Tasks/docs/execution-design.md)，排序段、快速查询和精确计数见 [检索设计](../../../../src/MS.Microservice.Search/docs/search-design.md)。
 
 ## Swagger 与错误
 
