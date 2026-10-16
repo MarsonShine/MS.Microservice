@@ -82,7 +82,7 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 | PDF、Word 模板与 HTML／DOCX 排版 | [Documents](src/MS.Microservice.Documents/README.md)；HTML／DOCX 转 PDF 使用可选 Windows [Rendering](src/MS.Microservice.Documents.Rendering/README.md) |
 | 文件存储、哈希与 ZIP | [Core](src/MS.Microservice.Core/README.md)；对象存储使用可选 [S3](src/MS.Microservice.Storage.S3/README.md)；[Files 常用流程](docs/components/files.md) |
 | 音频 | [Audio](src/MS.Microservice.Audio/README.md)：剪辑、音量、淡入淡出、合并和转换 |
-| Excel 与 CSV | [Excel](src/MS.Microservice.Excel/README.md)：导入、导出和定位错误报告 |
+| Excel 与 CSV | [Excel](src/MS.Microservice.Excel/README.md)：导入、导出和定位错误报告；[DataTransfer 常用流程](docs/components/data-transfer.md) |
 | 文本、编码与 JSON | [Core](src/MS.Microservice.Core/README.md) |
 | 邮件、短信、模板与站内通知 | [Notifications](src/MS.Microservice.Notifications/README.md) |
 | 后台图片批处理 | [Lab](samples/Lab/MS.Microservice.Lab/README.md#图片后台批处理)：上传、进度、取消、重试和私有下载 |

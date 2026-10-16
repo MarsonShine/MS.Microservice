@@ -8,6 +8,7 @@
 | 带校验的导入 | `ImportWithReport` / `ImportWithReportAsync` | [报告与映射](docs/import-reports-design.md) |
 | 模板填充 | `OpenExcel`、`DynamicExcelBuilder` | 公共接口注释 |
 | CSV 记录读写 | `CsvHelper.ReadAsync` / `WriteAsync` | [CSV 设计](docs/csv-design.md) |
+| CSV 模型导入／导出 | `ExcelHelper.ImportCsvWithReportAsync` / `ExportCsvAsync` | 复用 Excel 列映射、校验和错误报告；[DataTransfer 流程](../../docs/components/data-transfer.md) |
 
 ## 导入与错误报告
 

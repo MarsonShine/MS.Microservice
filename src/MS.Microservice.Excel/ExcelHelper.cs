@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 
 namespace MS.Microservice.Infrastructure.Utils;
 
-public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsyncExcelExport
+public partial class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsyncExcelExport
 {
     private static readonly ConcurrentDictionary<Type, ExcelTypeMeta> TypeMetaCache = new();
     [ThreadStatic]
@@ -304,21 +304,8 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             if (errors is not null && errors.Count != errorCount)
                 continue;
             if (validateRow is not null)
-            {
-                var validationErrors = validateRow(obj)
-                    ?? throw new InvalidOperationException("行校验回调不能返回 null。");
-                foreach (var error in validationErrors)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    ArgumentNullException.ThrowIfNull(error);
-                    var slotIndex = Array.FindIndex(slots, slot => slot.PropertyName == error.PropertyName);
-                    int? column = null;
-                    for (var j = 0; j < columnCount; j++)
-                        if (columnIndexMap[j] == slotIndex && slotIndex >= 0) { column = j; break; }
-                    errors!.Add(CreateImportError(ExcelImportErrorKind.BusinessValidation, i, column,
-                        slotIndex < 0 ? null : slots[slotIndex], error.Message, propertyName: error.PropertyName));
-                }
-            }
+                ValidateBusinessRow(obj, validateRow, meta, columnIndexMap, columnCount, i,
+                    targetSheet.SheetName, errors!, cancellationToken);
             if (errors is null || errors.Count == errorCount)
                 acceptRow(i + 1, obj);
         }
@@ -348,7 +335,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         return ImportCore<T, ExcelImportReport<T>>(fileName, stream, (meta, map, count, formatter, evaluator) =>
         {
             var rows = new List<ExcelImportRow<T>>();
-            var errors = ValidateReportColumns(meta, map, count);
+            var errors = ValidateReportColumns(meta, map, count, sheet!.SheetName, titleRowIndex);
             if (errors.Count == 0)
                 ReadRows<T>(meta, map, count, formatter, evaluator,
                     (number, value) => rows.Add(new(number, value)), errors, validateRow, cancellationToken);
@@ -674,7 +661,8 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             ? CellReadStatus.Success : CellReadStatus.Invalid;
     }
 
-    private List<ExcelImportError> ValidateReportColumns(ExcelTypeMeta meta, int[] map, int count)
+    private static List<ExcelImportError> ValidateReportColumns(ExcelTypeMeta meta, int[] map, int count,
+        string sourceName, int headerRowIndex)
     {
         var errors = new List<ExcelImportError>();
         var comparer = meta.NameToSlotIndex.Comparer;
@@ -684,7 +672,7 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
             for (var index = 0; index < count; index++)
                 if (map[index] >= 0 && comparer.Equals(meta.Slots[map[index]].ColumnName, group.Key))
                 { column = index; break; }
-            errors.Add(CreateImportError(ExcelImportErrorKind.DuplicateColumn, titleRowIndex, column,
+            errors.Add(CreateTableImportError(sourceName, ExcelImportErrorKind.DuplicateColumn, headerRowIndex, column,
                 group.First(), "多个模型属性使用相同列名，无法唯一映射。"));
         }
         var mapped = new HashSet<int>();
@@ -694,20 +682,24 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
                 continue;
             var slot = meta.Slots[map[column]];
             if (!mapped.Add(map[column]))
-                errors.Add(CreateImportError(ExcelImportErrorKind.DuplicateColumn, titleRowIndex, column, slot, "标题重复映射到同一属性。"));
+                errors.Add(CreateTableImportError(sourceName, ExcelImportErrorKind.DuplicateColumn, headerRowIndex, column, slot, "标题重复映射到同一属性。"));
             if (!slot.CanWrite)
-                errors.Add(CreateImportError(ExcelImportErrorKind.UnwritableProperty, titleRowIndex, column, slot, "导入属性必须可写。"));
+                errors.Add(CreateTableImportError(sourceName, ExcelImportErrorKind.UnwritableProperty, headerRowIndex, column, slot, "导入属性必须可写。"));
         }
         for (var index = 0; index < meta.Slots.Length; index++)
             if (meta.Slots[index].Required && !mapped.Contains(index))
-                errors.Add(CreateImportError(ExcelImportErrorKind.MissingColumn, titleRowIndex, null, meta.Slots[index], "缺少必填列。"));
+                errors.Add(CreateTableImportError(sourceName, ExcelImportErrorKind.MissingColumn, headerRowIndex, null, meta.Slots[index], "缺少必填列。"));
         return errors;
     }
 
     private ExcelImportError CreateImportError(ExcelImportErrorKind kind, int row, int? column,
+        ExcelPropertySlot? slot, string message, string? rawValue = null, string? propertyName = null)
+        => CreateTableImportError(sheet!.SheetName, kind, row, column, slot, message, rawValue, propertyName);
+
+    private static ExcelImportError CreateTableImportError(string sourceName, ExcelImportErrorKind kind, int row, int? column,
         ExcelPropertySlot? slot, string message, string? rawValue = null, string? propertyName = null) => new()
     {
-        SheetName = sheet!.SheetName,
+        SheetName = sourceName,
         RowNumber = row + 1,
         ColumnNumber = column + 1,
         ColumnName = slot?.ColumnName,
@@ -716,6 +708,25 @@ public class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport, IAsync
         Message = message,
         RawValue = rawValue
     };
+
+    private static void ValidateBusinessRow<T>(T value, Func<T, IEnumerable<ExcelRowValidationError>> validateRow,
+        ExcelTypeMeta meta, int[] map, int count, int row, string sourceName,
+        List<ExcelImportError> errors, CancellationToken cancellationToken)
+    {
+        var validationErrors = validateRow(value)
+            ?? throw new InvalidOperationException("行校验回调不能返回 null。");
+        foreach (var error in validationErrors)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ArgumentNullException.ThrowIfNull(error);
+            var slotIndex = Array.FindIndex(meta.Slots, slot => slot.PropertyName == error.PropertyName);
+            int? column = null;
+            for (var j = 0; j < count; j++)
+                if (map[j] == slotIndex && slotIndex >= 0) { column = j; break; }
+            errors.Add(CreateTableImportError(sourceName, ExcelImportErrorKind.BusinessValidation, row, column,
+                slotIndex < 0 ? null : meta.Slots[slotIndex], error.Message, propertyName: error.PropertyName));
+        }
+    }
 
     [Conditional("MS_Microservice_DIAGNOSTICS")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

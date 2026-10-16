@@ -36,7 +36,7 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 | `/videos` | 信息读取、编辑转码、有序拼接、截帧、提取音轨、带时间范围的文字／Logo 水印 |
 | `/inference` | OCR、带线框表格、自动图片去水印、蒙版修复、抠图、两倍增强、自动／手动视频修复 |
 | `/audio` | 信息读取、剪辑、音量与淡变、合并、混音、转码和单声道转立体声 |
-| `/spreadsheets` | Excel 示例与导出、带定位错误的导入报告、错误行下载，CSV 读写 |
+| `/spreadsheets` | Excel／CSV 商品导入导出、带定位错误的校验报告、错误下载与校验后汇总，CSV 原始记录读写 |
 | `/documents` | PDF 信息、文字、选页重排、合并拆分、PNG 渲染、水印叠加；Word 模板下载与填充 |
 | `/rendering` | HTML／CSS 排版为 PDF，可信普通 DOCX 转 PDF |
 | `/files` | 私有文件保存、下载、元数据、删除、SHA-256、重复候选、ZIP 打包解包 |
@@ -52,7 +52,7 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 
 可以按以下顺序查看实际效果：
 
-- **Excel／CSV**：先下载 `/spreadsheets/excel/sample` 或调用导出，再上传到 `excel/import-report`；CSV 用 `csv/write` 生成后再 `csv/read`。
+- **Excel／CSV**：先调用 `/spreadsheets/excel/export` 或 `csv/export`，再上传到对应的 `import-report` 查看报告、`import` 执行校验后商品汇总，错误通过 `import-errors` 下载；[DataTransfer 流程](../../../docs/components/data-transfer.md)包含类库和 HTTP 示例。CSV 原始记录仍可用 `csv/write` 与 `csv/read` 读写。
 - **Word → PDF**：下载 `/documents/word/template-sample`，到 `word/fill` 上传模板并填入 Tag 字典，最后把结果上传到 `/rendering/docx-pdf`。
 - **文件与 ZIP**：上传后保留返回的 key、originalFileName 和下载地址，再查询摘要、比较重复候选或删除；ZIP 解包返回的每个文件也有独立下载地址。[Files 常用流程](../../../docs/components/files.md)包含类库和 HTTP 接入步骤。
 - **媒体**：先编辑或加水印，再使用 `/inference/watermarks/remove` 下载结果、蒙版和报告，检查误选后用 `repair` 上传修正蒙版。视频修复下载 FFV1 MKV 预览包，需要 MP4 时再调用视频转码。

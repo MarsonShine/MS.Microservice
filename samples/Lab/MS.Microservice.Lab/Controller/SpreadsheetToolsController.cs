@@ -48,6 +48,50 @@ public sealed class SpreadsheetToolsController(ToolDemoFiles files) : ToolDemoCo
         return Download(await ExportAsync(report.Errors, "Errors"), ExcelMime, "import-errors.xlsx");
     }
 
+    /// <summary>校验 Excel 商品表，通过后计算商品数量、库存数量与总金额。</summary>
+    /// <remarks>示范先完成整份校验再调用业务处理；有错误返回 422 和定位报告，不计算部分结果，不写数据库。</remarks>
+    [HttpPost("excel/import"), Consumes("multipart/form-data"), Produces("application/json")]
+    [ProducesResponseType<SpreadsheetImportSummary>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ExcelImportReport<SpreadsheetDemoRow>>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ImportProducts([FromForm] SpreadsheetImportForm form)
+        => ProcessProducts(await ImportAsync(form));
+
+    /// <summary>将商品列表导出为带中文表头的 UTF-8 CSV。</summary>
+    /// <remarks>复用 Excel 商品模型的列名与顺序，可直接交给 csv/import 或 csv/import-report。默认商品与 excel/sample 一致。</remarks>
+    [HttpPost("csv/export"), Consumes("application/json"), Produces("text/csv")]
+    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportProductsCsv([FromBody] SpreadsheetExportRequest request)
+    {
+        using var output = new MemoryStream();
+        await new ExcelHelper().ExportCsvAsync(request.Rows, output,
+            new() { Encoding = new UTF8Encoding(true, true) }, Token);
+        return Download(output.ToArray(), "text/csv; charset=utf-8", "products.csv");
+    }
+
+    /// <summary>导入带表头的商品 CSV，返回与 Excel 相同结构的定位报告。</summary>
+    /// <remarks>表头使用编号、名称、数量、单价，可调整顺序。行号为一基逻辑记录号，SheetName 为 CSV；MaximumRows 限制数据记录数，不含表头。</remarks>
+    [HttpPost("csv/import-report"), Consumes("multipart/form-data"), Produces("application/json")]
+    [ProducesResponseType<ExcelImportReport<SpreadsheetDemoRow>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ImportCsvReport([FromForm] CsvReadForm form) => Ok(await ImportCsvAsync(form));
+
+    /// <summary>校验 CSV 商品表，通过后计算与 Excel 导入相同的商品汇总。</summary>
+    /// <remarks>先用 csv/export 生成带表头的商品文件。整份校验通过后返回商品数、总数量与金额；存在错误返回 422 和定位报告，不计算部分结果，不写数据库。</remarks>
+    [HttpPost("csv/import"), Consumes("multipart/form-data"), Produces("application/json")]
+    [ProducesResponseType<SpreadsheetImportSummary>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ExcelImportReport<SpreadsheetDemoRow>>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ImportCsvProducts([FromForm] CsvReadForm form)
+        => ProcessProducts(await ImportCsvAsync(form));
+
+    /// <summary>将 CSV 商品表的校验错误下载为 XLSX，保留源记录和列位置。</summary>
+    /// <remarks>上传与 csv/import-report 相同的商品文件；返回的报告中 SheetName 为 CSV，行号为逻辑记录号。无错误时下载空报告表。</remarks>
+    [HttpPost("csv/import-errors"), Consumes("multipart/form-data"), Produces(ExcelMime)]
+    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ImportCsvErrors([FromForm] CsvReadForm form)
+    {
+        var report = await ImportCsvAsync(form);
+        return Download(await ExportAsync(report.Errors, "Errors"), ExcelMime, "import-errors.xlsx");
+    }
+
     /// <summary>读取 UTF-8 CSV，并返回逻辑记录和原始字段。</summary>
     /// <remarks>可先用 csv/write 下载示例再上传。引号、字段内换行和空白会保留，不自动识别表头或转换数值；示例每条最多 256 列、65536 字符。</remarks>
     [HttpPost("csv/read"), Consumes("multipart/form-data"), Produces("application/json")]
@@ -93,6 +137,29 @@ public sealed class SpreadsheetToolsController(ToolDemoFiles files) : ToolDemoCo
         using var output = new MemoryStream();
         try { await helper.ExportAsync(rows, sheetName, output, Token); return output.ToArray(); }
         finally { helper.Workbook?.Dispose(); }
+    }
+
+    private async Task<ExcelImportReport<SpreadsheetDemoRow>> ImportCsvAsync(CsvReadForm form)
+    {
+        using var input = new MemoryStream(await Files.ReadAsync(form.File, Token), writable: false);
+        return await new ExcelHelper().ImportCsvWithReportAsync<SpreadsheetDemoRow>(input, ValidateProduct,
+            new() { Delimiter = Delimiter(form.Delimiter), MaxColumns = 256, MaxRecordChars = 65536 }, form.MaximumRows, Token);
+    }
+
+    private IActionResult ProcessProducts(ExcelImportReport<SpreadsheetDemoRow> report)
+    {
+        if (!report.IsValid) return UnprocessableEntity(report);
+        Token.ThrowIfCancellationRequested();
+        try
+        {
+            return Ok(new SpreadsheetImportSummary(report.Rows.Count,
+                report.Rows.Sum(row => (long)row.Value.Quantity),
+                report.Rows.Sum(row => row.Value.Quantity * row.Value.UnitPrice)));
+        }
+        catch (OverflowException)
+        {
+            throw new InvalidDataException("商品汇总金额超出 decimal 可表示范围。");
+        }
     }
 
     private static IEnumerable<ExcelRowValidationError> ValidateProduct(SpreadsheetDemoRow row)

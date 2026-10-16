@@ -3,6 +3,9 @@ using MS.Microservice.Infrastructure.Utils.Excel;
 
 namespace MS.Microservice.Lab.Controller;
 
+/// <summary>整份导入校验通过后计算的商品汇总，不持久化业务数据。</summary>
+public sealed record SpreadsheetImportSummary(int ProductCount, long TotalQuantity, decimal TotalValue);
+
 /// <summary>商品工作表示例行；Excel 列名使用中文表头。</summary>
 public sealed class SpreadsheetDemoRow
 {
@@ -47,7 +50,7 @@ public sealed class CsvReadForm
     /// <summary>单字符分隔符，默认逗号；例如分号“;”。</summary>
     [Required(AllowEmptyStrings = true), StringLength(1, MinimumLength = 1), DisplayFormat(ConvertEmptyStringToNull = false)]
     public string Delimiter { get; set; } = ",";
-    /// <summary>允许返回的最大记录数，默认 1000，超限报错而非截断。</summary>
+    /// <summary>记录上限，默认 1000，超限报错。csv/read 包含表头，csv/import 系列只计数据记录。</summary>
     [Range(1, 10000)] public int MaximumRows { get; set; } = 1000;
 }
 
