@@ -24,7 +24,10 @@ public sealed class S3ToolSettings
     public string? SessionToken { get; set; }
 }
 
-public sealed record S3UploadResult(string Key, int Bytes, string MetadataUrl, string DownloadUrl);
+public sealed record S3UploadResult(string Key, int Bytes, string MetadataUrl, string DownloadUrl)
+{
+    public string? OriginalFileName { get; init; }
+}
 public sealed record S3ReadUrlResult(string Key, string Url, int RequestedLifetimeSeconds);
 
 [LabOnly]
@@ -54,7 +57,10 @@ public sealed class S3ToolsController(ToolDemoFiles files, IConfiguration config
         {
             return Conflict(new ProblemDetails { Status = 409, Title = "该 key 已存在，未覆盖对象。" });
         }
-        var result = new S3UploadResult(key, bytes.Length, "/api/lab/tools/s3/" + key, "/api/lab/tools/s3/" + key + "/content");
+        var result = new S3UploadResult(key, bytes.Length, "/api/lab/tools/s3/" + key, "/api/lab/tools/s3/" + key + "/content")
+        {
+            OriginalFileName = Path.GetFileName(form.File!.FileName.Replace('\\', '/'))
+        };
         return Created(result.MetadataUrl, result);
     }
 

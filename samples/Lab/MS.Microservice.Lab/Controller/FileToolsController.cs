@@ -29,7 +29,11 @@ public sealed class ZipFilesForm
     public List<IFormFile> Files { get; set; } = [];
 }
 
-public sealed record DemoStoredFile(string Key, long Length, DateTimeOffset LastModifiedUtc, string DownloadUrl);
+public sealed record DemoStoredFile(string Key, long Length, DateTimeOffset LastModifiedUtc, string DownloadUrl)
+{
+    /// <summary>上传时返回的叶子文件名，供调用方保存；存储层不持久化此名称。</summary>
+    public string? OriginalFileName { get; init; }
+}
 public sealed record DemoDuplicateGroup(long Length, string Sha256, IReadOnlyList<string> Keys);
 public sealed record DemoExtractedFile(string RelativePath, DemoStoredFile File);
 public sealed record DemoExtractionResult(IReadOnlyList<DemoExtractedFile> Files, IReadOnlyList<string> EmptyDirectories);
@@ -56,7 +60,10 @@ public sealed class FileToolsController(ToolDemoFiles files, IWebHostEnvironment
         var key = StoredFileKey.Create(DemoFileStore.Extension(form.File!.FileName));
         using var input = new MemoryStream(bytes, writable: false);
         await storage.WriteNewAsync(key, input, Token);
-        var result = Describe((await storage.GetMetadataAsync(key, Token))!);
+        var result = Describe((await storage.GetMetadataAsync(key, Token))!) with
+        {
+            OriginalFileName = Path.GetFileName(form.File!.FileName.Replace('\\', '/'))
+        };
         return Created(result.DownloadUrl, result);
     }
 
@@ -72,16 +79,26 @@ public sealed class FileToolsController(ToolDemoFiles files, IWebHostEnvironment
     }
 
     /// <summary>下载当前用户保存的文件内容。</summary>
-    /// <remarks>返回 application/octet-stream 附件，不在浏览器中执行上传内容。只接受 canonical key，不接受目录或服务器路径。</remarks>
+    /// <remarks>返回 application/octet-stream 附件，ASP.NET Core 输出并释放文件流。打开后检查 64 MiB 输出上限。只接受 canonical key，不接受目录或服务器路径。</remarks>
     [HttpGet("{key}/content"), Produces("application/octet-stream")]
-    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType<FileStreamResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DownloadContent(string key)
     {
         try
         {
-            await using var input = await _store.ForOwner(Owner).OpenReadAsync(key, Token);
-            return Download(await Files.ReadOutputAsync(input, Token), "application/octet-stream", key);
+            var input = await _store.ForOwner(Owner).OpenReadAsync(key, Token);
+            try
+            {
+                if (input.Length > ToolDemoFiles.MaximumOutputBytes)
+                    throw new ToolUploadException(413, "演示结果超过 64 MiB，请缩小输入或选段。");
+                return File(input, "application/octet-stream", key);
+            }
+            catch
+            {
+                await input.DisposeAsync();
+                throw;
+            }
         }
         catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { return NotFound(); }
     }

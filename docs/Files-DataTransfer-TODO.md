@@ -7,7 +7,7 @@
 | 流程 | 现有实现 | 后续检查点 |
 | --- | --- | --- |
 | 文件写入、读取、元数据、删除 | [IFileStorage](../src/MS.Microservice.Core/IO/IFileStorage.cs)、LocalFileStorage、[S3FileStorage](../src/MS.Microservice.Storage.S3/README.md) | 保留统一存储契约，检查调用方还需重复哪些衔接代码 |
-| HTTP 上传、下载、删除 | [FileToolsController](../samples/Lab/MS.Microservice.Lab/Controller/FileToolsController.cs) | 复用现有大小限制和用户隔离；下载目前先读入内存，检查直接流式返回的适用性 |
+| HTTP 上传、下载、删除 | [FileToolsController](../samples/Lab/MS.Microservice.Lab/Controller/FileToolsController.cs) | 已复用现有大小限制和用户隔离，本地下载直接输出文件流，上传返回原始叶子文件名 |
 | Excel 导入、校验、错误报告与导出 | [Excel](../src/MS.Microservice.Excel/README.md)、SpreadsheetToolsController | 明确校验成功后交给业务处理的示例，复用行列定位和错误文件导出 |
 | CSV 读写 | CsvHelper、SpreadsheetToolsController | 原始字段读写已具备；检查常见数据映射、校验和业务处理如何最少衔接 |
 | 现有 HTTP 验证 | test/MS.Microservice.Lab.Tests/Tools 中的文件及表格测试 | 复用已有测试，新增检查只覆盖此次改变的行为与缺口 |
@@ -19,7 +19,7 @@ Files 与 DataTransfer 是本轮能力范围名称，是否需要新增项目由
 | Slice | 状态 | 建议 commit 标题 | 验收 | 依赖 |
 | --- | --- | --- | --- | --- |
 | 1：现状与待办 | 完成 | docs: record Files and DataTransfer scope and backlog | 入口存在，范围与已确认需求一致 | 无 |
-| 2：Files 常用流程 | 待开始 | feat(files): complete common file flows using existing storage | 保存后可查询、下载和删除；现有用户隔离仍有效；验证受影响的本地及 S3 契约 | 1 |
+| 2：Files 常用流程 | 完成 | feat(files): complete common file flows using existing storage | 保存后可查询、下载和删除；现有用户隔离仍有效；验证受影响的本地及 S3 契约 | 1 |
 | 3：DataTransfer 常用流程 | 待开始 | feat(data-transfer): connect common import and export flows | Excel／CSV 导出后可导入；错误有位置；示例展示校验后业务处理；流正确释放 | 1；若使用 Files 保存产物则依赖 2 |
 
 每片将实现、必要测试和使用说明放在同一提交内。后续片开始时再根据代码明确改动文件与验证范围。
@@ -27,8 +27,8 @@ Files 与 DataTransfer 是本轮能力范围名称，是否需要新增项目由
 ## 当前交付待办
 
 - [x] 梳理已有文件存储与表格接口，确定复用入口。
-- [ ] Files：补齐实际缺失的调用衔接，跑通保存、查询、下载、删除。
-- [ ] Files：更新最短接入示例，验证受影响的存储及 HTTP 流程。
+- [x] Files：补齐实际缺失的调用衔接，跑通保存、查询、下载、删除。
+- [x] Files：更新[最短接入示例](components/files.md)，验证受影响的存储及 HTTP 流程。
 - [ ] DataTransfer：跑通 Excel／CSV 导入、校验、业务处理与导出示例。
 - [ ] DataTransfer：复用错误报告，补充此次改动所需的验证和使用说明。
 

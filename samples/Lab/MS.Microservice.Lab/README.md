@@ -54,7 +54,7 @@ Messaging.Wolverine.Tests。Messaging.IntegrationTests 对两种实现运行相�
 
 - **Excel／CSV**：先下载 `/spreadsheets/excel/sample` 或调用导出，再上传到 `excel/import-report`；CSV 用 `csv/write` 生成后再 `csv/read`。
 - **Word → PDF**：下载 `/documents/word/template-sample`，到 `word/fill` 上传模板并填入 Tag 字典，最后把结果上传到 `/rendering/docx-pdf`。
-- **文件与 ZIP**：上传后保留返回的 key 和下载地址，再查询摘要、比较重复候选或删除；ZIP 解包返回的每个文件也有独立下载地址。
+- **文件与 ZIP**：上传后保留返回的 key、originalFileName 和下载地址，再查询摘要、比较重复候选或删除；ZIP 解包返回的每个文件也有独立下载地址。[Files 常用流程](../../../docs/components/files.md)包含类库和 HTTP 接入步骤。
 - **媒体**：先编辑或加水印，再使用 `/inference/watermarks/remove` 下载结果、蒙版和报告，检查误选后用 `repair` 上传修正蒙版。视频修复下载 FFV1 MKV 预览包，需要 MP4 时再调用视频转码。
 - **通知**：先渲染模板或发布一条本人站内通知；配置邮件／短信服务后再主动调用发送接口，发送会产生真实邮件或短信。
 

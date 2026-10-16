@@ -16,6 +16,7 @@ public sealed class FileToolsApiTests
         using var host = new ToolDemoTestHost(new Dictionary<string, string?> { ["ToolDemos:StorageDirectory"] = "   " });
         var bytes = "alpha\n"u8.ToArray();
         var first = await Upload(host, "first.txt", bytes);
+        Assert.Equal("first.txt", first.OriginalFileName);
         Assert.True(Directory.Exists(Path.Combine(host.Root, ".tools", "tool-demo-files")));
         var second = await Upload(host, "second.txt", bytes);
         var different = await Upload(host, "different.txt", "omega\n"u8.ToArray());
@@ -37,12 +38,47 @@ public sealed class FileToolsApiTests
         await Status(contentResponse, HttpStatusCode.OK);
         Assert.Equal(bytes, await contentResponse.Content.ReadAsByteArrayAsync());
         Assert.Equal("application/octet-stream", contentResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(bytes.Length, contentResponse.Content.Headers.ContentLength);
+        Assert.Equal("attachment", contentResponse.Content.Headers.ContentDisposition?.DispositionType);
         using var deleted = await host.Client.DeleteAsync("/api/lab/tools/files/" + first.Key);
         await Status(deleted, HttpStatusCode.NoContent);
         using var missing = await host.Client.GetAsync(first.DownloadUrl);
         await Status(missing, HttpStatusCode.NotFound);
         using var repeatDelete = await host.Client.DeleteAsync("/api/lab/tools/files/" + first.Key);
         await Status(repeatDelete, HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task OtherUserCannotReadOrDeleteAnUploadedFile()
+    {
+        using var host = new ToolDemoTestHost();
+        var bytes = "private"u8.ToArray();
+        var file = await Upload(host, "C:\\fakepath\\报告.txt", bytes);
+        Assert.Equal("报告.txt", file.OriginalFileName);
+        host.Client.DefaultRequestHeaders.Remove("X-Test-User");
+        host.Client.DefaultRequestHeaders.Add("X-Test-User", "bob");
+        using var metadata = await host.Client.GetAsync("/api/lab/tools/files/" + file.Key);
+        await Status(metadata, HttpStatusCode.NotFound);
+        using var download = await host.Client.GetAsync(file.DownloadUrl);
+        await Status(download, HttpStatusCode.NotFound);
+        using var deletion = await host.Client.DeleteAsync("/api/lab/tools/files/" + file.Key);
+        await Status(deletion, HttpStatusCode.NoContent);
+        host.Client.DefaultRequestHeaders.Remove("X-Test-User");
+        host.Client.DefaultRequestHeaders.Add("X-Test-User", "alice");
+        Assert.Equal(bytes, await host.Client.GetByteArrayAsync(file.DownloadUrl));
+    }
+
+    [Fact]
+    public async Task DownloadRejectsOversizedStoredFileBeforeSendingContent()
+    {
+        using var host = new ToolDemoTestHost();
+        var file = await Upload(host, "large.bin", [1]);
+        var path = Directory.GetFiles(host.Root, file.Key, SearchOption.AllDirectories).Single();
+        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Write))
+            stream.SetLength(MS.Microservice.Lab.Application.Tools.ToolDemoFiles.MaximumOutputBytes + 1L);
+        using var response = await host.Client.GetAsync(file.DownloadUrl);
+        await Status(response, HttpStatusCode.RequestEntityTooLarge);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Theory]
