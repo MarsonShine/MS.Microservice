@@ -186,17 +186,17 @@ High-signal examples:
 
 Look for:
 
-- behavior changes without tests
-- tests that cover only the happy path
-- missing regression coverage for bug fixes
+- critical behavior changes without credible regression evidence
+- validation limited to the happy path when affected failure paths carry concrete risks
+- bug-fix evidence that would not expose the reported failure
 - time-dependent tests that could use `TimeProvider`
 - tests coupled to internal implementation instead of behavior
 
 High-signal examples:
 
-- a bug fix changes branching logic but no test captures the bug
-- auth or serialization changes ship without integration coverage
-- retry or cancellation behavior changes with no dedicated tests
+- a branching fix has evidence only for inputs that also passed before the fix
+- auth or serialization checks omit the affected permission boundary or wire contract
+- retry or cancellation changes have no evidence for affected duplicate effects or resource cleanup
 
 ## .NET 10 alignment notes
 
