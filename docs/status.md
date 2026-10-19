@@ -13,7 +13,8 @@
 
 ## 验证
 
-- 本次未运行 `dotnet restore/build/test`；变更仅涉及 Markdown 与 `.github/skills` 副本，不改变编译产物。
+- 本次未运行 `dotnet restore/build/test`；变更仅涉及 Markdown、决策记录与 `.github/skills` 副本，不改变编译产物。
+- 技能副本：`.github/skills/csharp-dotnet-code-checklist` 的 4 个文件与 ai-skills `a69b026` 哈希一致；已提交的评测工作区已移除。
 - 可追溯证据：[module-consumption.json](validation/module-consumption.json)（`9c32e98`，2026-09-10），只覆盖模块消费，不含发布验收。
 - CI：[dotnet-ci.yml](../.github/workflows/dotnet-ci.yml) 覆盖构建、测试、集成测试、容器冒烟和漏洞扫描；最近一次运行结果在 GitHub Actions 查看，本文件不复制日志。
 
