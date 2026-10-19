@@ -18,6 +18,14 @@
 - 可追溯证据：[module-consumption.json](validation/module-consumption.json)（`9c32e98`，2026-09-10），只覆盖模块消费，不含发布验收。
 - CI：[dotnet-ci.yml](../.github/workflows/dotnet-ci.yml) 覆盖构建、测试、集成测试、容器冒烟和漏洞扫描；最近一次运行结果在 GitHub Actions 查看，本文件不复制日志。
 
+## CI 摘要
+
+| 项 | 值 |
+| --- | --- |
+| workflow | `dotnet-ci` |
+| 最近记录 | 无（本次未运行，需在 GitHub Actions 查看 `master` 最近一次运行） |
+| 记录格式 | commit + 结论 + 日期；不复制日志 |
+
 ## 阻塞
 
 - 真实 PostgreSQL／RabbitMQ 容器环境与部署环境未提供，roadmap 中的故障矩阵、发布验收和数据迁移验证仍无法执行。
