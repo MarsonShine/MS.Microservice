@@ -4,6 +4,7 @@
 
 | 入口 | 用途 |
 | --- | --- |
+| [当前状态](docs/status.md) | 当前分支、验证范围、阻塞与下一步；跨会话先看这里。 |
 | [总体架构与设计理由](docs/Architecture-Overview.md) | 先理解 Core、模块、Reference 和 Lab 各自解决什么问题。 |
 | [快速启动](docs/Getting-Started.md) | 一个脚本准备 Reference 或 Lab，并演练消息恢复。 |
 | [六个递进 Lab](docs/labs/README.md) | 分层、事务、可靠消息、故障、诊断与组件替换。 |
