@@ -1,6 +1,19 @@
 # Root-Cause Bug Fix Protocol
 
-Current state: [docs/status.md](docs/status.md). Decisions: [docs/decisions/](docs/decisions/README.md). Remaining work: [docs/framework-optimization-roadmap.md](docs/framework-optimization-roadmap.md).
+<!-- harness:managed v1 sha256:4748970e5308f31520e3ca033395a1248dd88a993327b29cc9a56f36b9784f50 -->
+## Working Agreement
+
+- Keep exactly one task `in_progress`. Do not start a second task until the first has passing acceptance evidence.
+- Before editing, state the task's in-scope paths, out-of-scope work, and acceptance command.
+- A change outside the declared scope is a scope violation: revert it or split it into a new task.
+- Done means the acceptance command passed and its output is recorded. Code inspection is not evidence.
+- A one-file edit may skip the task card, but must still state its acceptance check in the commit or report.
+- Record the current state in `docs/status.md` and the active task in `docs/tasks/active.md`.
+- Project facts belong in `README.md` and the `## Project` section. Do not copy commands into this block.
+- This block is generated. Change the baseline and run `harness sync`; do not edit it by hand.
+<!-- /harness:managed -->
+
+Current state: [docs/status.md](docs/status.md). Decisions: [docs/decisions/](docs/decisions/README.md). Remaining work: [docs/framework-optimization-roadmap.md](docs/framework-optimization-roadmap.md). Harness recovery: [docs/harness.md](docs/harness.md).
 
 When handling a bug, failure, unexpected behavior, or edge case, do not optimize only for the reported example. Treat it as evidence of a potentially broader defect.
 
@@ -33,3 +46,12 @@ Prefer restoring the violated invariant in shared logic, data models, state tran
 Complete the fix when the invariant is restored and credible evidence covers the affected behavior and relevant regression risks. Disclose unverified behavior; an unavailable check is not a pass.
 
 Briefly report the root cause, invariant, fix layer, changed behavior, verification performed or reused, and remaining uncertainty.
+
+## Project
+
+- Stack: .NET 10 (`global.json` 10.0.401); PostgreSQL, RabbitMQ, and Keycloak for local runs.
+- Build: `dotnet restore --configfile nuget.config`, then `dotnet build --no-restore -c Release`.
+- Test: `dotnet test --no-build -c Release`; integration, container, and vulnerability checks are in `.github/workflows/dotnet-ci.yml`.
+- Commands: [README](README.md) and [docs/Getting-Started.md](docs/Getting-Started.md) are authoritative; do not copy them here.
+- Boundaries: shared modules must not depend on Reference, Lab, or concrete User/Order models; Web is the composition root; schema changes go through the explicit DatabaseMigrator, never startup DDL.
+- State: [docs/status.md](docs/status.md); active task: [docs/tasks/active.md](docs/tasks/active.md); harness recovery: [docs/harness.md](docs/harness.md).
