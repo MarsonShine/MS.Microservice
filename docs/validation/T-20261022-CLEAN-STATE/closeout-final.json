@@ -1,0 +1,25 @@
+{
+  "errors": [],
+  "warnings": [],
+  "inspected_files": [
+    "docs/status.md",
+    "docs/tasks/active.md"
+  ],
+  "scratch_files": [],
+  "preserved": {},
+  "base": "b6d581ac8ab7f01e6f97dbca5da0078bd6272cb4",
+  "result": "passed",
+  "changed_file_count": 10,
+  "declared_scope": [
+    "AGENTS.md",
+    "docs/status.md",
+    "docs/tasks/active.md",
+    "docs/worktree-handoff.md",
+    "docs/harness.md",
+    "docs/validation/T-20261022-HARNESS-DOCS/task.md",
+    "docs/validation/T-20261022-CLEAN-STATE"
+  ],
+  "complete": true,
+  "checked_at": "2026-10-22T07:18:46.657824+00:00",
+  "checked_head": "116e7c34e2d58f9ce12c629f04887b369cca5443"
+}

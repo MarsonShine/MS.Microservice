@@ -1,10 +1,7 @@
 # 当前任务
 
-Status: in_progress
-Task: T-20261022-CLEAN-STATE
-Next: 按五批计划更新状态入口、生命周期与收尾检查，再完成接续演练。
+Status: idle
+Task: none
+Next: 按用户下一项请求填写契约；产品候选与既有验证缺口见 [路线图](../framework-optimization-roadmap.md)。
 
-- 范围：状态与交接文档、历史任务归属、收尾接线和验收证据。
-- 不涉及：业务代码、数据库／消息故障矩阵、依赖安全告警修复。
-- 验收：相对链接检查、harness 检查、只读收尾检查和接续演练。
-- 契约与结果：[本次任务](../validation/T-20261022-CLEAN-STATE/summary.md)。
+最近完成：[会话收尾改进](../validation/T-20261022-CLEAN-STATE/summary.md)。历史契约与结果已保存在对应证据目录。

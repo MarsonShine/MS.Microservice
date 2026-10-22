@@ -1,0 +1,46 @@
+{
+  "repository": "MS.Microservice",
+  "baseline": "b6d581a",
+  "read_files": [
+    "AGENTS.md",
+    "docs/status.md",
+    "docs/tasks/active.md"
+  ],
+  "before": {
+    "AGENTS.md": {
+      "characters": 4160,
+      "lines": 57
+    },
+    "docs/status.md": {
+      "characters": 1724,
+      "lines": 50
+    },
+    "docs/tasks/active.md": {
+      "characters": 822,
+      "lines": 26
+    }
+  },
+  "after": {
+    "AGENTS.md": {
+      "characters": 4338,
+      "lines": 59
+    },
+    "docs/status.md": {
+      "characters": 801,
+      "lines": 24
+    },
+    "docs/tasks/active.md": {
+      "characters": 192,
+      "lines": 7
+    }
+  },
+  "recovered_state": {
+    "Status": "idle",
+    "Task": "none",
+    "Next": "下一项维护可先定位下方已知 dotnet-ci 测试失败；新任务写入 [活动入口](tasks/active.md)。"
+  },
+  "before_characters": 6706,
+  "after_characters": 5331,
+  "result": "passed",
+  "limits": "Deterministic startup-path inspection, not a fresh model session. Characters are not tokens; model mistakes and repeated test executions were not measured."
+}

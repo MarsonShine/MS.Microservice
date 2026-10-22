@@ -2,14 +2,14 @@
 
 更新：2026-10-22
 分支：master
-Baseline: b6d581a
-Status: in_progress
-Task: T-20261022-CLEAN-STATE
-Next: 完成 [当前任务](tasks/active.md) 的五批收尾与接续改进。
+Baseline: 116e7c3（本次交接只更新文档与证据，未改业务代码）
+Status: idle
+Task: none
+Next: 下一项维护可先定位下方已知 dotnet-ci 测试失败；新任务写入 [活动入口](tasks/active.md)。
 
 ## 当前事实
 
-- 当前任务及验收结果见 [任务摘要](validation/T-20261022-CLEAN-STATE/summary.md)。工作区和远端状态以 Git 查询为准。
+- 最近完成的收尾改进及验收结果见 [任务摘要](validation/T-20261022-CLEAN-STATE/summary.md)。工作区和远端状态以 Git 查询为准。
 - harness 文档恢复试点已完成，见 [历史摘要](validation/T-20261022-HARNESS-DOCS/summary.md) 和 [原契约](validation/T-20261022-HARNESS-DOCS/task.md)。
 - 后续产品工作只在 [路线图](framework-optimization-roadmap.md) 中维护；本页不复制清单。
 
