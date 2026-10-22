@@ -38,6 +38,14 @@ python "$HOME/.agents/harness/harness.py" check
 
 `init` 只用于新仓库或空 `AGENTS.md`；已有内容用 `adopt`。所有写操作先看 diff，不自动提交。
 
+## 必需文档恢复与证据试点
+
+使用包含 ai-skills `837c3dd` 修复的引擎时，`check` 会拒绝缺失或空白的任务卡、状态页、恢复指南和 PR 模板。`sync --write` 仅补建这些缺失／空白文件，保留已有非空项目文档；历史任务结果应从 Git 或备份恢复。
+
+源模板更新不会迁移已有项目文档。新字段需要增量编辑，不能将 `harness check` 通过解释为证据有效或业务正确。
+
+本仓库以 [T-20261022-HARNESS-DOCS](validation/T-20261022-HARNESS-DOCS/summary.md) 试点“验收项 → 可复查证据 → 判断”。任务卡和状态页引用同一摘要；实际输出与人工判断分开记录。该试点不要求所有任务建立 trace，也不增加 VCR 统计。
+
 ## 没有 AI 工具时
 
 1. 打开 `AGENTS.md`，保留 `## Working Agreement` 到 `<!-- /harness:managed -->` 的内容。

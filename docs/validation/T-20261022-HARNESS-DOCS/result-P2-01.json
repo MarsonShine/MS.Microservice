@@ -1,0 +1,64 @@
+{
+  "baseline_ref": "af63286",
+  "candidate_engine_sha256": "ce64fd39fde8c04e8aadb22511efccf49e64aa997e28cb338afb39f442266d03",
+  "baseline_engine_sha256": "5356274a17813971f5d50377756a8a83b6f988500fcdbd21ebe2ae20dd24cbf3",
+  "project_input_sha256": {
+    "AGENTS.md": "824e885c0ad81f609b7057d92c065eecb869abbbb9b2a0c74db7298156d75e92",
+    "CLAUDE.md": "db72195b77c551ecea357ebec91123c12d4ae06d8c9131d824ca8e70fd05816d",
+    ".github/copilot-instructions.md": "8e88656332a9982bf49966bf46bbcd474c8168126a2616de78f35362b078c611",
+    "docs/tasks/active.md": "7eee1342bf20b1e9e870b05585de5b7fee6a319b6dd46f991ad7b5e6988e9191",
+    "docs/status.md": "45536d64f14dc9e3d8ae66efab197da0fda4314a45b31be159c5b52d9583252f",
+    "docs/harness.md": "c6f602598b73a026bb44f0c1cf28fe59a7447fcb5c5b5f2f8b4499438cf995ac",
+    ".github/pull_request_template.md": "c5fd1c70b54de949f73df116646f5e3741b594deb8f89ba2a288fe414a13120b"
+  },
+  "runs": [
+    {
+      "id": "intact-project",
+      "command": "check",
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "id": "baseline-misses-absence",
+      "command": "check",
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "id": "baseline-cannot-restore",
+      "command": "sync",
+      "exit": 0,
+      "stdout": "would update the managed block in AGENTS.md and copilot instructions\nsynced; review the diff before committing\n",
+      "stderr": ""
+    },
+    {
+      "id": "candidate-rejects-absence",
+      "command": "check",
+      "exit": 1,
+      "stdout": "error: docs/tasks/active.md: missing; run sync --write to restore the template\n",
+      "stderr": ""
+    },
+    {
+      "id": "candidate-restores",
+      "command": "sync",
+      "exit": 0,
+      "stdout": "would update managed blocks and restore missing or empty support documents\nsynced; review the diff before committing\n- restored docs\\tasks\\active.md\n",
+      "stderr": ""
+    },
+    {
+      "id": "restored-project",
+      "command": "check",
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "preserved_documents": [
+    "docs/status.md",
+    "docs/harness.md",
+    ".github/pull_request_template.md"
+  ],
+  "result": "passed"
+}
