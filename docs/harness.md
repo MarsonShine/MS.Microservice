@@ -46,6 +46,20 @@ python "$HOME/.agents/harness/harness.py" check
 
 本仓库以 [T-20261022-HARNESS-DOCS](validation/T-20261022-HARNESS-DOCS/summary.md) 试点“验收项 → 可复查证据 → 判断”。任务卡和状态页引用同一摘要；实际输出与人工判断分开记录。该试点不要求所有任务建立 trace，也不增加 VCR 统计。
 
+## 只读会话收尾检查
+
+安装带 closeout 子命令的 ai-skills 引擎后，从仓库根运行：
+
+```powershell
+python "$HOME/.agents/harness/harness.py" closeout --root . --state docs/status.md --task docs/tasks/active.md
+```
+
+完成任务并归档后追加 `--complete`。有本次未提交文件时，用重复的 `--scope <路径>` 声明范围；`--base <会话基线>` 同时检查本次已提交改动。原有改动用 `--preserve "路径=保留原因"` 说明；只对明确属于本任务的临时路径使用 `--scratch <路径>`。
+
+命令只读并输出 JSON：退出码 0 表示所选结构检查通过，1 表示检查失败。它检查 Status/Task/Next、状态页与任务卡一致性、内联文件链接及未说明的改动；不会验证业务正确性、远端 CI 或全部忽略文件，也不会删除文件、执行文档命令或修改托管块。blocked 交接还需 Blocker；未完成交接可通过普通检查，但不能通过 --complete。
+
+任务完成后将契约和结果保存到 docs/validation/<task>/，再把状态页和活动入口设为 idle/none。详细生命周期见 [跨会话约定](worktree-handoff.md)。
+
 ## 没有 AI 工具时
 
 1. 打开 `AGENTS.md`，保留 `## Working Agreement` 到 `<!-- /harness:managed -->` 的内容。

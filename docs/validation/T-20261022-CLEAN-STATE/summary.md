@@ -11,7 +11,7 @@ Baseline: b6d581a
 | --- | --- | --- |
 | 1 当前状态 | 已完成任务已归档、当前状态和链接正确 | passed |
 | 2 生命周期 | 当前状态／任务／证据／历史职责清晰，按输入判断失效 | passed |
-| 3 收尾检查 | 状态冲突、断链、未说明改动可检测；不写文件 | pending |
+| 3 收尾检查 | 状态冲突、断链、未说明改动可检测；不写文件 | passed |
 | 4 包装清理 | 在 ai-skills 完成，本仓库无依赖目录改动 | pending |
 | 5 接续演练 | 只读项目入口能定位下一步及有效证据 | pending |
 
@@ -22,3 +22,5 @@ Baseline: b6d581a
 Slice 1: relative links passed; previous task preserved; Git/CI baseline facts inspected. No runtime code changed.
 
 Slice 2: ownership/lifecycle reviewed; relative links passed; time-only staleness rules replaced with relevant-input comparison.
+
+Slice 3: six closeout CLI tests and four support-document tests passed; catalog and changed-skill validation passed. Actual closeout inspections passed for both repositories with explicit scopes. Checks do not prove semantic freshness or business CI health.
