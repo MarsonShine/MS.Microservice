@@ -92,6 +92,7 @@ public static partial class F
 
     public static async Task<T> Retry<T>(int retries, int delayMillis, Func<Task<T>> start)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(delayMillis);
         // Preserve the functional entry's uncapped, doubling delays rather than the strategy's default five-minute cap.
         var strategy = new ExponentialBackoffRetryStrategy(retries, TimeSpan.FromMilliseconds(delayMillis), maxDelay: TimeSpan.MaxValue);
         var executor = new RetryExecutor(strategy, new ExceptionTypeRetryCondition(typeof(Exception)));

@@ -23,8 +23,15 @@ namespace MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy
 
         public TimeSpan GetDelay(RetryContext context)
         {
-            var delay = TimeSpan.FromMilliseconds(
-                _baseDelay.TotalMilliseconds * Math.Pow(_multiplier, context.Attempt - 1));
+            var finiteMultiplier = double.IsFinite(_multiplier);
+            // Zero stays zero even when a valid multiplier's exponent overflows to infinity.
+            var milliseconds = _baseDelay == TimeSpan.Zero && finiteMultiplier
+                ? 0d
+                : _baseDelay.TotalMilliseconds * Math.Pow(_multiplier, context.Attempt - 1);
+            // Apply the cap before converting: FromMilliseconds cannot represent an overflowing exponent.
+            if (finiteMultiplier && milliseconds >= _maxDelay.TotalMilliseconds)
+                return _maxDelay;
+            var delay = TimeSpan.FromMilliseconds(milliseconds);
 
             return delay > _maxDelay ? _maxDelay : delay;
         }

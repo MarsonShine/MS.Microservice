@@ -1,0 +1,188 @@
+  MS.Microservice.Threading -> E:\repositories\MS.Microservice\src\MS.Microservice.Threading\bin\Release\net10.0\MS.Microservice.Threading.dll
+  MS.Microservice.Domain.Primitives -> E:\repositories\MS.Microservice\src\MS.Microservice.Domain.Primitives\bin\Release\net10.0\MS.Microservice.Domain.Primitives.dll
+  MS.Microservice.Core -> E:\repositories\MS.Microservice\src\MS.Microservice.Core\bin\Release\net10.0\MS.Microservice.Core.dll
+  MS.Microservice.Core.Tests -> E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\bin\Release\net10.0\MS.Microservice.Core.Tests.dll
+E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\bin\Release\net10.0\MS.Microservice.Core.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.1+bf6400fd51 (64-bit .NET 10.0.13)
+[xUnit.net 00:00:00.17]   Discovering: MS.Microservice.Core.Tests
+[xUnit.net 00:00:00.34]   Discovered:  MS.Microservice.Core.Tests
+[xUnit.net 00:00:00.38]   Starting:    MS.Microservice.Core.Tests
+[xUnit.net 00:00:00.46]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(delayMillis: -2) [FAIL]
+[xUnit.net 00:00:00.46]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.46]       Expected: typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.46]       Stack Trace:
+[xUnit.net 00:00:00.46]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(101,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(Int32 delayMillis)
+[xUnit.net 00:00:00.46]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.47]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(delayMillis: -1) [FAIL]
+[xUnit.net 00:00:00.47]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.47]       Expected: typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.47]       Stack Trace:
+[xUnit.net 00:00:00.47]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(101,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(Int32 delayMillis)
+[xUnit.net 00:00:00.47]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.48]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.48]       Expected: typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(delayMillis: -2147483648) [FAIL]
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(101,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(Int32 delayMillis)
+[xUnit.net 00:00:00.48]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.ZeroBaseDelay_RemainsZeroWhenExponentOverflows [FAIL]
+[xUnit.net 00:00:00.48]       System.ArgumentException : TimeSpan does not accept floating point Not-a-Number values.
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]            at System.TimeSpan.FromMilliseconds(Double value)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs(26,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(30,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.ZeroBaseDelay_RemainsZeroWhenExponentOverflows()
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(attempt: 2) [FAIL]
+[xUnit.net 00:00:00.48]       System.OverflowException : TimeSpan overflowed because the duration is too long.
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]            at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs(26,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(51,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(Int32 attempt)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(attempt: 1) [FAIL]
+[xUnit.net 00:00:00.48]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.48]       Expected: 10675199.02:48:05.4775807
+[xUnit.net 00:00:00.48]       Actual:   10675199.02:48:05.4769664
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(51,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(Int32 attempt)
+[xUnit.net 00:00:00.48]            at InvokeStub_RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(Object, Span`1)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(multiplier: 2, attempt: 2147483647) [FAIL]
+[xUnit.net 00:00:00.48]       System.OverflowException : TimeSpan overflowed because the duration is too long.
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]            at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs(26,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(22,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Double multiplier, Int32 attempt)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(multiplier: 1.7976931348623157E+308, attempt: 2) [FAIL]
+[xUnit.net 00:00:00.48]       System.OverflowException : TimeSpan overflowed because the duration is too long.
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]            at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs(26,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(22,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Double multiplier, Int32 attempt)
+[xUnit.net 00:00:00.48]            at InvokeStub_RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Object, Span`1)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.48]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(multiplier: 1.7976931348623157E+308, attempt: 3) [FAIL]
+[xUnit.net 00:00:00.48]       System.OverflowException : TimeSpan overflowed because the duration is too long.
+[xUnit.net 00:00:00.48]       Stack Trace:
+[xUnit.net 00:00:00.48]            at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs(26,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context)
+[xUnit.net 00:00:00.48]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(22,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Double multiplier, Int32 attempt)
+[xUnit.net 00:00:00.48]            at InvokeStub_RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Object, Span`1)
+[xUnit.net 00:00:00.48]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(delayMillis: -2) [20 ms]
+  错误消息:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.ArgumentOutOfRangeException)
+  堆栈跟踪:
+     at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(Int32 delayMillis) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 101
+--- End of stack trace from previous location ---
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(delayMillis: -1) [< 1 ms]
+  错误消息:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.ArgumentOutOfRangeException)
+  堆栈跟踪:
+     at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(Int32 delayMillis) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 101
+--- End of stack trace from previous location ---
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(delayMillis: -2147483648) [< 1 ms]
+  错误消息:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.ArgumentOutOfRangeException)
+  堆栈跟踪:
+     at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.NegativeFunctionalDelay_IsRejectedBeforeCallingOperation(Int32 delayMillis) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 101
+--- End of stack trace from previous location ---
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.ZeroBaseDelay_RemainsZeroWhenExponentOverflows [< 1 ms]
+  错误消息:
+   System.ArgumentException : TimeSpan does not accept floating point Not-a-Number values.
+  堆栈跟踪:
+     at System.TimeSpan.FromMilliseconds(Double value)
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs:line 26
+   at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.ZeroBaseDelay_RemainsZeroWhenExponentOverflows() in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 30
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(attempt: 2) [< 1 ms]
+  错误消息:
+   System.OverflowException : TimeSpan overflowed because the duration is too long.
+  堆栈跟踪:
+     at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs:line 26
+   at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(Int32 attempt) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 51
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(attempt: 1) [4 ms]
+  错误消息:
+   Assert.Equal() Failure: Values differ
+Expected: 10675199.02:48:05.4775807
+Actual:   10675199.02:48:05.4769664
+  堆栈跟踪:
+     at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(Int32 attempt) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 51
+   at InvokeStub_RetryDelayBoundaryTests.TimeSpanMaximum_IsReturnedWithoutConversionOverflow(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(multiplier: 2, attempt: 2147483647) [< 1 ms]
+  错误消息:
+   System.OverflowException : TimeSpan overflowed because the duration is too long.
+  堆栈跟踪:
+     at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs:line 26
+   at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Double multiplier, Int32 attempt) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 22
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(multiplier: 1.7976931348623157E+308, attempt: 2) [< 1 ms]
+  错误消息:
+   System.OverflowException : TimeSpan overflowed because the duration is too long.
+  堆栈跟踪:
+     at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs:line 26
+   at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Double multiplier, Int32 attempt) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 22
+   at InvokeStub_RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(multiplier: 1.7976931348623157E+308, attempt: 3) [< 1 ms]
+  错误消息:
+   System.OverflowException : TimeSpan overflowed because the duration is too long.
+  堆栈跟踪:
+     at System.TimeSpan.IntervalFromDoubleTicks(Double ticks)
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy.ExponentialBackoffRetryStrategy.GetDelay(RetryContext context) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryStrategy\ExponentialBackoffRetryStrategy.cs:line 26
+   at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Double multiplier, Int32 attempt) in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 22
+   at InvokeStub_RetryDelayBoundaryTests.OverflowingExponentialDelay_ReturnsCap(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.52]     MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DelayLargerThanTimerLimit_RemainsCancellableWithoutRetryingEarly [FAIL]
+[xUnit.net 00:00:00.52]       Assert.ThrowsAny() Failure: Exception type was not compatible
+[xUnit.net 00:00:00.52]       Expected: typeof(System.OperationCanceledException)
+[xUnit.net 00:00:00.52]       Actual:   typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.52]       ---- System.ArgumentOutOfRangeException : The value needs to translate in milliseconds to -1 (signifying an infinite timeout), 0, or a positive integer less than or equal to the maximum allowed timer duration. (Parameter 'delay')
+[xUnit.net 00:00:00.52]       Stack Trace:
+[xUnit.net 00:00:00.52]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs(89,0): at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DelayLargerThanTimerLimit_RemainsCancellableWithoutRetryingEarly()
+[xUnit.net 00:00:00.52]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.52]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.52]            at System.Threading.Tasks.Task.ValidateTimeout(TimeSpan timeout, ExceptionArgument argument)
+[xUnit.net 00:00:00.52]            at System.Threading.Tasks.Task.Delay(TimeSpan delay, TimeProvider timeProvider, CancellationToken cancellationToken)
+[xUnit.net 00:00:00.52]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryExecutor.cs(74,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryExecutor.ExecuteCancellableAsync[T](Func`2 operation, CancellationToken cancellationToken)
+[xUnit.net 00:00:00.52]         E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryExecutor.cs(23,0): at MS.Microservice.Core.Common.Advance.Resilience.RetryExecutor.ExecuteAsync[T](Func`1 operation, CancellationToken cancellationToken)
+[xUnit.net 00:00:00.52]   Finished:    MS.Microservice.Core.Tests
+  已通过 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DecreasingMultiplier_PreservesDelaySequence(multiplier: 0, secondMilliseconds: 0, thirdMilliseconds: 0) [1 ms]
+  已通过 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DecreasingMultiplier_PreservesDelaySequence(multiplier: 0.5, secondMilliseconds: 500, thirdMilliseconds: 250) [< 1 ms]
+  已通过 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DefaultCap_RemainsFiveMinutesWhileExplicitMaximumAllowsLongerDelay [< 1 ms]
+  失败 MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DelayLargerThanTimerLimit_RemainsCancellableWithoutRetryingEarly [4 ms]
+  错误消息:
+   Assert.ThrowsAny() Failure: Exception type was not compatible
+Expected: typeof(System.OperationCanceledException)
+Actual:   typeof(System.ArgumentOutOfRangeException)
+---- System.ArgumentOutOfRangeException : The value needs to translate in milliseconds to -1 (signifying an infinite timeout), 0, or a positive integer less than or equal to the maximum allowed timer duration. (Parameter 'delay')
+  堆栈跟踪:
+     at MS.Microservice.Core.Tests.Common.Advance.Resilience.RetryDelayBoundaryTests.DelayLargerThanTimerLimit_RemainsCancellableWithoutRetryingEarly() in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Common\Advance\Resilience\RetryDelayBoundaryTests.cs:line 89
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.Threading.Tasks.Task.ValidateTimeout(TimeSpan timeout, ExceptionArgument argument)
+   at System.Threading.Tasks.Task.Delay(TimeSpan delay, TimeProvider timeProvider, CancellationToken cancellationToken)
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryExecutor.ExecuteCancellableAsync[T](Func`2 operation, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryExecutor.cs:line 74
+   at MS.Microservice.Core.Common.Advance.Resilience.RetryExecutor.ExecuteAsync[T](Func`1 operation, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\src\MS.Microservice.Core\Common\Advance\Resilience\RetryExecutor.cs:line 23
+
+测试运行失败。
+测试总数: 13
+     通过数: 3
+     失败数: 10
+总时间: 1.4045 秒

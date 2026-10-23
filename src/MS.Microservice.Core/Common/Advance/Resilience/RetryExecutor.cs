@@ -71,7 +71,7 @@ public class RetryExecutor(IRetryStrategy strategy, IRetryCondition condition)
             if (delay > TimeSpan.Zero)
             {
                 _logger.LogInformation("Waiting {Delay} before next retry attempt {NextAttempt}", delay, context.Attempt + 1);
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await WaitForRetryAsync(delay, cancellationToken).ConfigureAwait(false);
             }
             context.Attempt++;
         }
@@ -92,6 +92,18 @@ public class RetryExecutor(IRetryStrategy strategy, IRetryCondition condition)
             await operation(token).ConfigureAwait(false);
             return true;
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task WaitForRetryAsync(TimeSpan delay, CancellationToken cancellationToken)
+    {
+        // Preserve long policy delays without exceeding the runtime's per-timer limit.
+        var maximumTimerDelay = TimeSpan.FromMilliseconds(uint.MaxValue - 1L);
+        while (delay > maximumTimerDelay)
+        {
+            await Task.Delay(maximumTimerDelay, cancellationToken).ConfigureAwait(false);
+            delay -= maximumTimerDelay;
+        }
+        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
     }
 
     public T Execute<T>(Func<T> operation)
