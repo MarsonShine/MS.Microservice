@@ -19,3 +19,7 @@ RetryBuilder、RetryExecutor、IRetryStrategy 和 IRetryCondition 保持现有�
 明确的调用方取消优先于重试条件；如果调用方没有取消，操作自身抛出的 OperationCanceledException 仍由旧条件决定是否重试。耗尽抛出最后一次异常并保留其原始堆栈。同步 Execute 仍阻塞到完成，执行器的异步等待不捕获同步上下文；不通过 Task.Run 改变调用入口。
 
 普通 HTTP 使用独立 Http.Resilience 管线；AI 的 HTTP 分类与 Retry-After 逻辑不由本工具接管。
+
+## 函数式兼容入口
+
+`F.Retry<T>(retries, delayMillis, start)` 保留原签名，转发到同一 RetryExecutor，使用两倍指数间隔并显式关闭五分钟默认封顶。retries 表示额外尝试次数，非正值仅执行一次；无调用方令牌时仍会重试操作自身的取消异常。该入口不再递归执行重试。

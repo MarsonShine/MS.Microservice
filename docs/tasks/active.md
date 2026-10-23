@@ -1,6 +1,6 @@
 # 当前任务
 Status: idle
 Task: none
-Next: 开始 F.Retry 共享执行循环。
+Next: 开始重试延迟边界修复。
 
-第一片已完成：[结果](../validation/CORE-RETRY-EXECUTION/summary.md)、[契约](../validation/CORE-RETRY-EXECUTION/task.md)。
+第二片完成：[结果](../validation/CORE-FUNCTIONAL-RETRY/summary.md)、[契约](../validation/CORE-FUNCTIONAL-RETRY/task.md)。

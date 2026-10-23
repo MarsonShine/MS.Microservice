@@ -1,5 +1,9 @@
 ﻿namespace MS.Microservice.Core.Functional;
 
+using MS.Microservice.Core.Common.Advance.Resilience;
+using MS.Microservice.Core.Common.Advance.Resilience.RetryCondition;
+using MS.Microservice.Core.Common.Advance.Resilience.RetryStrategy;
+
 public static partial class F
 {
     public static Task<T> Async<T>(T t) => Task.FromResult(t);
@@ -88,14 +92,9 @@ public static partial class F
 
     public static async Task<T> Retry<T>(int retries, int delayMillis, Func<Task<T>> start)
     {
-        try
-        {
-            return await start().ConfigureAwait(false);
-        }
-        catch when (retries > 0)
-        {
-            await Task.Delay(delayMillis).ConfigureAwait(false);
-            return await Retry(retries - 1, delayMillis * 2, start).ConfigureAwait(false);
-        }
+        // Preserve the functional entry's uncapped, doubling delays rather than the strategy's default five-minute cap.
+        var strategy = new ExponentialBackoffRetryStrategy(retries, TimeSpan.FromMilliseconds(delayMillis), maxDelay: TimeSpan.MaxValue);
+        var executor = new RetryExecutor(strategy, new ExceptionTypeRetryCondition(typeof(Exception)));
+        return await executor.ExecuteAsync(start).ConfigureAwait(false);
     }
 }
