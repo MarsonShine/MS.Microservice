@@ -16,5 +16,6 @@
     <Project Path="test/MS.Microservice.AI.Qwen.Tests/MS.Microservice.AI.Qwen.Tests.csproj" />
   </Folder>
   <Folder Name="/Dependencies/">
+    <Project Path="../src/MS.Microservice.Threading/MS.Microservice.Threading.csproj" />
   </Folder>
 </Solution>

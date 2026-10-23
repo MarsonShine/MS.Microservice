@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
+using MS.Microservice.Threading;
 
 namespace MS.Microservice.AI.Core;
 
@@ -62,7 +63,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(request);
 
-        await _concurrencyGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var lease = await _concurrencyGate.AcquireAsync(cancellationToken).ConfigureAwait(false);
         var startedAt = TimeProvider.GetTimestamp();
         using var activity = StartActivity(model, request, isStreaming: false);
 
@@ -92,7 +93,6 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         finally
         {
             ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
-            _concurrencyGate.Release();
         }
     }
 
@@ -101,7 +101,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(request);
-        await _concurrencyGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var lease = await _concurrencyGate.AcquireAsync(cancellationToken).ConfigureAwait(false);
         var startedAt = TimeProvider.GetTimestamp();
         using var activity = StartActivity(model, request, isStreaming: true);
         using var timeout = new CancellationTokenSource(model.Timeout, TimeProvider);
@@ -142,7 +142,6 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
             stream?.Response.Dispose();
             if (!completed) activity?.SetStatus(ActivityStatusCode.Error);
             ChatCompleted(_logger, Name, TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds, model.Model);
-            _concurrencyGate.Release();
         }
     }
 

@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
+using MS.Microservice.Threading;
 
 namespace MS.Microservice.AI.Core;
 
@@ -184,7 +185,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
         Func<HttpResponseMessage, CancellationToken, Task<TResult>> parseResponseAsync,
         CancellationToken cancellationToken)
     {
-        await _concurrencyGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        using var lease = await _concurrencyGate.AcquireAsync(cancellationToken).ConfigureAwait(false);
         var startedAt = TimeProvider.GetTimestamp();
         using var activity = StartActivity(capability, operationName, model, requestId);
 
@@ -208,7 +209,6 @@ internal abstract class OpenAICompatibleMediaProviderBase
                 operationName,
                 TimeProvider.GetElapsedTime(startedAt).TotalMilliseconds,
                 model.Model);
-            _concurrencyGate.Release();
         }
     }
 

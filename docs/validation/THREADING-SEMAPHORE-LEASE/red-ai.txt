@@ -1,0 +1,62 @@
+  正在确定要还原的项目…
+  已还原 E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Abstractions\MS.Microservice.AI.Abstractions.csproj (用时 160 毫秒)。
+  已还原 E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Core\MS.Microservice.AI.Core.csproj (用时 345 毫秒)。
+  已还原 E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\MS.Microservice.AI.Core.Tests.csproj (用时 352 毫秒)。
+  已还原 E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.OpenAI\MS.Microservice.AI.OpenAI.csproj (用时 346 毫秒)。
+  MS.Microservice.AI.Abstractions -> E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Abstractions\bin\Release\net10.0\MS.Microservice.AI.Abstractions.dll
+  MS.Microservice.AI.Core -> E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Core\bin\Release\net10.0\MS.Microservice.AI.Core.dll
+  MS.Microservice.AI.OpenAI -> E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.OpenAI\bin\Release\net10.0\MS.Microservice.AI.OpenAI.dll
+  MS.Microservice.AI.Core.Tests -> E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\bin\Release\net10.0\MS.Microservice.AI.Core.Tests.dll
+E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\bin\Release\net10.0\MS.Microservice.AI.Core.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+[xUnit.net 00:00:05.53]     MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(path: "chat") [FAIL]
+  失败 MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(path: "chat") [5 s]
+  错误消息:
+   System.OperationCanceledException : The operation was canceled.
+  堆栈跟踪:
+     at System.Threading.CancellationToken.ThrowOperationCanceledException()
+   at System.Threading.SemaphoreSlim.WaitUntilCountOrTimeoutAsync(TaskNode asyncWaiter, Int64 millisecondsTimeout, CancellationToken cancellationToken)
+   at MS.Microservice.AI.Core.OpenAICompatibleChatProviderBase.GetResponseAsync(AIResolvedModel model, AIChatRequest request, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Core\OpenAICompatibleChatProviderBase.cs:line 65
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.<>c__DisplayClass5_0.<<FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot>g__Invoke|1>d.MoveNext() in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 32
+--- End of stack trace from previous location ---
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(String path) in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 45
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:10.54]     MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(path: "media") [FAIL]
+  失败 MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(path: "media") [5 s]
+  错误消息:
+   System.OperationCanceledException : The operation was canceled.
+  堆栈跟踪:
+     at System.Threading.CancellationToken.ThrowOperationCanceledException()
+   at System.Threading.SemaphoreSlim.WaitUntilCountOrTimeoutAsync(TaskNode asyncWaiter, Int64 millisecondsTimeout, CancellationToken cancellationToken)
+   at MS.Microservice.AI.Core.OpenAICompatibleMediaProviderBase.ExecuteCoreAsync[TResult](AICapability capability, String operationName, AIResolvedModel model, String requestId, Func`1 createRequest, Func`3 parseResponseAsync, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Core\OpenAICompatibleMediaProviderBase.cs:line 187
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.<>c__DisplayClass5_0.<<FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot>g__Invoke|1>d.MoveNext() in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 31
+--- End of stack trace from previous location ---
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(String path) in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 45
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:15.57]     MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(path: "stream") [FAIL]
+  失败 MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(path: "stream") [5 s]
+  错误消息:
+   System.OperationCanceledException : The operation was canceled.
+  堆栈跟踪:
+     at System.Threading.CancellationToken.ThrowOperationCanceledException()
+   at System.Threading.SemaphoreSlim.WaitUntilCountOrTimeoutAsync(TaskNode asyncWaiter, Int64 millisecondsTimeout, CancellationToken cancellationToken)
+   at MS.Microservice.AI.Core.OpenAICompatibleChatProviderBase.StreamAsync(AIResolvedModel model, AIChatRequest request, CancellationToken cancellationToken)+MoveNext() in E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Core\OpenAICompatibleChatProviderBase.cs:line 104
+   at MS.Microservice.AI.Core.OpenAICompatibleChatProviderBase.StreamAsync(AIResolvedModel model, AIChatRequest request, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.<>c__DisplayClass5_0.<<FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot>g__Invoke|1>d.MoveNext() in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 36
+--- End of stack trace from previous location ---
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.<>c__DisplayClass5_0.<<FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot>g__Invoke|1>d.MoveNext() in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 36
+--- End of stack trace from previous location ---
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.FailureAfterAcquiringSlotBeforeRequestStillReleasesSlot(String path) in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 45
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:20.69]     MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.StreamDisposalFailureStillReleasesSlotForNextRequest [FAIL]
+  失败 MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.StreamDisposalFailureStillReleasesSlotForNextRequest [5 s]
+  错误消息:
+   System.OperationCanceledException : The operation was canceled.
+  堆栈跟踪:
+     at System.Threading.CancellationToken.ThrowOperationCanceledException()
+   at System.Threading.SemaphoreSlim.WaitUntilCountOrTimeoutAsync(TaskNode asyncWaiter, Int64 millisecondsTimeout, CancellationToken cancellationToken)
+   at MS.Microservice.AI.Core.OpenAICompatibleChatProviderBase.GetResponseAsync(AIResolvedModel model, AIChatRequest request, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\MS.Microservice.AI\src\MS.Microservice.AI.Core\OpenAICompatibleChatProviderBase.cs:line 65
+   at MS.Microservice.AI.Core.Tests.AIConcurrencyLeaseTests.StreamDisposalFailureStillReleasesSlotForNextRequest() in E:\repositories\MS.Microservice\MS.Microservice.AI\test\MS.Microservice.AI.Core.Tests\AIConcurrencyLeaseTests.cs:line 64
+--- End of stack trace from previous location ---
+
+失败!  - 失败:     4，通过:     1，已跳过:     0，总计:     5，持续时间: 20 s - MS.Microservice.AI.Core.Tests.dll (net10.0)
