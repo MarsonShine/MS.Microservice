@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -34,53 +34,39 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             /// <summary>
             /// 批量转换音频格式
             /// </summary>
-            public async Task BatchConvertAudioFormatAsync(
+            public Task BatchConvertAudioFormatAsync(
                 IEnumerable<string> inputFiles, string outputDirectory, AudioFormat outputFormat,
                 AudioConvertOptions? options = null)
+                => processor.BatchConvertAsync(inputFiles, outputDirectory, outputFormat, options);
+
+            /// <summary>批量转换；旧入口默认使用处理器数作为并发上限，等待所有项后传播失败。</summary>
+            public Task BatchConvertAsync(IEnumerable<string> inputFiles, string outputDirectory,
+                AudioFormat outputFormat, AudioConvertOptions? options = null)
+                => processor.BatchConvertAsync(inputFiles, outputDirectory, outputFormat, options, Environment.ProcessorCount, CancellationToken.None);
+
+            /// <summary>受限并发转换；取消停止后续派发，已开始的旧音频转换仍需等待完成。</summary>
+            public async Task BatchConvertAsync(IEnumerable<string> inputFiles, string outputDirectory,
+                AudioFormat outputFormat, AudioConvertOptions? options, int maxConcurrency, CancellationToken cancellationToken)
             {
+                ArgumentNullException.ThrowIfNull(inputFiles);
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrency);
+                cancellationToken.ThrowIfCancellationRequested();
                 options ??= new AudioConvertOptions();
-
-                if (!Directory.Exists(outputDirectory))
-                    Directory.CreateDirectory(outputDirectory);
-
-                var tasks = inputFiles.Select(async inputFile =>
+                var files = inputFiles.ToArray();
+                Directory.CreateDirectory(outputDirectory);
+                var results = await MS.Microservice.Threading.BatchProcessing.CollectAsync<string, bool>(files, async (inputFile, token) =>
                 {
-                    var fileName = Path.GetFileNameWithoutExtension(inputFile);
+                    token.ThrowIfCancellationRequested();
                     var extension = outputFormat == AudioFormat.Mp3 ? ".mp3" : ".wav";
-                    var outputFile = Path.Combine(outputDirectory, fileName + extension);
-
+                    var outputFile = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(inputFile) + extension);
                     await processor.ConvertAudioFormatAsync(inputFile, outputFile, options);
-                });
-
-                await Task.WhenAll(tasks);
+                    return true;
+                }, maxConcurrency, cancellationToken);
+                // Task.WhenAll reports faults ahead of canceled items; retain that legacy contract.
+                var failure = results.FirstOrDefault(result => result.Error is not null and not OperationCanceledException)
+                    ?? results.FirstOrDefault(result => !result.IsSuccess);
+                if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure.Error!).Throw();
             }
-
-            /// <summary>
-            /// 批量转换音频文件格式
-            /// </summary>
-            public async Task BatchConvertAsync(
-                IEnumerable<string> inputFiles,
-                string outputDirectory,
-                AudioFormat outputFormat,
-                AudioConvertOptions? options = null)
-            {
-                options ??= new AudioConvertOptions();
-
-                if (!Directory.Exists(outputDirectory))
-                    Directory.CreateDirectory(outputDirectory);
-
-                var tasks = inputFiles.Select(async inputFile =>
-                {
-                    var fileName = Path.GetFileNameWithoutExtension(inputFile);
-                    var extension = outputFormat == AudioFormat.Mp3 ? ".mp3" : ".wav";
-                    var outputFile = Path.Combine(outputDirectory, fileName + extension);
-
-                    await processor.ConvertAudioFormatAsync(inputFile, outputFile, options);
-                });
-
-                await Task.WhenAll(tasks);
-            }
-
             /// <summary>
             /// 从内存中的音频数据创建音频文件
             /// </summary>

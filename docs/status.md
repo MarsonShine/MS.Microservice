@@ -1,24 +1,15 @@
 # 当前状态
-
-更新：2026-10-22
-分支：master
-Baseline: 116e7c3（本次交接只更新文档与证据，未改业务代码）
+更新：2026-10-23
 Status: idle
 Task: none
-Next: 下一项维护可先定位下方已知 dotnet-ci 测试失败；新任务写入 [活动入口](tasks/active.md)。
+Next: 用户依次审查 ProcessRunner 与 BatchProcessing 两个本地提交。
+Baseline: 6e99dd4b703a194d7480c5e7b771b20cffabd653
 
-## 当前事实
+## 本次交付
+- [Slice 1：ProcessRunner](validation/EXECUTION-TOOLS/process.md)：8 项测试通过，媒体推理构建成功。
+- [Slice 2：BatchProcessing](validation/EXECUTION-TOOLS/batch.md)：6 项测试通过，含音频旧入口兼容验证。
+- 改动按两片创建本地提交，未推送；文件归属见第二片清单。
 
-- 最近完成的收尾改进及验收结果见 [任务摘要](validation/T-20261022-CLEAN-STATE/summary.md)。工作区和远端状态以 Git 查询为准。
-- harness 文档恢复试点已完成，见 [历史摘要](validation/T-20261022-HARNESS-DOCS/summary.md) 和 [原契约](validation/T-20261022-HARNESS-DOCS/task.md)。
-- 后续产品工作只在 [路线图](framework-optimization-roadmap.md) 中维护；本页不复制清单。
-
-## 验证与限制
-
-- 基线 b6d581a 的 [dotnet-ci](https://github.com/MarsonShine/MS.Microservice/actions/runs/39720615089) 在 Test 步骤失败；未在本次文档任务中修复或重跑业务套件。
-- 原 harness 试点只证明工作协议文件检查与恢复，证据范围见历史摘要。
-- PostgreSQL／RabbitMQ、部署与迁移验证仍需路线图所列环境和证据。
-
-## 阅读入口
-
-[跨会话约定](worktree-handoff.md) · [harness 恢复](harness.md) · [项目说明](../README.md) · [决策索引](decisions/README.md)
+## 验证边界
+在线 NuGet 恢复失败，使用本机缓存完成功能验证，未运行漏洞审计或真实媒体端到端测试。
+原基线 b6d581a 的 [dotnet-ci 失败](https://github.com/MarsonShine/MS.Microservice/actions/runs/39720615089) 未在本任务处理。真实 PostgreSQL/RabbitMQ 与部署验证仍见 [路线图](framework-optimization-roadmap.md)。

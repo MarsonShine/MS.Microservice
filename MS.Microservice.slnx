@@ -28,6 +28,7 @@
     <Project Path="src/MS.Microservice.Search/MS.Microservice.Search.csproj" />
     <Project Path="src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
+    <Project Path="src/MS.Microservice.Threading/MS.Microservice.Threading.csproj" />
   </Folder>
   <Folder Name="/samples/Reference/">
     <Project Path="samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Reference.Application.csproj" />
@@ -86,6 +87,7 @@
     <Project Path="test/MS.Microservice.Search.Tests/MS.Microservice.Search.Tests.csproj" />
     <Project Path="test/MS.Microservice.Storage.S3.Tests/MS.Microservice.Storage.S3.Tests.csproj" />
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Threading.Tests/MS.Microservice.Threading.Tests.csproj" />
     <Project Path="test/ProcessFixture/ProcessFixture.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />

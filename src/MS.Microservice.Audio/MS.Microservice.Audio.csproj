@@ -7,4 +7,4 @@
     <PackageReference Include="NAudio" />
     <PackageReference Include="NAudio.Lame" />
   </ItemGroup>
-</Project>
+<ItemGroup><ProjectReference Include="../MS.Microservice.Threading/MS.Microservice.Threading.csproj" /></ItemGroup></Project>

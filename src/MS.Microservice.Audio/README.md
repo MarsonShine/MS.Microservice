@@ -57,3 +57,11 @@ await processor.CombineAudioFilesAsync(
 MP3 有损编码和补帧会影响解码后的末尾时长；压缩音频的定位精度受解码器限制。`AudioEditor.EditAsync` 在处理块之间检查取消，单次原生调用无法强制中断；旧合并、混音和转换入口没有取消参数。输出目录由宿主保持可信且稳定。
 
 源码或包的引用方式见[组件消费](../../docs/components/consumption.md)。维护说明：[编辑与发布](docs/audio-editor-design.md)、[格式探测与已有基准](docs/format-detection-design.md)、[静音缓冲](docs/silence-buffer-design.md)。
+
+## 批量转换并发
+
+BatchConvertAsync 与 BatchConvertAudioFormatAsync 保留原签名，共用受限并发实现，默认并发上限为 Environment.ProcessorCount。所有项结束后传播失败；失败优先于单项取消。
+
+需要指定并发和取消时使用 BatchConvertAsync(inputFiles, outputDirectory, outputFormat, options, maxConcurrency, cancellationToken)。取消只停止后续派发，已开始的旧 ConvertAudioFormatAsync 不支持取消，仍需等待完成。输出文件名继续由输入叶子名称生成，调用方应提供不冲突的目标名称。
+
+通用逐项结果见 [BatchProcessing](../MS.Microservice.Threading/README.md)。

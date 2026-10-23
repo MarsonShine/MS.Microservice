@@ -96,3 +96,4 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 ## 轻量执行工具
 
 - [ProcessRunner](src/MS.Microservice.Processes/README.md)：无 shell 的外部进程执行、双流限额、超时和取消；媒体工具复用该实现。
+- [BatchProcessing](src/MS.Microservice.Threading/README.md)：有限列表的有界并发与逐项结果；音频批量转换复用该实现。

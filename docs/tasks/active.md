@@ -1,7 +1,6 @@
 # 当前任务
-
 Status: idle
 Task: none
-Next: 按用户下一项请求填写契约；产品候选与既有验证缺口见 [路线图](../framework-optimization-roadmap.md)。
+Next: 用户审查两个本地提交。
 
-最近完成：[会话收尾改进](../validation/T-20261022-CLEAN-STATE/summary.md)。历史契约与结果已保存在对应证据目录。
+已完成：[ProcessRunner](../validation/EXECUTION-TOOLS/process.md)、[BatchProcessing](../validation/EXECUTION-TOOLS/batch.md)。范围、验收命令、输出与限制已记录；两片分别创建本地提交，未推送。
