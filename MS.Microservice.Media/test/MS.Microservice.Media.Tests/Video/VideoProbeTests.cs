@@ -8,6 +8,15 @@ public sealed class VideoProbeTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "MS.Microservice.VideoTests", Guid.NewGuid().ToString("N"));
 
+    [Fact]
+    public async Task Runner_InfiniteTimeoutRemainsSupported()
+    {
+        var options = new FfmpegOptions { Timeout = Timeout.InfiniteTimeSpan };
+        _ = new VideoProcessor(options);
+        var output = await new MediaProcessRunner(options.Timeout).RunAsync("dotnet", ["--version"], default);
+        Assert.False(string.IsNullOrWhiteSpace(output));
+    }
+
     [Theory]
     [InlineData(0, 320, 240)]
     [InlineData(90, 240, 320)]

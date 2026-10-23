@@ -2,8 +2,10 @@
 更新：2026-10-23
 Status: idle
 Task: none
-Next: 用户依次审查 ProcessRunner 与 BatchProcessing 两个本地提交。
-Baseline: 6e99dd4b703a194d7480c5e7b771b20cffabd653
+Next: 用户审查 ProcessRunner 超时参数独立修复 slice；本地提交，不推送。
+Baseline: cfecf51
+
+最新修复及验收见 [ProcessRunner 超时参数修复](validation/PROCESS-RUNNER-DEADLINES/summary.md)：22 项组件测试及 1 项旧媒体接口测试通过。契约已归档，活动入口回到 idle。
 
 ## 本次交付
 - [Slice 1：ProcessRunner](validation/EXECUTION-TOOLS/process.md)：8 项测试通过，媒体推理构建成功。

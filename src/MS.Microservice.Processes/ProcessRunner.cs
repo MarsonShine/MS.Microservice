@@ -5,7 +5,9 @@ namespace MS.Microservice.Processes;
 
 public sealed record ProcessRunOptions
 {
+    /// <summary>Positive execution deadline, or Timeout.InfiniteTimeSpan to rely only on caller cancellation.</summary>
     public TimeSpan Timeout { get; init; } = TimeSpan.FromMinutes(1);
+    /// <summary>Positive finite cleanup deadline within the CancellationTokenSource timer range.</summary>
     public TimeSpan CleanupTimeout { get; init; } = TimeSpan.FromSeconds(10);
     public int MaximumOutputCharacters { get; init; } = 262144;
     public string? WorkingDirectory { get; init; }
@@ -23,7 +25,8 @@ public static class ProcessRunner
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         ArgumentNullException.ThrowIfNull(arguments);
         options ??= new();
-        if (options.Timeout <= TimeSpan.Zero || options.CleanupTimeout <= TimeSpan.Zero || options.MaximumOutputCharacters < 1)
+        if ((options.Timeout != Timeout.InfiniteTimeSpan && !IsValidFiniteTimeout(options.Timeout))
+            || !IsValidFiniteTimeout(options.CleanupTimeout) || options.MaximumOutputCharacters < 1)
             throw new ArgumentOutOfRangeException(nameof(options));
         cancellationToken.ThrowIfCancellationRequested();
         var start = new ProcessStartInfo(executable)
@@ -98,4 +101,8 @@ public static class ProcessRunner
             catch (Exception error) { fault.TrySetResult(error); throw; }
         }
     }
+
+    // Match CancellationTokenSource's truncation to whole milliseconds, including its upper boundary.
+    private static bool IsValidFiniteTimeout(TimeSpan value) =>
+        value > TimeSpan.Zero && (long)value.TotalMilliseconds <= uint.MaxValue - 1L;
 }

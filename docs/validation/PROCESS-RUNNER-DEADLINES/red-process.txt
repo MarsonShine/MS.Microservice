@@ -1,0 +1,128 @@
+  MS.Microservice.Processes -> E:\repositories\MS.Microservice\src\MS.Microservice.Processes\bin\Release\net10.0\MS.Microservice.Processes.dll
+  ProcessFixture -> E:\repositories\MS.Microservice\test\ProcessFixture\bin\Release\net10.0\ProcessFixture.dll
+  MS.Microservice.Processes.Tests -> E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\bin\Release\net10.0\MS.Microservice.Processes.Tests.dll
+E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\bin\Release\net10.0\MS.Microservice.Processes.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.1+bf6400fd51 (64-bit .NET 10.0.13)
+[xUnit.net 00:00:00.16]   Discovering: MS.Microservice.Processes.Tests
+[xUnit.net 00:00:00.23]   Discovered:  MS.Microservice.Processes.Tests
+[xUnit.net 00:00:00.27]   Starting:    MS.Microservice.Processes.Tests
+[xUnit.net 00:00:00.34]     MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 49.17:02:47.2950000, cleanupTimeout: 00:00:10) [FAIL]
+[xUnit.net 00:00:00.35]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.35]                  ↓ (pos 0)
+[xUnit.net 00:00:00.35]       Expected: "options"
+[xUnit.net 00:00:00.35]       Actual:   "delay"
+[xUnit.net 00:00:00.35]                  ↑ (pos 0)
+[xUnit.net 00:00:00.35]       Stack Trace:
+[xUnit.net 00:00:00.35]         E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs(31,0): at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout)
+[xUnit.net 00:00:00.35]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.86]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.86]     MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:01, cleanupTimeout: 49.17:02:47.2950000) [FAIL]
+[xUnit.net 00:00:00.86]       Expected: typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.86]       Stack Trace:
+[xUnit.net 00:00:00.86]         E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs(29,0): at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout)
+[xUnit.net 00:00:00.86]         --- End of stack trace from previous location ---
+  失败 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 49.17:02:47.2950000, cleanupTimeout: 00:00:10) [16 ms]
+  错误消息:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "options"
+Actual:   "delay"
+           ↑ (pos 0)
+  堆栈跟踪:
+     at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout) in E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs:line 31
+--- End of stack trace from previous location ---
+  失败 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:01, cleanupTimeout: 49.17:02:47.2950000) [506 ms]
+  错误消息:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.ArgumentOutOfRangeException)
+  堆栈跟踪:
+     at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout) in E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs:line 29
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:01.51]     MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:01, cleanupTimeout: 10675199.02:48:05.4775807) [FAIL]
+[xUnit.net 00:00:01.51]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:01.51]       Expected: typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:01.51]       Stack Trace:
+[xUnit.net 00:00:01.51]         E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs(29,0): at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout)
+[xUnit.net 00:00:01.51]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:01.52]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:01.52]                  ↓ (pos 0)
+[xUnit.net 00:00:01.52]     MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 10675199.02:48:05.4775807, cleanupTimeout: 00:00:10) [FAIL]
+[xUnit.net 00:00:01.52]       Expected: "options"
+[xUnit.net 00:00:01.52]       Actual:   "delay"
+[xUnit.net 00:00:01.52]                  ↑ (pos 0)
+[xUnit.net 00:00:01.52]       Stack Trace:
+[xUnit.net 00:00:01.52]         E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs(31,0): at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout)
+[xUnit.net 00:00:01.52]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:01.53]     MS.Microservice.Processes.Tests.RunnerTests.InfiniteExecutionTimeoutReturnsTheProcessResult [FAIL]
+[xUnit.net 00:00:01.53]       System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values. (Parameter 'options')
+[xUnit.net 00:00:01.53]       Stack Trace:
+[xUnit.net 00:00:01.53]         E:\repositories\MS.Microservice\src\MS.Microservice.Processes\ProcessRunner.cs(27,0): at MS.Microservice.Processes.ProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, ProcessRunOptions options, CancellationToken cancellationToken)
+[xUnit.net 00:00:01.53]         E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs(38,0): at MS.Microservice.Processes.Tests.RunnerTests.InfiniteExecutionTimeoutReturnsTheProcessResult()
+[xUnit.net 00:00:01.53]         --- End of stack trace from previous location ---
+  失败 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:01, cleanupTimeout: 10675199.02:48:05.4775807) [648 ms]
+  错误消息:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.ArgumentOutOfRangeException)
+  堆栈跟踪:
+     at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout) in E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs:line 29
+--- End of stack trace from previous location ---
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:00, cleanupTimeout: 00:00:10) [1 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:01, cleanupTimeout: -00:00:00.0010000) [< 1 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 00:00:01, cleanupTimeout: 00:00:00) [< 1 ms]
+  失败 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: 10675199.02:48:05.4775807, cleanupTimeout: 00:00:10) [< 1 ms]
+  错误消息:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "options"
+Actual:   "delay"
+           ↑ (pos 0)
+  堆栈跟踪:
+     at MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(TimeSpan timeout, TimeSpan cleanupTimeout) in E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs:line 31
+--- End of stack trace from previous location ---
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.InvalidDeadlinesFailBeforePreparingOrStartingAProcess(timeout: -00:00:00.0020000, cleanupTimeout: 00:00:10) [< 1 ms]
+  失败 MS.Microservice.Processes.Tests.RunnerTests.InfiniteExecutionTimeoutReturnsTheProcessResult [7 ms]
+  错误消息:
+   System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values. (Parameter 'options')
+  堆栈跟踪:
+     at MS.Microservice.Processes.ProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, ProcessRunOptions options, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\src\MS.Microservice.Processes\ProcessRunner.cs:line 27
+   at MS.Microservice.Processes.Tests.RunnerTests.InfiniteExecutionTimeoutReturnsTheProcessResult() in E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs:line 38
+--- End of stack trace from previous location ---
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.MissingExecutableFails [4 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.MaximumFiniteDeadlinesAreAccepted [239 ms]
+[xUnit.net 00:00:01.79]     MS.Microservice.Processes.Tests.RunnerTests.CancellationStopsProcess(infiniteTimeout: True) [FAIL]
+[xUnit.net 00:00:01.79]       Assert.ThrowsAny() Failure: Exception type was not compatible
+[xUnit.net 00:00:01.79]       Expected: typeof(System.OperationCanceledException)
+[xUnit.net 00:00:01.79]       Actual:   typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:01.79]       ---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values. (Parameter 'options')
+[xUnit.net 00:00:01.79]       Stack Trace:
+[xUnit.net 00:00:01.79]         E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs(82,0): at MS.Microservice.Processes.Tests.RunnerTests.CancellationStopsProcess(Boolean infiniteTimeout)
+[xUnit.net 00:00:01.79]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:01.79]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:01.79]         E:\repositories\MS.Microservice\src\MS.Microservice.Processes\ProcessRunner.cs(27,0): at MS.Microservice.Processes.ProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, ProcessRunOptions options, CancellationToken cancellationToken)
+  失败 MS.Microservice.Processes.Tests.RunnerTests.CancellationStopsProcess(infiniteTimeout: True) [1 ms]
+  错误消息:
+   Assert.ThrowsAny() Failure: Exception type was not compatible
+Expected: typeof(System.OperationCanceledException)
+Actual:   typeof(System.ArgumentOutOfRangeException)
+---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values. (Parameter 'options')
+  堆栈跟踪:
+     at MS.Microservice.Processes.Tests.RunnerTests.CancellationStopsProcess(Boolean infiniteTimeout) in E:\repositories\MS.Microservice\test\MS.Microservice.Processes.Tests\RunnerTests.cs:line 82
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at MS.Microservice.Processes.ProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, ProcessRunOptions options, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\src\MS.Microservice.Processes\ProcessRunner.cs:line 27
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.CancellationStopsProcess(infiniteTimeout: False) [1 s]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.OutputLimitStopsProcess [160 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.PreCanceledDoesNotStart [< 1 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.CapturesBothStreamsAndNonzeroExit [141 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.DrainsBothPipesWithoutDeadlock [162 ms]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.TimeoutIsDistinctFromCancellation [1 s]
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.EnvironmentOverridesArePassed [143 ms]
+[xUnit.net 00:00:05.52]   Finished:    MS.Microservice.Processes.Tests
+  已通过 MS.Microservice.Processes.Tests.RunnerTests.MaximumCleanupDeadlinePreservesTheExecutionTimeout [1 s]
+
+测试总数: 20
+     通过数: 14
+     失败数: 6
+测试运行失败。
+总时间: 6.5009 秒

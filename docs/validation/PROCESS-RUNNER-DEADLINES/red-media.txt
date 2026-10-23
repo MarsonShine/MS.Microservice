@@ -1,0 +1,34 @@
+  正在确定要还原的项目…
+  已还原 E:\repositories\MS.Microservice\src\MS.Microservice.Processes\MS.Microservice.Processes.csproj (用时 156 毫秒)。
+  已还原 E:\repositories\MS.Microservice\MS.Microservice.Media\test\MS.Microservice.Media.Tests\MS.Microservice.Media.Tests.csproj (用时 263 毫秒)。
+  已还原 E:\repositories\MS.Microservice\MS.Microservice.Media\src\MS.Microservice.Media\MS.Microservice.Media.csproj (用时 259 毫秒)。
+  MS.Microservice.Processes -> E:\repositories\MS.Microservice\src\MS.Microservice.Processes\bin\Release\net10.0\MS.Microservice.Processes.dll
+  MS.Microservice.Media -> E:\repositories\MS.Microservice\MS.Microservice.Media\src\MS.Microservice.Media\bin\Release\net10.0\MS.Microservice.Media.dll
+  MS.Microservice.Media.Tests -> E:\repositories\MS.Microservice\MS.Microservice.Media\test\MS.Microservice.Media.Tests\bin\Release\net10.0\MS.Microservice.Media.Tests.dll
+E:\repositories\MS.Microservice\MS.Microservice.Media\test\MS.Microservice.Media.Tests\bin\Release\net10.0\MS.Microservice.Media.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.1+bf6400fd51 (64-bit .NET 10.0.13)
+[xUnit.net 00:00:00.26]   Discovering: MS.Microservice.Media.Tests
+[xUnit.net 00:00:00.45]   Discovered:  MS.Microservice.Media.Tests
+[xUnit.net 00:00:00.48]   Starting:    MS.Microservice.Media.Tests
+[xUnit.net 00:00:00.58]     MS.Microservice.Media.Tests.Video.VideoProbeTests.Runner_InfiniteTimeoutRemainsSupported [FAIL]
+[xUnit.net 00:00:00.58]       System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values. (Parameter 'options')
+[xUnit.net 00:00:00.58]       Stack Trace:
+[xUnit.net 00:00:00.58]         E:\repositories\MS.Microservice\src\MS.Microservice.Processes\ProcessRunner.cs(27,0): at MS.Microservice.Processes.ProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, ProcessRunOptions options, CancellationToken cancellationToken)
+[xUnit.net 00:00:00.58]         E:\repositories\MS.Microservice\MS.Microservice.Media\src\MS.Microservice.Media\Video\MediaProcessRunner.cs(7,0): at MS.Microservice.Media.Video.MediaProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, CancellationToken cancellationToken)
+[xUnit.net 00:00:00.58]         E:\repositories\MS.Microservice\MS.Microservice.Media\test\MS.Microservice.Media.Tests\Video\VideoProbeTests.cs(16,0): at MS.Microservice.Media.Tests.Video.VideoProbeTests.Runner_InfiniteTimeoutRemainsSupported()
+[xUnit.net 00:00:00.58]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.60]   Finished:    MS.Microservice.Media.Tests
+  失败 MS.Microservice.Media.Tests.Video.VideoProbeTests.Runner_InfiniteTimeoutRemainsSupported [32 ms]
+  错误消息:
+   System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values. (Parameter 'options')
+  堆栈跟踪:
+     at MS.Microservice.Processes.ProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, ProcessRunOptions options, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\src\MS.Microservice.Processes\ProcessRunner.cs:line 27
+   at MS.Microservice.Media.Video.MediaProcessRunner.RunAsync(String executable, IEnumerable`1 arguments, CancellationToken cancellationToken) in E:\repositories\MS.Microservice\MS.Microservice.Media\src\MS.Microservice.Media\Video\MediaProcessRunner.cs:line 7
+   at MS.Microservice.Media.Tests.Video.VideoProbeTests.Runner_InfiniteTimeoutRemainsSupported() in E:\repositories\MS.Microservice\MS.Microservice.Media\test\MS.Microservice.Media.Tests\Video\VideoProbeTests.cs:line 16
+--- End of stack trace from previous location ---
+
+测试运行失败。
+测试总数: 1
+     失败数: 1
+总时间: 2.6915 秒

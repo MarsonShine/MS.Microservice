@@ -1,6 +1,6 @@
 # 当前任务
 Status: idle
 Task: none
-Next: 用户审查两个本地提交。
+Next: 用户审查 ProcessRunner 超时参数独立修复提交。
 
-已完成：[ProcessRunner](../validation/EXECUTION-TOOLS/process.md)、[BatchProcessing](../validation/EXECUTION-TOOLS/batch.md)。范围、验收命令、输出与限制已记录；两片分别创建本地提交，未推送。
+已完成：[结果与证据](../validation/PROCESS-RUNNER-DEADLINES/summary.md)、[原任务契约](../validation/PROCESS-RUNNER-DEADLINES/task.md)。23 项验收测试通过，按用户要求创建本地提交，不推送。
