@@ -24,6 +24,7 @@
     <Project Path="src/MS.Microservice.Http.Resilience/MS.Microservice.Http.Resilience.csproj" />
     <Project Path="src/MS.Microservice.Notifications/MS.Microservice.Notifications.csproj" />
     <Project Path="src/MS.Microservice.Observability/MS.Microservice.Observability.csproj" />
+    <Project Path="src/MS.Microservice.Processes/MS.Microservice.Processes.csproj" />
     <Project Path="src/MS.Microservice.Search/MS.Microservice.Search.csproj" />
     <Project Path="src/MS.Microservice.Storage.S3/MS.Microservice.Storage.S3.csproj" />
     <Project Path="src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
@@ -75,6 +76,7 @@
     <Project Path="test/MS.Microservice.Lab.Tests/MS.Microservice.Lab.Tests.csproj" />
     <Project Path="test/MS.Microservice.Notifications.Tests/MS.Microservice.Notifications.Tests.csproj" />
     <Project Path="test/MS.Microservice.Observability.Tests/MS.Microservice.Observability.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Processes.Tests/MS.Microservice.Processes.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Application.Tests/MS.Microservice.Reference.Application.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.DatabaseMigrator.Tests/MS.Microservice.Reference.DatabaseMigrator.Tests.csproj" />
     <Project Path="test/MS.Microservice.Reference.Domain.Tests/MS.Microservice.Reference.Domain.Tests.csproj" />
@@ -84,6 +86,7 @@
     <Project Path="test/MS.Microservice.Search.Tests/MS.Microservice.Search.Tests.csproj" />
     <Project Path="test/MS.Microservice.Storage.S3.Tests/MS.Microservice.Storage.S3.Tests.csproj" />
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
+    <Project Path="test/ProcessFixture/ProcessFixture.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">

@@ -92,3 +92,7 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 | 文件与正文检索 | [Search](src/MS.Microservice.Search/README.md)：持久文件名／路径和中英文正文索引，默认快速返回前 50 条、按需精确计数，路径排序优先响应、相关度排序可选 |
 
 数据库、Broker 和容器故障验证属于集成测试。没有对应环境时不要把跳过这些测试视为生产验证通过；快速的宿主与业务验证使用 TestServer/SQLite。
+
+## 轻量执行工具
+
+- [ProcessRunner](src/MS.Microservice.Processes/README.md)：无 shell 的外部进程执行、双流限额、超时和取消；媒体工具复用该实现。

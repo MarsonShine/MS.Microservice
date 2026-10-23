@@ -9,4 +9,4 @@
     <InternalsVisibleTo Include="MS.Microservice.Media.Tests" />
     <InternalsVisibleTo Include="MS.Microservice.Media.Inference" />
   </ItemGroup>
-</Project>
+<ItemGroup><ProjectReference Include="../../../src/MS.Microservice.Processes/MS.Microservice.Processes.csproj" /></ItemGroup></Project>
