@@ -4,6 +4,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="../MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
+		<ProjectReference Include="../MS.Microservice.Threading/MS.Microservice.Threading.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="Entity\**" />

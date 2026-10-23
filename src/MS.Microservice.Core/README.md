@@ -10,6 +10,7 @@
 | 文本差异、编码、JSON | `TextDiff`、`TextEncodingConverter`、`JsonText` | [文本工具设计](docs/text-tools-design.md) |
 | HTTP 调用与日志 | `LogHttpClient`、`LoggingHttpClientHandler` | [正文日志行为](Net/Http/body-logging.md) |
 | 函数式结果与查询规格 | `Functional`、`Specification` | 公共类型注释；数据库执行由持久化组件提供 |
+| 同键并发请求合并 | `Concurrent.SingleflightManager` | 兼容入口转发到 [Threading](../MS.Microservice.Threading/README.md#singleflight)，新接入可直接引用 Threading |
 | 业务缓存治理 | 独立的 [Caching](../MS.Microservice.Caching/README.md) 组件 | Core 不再提供分布式缓存 JSON 扩展或缓存配置；弱引用工具在 `Memory` 中 |
 | 敏感字段输出 | `SensitiveValues`、`SensitiveJson`、`LogSensitive` | [注册、扫描与执行链](docs/sensitive-data-design.md) |
 | 审计操作上下文 | `AuditOperationContext`、`AuditOperationAttribute` | [EF 自动采集接入](../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing)；Core 仅定义操作身份，不访问数据库 |

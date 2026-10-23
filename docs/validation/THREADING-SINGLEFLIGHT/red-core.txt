@@ -1,0 +1,36 @@
+  MS.Microservice.Domain.Primitives -> E:\repositories\MS.Microservice\src\MS.Microservice.Domain.Primitives\bin\Release\net10.0\MS.Microservice.Domain.Primitives.dll
+  MS.Microservice.Core -> E:\repositories\MS.Microservice\src\MS.Microservice.Core\bin\Release\net10.0\MS.Microservice.Core.dll
+  MS.Microservice.Core.Tests -> E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\bin\Release\net10.0\MS.Microservice.Core.Tests.dll
+E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\bin\Release\net10.0\MS.Microservice.Core.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+[xUnit.net 00:00:00.01] xUnit.net VSTest Adapter v3.1.1+bf6400fd51 (64-bit .NET 10.0.13)
+[xUnit.net 00:00:00.23]   Discovering: MS.Microservice.Core.Tests
+[xUnit.net 00:00:00.43]   Discovered:  MS.Microservice.Core.Tests
+[xUnit.net 00:00:00.46]   Starting:    MS.Microservice.Core.Tests
+[xUnit.net 00:00:05.59]     MS.Microservice.Core.Tests.Concurrent.SingleflightManagerTests.LegacyEntrySharesFailureAndAllowsAnotherAttempt [FAIL]
+[xUnit.net 00:00:05.59]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:05.59]       Expected: typeof(System.IO.IOException)
+[xUnit.net 00:00:05.59]       Actual:   typeof(System.TimeoutException)
+[xUnit.net 00:00:05.59]       ---- System.TimeoutException : The operation has timed out.
+[xUnit.net 00:00:05.59]       Stack Trace:
+[xUnit.net 00:00:05.59]         E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Concurrent\SingleflightManagerTests.cs(20,0): at MS.Microservice.Core.Tests.Concurrent.SingleflightManagerTests.LegacyEntrySharesFailureAndAllowsAnotherAttempt()
+[xUnit.net 00:00:05.59]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:05.59]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:05.59]
+[xUnit.net 00:00:05.60]   Finished:    MS.Microservice.Core.Tests
+  失败 MS.Microservice.Core.Tests.Concurrent.SingleflightManagerTests.LegacyEntrySharesFailureAndAllowsAnotherAttempt [5 s]
+  错误消息:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.IO.IOException)
+Actual:   typeof(System.TimeoutException)
+---- System.TimeoutException : The operation has timed out.
+  堆栈跟踪:
+     at MS.Microservice.Core.Tests.Concurrent.SingleflightManagerTests.LegacyEntrySharesFailureAndAllowsAnotherAttempt() in E:\repositories\MS.Microservice\test\MS.Microservice.Core.Tests\Concurrent\SingleflightManagerTests.cs:line 20
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+
+
+测试总数: 1
+测试运行失败。
+     失败数: 1
+总时间: 6.8413 秒

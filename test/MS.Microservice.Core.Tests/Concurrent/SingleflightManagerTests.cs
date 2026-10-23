@@ -8,6 +8,20 @@ namespace MS.Microservice.Core.Tests.Concurrent
     public class SingleflightManagerTests
     {
         [Fact]
+        public async Task LegacyEntrySharesFailureAndAllowsAnotherAttempt()
+        {
+            var manager = new SingleflightManager();
+            var release = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var first = manager.ExecuteOnceAsync("key", () => release.Task);
+            var follower = manager.ExecuteOnceAsync("key", () => Task.FromResult(99));
+            var failure = new System.IO.IOException("source failed");
+            release.SetException(failure);
+            Assert.Same(failure, await Assert.ThrowsAsync<System.IO.IOException>(() => first.WaitAsync(TimeSpan.FromSeconds(5))));
+            Assert.Same(failure, await Assert.ThrowsAsync<System.IO.IOException>(() => follower.WaitAsync(TimeSpan.FromSeconds(5))));
+            Assert.Equal(7, await manager.ExecuteOnceAsync("key", () => Task.FromResult(7)));
+        }
+
+        [Fact]
         public async Task ExecuteOnceAsync_ReturnsCorrectResult()
         {
             var manager = new SingleflightManager();
