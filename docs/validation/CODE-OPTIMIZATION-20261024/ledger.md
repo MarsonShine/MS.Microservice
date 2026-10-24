@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- |
 | 00 | `docs: record code audit and optimization slices` | 审计/清单/状态；harness、链接、diff 检查 | 无 | complete |
 | 01 | `fix(ai): share provider concurrency across capabilities` | AI.Core/Provider/测试；dotnet test MS.Microservice.AI/MS.Microservice.AI.slnx --no-restore -c Release | 00 | complete |
-| 02 | `feat(ai): enforce bounded response and SSE reads` | AI 预算/解析/测试；AI 解决方案测试及超限/取消/释放回归 | 01 | pending |
+| 02 | `feat(ai): enforce bounded response and SSE reads` | AI 预算/解析/测试；AI 解决方案测试及超限/取消/释放回归 | 01 | complete |
 | 03 | `fix(messaging): claim outbox work when ready to publish` | SelfManaged.EFCore/测试；dotnet test MS.Microservice.Messaging/test/MS.Microservice.Messaging.SelfManaged.Tests --no-restore -c Release | 00 | pending |
 | 04 | `fix(audio): release readers on success and partial failure` | AudioProcessor/扩展/测试；dotnet test test/MS.Microservice.Audio.Tests --no-restore -c Release | 00 | pending |
 | 05 | `fix(logging): record final HTTP outcomes` | Logging/宿主管线；Logging.AspNetCore.Tests 与 Reference.Web.Tests 管线验证 | 00 | pending |

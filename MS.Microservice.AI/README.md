@@ -297,6 +297,20 @@ var image = await imageClient.GenerateAsync(new AIImageGenerationRequest
 - `AI__Models__Tts__Speech__Voice`
 - `AI__Models__ImageGeneration__Poster__ResponseFormat`
 
+### 响应读取预算
+
+在 `AI:Providers:<Provider>` 配置响应预算，内置 Provider 的聊天、语音和图像能力共同使用这些配置：
+
+| 属性 | 默认值 | 约束 |
+| --- | --- | --- |
+| `MaxResponseBytes` | 64 MiB | 成功的非流式响应正文；1 到 `Int32.MaxValue` 字节 |
+| `MaxErrorResponseBytes` | 64 KiB | HTTP 错误正文，也适用于 SSE 握手失败；1 到 `Int32.MaxValue` 字节 |
+| `MaxStreamLineCharacters` | 1,048,576 | 成功 SSE 响应每行的 UTF-16 字符数，正整数；不计行尾 CR/LF |
+
+字节预算以实际正文为准，不能通过省略或伪造 `Content-Length` 绕过。成功 SSE 响应保持流式，每一行（包括注释和其他被忽略的行）都先检查长度；支持 LF、CR、CRLF、BOM 与 EOF 末行，仍按现有单 `data:` 行协议解析。行预算不是整个 SSE 响应的总量上限，完整流仍受原有超时和调用方取消约束。
+
+超限抛出 `AIProviderException`，错误码为 `ResponseInvalid`、`IsTransient` 为 `false`，不自动重试；保留 Provider、模型、场景、请求标识和 HTTP 状态等上下文。它限制收到正文后的缓冲与解析，不限制宿主自定义 HTTP handler 在交付响应前已经分配的内存。预算按响应或行计算，不是进程总内存上限；并发请求、缓冲池、字符串、JSON 对象及音频副本仍会叠加。
+
 ### Current Scope
 
 - Implemented: chat/completion, provider-neutral JSON Object/JSON Schema response formats, streaming SSE parsing, TTS, ASR, image generation, image edit, and the business-neutral QuestionGeneration Harness.
