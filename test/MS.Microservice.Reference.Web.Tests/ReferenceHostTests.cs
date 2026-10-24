@@ -143,6 +143,105 @@ public sealed class ReferenceHostTests
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
     }
 
+    [Fact]
+    public async Task ReferencePoliciesHonorCustomPermissionsWithoutAcceptingTheirDefaults()
+    {
+        await using var fixture = await Fixture.CreateAsync(authenticationOverrides: new Dictionary<string, string?>
+        {
+            ["ManagePermission"] = "profiles.write",
+            ["OperationsPermission"] = "messages.inspect"
+        });
+        var cases = new[]
+        {
+            (Scope: "profiles.manage messaging.manage", Manage: false, Operations: false),
+            (Scope: "read profiles.write write", Manage: true, Operations: false),
+            (Scope: "messages.inspect", Manage: false, Operations: true),
+            (Scope: "profiles.write.extra MESSAGES.INSPECT", Manage: false, Operations: false)
+        };
+
+        foreach (var item in cases)
+        {
+            fixture.Authenticate(item.Scope);
+            using var profiles = await fixture.Client.GetAsync("/api/v1/profiles");
+            using var operations = await fixture.Client.GetAsync("/api/operations/messages/failures");
+
+            Assert.Equal(item.Manage ? HttpStatusCode.OK : HttpStatusCode.Forbidden, profiles.StatusCode);
+            Assert.Equal(item.Operations ? HttpStatusCode.OK : HttpStatusCode.Forbidden, operations.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task CustomClaimMappingsAreSharedByReferencePoliciesAndTheRequestActor()
+    {
+        await using var fixture = await Fixture.CreateAsync(authenticationOverrides: new Dictionary<string, string?>
+        {
+            ["SubjectClaimType"] = "user_id",
+            ["PermissionClaimType"] = "permissions"
+        });
+
+        fixture.Authenticate("profiles.manage messaging.manage");
+        using var defaults = await fixture.Client.GetAsync("/api/v1/profiles");
+        Assert.Equal(HttpStatusCode.Forbidden, defaults.StatusCode);
+        fixture.AuthenticateClaims([new("user_id", "mapped-user"), new("scope", "profiles.manage")]);
+        using var wrongPermissionClaim = await fixture.Client.GetAsync("/api/v1/profiles");
+        Assert.Equal(HttpStatusCode.Forbidden, wrongPermissionClaim.StatusCode);
+
+        fixture.AuthenticateClaims([
+            new("user_id", "mapped-user"),
+            new("permissions", "read profiles.manage"),
+            new("permissions", "messaging.manage")
+        ]);
+        using var created = await fixture.Client.PostAsJsonAsync("/api/v1/profiles",
+            new CreateProfile("https://issuer.example", "mapped-user", "mapped profile", []));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var profile = (await created.Content.ReadFromJsonAsync<ProfileView>())!;
+        using var me = await fixture.Client.GetAsync("/api/v1/me");
+        using var operations = await fixture.Client.GetAsync("/api/operations/messages/failures");
+
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+        Assert.Equal(profile.Id, (await me.Content.ReadFromJsonAsync<ProfileView>())!.Id);
+        Assert.Equal(HttpStatusCode.OK, operations.StatusCode);
+    }
+
+    [Fact]
+    public async Task MappedSubjectMustBeNonEmptyAndUnambiguousForNamedAndDefaultPolicies()
+    {
+        await using var fixture = await Fixture.CreateAsync(authenticationOverrides: new Dictionary<string, string?>
+        {
+            ["SubjectClaimType"] = "user_id",
+            ["PermissionClaimType"] = "permissions"
+        });
+        Claim[][] invalidSubjects =
+        [
+            [],
+            [new("user_id", "")],
+            [new("user_id", " ")],
+            [new("user_id", "first"), new("user_id", "second")]
+        ];
+        foreach (var subjects in invalidSubjects)
+        {
+            fixture.AuthenticateClaims(subjects.Concat([
+                new Claim("sub", "legacy-subject"),
+                new Claim("permissions", "profiles.manage messaging.manage")
+            ]));
+            foreach (var path in new[] { "/api/v1/profiles", "/api/operations/messages/failures", "/api/v1/me" })
+            {
+                using var response = await fixture.Client.GetAsync(path);
+                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            }
+        }
+
+        // Repeated claims carrying the same subject still identify one actor.
+        fixture.AuthenticateClaims([
+            new("user_id", "same-user"), new("user_id", "same-user"),
+            new("permissions", "profiles.manage messaging.manage")
+        ]);
+        using var profiles = await fixture.Client.GetAsync("/api/v1/profiles");
+        using var operations = await fixture.Client.GetAsync("/api/operations/messages/failures");
+        Assert.Equal(HttpStatusCode.OK, profiles.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, operations.StatusCode);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -1420,11 +1519,14 @@ public sealed class ReferenceHostTests
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
             int? apiPermitLimit = null, int apiWindowSeconds = 60, int? apiTimeoutSeconds = null, bool storageAvailable = true,
             Action<IServiceCollection>? configureServices = null, bool? httpIdempotencyEnabled = null,
-            bool onlyIdempotencyMigrationPending = false, bool mvcEndpoints = false)
+            bool onlyIdempotencyMigrationPending = false, bool mvcEndpoints = false,
+            IReadOnlyDictionary<string, string?>? authenticationOverrides = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
             var builder = Builder();
+            foreach (var entry in authenticationOverrides ?? new Dictionary<string, string?>())
+                builder.Configuration["Authentication:" + entry.Key] = entry.Value;
             if (httpIdempotencyEnabled is { } enabled)
                 builder.Configuration["Http:Idempotency:Enabled"] = enabled.ToString();
             if (apiPermitLimit is { } limit)
@@ -1503,6 +1605,11 @@ public sealed class ReferenceHostTests
         {
             var claims = new List<Claim> { new("sub", subject), new("scope", scope) };
             if (tokenId is not null) claims.Add(new("jti", tokenId));
+            AuthenticateClaims(claims);
+        }
+
+        public void AuthenticateClaims(IEnumerable<Claim> claims)
+        {
             var token = new JwtSecurityToken("https://issuer.example", "ms-reference",
                 claims, expires: DateTime.UtcNow.AddMinutes(5),
                 signingCredentials: new(Key, SecurityAlgorithms.HmacSha256));

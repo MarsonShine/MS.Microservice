@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +9,8 @@ namespace MS.Microservice.AspNetCore;
 
 public sealed class ExternalIdentityOptions
 {
+    private const string InvalidConfiguration = "External identity requires Authority, Audience and claim mappings; production Authority must use HTTPS.";
+
     public string Authority { get; set; } = "";
     public string Audience { get; set; } = "";
     public string SubjectClaimType { get; set; } = "sub";
@@ -20,22 +21,32 @@ public sealed class ExternalIdentityOptions
 
     public void Validate(bool development)
     {
+        ValidateJwt(development);
+        if (string.IsNullOrWhiteSpace(PermissionClaimType) || string.IsNullOrWhiteSpace(ManagePermission)
+            || string.IsNullOrWhiteSpace(OperationsPermission))
+            throw new ArgumentException(InvalidConfiguration);
+    }
+
+    internal void ValidateJwt(bool development)
+    {
         if (!Uri.TryCreate(Authority, UriKind.Absolute, out var authority)
             || (authority.Scheme != "https" && !(development && authority.Scheme == "http"))
             || string.IsNullOrWhiteSpace(Audience) || string.IsNullOrWhiteSpace(SubjectClaimType)
-            || string.IsNullOrWhiteSpace(RoleClaimType) || string.IsNullOrWhiteSpace(PermissionClaimType)
-            || string.IsNullOrWhiteSpace(ManagePermission) || string.IsNullOrWhiteSpace(OperationsPermission))
-            throw new ArgumentException("External identity requires Authority, Audience and claim mappings; production Authority must use HTTPS.");
+            || string.IsNullOrWhiteSpace(RoleClaimType))
+            throw new ArgumentException(InvalidConfiguration);
     }
 }
 
-public static class ExternalIdentityExtensions
+public static partial class ExternalIdentityExtensions
 {
-    public static IServiceCollection AddExternalIdentity(this IServiceCollection services, IConfiguration configuration,
+    /// <summary>Registers external JWT validation and subject-based default and fallback authorization; hosts supply named policies.</summary>
+    public static IServiceCollection AddExternalJwtIdentity(this IServiceCollection services, ExternalIdentityOptions identity,
         IHostEnvironment environment)
     {
-        var identity = configuration.GetSection("Authentication").Get<ExternalIdentityOptions>() ?? new();
-        identity.Validate(environment.IsDevelopment());
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentNullException.ThrowIfNull(environment);
+        identity.ValidateJwt(environment.IsDevelopment());
         services.AddSingleton(identity);
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
@@ -56,12 +67,22 @@ public static class ExternalIdentityExtensions
             options.DefaultPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser()
                 .RequireAssertion(context => HasSubject(context.User, identity.SubjectClaimType)).Build();
             options.FallbackPolicy = options.DefaultPolicy;
-            options.AddPolicy("Manage", policy => policy.RequireAuthenticatedUser().RequireAssertion(context => HasSubject(context.User, identity.SubjectClaimType))
-                .RequireAssertion(context => HasPermission(context.User, identity.PermissionClaimType, identity.ManagePermission)));
-            options.AddPolicy("MessagingOperations", policy => policy.RequireAuthenticatedUser().RequireAssertion(context => HasSubject(context.User, identity.SubjectClaimType))
-                .RequireAssertion(context => HasPermission(context.User, identity.PermissionClaimType, identity.OperationsPermission)));
         });
         return services;
+    }
+
+    /// <summary>Requires an authenticated identity with one distinct nonempty subject and the specified whole scope token.</summary>
+    public static AuthorizationPolicyBuilder RequireExternalScope(this AuthorizationPolicyBuilder policy,
+        ExternalIdentityOptions identity, string permission)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentException.ThrowIfNullOrWhiteSpace(identity.SubjectClaimType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(identity.PermissionClaimType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(permission);
+        return policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => HasSubject(context.User, identity.SubjectClaimType))
+            .RequireAssertion(context => HasPermission(context.User, identity.PermissionClaimType, permission));
     }
 
     private static bool HasSubject(ClaimsPrincipal user, string claimType)

@@ -12,7 +12,7 @@ Provides HTTP error handling, trace IDs, proxy/CORS configuration, optional rate
 | Application errors | `ApplicationErrorResults.ToProblem` | [Error-code mapping](docs/application-errors.md) |
 | Request validation | .NET 10 generated validation | [Binding limitations](docs/minimal-api-validation.md) |
 | Upload screening | `FileUploadValidator` | [Implementation and tests](docs/uploads.md) |
-| External identity | `AddExternalIdentity` | [Permission semantics](docs/permission-check-design.md) |
+| External identity | `AddExternalJwtIdentity` / `RequireExternalScope` | [Permission semantics](docs/permission-check-design.md) |
 | Automatic audit operations | `AddAutomaticAuditOperations` | Trusted identity and `[AuditOperation]` actions; see below |
 
 ## Host setup
@@ -45,7 +45,10 @@ Unhandled 500 responses hide internal details. Default exception logs contain me
 Configure `Authentication:Authority` and `Authentication:Audience`, then register and enable authentication before protected endpoints:
 
 ```csharp
-builder.Services.AddExternalIdentity(builder.Configuration, builder.Environment);
+var identity = builder.Configuration.GetSection("Authentication").Get<ExternalIdentityOptions>() ?? new();
+builder.Services.AddExternalJwtIdentity(identity, builder.Environment);
+var reports = new AuthorizationPolicyBuilder().RequireExternalScope(identity, "reports.read").Build();
+builder.Services.AddAuthorization(options => options.AddPolicy("Reports", reports));
 // After app.UsePlatformHttp():
 app.UseAuthentication();
 app.UseAuthorization();
@@ -55,12 +58,17 @@ app.UseAuthorization();
 | --- | --- |
 | `Authority`, `Audience` | Required; production Authority uses HTTPS |
 | `SubjectClaimType` | `sub`; exactly one distinct, non-empty subject is required |
-| `RoleClaimType`, `PermissionClaimType` | `roles`, `scope` |
-| `Manage` policy | Whole scope token `profiles.manage` |
-| `MessagingOperations` policy | Whole scope token `messaging.manage` |
+| `RoleClaimType` | `roles` |
+| `PermissionClaimType` | `scope`; required only when building a scope policy |
 | Permission matching | Ordinal and case-sensitive; claims can contain space-separated scopes |
 
-The component validates external tokens and does not issue tokens or store passwords. Its fallback policy protects endpoints unless they explicitly allow anonymous access. Development may use an HTTP identity provider.
+Use `Microsoft.AspNetCore.Authorization` for the policy builder. Configure the identity before registration; the same `ExternalIdentityOptions` instance is available from DI for host identity mapping. `AddExternalJwtIdentity` validates Authority, Audience and subject/role mappings without requiring any permission settings or registering named application policies. `RequireExternalScope` validates its subject mapping, permission claim mapping and explicit permission when the policy is built. It includes authentication and subject requirements because named policies do not inherit the default policy.
+
+The component validates external tokens and does not issue tokens or store passwords. Its fallback policy protects endpoints unless they explicitly allow anonymous access. Development may use an HTTP identity provider. [Reference](../../samples/Reference/MS.Microservice.Reference.Web/README.md) registers its own profile and message-operation policies with the generic scope helper.
+
+### Compatibility registration
+
+`AddExternalIdentity(configuration, environment)` remains available with its original signature and behavior. It binds the `Authentication` section, performs the full `ExternalIdentityOptions.Validate(bool)` check, and registers `Manage` and `MessagingOperations`. Their defaults remain `ManagePermission=profiles.manage` and `OperationsPermission=messaging.manage`, with `PermissionClaimType=scope`. These policies retain their existing reads of the registered mutable options. The generic JWT entry point ignores the two compatibility permission properties, including empty values; the existing options properties and defaults remain available for callers and Reference configuration.
 
 ## Upload validation
 
