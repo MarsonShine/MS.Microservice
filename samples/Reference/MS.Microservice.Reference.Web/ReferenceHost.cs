@@ -119,8 +119,8 @@ public static class ReferenceHost
     {
         var rateLimiting = Enabled(app.Configuration, "Http:RateLimiting:Enabled");
         var requestTimeouts = Enabled(app.Configuration, "Http:RequestTimeouts:Enabled");
-        app.UsePlatformHttp();
         app.UseMsRequestLogging();
+        app.UsePlatformHttp();
         if (requestTimeouts) app.UsePlatformRequestTimeouts();
         app.UseAuthentication();
         app.UseAuthorization();

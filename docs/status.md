@@ -2,7 +2,7 @@
 更新：2026-10-24
 Status: idle
 Task: none
-Next: 提交已验收的 Slice 04，然后实施日志最终状态 Slice 05。
+Next: 提交已验收的 Slice 05，然后引入 API/消费者校验 Slice 06。
 Baseline: 883b907c733d75093f79a0fa20639023ac3167fd
 
 ## 最新交付
