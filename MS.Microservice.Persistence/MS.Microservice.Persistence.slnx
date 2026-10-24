@@ -12,6 +12,7 @@
     <Project Path="benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/Dependencies/">
+    <Project Path="../src/MS.Microservice.Threading/MS.Microservice.Threading.csproj" />
     <Project Path="../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
     <Project Path="../src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
   </Folder>

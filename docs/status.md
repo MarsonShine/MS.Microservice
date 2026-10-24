@@ -2,11 +2,11 @@
 更新：2026-10-24
 Status: idle
 Task: none
-Next: 实施架构边界测试修正 Slice 11。
+Next: 实施重试单调计时 Slice 12。
 Baseline: 883b907c733d75093f79a0fa20639023ac3167fd
 
 ## 最新交付
-用户授权连续完成[优化分片](validation/CODE-OPTIMIZATION-20261024/ledger.md)并逐片提交，最后逐个审核；不推送、不改写已有提交。当前唯一任务见[活动任务](tasks/active.md)。Slice 00–10 已取得验收证据；下一片为 Slice 11。初始[审计报告](validation/CODE-AUDIT-20261024/report.md)保留为历史基线。
+用户授权连续完成[优化分片](validation/CODE-OPTIMIZATION-20261024/ledger.md)并逐片提交，最后逐个审核；不推送、不改写已有提交。当前唯一任务见[活动任务](tasks/active.md)。Slice 00–11 已取得验收证据；下一片为 Slice 12。初始[审计报告](validation/CODE-AUDIT-20261024/report.md)保留为历史基线。
 
 此前 [Core 重试三片结果](validation/CORE-RETRY-DELAYS/summary.md)的 85 项 Retry 验证记录保留，旧接口与正常默认行为保留，F 负 delayMillis 改为明确拒绝。[Singleflight](validation/THREADING-SINGLEFLIGHT/summary.md)、[名额租约](validation/THREADING-SEMAPHORE-LEASE/summary.md) 已有历史交付记录。
 

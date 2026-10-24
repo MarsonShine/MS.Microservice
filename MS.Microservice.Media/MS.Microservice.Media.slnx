@@ -7,4 +7,7 @@
     <Project Path="test/MS.Microservice.Media.Tests/MS.Microservice.Media.Tests.csproj" />
     <Project Path="test/MS.Microservice.Media.Inference.Tests/MS.Microservice.Media.Inference.Tests.csproj" />
   </Folder>
+  <Folder Name="/Dependencies/">
+    <Project Path="../src/MS.Microservice.Processes/MS.Microservice.Processes.csproj" />
+  </Folder>
 </Solution>
