@@ -97,9 +97,15 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 AudioFormat outputFormat,
                 AudioCombineOptions? options = null)
             {
-                var streams = inputFiles.Select(file => new FileStream(file, FileMode.Open, FileAccess.Read)).ToList();
+                ArgumentNullException.ThrowIfNull(inputFiles);
+                var streams = new List<FileStream>();
                 try
                 {
+                    foreach (var file in inputFiles)
+                    {
+                        streams.Add(new FileStream(file, FileMode.Open, FileAccess.Read));
+                    }
+
                     return await processor.CombineAudioStreamsAsync(streams, outputFormat, options);
                 }
                 finally

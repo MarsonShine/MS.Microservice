@@ -191,9 +191,14 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 var targetFormat = options.TargetFormat ?? new WaveFormat(44100, 16, 2);
                 var outputFormat = GetOutputFormat(outputFile);
 
-                var audioFileReaders = files.Select(file => new AudioFileReader(file)).ToList();
+                var audioFileReaders = new List<AudioFileReader>(files.Length);
                 try
                 {
+                    foreach (var file in files)
+                    {
+                        audioFileReaders.Add(new AudioFileReader(file));
+                    }
+
                     var sampleProviders = audioFileReaders
                         .Select(reader => options.AutoConvertToStereo ? ConvertToStereo(reader) : reader.ToSampleProvider())
                         .ToList();
@@ -229,7 +234,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 var inputFormat = GetInputFormat(inputFile);
                 var outputFormat = GetOutputFormat(outputFile);
 
-                var reader = CreateAudioReader(inputFile, inputFormat);
+                using var reader = CreateAudioReader(inputFile, inputFormat);
 
                 if (!reader.WaveFormat.Equals(options.TargetFormat))
                 {
@@ -581,7 +586,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             };
         }
 
-        private static IWaveProvider CreateAudioReader(string filePath, AudioFormat format)
+        private static WaveStream CreateAudioReader(string filePath, AudioFormat format)
         {
             return format switch
             {

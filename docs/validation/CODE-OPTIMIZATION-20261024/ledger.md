@@ -10,7 +10,7 @@
 | 01 | `fix(ai): share provider concurrency across capabilities` | AI.Core/Provider/测试；dotnet test MS.Microservice.AI/MS.Microservice.AI.slnx --no-restore -c Release | 00 | complete |
 | 02 | `feat(ai): enforce bounded response and SSE reads` | AI 预算/解析/测试；AI 解决方案测试及超限/取消/释放回归 | 01 | complete |
 | 03 | `fix(messaging): claim outbox work when ready to publish` | SelfManaged.EFCore/测试；dotnet test MS.Microservice.Messaging/test/MS.Microservice.Messaging.SelfManaged.Tests --no-restore -c Release | 00 | complete |
-| 04 | `fix(audio): release readers on success and partial failure` | AudioProcessor/扩展/测试；dotnet test test/MS.Microservice.Audio.Tests --no-restore -c Release | 00 | pending |
+| 04 | `fix(audio): release readers on success and partial failure` | AudioProcessor/扩展/测试；dotnet test test/MS.Microservice.Audio.Tests --no-restore -c Release | 00 | complete |
 | 05 | `fix(logging): record final HTTP outcomes` | Logging/宿主管线；Logging.AspNetCore.Tests 与 Reference.Web.Tests 管线验证 | 00 | pending |
 | 06 | `build: validate public API and package consumer contracts` | build/API 基线/消费者/CI；正向、删除公开成员负向、包消费者执行 | 00 | pending |
 | 07 | `fix(core): unify HTTP helper ownership and query handling` | Core HTTP/测试；HTTP/JSON 测试和兼容检查 | 06 | pending |

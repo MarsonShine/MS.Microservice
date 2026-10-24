@@ -50,6 +50,8 @@ await processor.CombineAudioFilesAsync(
 
 合并默认按文件名排序；需要按传入顺序拼接时设置 `SortByFileName = false`。每个输入之后都会添加配置的静音，包括最后一个输入。`AudioProcessor` 的流合并入口会接管并释放输入流，返回的结果流由调用方释放；文件入口可能覆盖已有目标，需自行选择新路径。`AudioEditor` 的不覆盖保证不适用于这些旧入口。
 
+转换、混音及文件转流入口会在成功或失败后释放已打开的输入文件，包括后续输入打开失败的情况。
+
 ## 运行要求
 
 标准 PCM／float WAV 的编辑不需要 Windows 媒体解码器；MP3 解码、其他压缩格式和部分转换路径依赖 Windows ACM／Media Foundation。MP3 编码需要与进程架构匹配的 LAME 原生库。部署前应在目标平台验证实际使用的编解码路径。
