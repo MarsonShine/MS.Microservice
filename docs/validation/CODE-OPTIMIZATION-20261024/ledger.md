@@ -16,7 +16,7 @@
 | 07 | `fix(core): unify HTTP helper ownership and query handling` | Core HTTP/测试；HTTP/JSON 测试和兼容检查 | 06 | complete |
 | 08 | `refactor(auth): move reference policies to composition root` | AspNetCore/宿主/测试；身份测试与兼容检查 | 06 | complete |
 | 09 | `fix(tasks): reconcile failed terminal state writes online` | Tasks 执行器/测试；终态恢复且 handler 不重跑 | 00 | complete |
-| 10 | `feat(tasks): add bounded terminal job retention cleanup` | Tasks/EFCore/测试；清理、Retry 竞争、JobId 契约和兼容检查 | 06,09 | pending |
+| 10 | `feat(tasks): add bounded terminal job retention cleanup` | Tasks/EFCore/测试；清理、Retry 竞争、JobId 契约和兼容检查 | 06,09 | complete |
 | 11 | `test(architecture): target the reference host boundary` | 架构测试；dotnet test test/MS.Microservice.Architecture.Tests --no-restore -c Release | 00 | pending |
 | 12 | `fix(core): measure retry elapsed time monotonically` | Core Retry/测试；Retry 回归与兼容检查 | 06 | pending |
 | 13 | `fix(eventsourcing): bound projection batches and reuse tracked models` | EventSourcing/Lab/测试；持久投影、架构与兼容检查 | 06 | pending |

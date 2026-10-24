@@ -30,6 +30,8 @@ JobSnapshot? current = await jobs.GetAsync(request.Scope, created.JobId, cancell
 
 同一 `Scope + JobId` 再次提交相同请求会返回已有任务。处理器、JSON 字符串、队列、执行次数或首次调度时间不同，会抛出 `JobSubmissionConflictException`；JSON 的空白和属性顺序也参与比较。创建时间、当前状态和后来重试的时间不参与提交身份判断。
 
+可选 `IJobRetentionStore` 支持宿主按 Scope、终态和完成时间分批清理，使用方式见 [EF Core 任务存储](../MS.Microservice.Tasks.EFCore/README.md#终态保留清理)。物理清理会删除任务及其执行历史，也结束该 JobId 的提交幂等保留期；之后相同 Scope、JobId 被视为新任务。已有 `IJobStore` 实现无需实现此可选接口。
+
 | 状态 | 含义 |
 |---|---|
 | `Queued` | 已保存，等待领取 |
