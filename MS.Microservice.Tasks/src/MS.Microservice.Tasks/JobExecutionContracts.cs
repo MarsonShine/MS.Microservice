@@ -40,9 +40,11 @@ public sealed class JobExecutionOptions
     private readonly Dictionary<string, int> _queues = new(StringComparer.Ordinal) { ["default"] = 1 };
     public TimeSpan CancellationPollInterval { get; set; } = TimeSpan.FromMilliseconds(500);
     public TimeSpan StorageOperationTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan InitialFinalizationRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+    public TimeSpan MaximumFinalizationRetryDelay { get; set; } = TimeSpan.FromSeconds(30);
     internal IReadOnlyDictionary<string, int> Queues => _queues;
 
-    /// <summary>Sets the maximum executions whose handlers or cleanup are still active in a resource queue.</summary>
+    /// <summary>Sets the maximum executions whose handlers, cleanup or final-state reconciliation are still active in a resource queue.</summary>
     public void AddQueue(string queue, int concurrency)
     {
         JobSubmission.ValidateName(queue, 64, nameof(queue));

@@ -33,7 +33,7 @@ JobSnapshot? current = await jobs.GetAsync(request.Scope, created.JobId, cancell
 | 状态 | 含义 |
 |---|---|
 | `Queued` | 已保存，等待领取 |
-| `Running` | 当前执行尚未结束，可能已请求取消 |
+| `Running` | 当前工作或终态持久化尚未结束，可能已请求取消 |
 | `Succeeded` / `Failed` | 本次执行成功／失败 |
 | `Cancelled` | 排队时取消，或运行中的取消请求已在结束时生效 |
 | `Interrupted` | 执行中断，例如宿主停止；由执行方明确记录 |
@@ -43,5 +43,9 @@ JobSnapshot? current = await jobs.GetAsync(request.Scope, created.JobId, cancell
 `TryStartAsync` 返回当前执行的 `JobAttemptToken`；进度和结束更新必须携带它。进度为 0～100 的整数，同一次执行只能增加。执行入口和跨 Scope 的 `GetDueAsync` 应仅供可信后台代码调用；对外接口应从认证身份取得 Scope，再调用按 Scope 查询或控制的方法。
 
 宿主注册 `IJobHandler<TPayload>`，按明确名称和版本匹配任务；参数可使用普通 DTO 或 JsonElement。每次执行创建独立 DI scope，按 Queue 限制并发，观察持久取消请求并传递 CancellationToken。处理器必须配合取消，且在返回前等待自己启动的子任务结束；执行器不会提前释放仍在工作的资源槽。
+
+终态落库暂时失败时，执行器保留原容量槽，在同一宿主内持续重试存储并核对原 Attempt Token；处理器不会因此重跑。存储恢复后可以继续收敛，无需为此重启。停机取消重试等待，未完成的持久记录仍由下次启动恢复；具体提交结果以存储查询为准。
+
+`AddTaskExecution` 可配置终态重试间隔：`InitialFinalizationRetryDelay` 默认 1 秒，`MaximumFinalizationRetryDelay` 默认 30 秒，要求 `25ms <= initial <= maximum <= 5min`。间隔指数增加并封顶，每个存储操作继续使用独立的 `StorageOperationTimeout`（默认 10 秒）。
 
 存储模型、原子状态转换和事务边界见 [持久化设计](../../docs/persistence-design.md)，处理器执行及恢复见 [执行设计](../../docs/execution-design.md)。

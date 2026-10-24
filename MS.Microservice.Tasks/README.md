@@ -2,6 +2,8 @@
 
 统一任务中心提供持久任务提交、执行历史、进度、取消、重试及单实例恢复。Coravel 驱动执行，Dashboard 为可选的可视化管理组件。
 
+执行器在终态落库失败时保留原容量槽，等待存储恢复并持续核对原执行，不重跑已经结束的处理器。停机结束在线收敛，遗留持久执行仍遵循启动恢复规则，详见下方执行设计。
+
 打开 [MS.Microservice.Tasks.slnx](MS.Microservice.Tasks.slnx)：源码位于 `src`，测试位于 `test`，技术文档位于 `docs`。在本目录执行：
 
 ```powershell

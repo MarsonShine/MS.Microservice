@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Tasks.EFCore;
 
@@ -7,14 +8,15 @@ namespace MS.Microservice.Tasks.Tests;
 internal sealed class JobDatabase : IAsyncDisposable
 {
     private Action<IServiceCollection>? _configure;
+    private IInterceptor[] _interceptors = [];
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "ms-job-store-tests-" + Guid.NewGuid().ToString("N"));
     public ServiceProvider Services { get; private set; } = null!;
     public JobClock Clock { get; } = new();
     public string ConnectionString => "Data Source=" + Path.Combine(_directory, "jobs.db") + ";Pooling=false";
 
-    public static async Task<JobDatabase> CreateAsync(Action<IServiceCollection>? configure = null)
+    public static async Task<JobDatabase> CreateAsync(Action<IServiceCollection>? configure = null, params IInterceptor[] interceptors)
     {
-        var fixture = new JobDatabase { _configure = configure };
+        var fixture = new JobDatabase { _configure = configure, _interceptors = interceptors };
         Directory.CreateDirectory(fixture._directory);
         fixture.Services = fixture.CreateProvider();
         try
@@ -36,7 +38,7 @@ internal sealed class JobDatabase : IAsyncDisposable
     {
         var services = new ServiceCollection();
         services.AddSingleton<TimeProvider>(Clock);
-        services.AddDbContext<JobTestContext>(options => options.UseSqlite(ConnectionString));
+        services.AddDbContext<JobTestContext>(options => options.UseSqlite(ConnectionString).AddInterceptors(_interceptors));
         services.AddEfCoreJobStore<JobTestContext>();
         _configure?.Invoke(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
