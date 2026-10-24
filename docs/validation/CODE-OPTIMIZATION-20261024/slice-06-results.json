@@ -1,0 +1,198 @@
+{
+  "baselineCommit": "883b907c733d75093f79a0fa20639023ac3167fd",
+  "sourceHead": "3e82ab30383676c920404f857e05a66eeaf33ede",
+  "sdk": "10.0.402",
+  "apiStatus": "passed",
+  "apiPackages": [
+    {
+      "module": "MS.Microservice.AI.Abstractions",
+      "result": "passed",
+      "baselineSha256": "591C3942786440B05844A9F80BC7BFCB44DEA35A3792DECB6F5D1050B064C212",
+      "currentSha256": "8EF41AA05A9DE04061D8D2884C48EB7395E5543BC4CC8AFA1526EADF897EFD03"
+    },
+    {
+      "module": "MS.Microservice.Threading",
+      "result": "passed",
+      "baselineSha256": "526DEA92F377DFFAA19F9192BB032E166ABC53210FECFB66E871583D9B5EDADB",
+      "currentSha256": "C2808BFC18DE5FBCBF2506FB323E0EBDC26C1F326C4A3F78AB7C62BCAF465294"
+    },
+    {
+      "module": "MS.Microservice.AI.Core",
+      "result": "passed",
+      "baselineSha256": "61D54068B0E37306C73E2F298F7D940AB372D750112BD89C378B2E4D374F298A",
+      "currentSha256": "606B08AC09B10BBBC3148EA48E165174E123FC4D4C6FD6C0CDB438CCC6718785"
+    },
+    {
+      "module": "MS.Microservice.Domain.Primitives",
+      "result": "passed",
+      "baselineSha256": "7D7EFEBF8D82D9F2A4E3415898DCBD21D8CF5E544D8D28E3493CC70CAA0E22F6",
+      "currentSha256": "50A36652E701CCB9758991071FE1906F39420DBC07856FAF40340BFEAAA957F1"
+    },
+    {
+      "module": "MS.Microservice.Core",
+      "result": "passed",
+      "baselineSha256": "2C04C78AA0F5DD921BA2012A0E8B5B0C37F7F19330548DCA590F76859625E1D8",
+      "currentSha256": "537F30613A547CA010169F8694401933AA5C464CF8378178EB8B0E9DC15B656F"
+    },
+    {
+      "module": "MS.Microservice.AspNetCore",
+      "result": "passed",
+      "baselineSha256": "B406C30D1258FC886277014F7592F0F1C66ADC76376AE31A7EC2AB743F9E1EC3",
+      "currentSha256": "19CBF5A69B4EBC268D28E4399B31B115D5D7C7AE3A01FC7C81C7C01AD04AA9D5"
+    },
+    {
+      "module": "MS.Microservice.Audio",
+      "result": "passed",
+      "baselineSha256": "C4A683D744A18F18E16298F543D9902C51176E1E25DC141579E34AA38C7910FA",
+      "currentSha256": "AA9C432489A64ABF64239053F3A2A7300FF2287EC8FC0C2CF75EDF0EC3C93A55"
+    },
+    {
+      "module": "MS.Microservice.Caching",
+      "result": "passed",
+      "baselineSha256": "B08C94F7F235150408952488584D139E6BA4E56CAD4F5C82DABF723AE5120728",
+      "currentSha256": "7D9354BEC022553C14C27B3B8181C3723A2881F31A2EA75F17AC1A7F39880BAE"
+    },
+    {
+      "module": "MS.Microservice.EventSourcing",
+      "result": "passed",
+      "baselineSha256": "7E899825F5081D279EED2D0D87E85B6B5B61E5B9A7534D38E125BE9EAE4C8584",
+      "currentSha256": "523771675444A12914FEF2FC0ED0882BA9FF4D168A867101953C48FEBCB3CE22"
+    },
+    {
+      "module": "MS.Microservice.Http.Resilience",
+      "result": "passed",
+      "baselineSha256": "E09C052EC427D6C36448F70D663BE0523862FF42B968616621562B0EA92F1990",
+      "currentSha256": "E3FB320C4F30DAC23A5DECA0B53C5F5819F2270EC7D2A8ECA7839189C27957C6"
+    },
+    {
+      "module": "MS.Microservice.Logging.Core",
+      "result": "passed",
+      "baselineSha256": "88C53D7C46D18E430A49AEABA08340B93C731C5D08154917796AE26DD2A1BF6F",
+      "currentSha256": "30753A3738407A94644817C9DB01125A05122890C16C5E9C0C26257B7BFF4EF0"
+    },
+    {
+      "module": "MS.Microservice.Logging.AspNetCore",
+      "result": "passed",
+      "baselineSha256": "D891CD49CAAF6EF651FFBF0557599D243B948957A58DACB207D99CFFB6A2D1DF",
+      "currentSha256": "0E5C16912AD576B22F545B45A59DDF704FE42C43D285D6D80A36934FA916F062"
+    },
+    {
+      "module": "MS.Microservice.Messaging.Abstractions",
+      "result": "passed",
+      "baselineSha256": "48D98BCCE08AEE6D54B14D8A3802C5878D9915F7C7861CA4520B3EBBA218F078",
+      "currentSha256": "9E18B105517B714822DEB213582B4431983ED0DEC2502647BD3805BCB3B37F5C"
+    },
+    {
+      "module": "MS.Microservice.Messaging.SelfManaged.EFCore",
+      "result": "passed",
+      "baselineSha256": "43A86C4DE4D60F298B9DC1C34A225D1E236732636B8D18726A1C19D230EE2736",
+      "currentSha256": "3409FD34DCF3D1F3A1CEF6FBBCA94379BFDB2887DB073E18E0DC32318DCA8665"
+    },
+    {
+      "module": "MS.Microservice.Tasks",
+      "result": "passed",
+      "baselineSha256": "84645E8604000CFE7D306F01CC353895A0EF5F5712BE5DB7E50D45EE1AEFB7EC",
+      "currentSha256": "87AC8C7652BFDAE5AD2E433B1B21D4ED36F1660CD76EF104C97D030E1F22A167"
+    },
+    {
+      "module": "MS.Microservice.Tasks.EFCore",
+      "result": "passed",
+      "baselineSha256": "5E5B4420BC17DDB57EF21760D1CEB4E017382FA6AC14C04CA5391C1AE7CB1FE1",
+      "currentSha256": "128CEBD2DB83E98DD626B20CEB6241C58EF85E26BD40DDE8773515E74F14EFDB"
+    }
+  ],
+  "selfTest": [
+    {
+      "case": "baseline",
+      "exitCode": 0,
+      "result": "passed"
+    },
+    {
+      "case": "unchanged",
+      "exitCode": 0,
+      "result": "passed"
+    },
+    {
+      "case": "additive",
+      "exitCode": 0,
+      "result": "passed"
+    },
+    {
+      "case": "removed",
+      "exitCode": 1,
+      "result": "passed"
+    }
+  ],
+  "consumer": {
+    "revision": "3e82ab30383676c920404f857e05a66eeaf33ede",
+    "sdk": "10.0.402",
+    "version": "1.0.0-validation.1792818732668",
+    "modules": [
+      "MS.Microservice.Threading",
+      "MS.Microservice.Caching",
+      "MS.Microservice.Http.Resilience",
+      "MS.Microservice.Messaging.SelfManaged.EFCore"
+    ],
+    "sourceProjectCount": 5,
+    "sourceBuild": "passed",
+    "packageConsumer": "passed",
+    "messagingContextsVerified": 2,
+    "validatedAtUtc": "2026-10-24T05:12:38.2445307+00:00",
+    "consumerChecks": [
+      "threading.singleflight",
+      "threading.lease-release",
+      "caching.di-source-coalescing",
+      "caching.scope-isolation",
+      "http.get-retry",
+      "http.post-no-retry",
+      "messaging.first-context.commit-rollback-serialization-deduplication",
+      "messaging.second-context.commit-rollback-serialization-deduplication"
+    ],
+    "packages": [
+      {
+        "file": "MS.Microservice.Caching.1.0.0-validation.1792818732668.nupkg",
+        "sha256": "69EDE00AC00A94E447F631F25910B99FE2A2BB077C504D31C2F6EF50672DD18F"
+      },
+      {
+        "file": "MS.Microservice.Http.Resilience.1.0.0-validation.1792818732668.nupkg",
+        "sha256": "A064C3C03CAC57B95765A82EAEAC5CB3EFBE4D3EEDBE6841507EE1C1A4D4E7D8"
+      },
+      {
+        "file": "MS.Microservice.Messaging.Abstractions.1.0.0-validation.1792818732668.nupkg",
+        "sha256": "71A286B22F5973549A9089CF5A56A8E553F4598937885F8343D595432B5F2E43"
+      },
+      {
+        "file": "MS.Microservice.Messaging.SelfManaged.EFCore.1.0.0-validation.1792818732668.nupkg",
+        "sha256": "60375A3D26ADF159813943A57E773BFEBD16814450595FEDE3D3392521FBB5D6"
+      },
+      {
+        "file": "MS.Microservice.Threading.1.0.0-validation.1792818732668.nupkg",
+        "sha256": "82357D0E37A8D6E1480FA25F18788E2D7D22F26DC311931D07D63D056E9E7B15"
+      }
+    ],
+    "localPackageIds": [
+      "MS.Microservice.Threading",
+      "MS.Microservice.Caching",
+      "MS.Microservice.Http.Resilience",
+      "MS.Microservice.Messaging.Abstractions",
+      "MS.Microservice.Messaging.SelfManaged.EFCore"
+    ],
+    "hostDependencies": [
+      {
+        "package": "Microsoft.EntityFrameworkCore.Sqlite",
+        "version": "10.0.6"
+      },
+      {
+        "package": "SQLitePCLRaw.bundle_e_sqlite3",
+        "version": "3.0.2"
+      }
+    ],
+    "validationScriptSha256": "4A7FA72B30E6C2ED54D302379E438C0BAA3210790481C7ABB09DDA20F20D1056",
+    "consumerConfigSha256": "0B55A709876E2EEC7B82288E7AB27091C6159D6E109CA93FBF632840CA46042B"
+  },
+  "untrackedInputGuard": {
+    "exitCode": 1,
+    "omitted": "src/Fixture/Untracked.cs",
+    "exportReached": false
+  }
+}

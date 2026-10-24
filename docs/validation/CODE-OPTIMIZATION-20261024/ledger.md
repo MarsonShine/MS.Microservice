@@ -12,7 +12,7 @@
 | 03 | `fix(messaging): claim outbox work when ready to publish` | SelfManaged.EFCore/测试；dotnet test MS.Microservice.Messaging/test/MS.Microservice.Messaging.SelfManaged.Tests --no-restore -c Release | 00 | complete |
 | 04 | `fix(audio): release readers on success and partial failure` | AudioProcessor/扩展/测试；dotnet test test/MS.Microservice.Audio.Tests --no-restore -c Release | 00 | complete |
 | 05 | `fix(logging): record final HTTP outcomes` | Logging/宿主管线；Logging.AspNetCore.Tests 与 Reference.Web.Tests 管线验证 | 00 | complete |
-| 06 | `build: validate public API and package consumer contracts` | build/API 基线/消费者/CI；正向、删除公开成员负向、包消费者执行 | 00 | pending |
+| 06 | `build: validate public API and package consumer contracts` | build/API 基线/消费者/CI；正向、删除公开成员负向、包消费者执行 | 00 | complete |
 | 07 | `fix(core): unify HTTP helper ownership and query handling` | Core HTTP/测试；HTTP/JSON 测试和兼容检查 | 06 | pending |
 | 08 | `refactor(auth): move reference policies to composition root` | AspNetCore/宿主/测试；身份测试与兼容检查 | 06 | pending |
 | 09 | `fix(tasks): reconcile failed terminal state writes online` | Tasks 执行器/测试；终态恢复且 handler 不重跑 | 00 | pending |

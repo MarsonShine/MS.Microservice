@@ -41,10 +41,24 @@ module-manifest.json 记录源提交、文件 SHA-256 和项目闭包。
 - 持久化的中文、数值、消息 Id 和 UTC 时间保持一致。
 - 重复投递只有一个持久化业务效果。
 
-此验证使用 SQLite，不访问 Broker，也不替代 PostgreSQL/RabbitMQ 故障验收。
-报告默认保存在 artifacts/validation/module-consumption.json；临时目录保留供检查。
+闭包包含对应组件时，消费项目还直接调用本轮包中的公共 API，验证以下行为：
+
+- Threading：同键并发请求只执行一次回源，信号量租约释放后等待者取得名额。
+- Caching：通过 DI 注册后并发回源只发生一次，相同资源在不同 scope 下保持隔离。
+- Http.Resilience：本地 HTTP handler 模拟瞬时错误，GET 重试成功，POST 不重试；不访问外部服务。
+
+CI 使用以下四个入口及其依赖闭包；消费控制台只使用本轮版本的 `PackageReference`，不通过项目引用访问仓库源码。NuGet source mapping 将本轮闭包的包 ID 精确限定到临时本地源，其他依赖仍使用 nuget.org，保留默认漏洞检查：
+
+    ./build/validate-module-consumption.ps1 -Modules @('MS.Microservice.Threading', 'MS.Microservice.Caching', 'MS.Microservice.Http.Resilience', 'MS.Microservice.Messaging.SelfManaged.EFCore')
+
+导出前会检查选定项目闭包内未跟踪的编译、资源和打包输入，发现遗漏时列出路径并失败。先审查并纳入版本管理再重试；脚本不会自动暂存或把未知源码带入导出。消费验证程序由脚本明确复制，不属于组件源码导出。
+
+此验证使用 SQLite，不访问 Broker，也不替代 PostgreSQL/RabbitMQ 故障验收。消费宿主显式引用仓库 `Directory.Packages.props` 中既有版本的 `Microsoft.EntityFrameworkCore.Sqlite` 与 `SQLitePCLRaw.bundle_e_sqlite3`，实际版本记录在报告；它不导入中央版本文件，也不改变被测库包。此结果不代表其他 SQLite 原生组合已经验证。
+报告默认保存在 artifacts/validation/module-consumption.json，记录 SDK、源提交、实际验证项和生成包的 SHA-256；临时源码、包和消费项目保留供检查。
 使用 -Modules 可选择子集，使用 -ReportPath 指定报告位置。
 [已执行的 Windows 验证记录](../validation/module-consumption.json)列出了源版本和范围。
+
+公共 API 的基线比较与破坏性变更检测见 [API 兼容性校验](api-compatibility.md)。包消费验证检查实际调用行为，两项门禁分别执行。
 
 ## 接入边界
 
