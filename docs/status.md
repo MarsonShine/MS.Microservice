@@ -2,13 +2,13 @@
 更新：2026-10-24
 Status: idle
 Task: none
-Next: 执行全解决方案与交付收尾验收。
+Next: 等待用户额度重置后审核已有提交；剩余实现slice（undo/未完成）为无。
 Baseline: 883b907c733d75093f79a0fa20639023ac3167fd
 
 ## 最新交付
-用户授权连续完成[优化分片](validation/CODE-OPTIMIZATION-20261024/ledger.md)并逐片提交，最后逐个审核；不推送、不改写已有提交。当前唯一任务见[活动任务](tasks/active.md)。Slice 00–13 已取得验收证据；下一步为全解决方案与交付收尾。初始[审计报告](validation/CODE-AUDIT-20261024/report.md)保留为历史基线。
+[代码级优化](validation/CODE-OPTIMIZATION-20261024/final-acceptance.md)已完成，00审计与01–13实现分别提交在`codex/code-optimization-20261024`，无推送、无历史改写。[分片清单](validation/CODE-OPTIMIZATION-20261024/ledger.md)提供哈希及每片验收；[活动入口](tasks/active.md)为空闲状态。
 
-此前 [Core 重试三片结果](validation/CORE-RETRY-DELAYS/summary.md)的 85 项 Retry 验证记录保留，旧接口与正常默认行为保留，F 负 delayMillis 改为明确拒绝。[Singleflight](validation/THREADING-SINGLEFLIGHT/summary.md)、[名额租约](validation/THREADING-SEMAPHORE-LEASE/summary.md) 已有历史交付记录。
+## 验证与边界
+最终Release构建0警告0错误；完整测试3553通过、0失败、158项按既有条件跳过。受限执行中的证书/浏览器环境失败经同源码、所需本机权限下完整重跑消除，首轮证据保留。16包API基线兼容通过，关键NuGet消费者8项证据经输入/哈希核对后复用。
 
-## 验证边界
-审计阶段的 Core HTTP/JSON 24 项和 Logging 4 项结果保留在历史报告；实现阶段以分片验收为准。AI 最终184项、SelfManaged54项、Audio92项、Logging17项、Reference76项通过，Lab构建0警告0错误。各片红/绿证据见分片清单，后续未完成项仍为pending。原有 [dotnet-ci 失败](https://github.com/MarsonShine/MS.Microservice/actions/runs/39720615089) 未调查或处理；未执行全仓、真实服务故障、性能、部署与漏洞验收。
+真实后端故障矩阵、部署、专门漏洞和性能验收未执行；跳过原因及Tasks单执行宿主、保留清理、Lab投影边界见最终验收。原[远端CI失败](https://github.com/MarsonShine/MS.Microservice/actions/runs/39720615089)未调查或处理，不能由本地结果推断远端已绿。条件性能力继续保留在[路线图](framework-optimization-roadmap.md)。
