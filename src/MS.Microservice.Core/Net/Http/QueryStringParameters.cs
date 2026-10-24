@@ -16,6 +16,19 @@ public static class QueryStringParameters
 {
     private static readonly ConcurrentDictionary<Type, Func<object, ICollection<string>, int>> Populators = new();
 
+    internal static string BuildUrl(string url, object? body)
+    {
+        if (body is null) return url;
+        var parameters = new List<string>();
+        if (Dispatch(body, parameters) == 0) return url;
+
+        var fragmentIndex = url.IndexOf('#');
+        var path = fragmentIndex < 0 ? url : url[..fragmentIndex];
+        var fragment = fragmentIndex < 0 ? "" : url[fragmentIndex..];
+        var separator = path.Contains('?') ? (path.EndsWith('?') || path.EndsWith('&') ? "" : "&") : "?";
+        return string.Concat(path, separator, string.Join('&', parameters), fragment);
+    }
+
     /// <summary>把查询对象追加到 <paramref name="destination" />，返回追加后的元素个数。</summary>
     public static int Dispatch(object? body, ICollection<string> destination)
     {

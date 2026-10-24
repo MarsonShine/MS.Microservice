@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -24,11 +25,11 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
     }
 
     public ValueTask<T?> GetAsync<T>(string requestUrl, object? body, CancellationToken cancellationToken = default)
-        => SendAsync<T>(HttpMethod.Get, BuildUrl(requestUrl, body), null, null, cancellationToken);
+        => SendAsync<T>(HttpMethod.Get, QueryStringParameters.BuildUrl(requestUrl, body), null, null, cancellationToken);
 
     public ValueTask<T?> GetAsync<T>(string url, object? body, Dictionary<string, string> headers,
         CancellationToken cancellationToken = default)
-        => SendAsync<T>(HttpMethod.Get, BuildUrl(url, body), null, headers, cancellationToken);
+        => SendAsync<T>(HttpMethod.Get, QueryStringParameters.BuildUrl(url, body), null, headers, cancellationToken);
 
     public ValueTask<T?> PostAsync<T>(string url, object? body, CancellationToken cancellationToken = default)
         => SendAsync<T>(HttpMethod.Post, url, body, null, cancellationToken);
@@ -54,8 +55,7 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
         {
             using var response = await httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var result = await JsonSerializer.DeserializeAsync<T>(stream, JsonSerializerOptions, cancellationToken);
+            var result = await response.Content.ReadFromJsonAsync<T>(JsonSerializerOptions, cancellationToken);
             logger.LogInformation("HTTP {RequestId} {Method} completed {StatusCode} in {ElapsedMs} ms",
                 id, method.Method, (int)response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             return result;
@@ -69,18 +69,4 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
         }
     }
 
-    private static string BuildUrl(string url, object? body)
-    {
-        if (body is null) return url;
-        var parameters = new List<string>();
-        // 参数写入统一交给 QueryStringParameters：字典与对象两条路径共用同一套值语义。
-        var before = parameters.Count;
-        if (QueryStringParameters.Dispatch(body, parameters) == before) return url;
-
-        var fragmentIndex = url.IndexOf('#');
-        var path = fragmentIndex < 0 ? url : url[..fragmentIndex];
-        var fragment = fragmentIndex < 0 ? "" : url[fragmentIndex..];
-        var separator = path.Contains('?') ? (path.EndsWith('?') || path.EndsWith('&') ? "" : "&") : "?";
-        return string.Concat(path, separator, string.Join('&', parameters), fragment);
-    }
 }

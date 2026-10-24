@@ -162,6 +162,8 @@ JSON 排版和文本差异保留输入与结果在内存中，宿主应限制输
 
 `LogHttpClient.GetAsync` 支持属性对象或字典查询参数，省略 null、保留空字符串、展开集合；POST 使用 UTF-8 JSON。取消、状态错误和 JSON 错误分别保留原异常类型。每次请求的头不改动共享默认头。
 
+`MS.WebHttpClient` 中的 `HttpClient.GetAsync(api, body)` 扩展与 `LogHttpClient` 共用查询参数合并规则：保留已有 query 和 fragment，没有有效参数时保持 URL 不变。泛型与原始响应扩展都可追加 `CancellationToken`；旧重载继续使用 `CancellationToken.None`。原始响应由调用者释放，泛型扩展在读取完成或失败后释放响应。泛型扩展对非成功状态、非 `application/json`（包括缺少 Content-Type）及无效 JSON 返回 `default`，取消和其他读取错误仍传播；`LogHttpClient` 保留严格的状态与 JSON 异常行为。
+
 `LoggingHttpClientHandler` 开启 Information 日志时默认读取完整 URI 和正文。只需要元数据日志时，显式配置：
 
 ```csharp

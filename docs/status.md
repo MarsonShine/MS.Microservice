@@ -2,11 +2,11 @@
 更新：2026-10-24
 Status: idle
 Task: none
-Next: 提交已验收的 Slice 06，然后收敛 Core HTTP 辅助接口 Slice 07。
+Next: 提交已验收的 Slice 07，然后解耦认证策略 Slice 08。
 Baseline: 883b907c733d75093f79a0fa20639023ac3167fd
 
 ## 最新交付
-用户授权连续完成[优化分片](validation/CODE-OPTIMIZATION-20261024/ledger.md)并逐片提交，最后逐个审核；不推送、不改写已有提交。当前唯一任务见[活动任务](tasks/active.md)。Slice 00–05 已提交；Slice 06 API/包消费者校验已验收，待本片提交。初始[审计报告](validation/CODE-AUDIT-20261024/report.md)保留为历史基线。
+用户授权连续完成[优化分片](validation/CODE-OPTIMIZATION-20261024/ledger.md)并逐片提交，最后逐个审核；不推送、不改写已有提交。当前唯一任务见[活动任务](tasks/active.md)。Slice 00–06 已验证并提交；当前实施 Slice 07。初始[审计报告](validation/CODE-AUDIT-20261024/report.md)保留为历史基线。
 
 此前 [Core 重试三片结果](validation/CORE-RETRY-DELAYS/summary.md)的 85 项 Retry 验证记录保留，旧接口与正常默认行为保留，F 负 delayMillis 改为明确拒绝。[Singleflight](validation/THREADING-SINGLEFLIGHT/summary.md)、[名额租约](validation/THREADING-SEMAPHORE-LEASE/summary.md) 已有历史交付记录。
 

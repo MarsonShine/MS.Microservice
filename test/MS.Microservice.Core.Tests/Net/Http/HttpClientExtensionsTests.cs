@@ -30,7 +30,7 @@ public sealed class HttpClientExtensionsTests
             Tags = ["alpha", "beta"]
         });
 
-        HttpResponseMessage response = await client.GetAsync("orders", new QueryPayload
+        using HttpResponseMessage response = await client.GetAsync("orders", new QueryPayload
         {
             Id = 7,
             Tags = ["solo"]
@@ -95,6 +95,167 @@ public sealed class HttpClientExtensionsTests
         Assert.Equal(
             "https://example.test/orders?Keyword=%E4%B8%AD%E6%96%87%20%E7%A9%BA%E6%A0%BC%26x%3D1&Tags=a%26b&Tags=c%20d",
             handler.LastRequest!.RequestUri!.AbsoluteUri);
+    }
+
+    [Theory]
+    [InlineData("orders?fixed=1#anchor", false, "orders?fixed=1&Added=a%20%26%20b#anchor")]
+    [InlineData("orders#anchor", false, "orders?Added=a%20%26%20b#anchor")]
+    [InlineData("orders?", false, "orders?Added=a%20%26%20b")]
+    [InlineData("orders?fixed=1&", false, "orders?fixed=1&Added=a%20%26%20b")]
+    [InlineData("orders?fixed=1#anchor", true, "orders?fixed=1#anchor")]
+    [InlineData("orders#anchor", true, "orders#anchor")]
+    public async Task GetAsync_MergesParametersBeforeFragmentWithoutAddingEmptyQuery(string api, bool empty, string expected)
+    {
+        var handler = new RecordingHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new ResponsePayload { Message = "ok" })
+        }));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        var body = new { Added = empty ? null : "a & b" };
+
+        await client.GetAsync<ResponsePayload>(api, body);
+        Assert.Equal("https://example.test/" + expected, handler.LastRequest!.RequestUri!.AbsoluteUri);
+        using var raw = await client.GetAsync(api, body);
+        Assert.Equal("https://example.test/" + expected, handler.LastRequest!.RequestUri!.AbsoluteUri);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.OK, "application/json", "{\"Message\":\"ok\"}", true)]
+    [InlineData(HttpStatusCode.OK, "text/plain", "plain", false)]
+    [InlineData(HttpStatusCode.OK, "application/json", "{broken", false)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "application/json", "{}", false)]
+    public async Task GetAsync_GenericDisposesResponseAndContentOnEveryReturnPath(
+        HttpStatusCode status, string contentType, string payload, bool hasResult)
+    {
+        var content = new TrackingContent(payload, contentType);
+        using var response = new TrackingResponse(status) { Content = content };
+        using var client = new HttpClient(new RecordingHandler(_ => Task.FromResult<HttpResponseMessage>(response)))
+        {
+            BaseAddress = new Uri("https://example.test/")
+        };
+
+        var result = await client.GetAsync<ResponsePayload>("item", body: null!);
+
+        Assert.Equal(hasResult, result is not null);
+        Assert.True(response.Disposed);
+        Assert.True(content.Disposed);
+    }
+
+    [Fact]
+    public async Task GetAsync_GenericTreatsMissingContentTypeAsNonJson()
+    {
+        var content = new TrackingContent("{\"Message\":\"ok\"}", "application/json");
+        content.Headers.ContentType = null;
+        using var response = new TrackingResponse(HttpStatusCode.OK) { Content = content };
+        using var client = new HttpClient(new RecordingHandler(_ => Task.FromResult<HttpResponseMessage>(response)))
+        {
+            BaseAddress = new Uri("https://example.test/")
+        };
+
+        Assert.Null(await client.GetAsync<ResponsePayload>("item", body: null!));
+        Assert.True(response.Disposed);
+        Assert.True(content.Disposed);
+    }
+
+    [Fact]
+    public async Task GetAsync_RawResponseOwnershipRemainsWithTheCaller()
+    {
+        var content = new TrackingContent("{}", "application/json");
+        using var expected = new TrackingResponse(HttpStatusCode.OK) { Content = content };
+        using var client = new HttpClient(new RecordingHandler(_ => Task.FromResult<HttpResponseMessage>(expected)))
+        {
+            BaseAddress = new Uri("https://example.test/")
+        };
+
+        var response = await client.GetAsync("item", body: null!);
+
+        Assert.Same(expected, response);
+        Assert.False(expected.Disposed);
+        Assert.False(content.Disposed);
+        response.Dispose();
+        Assert.True(expected.Disposed);
+        Assert.True(content.Disposed);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetAsync_CancellationOverloadsCancelAnActiveRequest(bool generic)
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new TokenHandler(async (_, token) =>
+        {
+            entered.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            throw new InvalidOperationException("The canceled request continued.");
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        using var cancellation = new CancellationTokenSource();
+        Task call = generic
+            ? client.GetAsync<ResponsePayload>(api: "item", body: new { Id = 1 }, cancellationToken: cancellation.Token)
+            : client.GetAsync(api: "item", body: new { Id = 1 }, cancellationToken: cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => call.WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetAsync_CancellationDuringBodyReadDisposesTheUnreturnedResponse(bool generic)
+    {
+        var content = new WaitingContent();
+        using var response = new TrackingResponse(HttpStatusCode.OK) { Content = content };
+        using var client = new HttpClient(new TokenHandler((_, _) => Task.FromResult<HttpResponseMessage>(response)))
+        {
+            BaseAddress = new Uri("https://example.test/")
+        };
+        using var cancellation = new CancellationTokenSource();
+        Task call = generic
+            ? client.GetAsync<ResponsePayload>("item", null!, cancellation.Token)
+            : client.GetAsync("item", null!, cancellation.Token);
+        await content.Reading.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => call.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(response.Disposed);
+        Assert.True(content.Disposed);
+    }
+
+    private sealed class TokenHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => send(request, cancellationToken);
+    }
+
+    private sealed class WaitingContent : HttpContent
+    {
+        public TaskCompletionSource Reading { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool Disposed { get; private set; }
+        protected override Task SerializeToStreamAsync(System.IO.Stream stream, TransportContext? context)
+            => SerializeToStreamAsync(stream, context, CancellationToken.None);
+        protected override async Task SerializeToStreamAsync(System.IO.Stream stream, TransportContext? context, CancellationToken cancellationToken)
+        {
+            Reading.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        }
+        protected override bool TryComputeLength(out long length) { length = 0; return false; }
+        protected override void Dispose(bool disposing) { Disposed |= disposing; base.Dispose(disposing); }
+    }
+
+    private sealed class TrackingResponse(HttpStatusCode status) : HttpResponseMessage(status)
+    {
+        public bool Disposed { get; private set; }
+        protected override void Dispose(bool disposing) { Disposed |= disposing; base.Dispose(disposing); }
+    }
+
+    private sealed class TrackingContent(string payload, string contentType) : StringContent(payload, Encoding.UTF8, contentType)
+    {
+        public bool Disposed { get; private set; }
+        protected override void Dispose(bool disposing) { Disposed |= disposing; base.Dispose(disposing); }
     }
 
     private sealed class EscapingPayload
