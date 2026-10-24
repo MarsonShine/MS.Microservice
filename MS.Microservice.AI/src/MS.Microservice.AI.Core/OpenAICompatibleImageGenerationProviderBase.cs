@@ -10,9 +10,10 @@ internal abstract class OpenAICompatibleImageGenerationProviderBase : OpenAIComp
     protected OpenAICompatibleImageGenerationProviderBase(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

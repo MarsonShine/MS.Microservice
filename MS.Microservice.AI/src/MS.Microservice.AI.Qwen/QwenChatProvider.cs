@@ -9,9 +9,10 @@ internal sealed class QwenChatProvider : OpenAICompatibleChatProviderBase
     public QwenChatProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<QwenChatProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

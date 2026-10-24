@@ -9,6 +9,9 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MS.Microservice.AI.Core.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.AI.OpenAI.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.AI.DeepSeek.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.AI.Qwen.Tests" />
     <InternalsVisibleTo Include="MS.Microservice.AI.OpenAI" />
     <InternalsVisibleTo Include="MS.Microservice.AI.DeepSeek" />
     <InternalsVisibleTo Include="MS.Microservice.AI.Qwen" />

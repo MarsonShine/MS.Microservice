@@ -9,9 +9,10 @@ internal sealed class QwenAsrProvider : OpenAICompatibleAsrProviderBase
     public QwenAsrProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<QwenAsrProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

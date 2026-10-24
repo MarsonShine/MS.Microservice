@@ -97,6 +97,7 @@ public sealed class DeepSeekChatProviderTests
         return new DeepSeekChatProvider(
             new TestHttpClientFactory(handler),
             Options.Create(options),
+            new AIProviderConcurrency(Options.Create(options)),
             TimeProvider.System,
             NullLogger<DeepSeekChatProvider>.Instance);
     }

@@ -296,27 +296,27 @@ public sealed class QwenMediaProviderTests
 
     private static IAITtsProvider CreateTtsProvider(TestHandler handler)
     {
-        return new QwenTtsProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenTtsProvider>.Instance);
+        return new QwenTtsProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), new AIProviderConcurrency(Options.Create(CreateOptions())), TimeProvider.System, NullLogger<QwenTtsProvider>.Instance);
     }
 
     private static IAIAsrProvider CreateAsrProvider(TestHandler handler)
     {
-        return new QwenAsrProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenAsrProvider>.Instance);
+        return new QwenAsrProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), new AIProviderConcurrency(Options.Create(CreateOptions())), TimeProvider.System, NullLogger<QwenAsrProvider>.Instance);
     }
 
     private static IAIImageGenerationProvider CreateImageGenerationProvider(TestHandler handler)
     {
-        return new QwenImageGenerationProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenImageGenerationProvider>.Instance);
+        return new QwenImageGenerationProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), new AIProviderConcurrency(Options.Create(CreateOptions())), TimeProvider.System, NullLogger<QwenImageGenerationProvider>.Instance);
     }
 
     private static IAIImageEditProvider CreateImageEditProvider(TestHandler handler)
     {
-        return new QwenImageEditProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenImageEditProvider>.Instance);
+        return new QwenImageEditProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), new AIProviderConcurrency(Options.Create(CreateOptions())), TimeProvider.System, NullLogger<QwenImageEditProvider>.Instance);
     }
 
     private static QwenImageEditProvider CreateImageEditProviderInstance(TestHandler handler)
     {
-        return new QwenImageEditProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), TimeProvider.System, NullLogger<QwenImageEditProvider>.Instance);
+        return new QwenImageEditProvider(new TestHttpClientFactory(handler), Options.Create(CreateOptions()), new AIProviderConcurrency(Options.Create(CreateOptions())), TimeProvider.System, NullLogger<QwenImageEditProvider>.Instance);
     }
 
     private static AIOptions CreateOptions()

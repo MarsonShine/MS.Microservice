@@ -74,7 +74,7 @@ public sealed class AIProviderRegistrationOptions
     /// <summary>Default maximum retry attempts for transient failures. Individual models can override this.</summary>
     public int MaxRetryAttempts { get; set; } = 2;
 
-    /// <summary>Maximum concurrent requests allowed for this provider.</summary>
+    /// <summary>Maximum concurrent requests shared by this provider's built-in capabilities within one service container.</summary>
     public int ConcurrencyLimit { get; set; } = 8;
 }
 

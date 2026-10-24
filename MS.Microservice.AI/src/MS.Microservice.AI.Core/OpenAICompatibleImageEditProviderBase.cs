@@ -9,9 +9,10 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
     protected OpenAICompatibleImageEditProviderBase(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

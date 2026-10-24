@@ -9,9 +9,10 @@ internal sealed class QwenImageGenerationProvider : OpenAICompatibleImageGenerat
     public QwenImageGenerationProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<QwenImageGenerationProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

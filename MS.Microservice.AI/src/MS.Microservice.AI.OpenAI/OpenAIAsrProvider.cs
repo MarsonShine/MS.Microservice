@@ -9,9 +9,10 @@ internal sealed class OpenAIAsrProvider : OpenAICompatibleAsrProviderBase
     public OpenAIAsrProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<OpenAIAsrProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

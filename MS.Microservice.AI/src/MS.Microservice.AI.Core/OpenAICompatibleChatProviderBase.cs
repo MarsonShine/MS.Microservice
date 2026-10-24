@@ -27,11 +27,13 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
     protected OpenAICompatibleChatProviderBase(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(concurrency);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -45,7 +47,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         }
 
         _providerOptions = providerOptions;
-        _concurrencyGate = new SemaphoreSlim(providerOptions.ConcurrencyLimit, providerOptions.ConcurrencyLimit);
+        _concurrencyGate = concurrency.GetRequired(Name);
     }
 
     public abstract string Name { get; }
