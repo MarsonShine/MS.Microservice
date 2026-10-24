@@ -61,6 +61,47 @@ public sealed class PublisherTests
         Assert.Equal(OutboxState.Publishing, (await context.Set<OutboxEntry>().AsNoTracking().SingleAsync()).State);
     }
 
+    [Fact]
+    public async Task ExpiredConfirmationDoesNotConsumeTheNextMessagesLease()
+    {
+        await using var connection = await OpenAsync();
+        var services = new ServiceCollection();
+        services.AddScoped(_ => new BusinessContext(connection));
+        var clock = new OutboxStoreTests.Clock();
+        services.AddSingleton<TimeProvider>(clock);
+        var sends = 0;
+        var pendingDuringFirstSend = -1;
+        var transport = new Transport("confirmed", () =>
+        {
+            if (++sends != 1) return;
+            using var observation = new BusinessContext(connection);
+            pendingDuringFirstSend = observation.Set<OutboxEntry>().Count(entry => entry.State == OutboxState.Pending);
+            clock.Advance(TimeSpan.FromMinutes(2));
+        });
+        services.AddSingleton<IMessageTransport>(transport);
+        services.AddSelfManagedMessaging<BusinessContext>(ReceiverTests.Topology());
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<BusinessContext>();
+        await context.Database.EnsureCreatedAsync();
+        await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().ExecuteAsync(async token =>
+        {
+            var publisher = scope.ServiceProvider.GetRequiredService<IIntegrationEventPublisher>();
+            await publisher.EnqueueAsync(NewEvent(), token);
+            await publisher.EnqueueAsync(NewEvent(), token);
+        });
+
+        var published = await scope.ServiceProvider.GetRequiredService<SelfManagedPublisher<BusinessContext>>()
+            .PublishBatchAsync(default);
+
+        Assert.Equal(1, published);
+        Assert.Equal(1, pendingDuringFirstSend);
+        Assert.Equal(2, transport.Messages.Count);
+        var entries = await context.Set<OutboxEntry>().AsNoTracking().ToDictionaryAsync(entry => entry.Id);
+        Assert.Equal(OutboxState.Publishing, entries[transport.Messages[0].Id].State);
+        Assert.Equal(OutboxState.Published, entries[transport.Messages[1].Id].State);
+    }
+
     internal sealed class Transport(string outcome, Action? beforeResult = null) : IMessageTransport
     {
         public List<SerializedMessage> Messages { get; } = [];
