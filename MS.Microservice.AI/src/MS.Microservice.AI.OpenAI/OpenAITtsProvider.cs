@@ -9,9 +9,10 @@ internal sealed class OpenAITtsProvider : OpenAICompatibleTtsProviderBase
     public OpenAITtsProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<OpenAITtsProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

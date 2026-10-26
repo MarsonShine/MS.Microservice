@@ -23,6 +23,14 @@ Chat 与 Media 遇到超时、限流、网络故障时需要一致的重试规�
 [AIProductionPipeline](../src/MS.Microservice.AI.Core/AIProductionPipeline.cs)将观测失败与模型调用结果分开。
 报告器是尽力而为的观测扩展，不是事务性计费账本。
 
+## 响应读取的资源边界
+
+[AIResponseReader](../src/MS.Microservice.AI.Core/AIResponseReader.cs) 在公共 Chat/Media 传输层读取正文。请求使用 `ResponseHeadersRead`，收到状态后分别应用成功正文或错误正文预算，再交给原有解析器。正文仍使用 .NET `HttpContent.LoadIntoBufferAsync` 的有界缓冲和取消能力；由于它会跳过已缓冲内容的新限额，随后将已有缓冲写入只计数字节的 sink，核对实际长度而不再分配一份正文。`Content-Length` 不作为实际长度的证明。
+
+成功 SSE 响应不整包缓冲。行读取器向 `StreamReader` 每次请求一个字符，在追加字符前检查上限；以延迟消费 LF 的状态保留 CRLF 语义，遇到 CR 即交付已完成的行，不等待下一次网络输入。`StreamReader` 继续负责解码和 BOM，行读取器只负责边界，现有单 `data:` 行解析协议不变。
+
+正文和行超限都在进入重试分类前翻译成不可重试的 `ResponseInvalid`，异常保留请求上下文但不携带响应正文。读取继续使用既有尝试或整个流的 linked token；响应与并发租约仍由原有作用域释放。配置和默认值见[响应读取预算](../README.md#响应读取预算)。
+
 ## 为什么教育图像不放在 AI.Core
 
 场景分组、视觉计划、提示词元素和参考图连续性是具体业务规则。

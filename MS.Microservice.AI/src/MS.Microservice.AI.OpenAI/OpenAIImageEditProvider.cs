@@ -9,9 +9,10 @@ internal sealed class OpenAIImageEditProvider : OpenAICompatibleImageEditProvide
     public OpenAIImageEditProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<OpenAIImageEditProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

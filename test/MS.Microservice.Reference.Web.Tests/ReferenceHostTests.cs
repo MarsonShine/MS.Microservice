@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -21,11 +22,14 @@ using RabbitMQ.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using MS.Microservice.AspNetCore;
 using MS.Microservice.Idempotency.EFCore;
+using MS.Microservice.Logging.AspNetCore;
+using MS.Microservice.Logging.Core;
 using MS.Microservice.Messaging;
 using MS.Microservice.Messaging.RabbitMQ;
 using MS.Microservice.Messaging.SelfManaged;
@@ -39,6 +43,62 @@ namespace MS.Microservice.Reference.Web.Tests;
 
 public sealed class ReferenceHostTests
 {
+    [Theory]
+    [InlineData(HttpStatusCode.Conflict)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    public async Task CompletionLogUsesTheStatusWrittenByTheActualHostExceptionHandler(HttpStatusCode status)
+    {
+        var logger = new CompletionLogger();
+        Exception failure = status == HttpStatusCode.Conflict
+            ? new DbUpdateConcurrencyException("private exception detail")
+            : new IOException("private exception detail");
+        await using var fixture = await Fixture.CreateAsync(configureServices: services =>
+        {
+            services.AddSingleton<ILogger<MsRequestLoggingMiddleware>>(logger);
+            services.RemoveAll<IIntegrationEventPublisher>();
+            services.AddSingleton<IIntegrationEventPublisher>(new FailingPublisher(failure));
+        });
+        fixture.Authenticate("profiles.manage");
+        fixture.Client.DefaultRequestHeaders.Add("requestId", "logged-request");
+
+        using var response = await fixture.Client.PostAsJsonAsync("/api/v1/profiles",
+            new CreateProfile("https://issuer.example", "logged-subject", "profile", []));
+        var entry = await logger.Completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(status, response.StatusCode);
+        Assert.Single(logger.Entries);
+        Assert.Equal(5000, entry.EventId.Id);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Equal((int)status, entry.Fields["StatusCode"]);
+        Assert.Equal("/api/v1/profiles", entry.Fields["Path"]);
+        Assert.Equal("logged-request", entry.RequestId);
+        Assert.Null(entry.Exception);
+        Assert.DoesNotContain("private exception detail", entry.Message);
+    }
+
+    [Fact]
+    public async Task CompletionLogUsesTheActualHostTimeoutResponse()
+    {
+        var logger = new CompletionLogger();
+        await using var fixture = await Fixture.CreateAsync(apiTimeoutSeconds: 1, configureServices: services =>
+        {
+            services.AddSingleton<ILogger<MsRequestLoggingMiddleware>>(logger);
+            services.RemoveAll<IIntegrationEventPublisher>();
+            services.AddSingleton<IIntegrationEventPublisher>(new WaitingPublisher());
+        });
+        fixture.Authenticate("profiles.manage");
+
+        using var response = await fixture.Client.PostAsJsonAsync("/api/v1/profiles",
+            new CreateProfile("https://issuer.example", "timed-out-subject", "profile", []));
+        var entry = await logger.Completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
+        Assert.Single(logger.Entries);
+        Assert.Equal(5000, entry.EventId.Id);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Equal(504, entry.Fields["StatusCode"]);
+    }
+
     [Fact]
     public async Task FormalHostRequiresIdentityAndContainsNoLabOrLocalLoginRoutes()
     {
@@ -81,6 +141,105 @@ public sealed class ReferenceHostTests
         fixture.Authenticate("messaging.manage");
         using var allowed = await fixture.Client.GetAsync("/api/operations/messages/failures");
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    }
+
+    [Fact]
+    public async Task ReferencePoliciesHonorCustomPermissionsWithoutAcceptingTheirDefaults()
+    {
+        await using var fixture = await Fixture.CreateAsync(authenticationOverrides: new Dictionary<string, string?>
+        {
+            ["ManagePermission"] = "profiles.write",
+            ["OperationsPermission"] = "messages.inspect"
+        });
+        var cases = new[]
+        {
+            (Scope: "profiles.manage messaging.manage", Manage: false, Operations: false),
+            (Scope: "read profiles.write write", Manage: true, Operations: false),
+            (Scope: "messages.inspect", Manage: false, Operations: true),
+            (Scope: "profiles.write.extra MESSAGES.INSPECT", Manage: false, Operations: false)
+        };
+
+        foreach (var item in cases)
+        {
+            fixture.Authenticate(item.Scope);
+            using var profiles = await fixture.Client.GetAsync("/api/v1/profiles");
+            using var operations = await fixture.Client.GetAsync("/api/operations/messages/failures");
+
+            Assert.Equal(item.Manage ? HttpStatusCode.OK : HttpStatusCode.Forbidden, profiles.StatusCode);
+            Assert.Equal(item.Operations ? HttpStatusCode.OK : HttpStatusCode.Forbidden, operations.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task CustomClaimMappingsAreSharedByReferencePoliciesAndTheRequestActor()
+    {
+        await using var fixture = await Fixture.CreateAsync(authenticationOverrides: new Dictionary<string, string?>
+        {
+            ["SubjectClaimType"] = "user_id",
+            ["PermissionClaimType"] = "permissions"
+        });
+
+        fixture.Authenticate("profiles.manage messaging.manage");
+        using var defaults = await fixture.Client.GetAsync("/api/v1/profiles");
+        Assert.Equal(HttpStatusCode.Forbidden, defaults.StatusCode);
+        fixture.AuthenticateClaims([new("user_id", "mapped-user"), new("scope", "profiles.manage")]);
+        using var wrongPermissionClaim = await fixture.Client.GetAsync("/api/v1/profiles");
+        Assert.Equal(HttpStatusCode.Forbidden, wrongPermissionClaim.StatusCode);
+
+        fixture.AuthenticateClaims([
+            new("user_id", "mapped-user"),
+            new("permissions", "read profiles.manage"),
+            new("permissions", "messaging.manage")
+        ]);
+        using var created = await fixture.Client.PostAsJsonAsync("/api/v1/profiles",
+            new CreateProfile("https://issuer.example", "mapped-user", "mapped profile", []));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var profile = (await created.Content.ReadFromJsonAsync<ProfileView>())!;
+        using var me = await fixture.Client.GetAsync("/api/v1/me");
+        using var operations = await fixture.Client.GetAsync("/api/operations/messages/failures");
+
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+        Assert.Equal(profile.Id, (await me.Content.ReadFromJsonAsync<ProfileView>())!.Id);
+        Assert.Equal(HttpStatusCode.OK, operations.StatusCode);
+    }
+
+    [Fact]
+    public async Task MappedSubjectMustBeNonEmptyAndUnambiguousForNamedAndDefaultPolicies()
+    {
+        await using var fixture = await Fixture.CreateAsync(authenticationOverrides: new Dictionary<string, string?>
+        {
+            ["SubjectClaimType"] = "user_id",
+            ["PermissionClaimType"] = "permissions"
+        });
+        Claim[][] invalidSubjects =
+        [
+            [],
+            [new("user_id", "")],
+            [new("user_id", " ")],
+            [new("user_id", "first"), new("user_id", "second")]
+        ];
+        foreach (var subjects in invalidSubjects)
+        {
+            fixture.AuthenticateClaims(subjects.Concat([
+                new Claim("sub", "legacy-subject"),
+                new Claim("permissions", "profiles.manage messaging.manage")
+            ]));
+            foreach (var path in new[] { "/api/v1/profiles", "/api/operations/messages/failures", "/api/v1/me" })
+            {
+                using var response = await fixture.Client.GetAsync(path);
+                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            }
+        }
+
+        // Repeated claims carrying the same subject still identify one actor.
+        fixture.AuthenticateClaims([
+            new("user_id", "same-user"), new("user_id", "same-user"),
+            new("permissions", "profiles.manage messaging.manage")
+        ]);
+        using var profiles = await fixture.Client.GetAsync("/api/v1/profiles");
+        using var operations = await fixture.Client.GetAsync("/api/operations/messages/failures");
+        Assert.Equal(HttpStatusCode.OK, profiles.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, operations.StatusCode);
     }
 
     [Theory]
@@ -1300,6 +1459,31 @@ public sealed class ReferenceHostTests
             => throw failure;
     }
 
+    private sealed class WaitingPublisher : IIntegrationEventPublisher
+    {
+        public ValueTask EnqueueAsync(IIntegrationEvent message, CancellationToken cancellationToken = default)
+            => new(Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken));
+    }
+
+    private sealed class CompletionLogger : ILogger<MsRequestLoggingMiddleware>
+    {
+        public ConcurrentQueue<CompletionLog> Entries { get; } = new();
+        public TaskCompletionSource<CompletionLog> Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var fields = ((IEnumerable<KeyValuePair<string, object?>>)state!).ToDictionary(item => item.Key, item => item.Value);
+            var entry = new CompletionLog(logLevel, eventId, fields, formatter(state, exception), exception, RequestLogScope.Current?.RequestId);
+            Entries.Enqueue(entry);
+            Completed.TrySetResult(entry);
+        }
+    }
+
+    private sealed record CompletionLog(LogLevel Level, EventId EventId, Dictionary<string, object?> Fields,
+        string Message, Exception? Exception, string? RequestId);
+
     private sealed class ClaimRace
     {
         internal Func<Task>? Winner { get; set; }
@@ -1335,11 +1519,14 @@ public sealed class ReferenceHostTests
         public static async Task<Fixture> CreateAsync(bool migrated = false, bool brokerAvailable = false,
             int? apiPermitLimit = null, int apiWindowSeconds = 60, int? apiTimeoutSeconds = null, bool storageAvailable = true,
             Action<IServiceCollection>? configureServices = null, bool? httpIdempotencyEnabled = null,
-            bool onlyIdempotencyMigrationPending = false, bool mvcEndpoints = false)
+            bool onlyIdempotencyMigrationPending = false, bool mvcEndpoints = false,
+            IReadOnlyDictionary<string, string?>? authenticationOverrides = null)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
             var builder = Builder();
+            foreach (var entry in authenticationOverrides ?? new Dictionary<string, string?>())
+                builder.Configuration["Authentication:" + entry.Key] = entry.Value;
             if (httpIdempotencyEnabled is { } enabled)
                 builder.Configuration["Http:Idempotency:Enabled"] = enabled.ToString();
             if (apiPermitLimit is { } limit)
@@ -1418,6 +1605,11 @@ public sealed class ReferenceHostTests
         {
             var claims = new List<Claim> { new("sub", subject), new("scope", scope) };
             if (tokenId is not null) claims.Add(new("jti", tokenId));
+            AuthenticateClaims(claims);
+        }
+
+        public void AuthenticateClaims(IEnumerable<Claim> claims)
+        {
             var token = new JwtSecurityToken("https://issuer.example", "ms-reference",
                 claims, expires: DateTime.UtcNow.AddMinutes(5),
                 signingCredentials: new(Key, SecurityAlgorithms.HmacSha256));

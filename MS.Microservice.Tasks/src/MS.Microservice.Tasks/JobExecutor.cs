@@ -12,6 +12,8 @@ public sealed class JobExecutor
     private readonly ILogger<JobExecutor> _logger;
     private readonly TimeSpan _pollInterval;
     private readonly TimeSpan _storageTimeout;
+    private readonly TimeSpan _initialFinalizationRetryDelay;
+    private readonly TimeSpan _maximumFinalizationRetryDelay;
     private readonly Dictionary<(string Name, int Version), JobHandlerRegistration> _handlers;
     private readonly Dictionary<string, SemaphoreSlim> _queues;
     private readonly Dictionary<Guid, Task> _active = [];
@@ -27,6 +29,8 @@ public sealed class JobExecutor
         _logger = logger;
         _pollInterval = options.CancellationPollInterval;
         _storageTimeout = options.StorageOperationTimeout;
+        _initialFinalizationRetryDelay = options.InitialFinalizationRetryDelay;
+        _maximumFinalizationRetryDelay = options.MaximumFinalizationRetryDelay;
         _handlers = handlers.ToDictionary(handler => (handler.Name, handler.Version));
         _queues = options.Queues.ToDictionary(queue => queue.Key,
             queue => new SemaphoreSlim(queue.Value, queue.Value), StringComparer.Ordinal);
@@ -116,51 +120,62 @@ public sealed class JobExecutor
         {
             if (handler is null || handler.Queue != execution.Job.Queue)
             {
-                await WithStoreAsync((store, token) => store.FailAsync(execution.Attempt,
-                    handler is null ? "handler_not_registered" : "queue_not_allowed", token));
+                var code = handler is null ? "handler_not_registered" : "queue_not_allowed";
+                await PublishFinalStateAsync(execution.Attempt,
+                    (store, token) => store.FailAsync(execution.Attempt, code, token));
                 return;
             }
-            using var timeout = new CancellationTokenSource(handler.Timeout, _clock);
-            using var work = CancellationTokenSource.CreateLinkedTokenSource(_stopping.Token, timeout.Token);
-            using var observerStop = new CancellationTokenSource();
             var observationFailed = false;
-            var observer = ObserveCancellationAsync(execution, work, observerStop.Token, () => observationFailed = true);
             string? result = null;
             Exception? failure = null;
-            try
+            bool timedOut;
+            bool workCanceled;
+            using (var timeout = new CancellationTokenSource(handler.Timeout, _clock))
+            using (var work = CancellationTokenSource.CreateLinkedTokenSource(_stopping.Token, timeout.Token))
             {
-                await using var scope = _scopes.CreateAsyncScope();
-                var context = new JobExecutionContext(execution.Job, (progress, message) =>
-                    WithStoreAsync((store, token) => store.ReportProgressAsync(execution.Attempt, progress, message, token), work.Token));
-                work.Token.ThrowIfCancellationRequested();
-                result = await handler.ExecuteAsync(scope.ServiceProvider, execution.Job.PayloadJson, context, work.Token);
-            }
-            catch (Exception error) { failure = error; }
-            finally
-            {
-                await observerStop.CancelAsync();
-                await observer;
+                using var observerStop = new CancellationTokenSource();
+                var observer = ObserveCancellationAsync(execution, work, observerStop.Token, () => observationFailed = true);
+                try
+                {
+                    await using var scope = _scopes.CreateAsyncScope();
+                    var context = new JobExecutionContext(execution.Job, (progress, message) =>
+                        WithStoreAsync((store, token) => store.ReportProgressAsync(execution.Attempt, progress, message, token), work.Token));
+                    work.Token.ThrowIfCancellationRequested();
+                    result = await handler.ExecuteAsync(scope.ServiceProvider, execution.Job.PayloadJson, context, work.Token);
+                }
+                catch (Exception error) { failure = error; }
+                finally
+                {
+                    await observerStop.CancelAsync();
+                    await observer;
+                }
+                timedOut = timeout.IsCancellationRequested;
+                workCanceled = work.IsCancellationRequested;
             }
 
-            // Publish a terminal state only after the handler and its DI scope have actually ended.
+            // Fix the outcome after work and scope cleanup; later retries must only repeat this storage operation.
             if (_stopping.IsCancellationRequested)
-                await WithStoreAsync((store, token) => store.RecoverAsync(execution.Attempt, handler.SafeToRetry, token));
-            else if (timeout.IsCancellationRequested || observationFailed || failure is not null)
+                await PublishFinalStateAsync(execution.Attempt,
+                    (store, token) => store.RecoverAsync(execution.Attempt, handler.SafeToRetry, token));
+            else if (timedOut || observationFailed || failure is not null)
             {
-                var code = timeout.IsCancellationRequested ? "execution_timeout"
+                var code = timedOut ? "execution_timeout"
                     : observationFailed ? "cancellation_observation_failed"
                     : failure is JsonException ? "payload_invalid" : "handler_failed";
-                if (failure is not null && !work.IsCancellationRequested)
+                if (failure is not null && !workCanceled)
                     _logger.LogWarning(failure, "Task handler failed with {ErrorCode}.", code);
-                await WithStoreAsync((store, token) => store.FailAsync(execution.Attempt, code, token));
+                await PublishFinalStateAsync(execution.Attempt,
+                    (store, token) => store.FailAsync(execution.Attempt, code, token));
             }
             else if (result is not null && (string.IsNullOrWhiteSpace(result) || result.Length > 4096))
-                await WithStoreAsync((store, token) => store.FailAsync(execution.Attempt, "result_reference_invalid", token));
-            else await WithStoreAsync((store, token) => store.CompleteAsync(execution.Attempt, result, token));
+                await PublishFinalStateAsync(execution.Attempt,
+                    (store, token) => store.FailAsync(execution.Attempt, "result_reference_invalid", token));
+            else await PublishFinalStateAsync(execution.Attempt,
+                (store, token) => store.CompleteAsync(execution.Attempt, result, token));
         }
         catch (Exception error)
         {
-            // A failed final write leaves Running durable for the next startup recovery; do not fabricate success.
+            // Unexpected execution errors preserve durable state for startup recovery; do not fabricate success.
             _logger.LogError(error, "Task execution could not publish its final state.");
         }
         finally
@@ -168,6 +183,39 @@ public sealed class JobExecutor
             capacity.Release();
             lock (_active) _active.Remove(execution.Attempt.Token);
         }
+    }
+
+    private async Task PublishFinalStateAsync(JobAttemptToken attempt,
+        Func<IJobStore, CancellationToken, Task<bool>> publish)
+    {
+        var delay = _initialFinalizationRetryDelay;
+        Exception? failure = null;
+        // Even shutdown recovery gets one independent write before stopping further attempts.
+        do
+        {
+            failure = null;
+            try
+            {
+                if (await WithStoreAsync(publish)) return;
+            }
+            catch (Exception error) { failure = error; }
+            if (_stopping.IsCancellationRequested) break;
+
+            try
+            {
+                if (await WithStoreAsync((store, token) => store.GetExecutionStatusAsync(attempt, token)) == JobExecutionStatus.Ended)
+                    return; // Ended proves only that this token no longer owns the execution, not that it succeeded.
+            }
+            catch (Exception error) { failure ??= error; }
+            if (_stopping.IsCancellationRequested) break;
+
+            _logger.LogWarning(failure, "Task final state could not be confirmed; retrying in {RetryDelay}.", delay);
+            try { await Task.Delay(delay, _clock, _stopping.Token); }
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested) { break; }
+            delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, _maximumFinalizationRetryDelay.Ticks));
+        } while (!_stopping.IsCancellationRequested);
+
+        _logger.LogWarning(failure, "Task final state was not confirmed before shutdown; unfinished executions will be recovered at startup.");
     }
 
     private async Task ObserveCancellationAsync(JobExecution execution, CancellationTokenSource work,

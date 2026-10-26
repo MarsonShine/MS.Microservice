@@ -67,4 +67,26 @@ await unit.ExecuteAsync(async token =>
 
 执行器的进度和控制查询使用独立短事务。SQLite 同库只允许一个写者，处理器持有业务写事务时不要同步等待进度写入；应在事务提交后汇报进度。
 
-首版部署约定为单实例，没有分布式租约和保留期清理。单独使用存储包不会自行恢复或重试；[Coravel 接入](../MS.Microservice.Tasks.Coravel/README.md)提供调度及按处理器策略恢复中断的执行。当前使用 SQLite 验证存储行为；其他关系型数据库应随宿主迁移和集成一起验证。实现细节见 [持久化设计](../../docs/persistence-design.md)。
+## 终态保留清理
+
+`AddEfCoreJobStore` 同时注册可选的 `IJobRetentionStore`，在同一个 DI scope 中与 `IJobStore` 指向同一个存储实例。它提供显式维护操作；宿主决定保留期、可信 Scope 和调用时机，组件注册不会启动清理 worker。
+
+以下示例中的 `retention` 由 DI 解析为 `IJobRetentionStore`，`clock` 为宿主的 `TimeProvider`。成功和失败可以使用不同保留期：
+
+```csharp
+var now = clock.GetUtcNow();
+await retention.PruneAsync(authorizedScope, JobState.Succeeded, now.AddDays(-7),
+    take: 100, cancellationToken: cancellationToken);
+await retention.PruneAsync(authorizedScope, JobState.Failed, now.AddDays(-30),
+    take: 100, cancellationToken: cancellationToken);
+```
+
+每次只清理指定 Scope 和终态，允许的状态为 `Succeeded`、`Failed`、`Cancelled`、`Interrupted`。完成时间必须严格早于 `finishedBeforeUtc`；等于截止时间、完成时间为空、Queued 和 Running 的记录都会保留。截止时间不得晚于当前时间。`take` 默认为 100，范围 1–1000，限制本次候选数量；返回值是实际删除的 Job 数，不包含级联删除的 Attempt 数。竞争可能让候选失去资格，因此返回 0 不保证库中没有其他到期记录。
+
+清理复用独立 fresh context 规则，拒绝调用方已有事务和 ambient transaction，不提交调用方其他更改。每条删除再次核对状态、截止时间和候选版本：Retry 先提交则跳过，删除先提交则 Retry 返回 NotFound。Job 与其 Attempt 通过现有外键级联一起删除；一个批次失败或取消时可能已完成部分删除，可以安全重试。此操作只处理任务记录，结果引用对应的文件生命周期仍由宿主管理。
+
+过期但未物理删除的任务仍保留原提交身份；删除后，同一 `Scope + JobId` 会作为新提交，允许新的参数，执行历史从新任务开始。保留期应覆盖调用方依赖的重试窗口，不提供删除之后的永久去重保证。
+
+清理使用已有模型与外键，不新增索引或启动 DDL。候选和删除数量受 `take` 限制，数据库筛选、排序的扫描成本仍取决于宿主数据规模与现有执行计划。
+
+当前执行部署约定为单实例，没有分布式租约。单独使用存储包不会自行恢复或重试；[Coravel 接入](../MS.Microservice.Tasks.Coravel/README.md)提供调度及按处理器策略恢复中断的执行。当前使用 SQLite 验证存储行为；其他关系型数据库应随宿主迁移和集成一起验证。实现细节见 [持久化设计](../../docs/persistence-design.md)。

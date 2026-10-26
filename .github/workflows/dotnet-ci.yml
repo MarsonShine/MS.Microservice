@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -26,6 +28,18 @@ jobs:
       - name: Validate build layout
         shell: pwsh
         run: ./build/validate-build-layout.ps1
+
+      - name: Validate API compatibility
+        shell: pwsh
+        run: ./build/validate-api-compatibility.ps1
+
+      - name: Validate API compatibility detector
+        shell: pwsh
+        run: ./build/validate-api-compatibility-self-test.ps1
+
+      - name: Validate package consumers
+        shell: pwsh
+        run: ./build/validate-module-consumption.ps1 -Modules @('MS.Microservice.Threading', 'MS.Microservice.Caching', 'MS.Microservice.Http.Resilience', 'MS.Microservice.Messaging.SelfManaged.EFCore')
 
       - name: Restore
         run: dotnet restore

@@ -13,9 +13,8 @@ internal sealed class SelfManagedPublisher<TContext>(OutboxStore<TContext> store
     public async Task<int> PublishBatchAsync(CancellationToken cancellationToken)
     {
         var token = Guid.NewGuid();
-        var messages = await store.ClaimAsync(token, cancellationToken);
         var published = 0;
-        foreach (var entry in messages)
+        await foreach (var entry in store.ClaimAsync(token, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!await store.RenewAsync(entry.Id, token, cancellationToken)) continue;

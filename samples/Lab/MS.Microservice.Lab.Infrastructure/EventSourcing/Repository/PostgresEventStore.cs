@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace MS.Microservice.Infrastructure.EventSourcing.Repository
 {
-    public sealed class PostgresEventStore : IEventStore
+    public sealed class PostgresEventStore : IEventStore, IEventBatchReader
     {
         private readonly EventStoreDbContext _dbContext;
         private readonly SystemTextJsonEventSerializer _serializer;
@@ -42,20 +42,30 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Repository
             CancellationToken cancellationToken = default)
             where TEvent : class, IEventSourcedEvent
         {
-            var query = _dbContext.EventStore
-                .AsNoTracking()
-                .Where(x => x.GlobalPosition > afterGlobalPosition);
-
-            if (!string.IsNullOrWhiteSpace(streamType))
-            {
-                query = query.Where(x => x.StreamType == streamType);
-            }
-
-            var events = await query
+            var events = await EventsAfter(afterGlobalPosition, streamType)
                 .OrderBy(x => x.GlobalPosition)
                 .ToListAsync(cancellationToken);
 
             return events.Select(Map<TEvent>).ToArray();
+        }
+
+        public async Task<IReadOnlyList<EventEnvelope<TEvent>>> ReadBatchAsync<TEvent>(
+            long afterGlobalPosition,
+            int take = 100,
+            string? streamType = null,
+            CancellationToken cancellationToken = default)
+            where TEvent : class, IEventSourcedEvent
+        {
+            if (take is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(take));
+            var events = await EventsAfter(afterGlobalPosition, streamType)
+                .OrderBy(x => x.GlobalPosition).Take(take).ToListAsync(cancellationToken);
+            return events.Select(Map<TEvent>).ToArray();
+        }
+
+        private IQueryable<EventStoreRecord> EventsAfter(long afterGlobalPosition, string? streamType)
+        {
+            var query = _dbContext.EventStore.AsNoTracking().Where(x => x.GlobalPosition > afterGlobalPosition);
+            return string.IsNullOrWhiteSpace(streamType) ? query : query.Where(x => x.StreamType == streamType);
         }
 
         public async Task AppendToStreamAsync<TEvent>(

@@ -12,6 +12,7 @@ COPY samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.W
 COPY src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj src/MS.Microservice.AspNetCore/
 COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Core/
 COPY src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj src/MS.Microservice.Domain.Primitives/
+COPY src/MS.Microservice.Threading/MS.Microservice.Threading.csproj src/MS.Microservice.Threading/
 COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.Abstractions/
 COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.RabbitMQ/
 COPY MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj MS.Microservice.Messaging/src/MS.Microservice.Messaging.SelfManaged.EFCore/

@@ -114,6 +114,7 @@ public sealed class QwenChatProviderTests
         return new QwenChatProvider(
             new TestHttpClientFactory(handler),
             Options.Create(options),
+            new AIProviderConcurrency(Options.Create(options)),
             TimeProvider.System,
             NullLogger<QwenChatProvider>.Instance);
     }

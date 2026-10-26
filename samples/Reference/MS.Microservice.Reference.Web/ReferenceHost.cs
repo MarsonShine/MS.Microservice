@@ -67,7 +67,10 @@ public static class ReferenceHost
             builder.Services.AddHostedService<ReferenceIdempotencyCleanupWorker>();
         }
         builder.Services.AddExceptionHandler<ReferenceConflictHandler>();
-        builder.Services.AddPlatformHttp(builder.Configuration).AddExternalIdentity(builder.Configuration, builder.Environment);
+        var identity = builder.Configuration.GetSection("Authentication").Get<ExternalIdentityOptions>() ?? new();
+        builder.Services.AddPlatformHttp(builder.Configuration)
+            .AddExternalJwtIdentity(identity, builder.Environment)
+            .AddReferenceAuthorization(identity);
         builder.Services.AddValidation();
         builder.Services.AddPlatformHealthChecks()
             .Add(new HealthCheckRegistration("durable-storage",
@@ -119,8 +122,8 @@ public static class ReferenceHost
     {
         var rateLimiting = Enabled(app.Configuration, "Http:RateLimiting:Enabled");
         var requestTimeouts = Enabled(app.Configuration, "Http:RequestTimeouts:Enabled");
-        app.UsePlatformHttp();
         app.UseMsRequestLogging();
+        app.UsePlatformHttp();
         if (requestTimeouts) app.UsePlatformRequestTimeouts();
         app.UseAuthentication();
         app.UseAuthorization();

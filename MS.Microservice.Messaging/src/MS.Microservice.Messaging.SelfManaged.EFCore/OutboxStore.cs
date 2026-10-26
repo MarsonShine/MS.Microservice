@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 
 namespace MS.Microservice.Messaging.SelfManaged;
@@ -7,7 +8,8 @@ internal sealed class OutboxStore<TContext>(TContext context, SelfManagedOptions
 {
     private IQueryable<OutboxEntry> Entries => context.Set<OutboxEntry>().AsNoTracking();
 
-    public async Task<IReadOnlyList<OutboxEntry>> ClaimAsync(Guid token, CancellationToken cancellationToken)
+    public async IAsyncEnumerable<OutboxEntry> ClaimAsync(Guid token,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (token == Guid.Empty) throw new ArgumentException("A claim requires a nonempty token.", nameof(token));
         var now = clock.GetUtcNow().UtcDateTime;
@@ -15,9 +17,10 @@ internal sealed class OutboxStore<TContext>(TContext context, SelfManagedOptions
                 || (x.State == OutboxState.Publishing && x.LockedUntilUtc <= now))
             .OrderBy(x => x.CreatedAtUtc).ThenBy(x => x.Id).Take(options.BatchSize)
             .Select(x => x.Id).ToListAsync(cancellationToken);
-        var claimed = new List<OutboxEntry>();
         foreach (var id in ids)
         {
+            // Acquire only when the publisher requests the next item, after the previous send has finished.
+            now = clock.GetUtcNow().UtcDateTime;
             // Eligibility and ownership change in one statement; selecting a candidate does not own it.
             var count = await Entries.Where(x => x.Id == id
                     && ((x.State == OutboxState.Pending && x.NextAttemptAtUtc <= now)
@@ -29,10 +32,9 @@ internal sealed class OutboxStore<TContext>(TContext context, SelfManagedOptions
             if (count == 1)
             {
                 var entry = await Entries.SingleOrDefaultAsync(x => x.Id == id && x.LockToken == token, cancellationToken);
-                if (entry is not null) claimed.Add(entry);
+                if (entry is not null) yield return entry;
             }
         }
-        return claimed;
     }
 
     private IQueryable<OutboxEntry> Owned(Guid id, Guid token, DateTime now)

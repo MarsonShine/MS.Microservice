@@ -3,9 +3,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
@@ -91,6 +93,48 @@ public sealed class ExternalIdentityTests
         var options = new ExternalIdentityOptions { Authority = authority, Audience = "audience" };
         if (valid) options.Validate(development);
         else Assert.Throws<ArgumentException>(() => options.Validate(development));
+    }
+
+    [Theory]
+    [InlineData("PermissionClaimType")]
+    [InlineData("ManagePermission")]
+    [InlineData("OperationsPermission")]
+    public void CompatibilityRegistrationStillRequiresPermissionSettings(string setting)
+    {
+        var builder = ServiceHost.CreateBuilder(["--environment", "Production", "--Authentication:Authority", "https://issuer.example", "--Authentication:Audience", "audience"]);
+        builder.Configuration[$"Authentication:{setting}"] = "";
+        Assert.Throws<ArgumentException>(() => builder.Services.AddExternalIdentity(builder.Configuration, builder.Environment));
+    }
+
+    [Fact]
+    public async Task CompatibilityPoliciesContinueReadingTheRegisteredOptions()
+    {
+        var builder = ServiceHost.CreateBuilder(["--environment", "Production", "--Authentication:Authority", "https://issuer.example", "--Authentication:Audience", "audience"]);
+        builder.Services.AddExternalIdentity(builder.Configuration, builder.Environment);
+        await using var app = builder.Build();
+        var policies = app.Services.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
+        Assert.NotNull(policies.GetPolicy("Manage"));
+        Assert.NotNull(policies.GetPolicy("MessagingOperations"));
+        var identity = app.Services.GetRequiredService<ExternalIdentityOptions>();
+        identity.SubjectClaimType = "subject_id";
+        identity.PermissionClaimType = "permissions";
+        identity.ManagePermission = "custom.manage";
+        identity.OperationsPermission = "custom.operations";
+        await using var scope = app.Services.CreateAsyncScope();
+        var authorization = scope.ServiceProvider.GetRequiredService<IAuthorizationService>();
+        foreach (var (policy, currentPermission, previousPermission) in new[]
+        {
+            ("Manage", "custom.manage", "profiles.manage"),
+            ("MessagingOperations", "custom.operations", "messaging.manage")
+        })
+        {
+            var current = new ClaimsPrincipal(new ClaimsIdentity([
+                new("subject_id", "external-user"), new("permissions", currentPermission)], "test"));
+            var previous = new ClaimsPrincipal(new ClaimsIdentity([
+                new("subject_id", "external-user"), new("permissions", previousPermission)], "test"));
+            Assert.True((await authorization.AuthorizeAsync(current, null, policy)).Succeeded);
+            Assert.False((await authorization.AuthorizeAsync(previous, null, policy)).Succeeded);
+        }
     }
 
     [Theory]

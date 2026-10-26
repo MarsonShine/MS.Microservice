@@ -74,8 +74,17 @@ public sealed class AIProviderRegistrationOptions
     /// <summary>Default maximum retry attempts for transient failures. Individual models can override this.</summary>
     public int MaxRetryAttempts { get; set; } = 2;
 
-    /// <summary>Maximum concurrent requests allowed for this provider.</summary>
+    /// <summary>Maximum concurrent requests shared by this provider's built-in capabilities within one service container.</summary>
     public int ConcurrencyLimit { get; set; } = 8;
+
+    /// <summary>Maximum bytes buffered for a successful non-streaming response.</summary>
+    public long MaxResponseBytes { get; set; } = 64L * 1024 * 1024;
+
+    /// <summary>Maximum bytes buffered for an HTTP error response, including streaming handshakes.</summary>
+    public long MaxErrorResponseBytes { get; set; } = 64L * 1024;
+
+    /// <summary>Maximum UTF-16 characters in any streaming response line, excluding its CR/LF terminator.</summary>
+    public int MaxStreamLineCharacters { get; set; } = 1024 * 1024;
 }
 
 /// <summary>

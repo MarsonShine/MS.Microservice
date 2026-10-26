@@ -1,0 +1,17 @@
+{
+  "formatVersion": 1,
+  "commit": "883b907c733d75093f79a0fa20639023ac3167fd",
+  "modules": [
+    "MS.Microservice.Core",
+    "MS.Microservice.AI.Core",
+    "MS.Microservice.AspNetCore",
+    "MS.Microservice.Tasks.EFCore",
+    "MS.Microservice.EventSourcing",
+    "MS.Microservice.Audio",
+    "MS.Microservice.Logging.AspNetCore",
+    "MS.Microservice.Messaging.SelfManaged.EFCore",
+    "MS.Microservice.Threading",
+    "MS.Microservice.Caching",
+    "MS.Microservice.Http.Resilience"
+  ]
+}

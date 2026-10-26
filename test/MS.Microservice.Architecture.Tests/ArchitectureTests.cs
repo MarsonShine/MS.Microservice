@@ -252,7 +252,7 @@ public class ArchitectureTests
     [Fact]
     public void ProductionWeb_ShouldNot_DependOn_LabHost()
     {
-        var referencedAssemblies = typeof(MS.Microservice.Lab.Controller.AccountController)
+        var referencedAssemblies = typeof(MS.Microservice.Reference.Web.ReferenceHost)
             .Assembly
             .GetReferencedAssemblies()
             .Select(assembly => assembly.Name);

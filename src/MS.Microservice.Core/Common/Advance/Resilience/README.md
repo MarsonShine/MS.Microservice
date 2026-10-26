@@ -2,6 +2,8 @@
 
 RetryBuilder、RetryExecutor、IRetryStrategy 和 IRetryCondition 保持现有命名空间与签名。策略和条件的多次设置仍覆盖前一次；成功结果调用 ShouldRetry<T>，异常调用 ShouldRetry<object?>。自定义策略的 RetryContext.Attempt 从 1 开始，LastException 提供当前失败。
 
+`RetryContext.TotalElapsed` 使用系统单调时间戳计算累计耗时，不受 UTC 校时影响。`StartTime` 保留创建时的 UTC 诊断时间，不用于持续时间判断。
+
 ## 次数和默认值
 
 - maxRetries=N 是额外重试 N 次，最多调用 N+1 次；0 表示仅执行一次。

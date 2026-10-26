@@ -27,11 +27,13 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
     protected OpenAICompatibleChatProviderBase(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(concurrency);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -45,7 +47,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         }
 
         _providerOptions = providerOptions;
-        _concurrencyGate = new SemaphoreSlim(providerOptions.ConcurrencyLimit, providerOptions.ConcurrencyLimit);
+        _concurrencyGate = concurrency.GetRequired(Name);
     }
 
     public abstract string Name { get; }
@@ -75,7 +77,9 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
                     isStreaming: false,
                     async (httpClient, httpRequest, requestCancellationToken) =>
                     {
-                        using var httpResponse = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseContentRead, requestCancellationToken).ConfigureAwait(false);
+                        using var httpResponse = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, requestCancellationToken).ConfigureAwait(false);
+                        await AIResponseReader.BufferAsync(httpResponse, _providerOptions, Name, AICapability.Chat,
+                            model, request.RequestId, requestCancellationToken).ConfigureAwait(false);
                         return await ParseChatCompletionResponseAsync(httpResponse, model, request, requestCancellationToken).ConfigureAwait(false);
                     },
                     cancellationToken)
@@ -285,6 +289,8 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         {
             using (httpResponse)
             {
+                await AIResponseReader.BufferAsync(httpResponse, _providerOptions, Name, AICapability.Chat,
+                    model, request.RequestId, cancellationToken).ConfigureAwait(false);
                 throw await CreateProviderExceptionAsync(httpResponse, model, request, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -301,6 +307,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         using var httpResponse = streamingResponse.Response;
         await using var responseStream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var reader = new StreamReader(responseStream);
+        var lines = new AIResponseReader.BoundedLineReader(reader, _providerOptions.MaxStreamLineCharacters);
 
         var sawDone = false;
         AIUsage? usage = null;
@@ -310,7 +317,13 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
 
         while (true)
         {
-            var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+            string? line;
+            try { line = await lines.ReadLineAsync(cancellationToken).ConfigureAwait(false); }
+            catch (HttpRequestException exception) when (exception.HttpRequestError == HttpRequestError.ConfigurationLimitExceeded)
+            {
+                throw AIResponseReader.LimitExceeded(Name, AICapability.Chat, model, request.RequestId,
+                    httpResponse, providerRequestId, "streaming line character", exception);
+            }
             if (line is null)
             {
                 break;

@@ -6,6 +6,10 @@ Host registration and claim mappings are described in the [README](../README.md#
 
 The subject requirement collects distinct subject values with ordinal comparison and accepts exactly one non-whitespace value. Missing, empty or conflicting subjects fail protected policies. JWT validation checks issuer, audience, lifetime and signing key; the component issues no credentials.
 
+`AddExternalJwtIdentity` registers JWT validation and subject-based default/fallback policies. Hosts own named application policies and use `RequireExternalScope` to include authentication, subject validation and an explicit scope requirement together. Pure JWT registration does not inspect permission settings. Reference binds one identity options instance and registers `Manage` and `MessagingOperations` in its composition root.
+
+The original `AddExternalIdentity` entry point is retained in [the compatibility adapter](../ExternalIdentity.Compatibility.cs). It still validates all legacy settings and registers both original policies. Their permission and claim mappings are read from the registered options during authorization, preserving the original closure behavior. `HasPermission` remains the common matching implementation for both paths.
+
 ## Measurement boundary
 
 The [microbenchmark](../../../benchmarks/MS.Microservice.AspNetCore.Benchmarks/Program.cs) measures the public permission method on prebuilt principals, not HTTP throughput. The earlier implementation used `FindAll`, LINQ and `Split`; the revised scanner avoids token arrays and substrings. The comparison baseline was commit `7b1c78a`.

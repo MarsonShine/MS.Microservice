@@ -329,6 +329,7 @@ public sealed class OpenAIMediaProviderTests
         return new OpenAITtsProvider(
             new TestHttpClientFactory(handler),
             Options.Create(CreateOptions()),
+            new AIProviderConcurrency(Options.Create(CreateOptions())),
             TimeProvider.System,
             NullLogger<OpenAITtsProvider>.Instance);
     }
@@ -338,6 +339,7 @@ public sealed class OpenAIMediaProviderTests
         return new OpenAIAsrProvider(
             new TestHttpClientFactory(handler),
             Options.Create(CreateOptions()),
+            new AIProviderConcurrency(Options.Create(CreateOptions())),
             TimeProvider.System,
             NullLogger<OpenAIAsrProvider>.Instance);
     }
@@ -347,6 +349,7 @@ public sealed class OpenAIMediaProviderTests
         return new OpenAIImageGenerationProvider(
             new TestHttpClientFactory(handler),
             Options.Create(CreateOptions()),
+            new AIProviderConcurrency(Options.Create(CreateOptions())),
             TimeProvider.System,
             NullLogger<OpenAIImageGenerationProvider>.Instance);
     }
@@ -356,6 +359,7 @@ public sealed class OpenAIMediaProviderTests
         return new OpenAIImageEditProvider(
             new TestHttpClientFactory(handler),
             Options.Create(CreateOptions()),
+            new AIProviderConcurrency(Options.Create(CreateOptions())),
             TimeProvider.System,
             NullLogger<OpenAIImageEditProvider>.Instance);
     }

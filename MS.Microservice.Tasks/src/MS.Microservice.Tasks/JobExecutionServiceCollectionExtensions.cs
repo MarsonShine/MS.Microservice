@@ -18,6 +18,10 @@ public static class JobExecutionServiceCollectionExtensions
         if (options.CancellationPollInterval < TimeSpan.FromMilliseconds(25) || options.CancellationPollInterval > TimeSpan.FromMinutes(1)
             || options.StorageOperationTimeout < TimeSpan.FromMilliseconds(25) || options.StorageOperationTimeout > TimeSpan.FromMinutes(5))
             throw new ArgumentException("Use finite cancellation polling and storage operation timeouts.", nameof(configure));
+        if (options.InitialFinalizationRetryDelay < TimeSpan.FromMilliseconds(25)
+            || options.MaximumFinalizationRetryDelay < options.InitialFinalizationRetryDelay
+            || options.MaximumFinalizationRetryDelay > TimeSpan.FromMinutes(5))
+            throw new ArgumentException("Finalization retry delays must satisfy 25ms <= initial <= maximum <= 5 minutes.", nameof(configure));
         services.AddSingleton(options);
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton(provider => new JobExecutor(provider.GetRequiredService<IServiceScopeFactory>(),

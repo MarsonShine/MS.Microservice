@@ -15,6 +15,7 @@ public static class JobServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<EfCoreJobStore<TContext>>();
         services.AddScoped<IJobStore>(provider => provider.GetRequiredService<EfCoreJobStore<TContext>>());
+        services.AddScoped<IJobRetentionStore>(provider => provider.GetRequiredService<EfCoreJobStore<TContext>>());
         return services;
     }
 }

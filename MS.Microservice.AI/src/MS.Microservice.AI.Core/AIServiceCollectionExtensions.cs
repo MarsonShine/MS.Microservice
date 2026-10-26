@@ -43,6 +43,7 @@ public static class AIServiceCollectionExtensions
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, AIOptionsValidator>());
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+        services.TryAddSingleton<AIProviderConcurrency>();
         services.TryAddSingleton<AIProductionPipeline>();
         services.TryAddSingleton<IAIModelResolver, DefaultAIModelResolver>();
         services.TryAddSingleton<IAIProviderFactory, DefaultAIProviderFactory>();

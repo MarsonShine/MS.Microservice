@@ -9,9 +9,10 @@ internal sealed class OpenAIChatProvider : OpenAICompatibleChatProviderBase
     public OpenAIChatProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<OpenAIChatProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

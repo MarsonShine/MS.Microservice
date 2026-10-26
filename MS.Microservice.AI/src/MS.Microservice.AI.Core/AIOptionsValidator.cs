@@ -33,6 +33,21 @@ public sealed class AIOptionsValidator : IValidateOptions<AIOptions>
                 failures.Add($"AI:Providers:{provider.Key}:ConcurrencyLimit must be greater than 0.");
             }
 
+            if (provider.Value.MaxResponseBytes is < 1 or > int.MaxValue)
+            {
+                failures.Add($"AI:Providers:{provider.Key}:MaxResponseBytes must be between 1 and Int32.MaxValue.");
+            }
+
+            if (provider.Value.MaxErrorResponseBytes is < 1 or > int.MaxValue)
+            {
+                failures.Add($"AI:Providers:{provider.Key}:MaxErrorResponseBytes must be between 1 and Int32.MaxValue.");
+            }
+
+            if (provider.Value.MaxStreamLineCharacters <= 0)
+            {
+                failures.Add($"AI:Providers:{provider.Key}:MaxStreamLineCharacters must be greater than 0.");
+            }
+
             if (provider.Value.ApiKeySecretName is not null && string.IsNullOrWhiteSpace(provider.Value.ApiKeySecretName))
             {
                 failures.Add($"AI:Providers:{provider.Key}:ApiKeySecretName cannot be empty when provided.");

@@ -36,6 +36,16 @@ GetDue 只查找已到时的 Queued 候选，不授予执行资格。TryStart �
 
 Retry 仅接受 Failed、Cancelled、Interrupted 且尚有次数的 Job，将其重新排队并清除本次进度、错误、取消标记和结果引用，保留旧 Attempt。Running 不能重试；旧 Token 即使继续回报也无法更新新执行。最大次数约束的是实际领取执行的数量，排队时取消不消耗执行次数。
 
+## 终态保留与并发清理
+
+`IJobRetentionStore` 是独立的可选契约，已有 `IJobStore` 实现无需增加成员。EF 存储把两个接口注册为同一个 scoped 实例，清理仍通过独立 scope 和干净的 DbContext 执行，拒绝调用方已有事务或 ambient transaction。
+
+一次清理按宿主指定的 Scope、一个终态和 UTC 截止时间筛选。只允许 Succeeded、Failed、Cancelled、Interrupted；完成时间为空或不严格早于截止时间的记录不符合条件。先按完成时间和 Id 排序，投影最多 take 个 Id、Version，再逐条执行包含 Scope、Id、Version、状态和截止时间条件的 DELETE。ExecuteDelete 不会自动应用 EF 并发标记，版本条件必须明确出现在删除语句中。
+
+Retry 先提交会改变版本、变成 Queued 并清空完成时间，候选删除因此返回 0；删除先提交则 Retry 看不到该任务。执行记录由已有外键在每条 Job 删除时级联清除，避免先删除 Attempt 后发现 Job 已重新排队。批次不持有跨所有候选的长事务，取消或失败允许已经完成的删除保留；返回计数只计算实际删除的 Job。take 限制候选与写入次数，不承诺数据库只扫描相同数量的行。
+
+保留期和调度由宿主决定，可以为不同 Scope、不同终态选择不同截止时间；默认不创建清理服务。实际删除之前，提交身份仍由原 Job 保留。删除以后同 Scope、同 JobId 是一次新提交，旧 Attempt Token 不能修改新的执行；组件不额外保存永久去重墓碑，也不处理 ResultReference 指向的文件。
+
 ## 扩展边界
 
 当前原子更新提供执行身份和数据库版本，没有分布式租约、续租或实例失联判定。单实例执行器启动时读取 Running 的执行令牌，再调用 RecoverAsync：同事务结束旧 Attempt，并在调用者明确允许、未取消且还有次数时将 Job 重新排队。这样进程不会在“已中断但尚未重排”的提交间隙丢失恢复机会。优雅停机也使用这一原子入口，安全任务留在队列供下次启动执行。

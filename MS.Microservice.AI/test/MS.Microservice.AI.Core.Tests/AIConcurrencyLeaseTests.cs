@@ -101,7 +101,7 @@ public sealed class AIConcurrencyLeaseTests
     }
 
     private sealed class ChatProvider(IHttpClientFactory factory, TimeProvider clock)
-        : OpenAICompatibleChatProviderBase(factory, CreateOptions(), clock, NullLogger.Instance)
+        : OpenAICompatibleChatProviderBase(factory, CreateOptions(), new AIProviderConcurrency(CreateOptions()), clock, NullLogger.Instance)
     {
         public override string Name => "test";
         protected override string HttpClientName => "test";
@@ -109,7 +109,7 @@ public sealed class AIConcurrencyLeaseTests
     }
 
     private sealed class MediaProvider(IHttpClientFactory factory, TimeProvider clock)
-        : OpenAICompatibleMediaProviderBase(factory, CreateOptions(), clock, NullLogger.Instance)
+        : OpenAICompatibleMediaProviderBase(factory, CreateOptions(), new AIProviderConcurrency(CreateOptions()), clock, NullLogger.Instance)
     {
         public override string Name => "test";
         protected override string HttpClientName => "test";

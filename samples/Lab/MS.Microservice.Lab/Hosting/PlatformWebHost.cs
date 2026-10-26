@@ -73,6 +73,7 @@ public static class PlatformWebHost
         var corsOptions = app.Services.GetRequiredService<IOptions<CorsOptions>>().Value;
 
         app.UseForwardedHeaders();
+        app.UseMsRequestLogging();
 
         if (app.Environment.IsDevelopment() || enableLabEndpoints)
         {
@@ -85,7 +86,6 @@ public static class PlatformWebHost
         }
 
         app.UseResponseCompression();
-        app.UseMsRequestLogging();
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseRouting();

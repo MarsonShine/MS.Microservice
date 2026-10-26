@@ -1,0 +1,672 @@
+{
+  "baselineCommit": "883b907c733d75093f79a0fa20639023ac3167fd",
+  "implementationHead": "cd32a1b67f74e29f17b6f63cd64d6d5ec0c5a044",
+  "sdk": "10.0.402",
+  "runtime": "10.0.13",
+  "restore": {
+    "exitCode": 0,
+    "log": null,
+    "output": "Quiet restore exited 0 without output; no log file was created."
+  },
+  "build": {
+    "exitCode": 0,
+    "warnings": 0,
+    "errors": 0,
+    "log": "artifacts/validation/code-optimization-final-build.log"
+  },
+  "initialRestrictedTestRun": {
+    "exitCode": 1,
+    "assemblies": 48,
+    "counts": {
+      "Passed": 3539,
+      "NotExecuted": 158,
+      "Failed": 14
+    },
+    "failedTests": [
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_RejectsWorkerBudgetsAndCleansBeforeAnyCallerWrites(variant: \"cssPage\")",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_RejectsWorkerBudgetsAndCleansBeforeAnyCallerWrites(variant: \"pdfBytes\")",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_CallerCopyFailureOrCancellationKeepsOwnershipAndMayLeavePartialBytes(cancel: True)",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Job_InheritsOwnedChildAndWaitsForItEvenAfterParentExits",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_StaticImageFormatsDecodeAndAppearInPdf(mime: \"image/jpeg\", format: Jpeg)",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_BlocksNetworkLocalFilesFramesScriptsRefreshAndBaseOverride",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_RealUnicodePaginationStylesFontImageAndCallerPrefix",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_RejectsWorkerBudgetsAndCleansBeforeAnyCallerWrites(variant: \"pages\")",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_StaticImageFormatsDecodeAndAppearInPdf(mime: \"image/webp\", format: Webp)",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_AcceptsExactUtf8AndOutputBudgetRejectsOneByteLess",
+      "MS.Microservice.Documents.Rendering.Tests.HtmlPdfRendererTests.Render_CallerCopyFailureOrCancellationKeepsOwnershipAndMayLeavePartialBytes(cancel: False)",
+      "MS.Microservice.Notifications.Tests.Email.SmtpEmailSenderTests.Send_PublicClientRejectsAnUntrustedLoopbackCertificate",
+      "MS.Microservice.Notifications.Tests.Email.SmtpEmailSenderTests.Send_RealTlsAndAuthenticationUseOnlyThePinnedLoopbackCertificate(mode: TlsOnConnect)",
+      "MS.Microservice.Notifications.Tests.Email.SmtpEmailSenderTests.Send_RealTlsAndAuthenticationUseOnlyThePinnedLoopbackCertificate(mode: RequireStartTls)"
+    ],
+    "resultsDirectory": "artifacts/validation/code-optimization-final-tests"
+  },
+  "finalTestRun": {
+    "exitCode": 0,
+    "execution": "require_escalated; original code and test configuration unchanged",
+    "assemblies": 48,
+    "counts": {
+      "Passed": 3553,
+      "NotExecuted": 158
+    },
+    "results": [
+      {
+        "assembly": "ms.microservice.ai.core.tests.dll",
+        "counts": {
+          "Passed": 109
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_27_net10.0[2].trx",
+        "sha256": "2e2b97620f770092706e64236f7d1b9897106ada3d7831cc8a82811466793a21"
+      },
+      {
+        "assembly": "ms.microservice.ai.deepseek.tests.dll",
+        "counts": {
+          "Passed": 10
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_27_net10.0[1].trx",
+        "sha256": "2f4cdc9d6a3c44d460ff5062976490bec3750ef1410aaf1a5c7e653ce0be4f0f"
+      },
+      {
+        "assembly": "ms.microservice.ai.openai.tests.dll",
+        "counts": {
+          "Passed": 31
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_28_net10.0[1].trx",
+        "sha256": "98e29cf4bc8bd1a4e7927be552271207aa04440328fb7a446247ee46a72df152"
+      },
+      {
+        "assembly": "ms.microservice.ai.questiongeneration.tests.dll",
+        "counts": {
+          "Passed": 21
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_28_net10.0.trx",
+        "sha256": "2edd4690831a08000efa11f760511ff466be13c77e46b3377b73ddfb84020682"
+      },
+      {
+        "assembly": "ms.microservice.ai.qwen.tests.dll",
+        "counts": {
+          "Passed": 13
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_27_net10.0.trx",
+        "sha256": "a5439ea53c1106f037bb6eeef4b1d3458284292266d180e19d849b19bc04dff6"
+      },
+      {
+        "assembly": "ms.microservice.architecture.tests.dll",
+        "counts": {
+          "Passed": 42
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_50_net10.0.trx",
+        "sha256": "fc0ea10ecc1fce86674a72efeeb88d78ccfd1e1da3bce4ca222f470e6ce20d22"
+      },
+      {
+        "assembly": "ms.microservice.aspnetcore.tests.dll",
+        "counts": {
+          "Passed": 117
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_50_net10.0[2].trx",
+        "sha256": "0b36a1cbb05c1493bde89df188995471bef90b4b902239356fd00d32a4812977"
+      },
+      {
+        "assembly": "ms.microservice.audio.tests.dll",
+        "counts": {
+          "Passed": 92
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_50_net10.0[3].trx",
+        "sha256": "419be9edcfe0f7b7907285e0cdf102631f79ad16068113e3ce65cbaea829537a"
+      },
+      {
+        "assembly": "ms.microservice.caching.redis.tests.dll",
+        "counts": {
+          "NotExecuted": 1,
+          "Passed": 16
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_52_net10.0.trx",
+        "sha256": "b7a162b2865b9085655858fd90fe5e632f7b4f8064a80d4c41f7282f0fdbd2bc"
+      },
+      {
+        "assembly": "ms.microservice.caching.tests.dll",
+        "counts": {
+          "Passed": 5
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_54_net10.0.trx",
+        "sha256": "1be363706cc072005651836b814c596efa5db2984e200f039be6a5e161d764ae"
+      },
+      {
+        "assembly": "ms.microservice.core.tests.dll",
+        "counts": {
+          "Passed": 1120
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_56_net10.0.trx",
+        "sha256": "45a9ce18287c23ce87dc8e15be58f7d66f33983ef34d277a0db847d4bfde44c0"
+      },
+      {
+        "assembly": "ms.microservice.documents.rendering.tests.dll",
+        "counts": {
+          "Passed": 94,
+          "NotExecuted": 6
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_55_net10.0.trx",
+        "sha256": "5325eb4e339038943a1af0ee59475375d20526561207b976c601f7130bbfb307"
+      },
+      {
+        "assembly": "ms.microservice.documents.tests.dll",
+        "counts": {
+          "Passed": 120
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_57_net10.0.trx",
+        "sha256": "44fda79214d3a8cfb6325c6b12b7dcdec8f1b071abe4ad6dca32a157a6a5cb1f"
+      },
+      {
+        "assembly": "ms.microservice.eventbus.tests.dll",
+        "counts": {
+          "Passed": 18
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_58_net10.0.trx",
+        "sha256": "316ce08d7ab959d989a29f233b96d4ffe953358e20cd67ae0eeafece3a7b4139"
+      },
+      {
+        "assembly": "ms.microservice.excel.tests.dll",
+        "counts": {
+          "Passed": 133,
+          "NotExecuted": 19
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_00_net10.0.trx",
+        "sha256": "edc01d2df4737497a701fcba1f504b360419b36d080d2e986721784bbfcb4c73"
+      },
+      {
+        "assembly": "ms.microservice.healthchecks.redis.tests.dll",
+        "counts": {
+          "Passed": 8
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_02_net10.0.trx",
+        "sha256": "3bfe235b202250a8b007f2f29870acfd20d5df18f656c921572b8b0118f6c5d7"
+      },
+      {
+        "assembly": "ms.microservice.http.resilience.tests.dll",
+        "counts": {
+          "Passed": 8
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_02_net10.0[1].trx",
+        "sha256": "bf9ec7a6a21e1b9016adbb51bdf2e488df652b5b3cf53fddaf6d475bfcb03dfa"
+      },
+      {
+        "assembly": "ms.microservice.idempotency.efcore.tests.dll",
+        "counts": {
+          "Passed": 9
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_30_net10.0.trx",
+        "sha256": "36f0d79e7d40e3ba902df0e9b91d4818a7a2e4c97e6456da16e55bbc48516851"
+      },
+      {
+        "assembly": "ms.microservice.lab.tests.dll",
+        "counts": {
+          "Passed": 418,
+          "NotExecuted": 15
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_04_net10.0.trx",
+        "sha256": "a807f66d7f9ad4d57111afc9dce2ba11e4dd1f93fcd5a061f4fc1f90fbf4cfea"
+      },
+      {
+        "assembly": "ms.microservice.logging.aspnetcore.tests.dll",
+        "counts": {
+          "Passed": 17
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_31_net10.0[2].trx",
+        "sha256": "bc7d0354a5ed409e8b6262e9336cf7b100bd845c8ab123c4006662658e7e1b40"
+      },
+      {
+        "assembly": "ms.microservice.logging.core.tests.dll",
+        "counts": {
+          "Passed": 15
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_31_net10.0[1].trx",
+        "sha256": "a5d9418367051f80bbadbf2d6446ccb0a5e9873d83892c273f1ca518e6c88d16"
+      },
+      {
+        "assembly": "ms.microservice.logging.nlog.tests.dll",
+        "counts": {
+          "Passed": 5
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_31_net10.0.trx",
+        "sha256": "97a1f7142ee4503c8e0adb77f7bcc1f4566a30c1e38d72eae5c317ce106217f1"
+      },
+      {
+        "assembly": "ms.microservice.logging.serilog.tests.dll",
+        "counts": {
+          "Passed": 4
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_32_net10.0.trx",
+        "sha256": "917a953fb80df9b63d60ef0a64694d12917d35c820390e8edbaba7a3eb72a000"
+      },
+      {
+        "assembly": "ms.microservice.media.inference.tests.dll",
+        "counts": {
+          "Passed": 136,
+          "NotExecuted": 64
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_33_net10.0[1].trx",
+        "sha256": "bfd5ac8ce7db5e164f8f48a95dab1bf75de0552fe851d600a31aeef1e3c6db63"
+      },
+      {
+        "assembly": "ms.microservice.media.tests.dll",
+        "counts": {
+          "NotExecuted": 41,
+          "Passed": 188
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_33_net10.0.trx",
+        "sha256": "0e47cbf9ca271d225087a82d520f8c244732e036235679433aaf1a61b888db54"
+      },
+      {
+        "assembly": "ms.microservice.messaging.abstractions.tests.dll",
+        "counts": {
+          "Passed": 42
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_36_net10.0.trx",
+        "sha256": "3e4017b2c85738cff74e62147ff16f876792942ad6e8a808b6043cb4c0de6e2d"
+      },
+      {
+        "assembly": "ms.microservice.messaging.integrationtests.dll",
+        "counts": {
+          "NotExecuted": 12,
+          "Passed": 5
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_39_net10.0.trx",
+        "sha256": "21204430c3b1344bb65c61dada9cae33fa09da1785e96d12c839486663b543c1"
+      },
+      {
+        "assembly": "ms.microservice.messaging.rabbitmq.tests.dll",
+        "counts": {
+          "Passed": 34
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_36_net10.0[1].trx",
+        "sha256": "778d7b6f721d07a7a70c2ef9dd7c50026ede23f84bdc49a37ea5632a322c4153"
+      },
+      {
+        "assembly": "ms.microservice.messaging.selfmanaged.tests.dll",
+        "counts": {
+          "Passed": 54
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_38_net10.0.trx",
+        "sha256": "50ce322ef7e920238eeaea5491db5101b60330acb50ee8b01726a8ee09fb9522"
+      },
+      {
+        "assembly": "ms.microservice.messaging.wolverine.tests.dll",
+        "counts": {
+          "Passed": 22
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_40_net10.0.trx",
+        "sha256": "5d935d3e0bfb1c7de20c2b2b1efb473a728ce0ae70733ba34673dca1d5aa07a1"
+      },
+      {
+        "assembly": "ms.microservice.notifications.tests.dll",
+        "counts": {
+          "Passed": 75
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_06_net10.0[1].trx",
+        "sha256": "5e31c0ec37a8d7e3b88899fbd0ae70d1a93ffee7e16bc0ef6e1ed96347369325"
+      },
+      {
+        "assembly": "ms.microservice.observability.tests.dll",
+        "counts": {
+          "Passed": 10
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_06_net10.0.trx",
+        "sha256": "bc34bb6ebf73544ce2a22bb96c83ac44e94dca20b48e1d5c5a039332d9641b85"
+      },
+      {
+        "assembly": "ms.microservice.persistence.efcore.tests.dll",
+        "counts": {
+          "Passed": 19
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_42_net10.0[1].trx",
+        "sha256": "ddcda6ba2fcf77327dd7131855301197b99bdd4f08d5e5324337a9b4a981b56f"
+      },
+      {
+        "assembly": "ms.microservice.persistence.sqlsugar.tests.dll",
+        "counts": {
+          "Passed": 20
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_42_net10.0.trx",
+        "sha256": "0194c64aad35e133d9dac260f8c0046c2a32c98654f04befd304a7aeb51e5037"
+      },
+      {
+        "assembly": "ms.microservice.processes.tests.dll",
+        "counts": {
+          "Passed": 22
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_08_net10.0.trx",
+        "sha256": "daff11fcde75d16e859f05fbee13dd20a98b0d1083f6ac633d68206b860f1576"
+      },
+      {
+        "assembly": "ms.microservice.reference.application.tests.dll",
+        "counts": {
+          "Passed": 5
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_09_net10.0.trx",
+        "sha256": "7fe7cb468d18f983e7bb07d38fe570062fae2b8b2f4afa476e90c5095a9a0756"
+      },
+      {
+        "assembly": "ms.microservice.reference.databasemigrator.tests.dll",
+        "counts": {
+          "Passed": 6
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_11_net10.0[1].trx",
+        "sha256": "869a6ef217ed60c36321d4890e9768ac44055b70a0a8ae247360d15e2d765e71"
+      },
+      {
+        "assembly": "ms.microservice.reference.domain.tests.dll",
+        "counts": {
+          "Passed": 20
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_11_net10.0.trx",
+        "sha256": "7b3fbf85299d4734033a20e76a4133a9d0cb031a27fa37bc8994ce897f67f68b"
+      },
+      {
+        "assembly": "ms.microservice.reference.persistence.tests.dll",
+        "counts": {
+          "Passed": 6
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_16_net10.0[1].trx",
+        "sha256": "f0b2caa3b764d315e11a20100170f562988f66d077113a6abe29f95f12a57876"
+      },
+      {
+        "assembly": "ms.microservice.reference.web.tests.dll",
+        "counts": {
+          "Passed": 79
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_16_net10.0[2].trx",
+        "sha256": "1329b7e681ee7b3719507e187e48a294f9e7a62de3658858ab6a8c392cfcf706"
+      },
+      {
+        "assembly": "ms.microservice.samples.educationalimages.tests.dll",
+        "counts": {
+          "Passed": 290
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_16_net10.0.trx",
+        "sha256": "0589e3a4ce3d7299e05d340bc436a0c637f1898252c410538b4ef3ea7cb4e79b"
+      },
+      {
+        "assembly": "ms.microservice.search.tests.dll",
+        "counts": {
+          "Passed": 6
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_19_net10.0[1].trx",
+        "sha256": "9eb33d8bf36ed9169bc3bf0f5bdd854f1f3268bd038e720c636bd5990e3cd30e"
+      },
+      {
+        "assembly": "ms.microservice.storage.s3.tests.dll",
+        "counts": {
+          "Passed": 25
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_19_net10.0[2].trx",
+        "sha256": "ab265768d7b5519ce93805028cc155f40e11e3f9eae9bde62874c39c189824ee"
+      },
+      {
+        "assembly": "ms.microservice.swagger.tests.dll",
+        "counts": {
+          "Passed": 8
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_19_net10.0.trx",
+        "sha256": "e772c9d4f79282850a6f2c0ab664102e57ec52f3ef5752c9ece0182c7be9d1e3"
+      },
+      {
+        "assembly": "ms.microservice.tasks.dashboard.tests.dll",
+        "counts": {
+          "Passed": 4
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_47_net10.0.trx",
+        "sha256": "b90377ba858c88132c5ccc6824ac4147d2affb25cf92480b74bdf7ba436cbb9c"
+      },
+      {
+        "assembly": "ms.microservice.tasks.messaging.tests.dll",
+        "counts": {
+          "Passed": 3
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_46_net10.0.trx",
+        "sha256": "73e1273f81fd0961e8a1e14bba07bd7ea7ca2dff475947a849a269308dd88ba0"
+      },
+      {
+        "assembly": "ms.microservice.tasks.tests.dll",
+        "counts": {
+          "Passed": 29
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_54_50_net10.0[1].trx",
+        "sha256": "06892560e70be4019c699f0018725149610f3814cbed8ce209c2e720786afb34"
+      },
+      {
+        "assembly": "ms.microservice.threading.tests.dll",
+        "counts": {
+          "Passed": 20
+        },
+        "trx": "artifacts/validation/code-optimization-final-tests-elevated/shuai.mao_FZ1114_2026-10-24_14_55_21_net10.0.trx",
+        "sha256": "f7f9f3f591152b785b34cadb11a8b7f245e2af4bdc49cec2d22d2eb238e01101"
+      }
+    ],
+    "skipsByReason": [
+      {
+        "reason": "Set RUN_MEDIA_FFMPEG_TESTS=true with ffmpeg/ffprobe installed to run real media integration tests.",
+        "count": 41
+      },
+      {
+        "reason": "Set MS_MEDIA_OCR_PYTHON and MS_MEDIA_OCR_MODELS for real local PP-OCRv5 CPU inference.",
+        "count": 19
+      },
+      {
+        "reason": "Performance baseline is opt-in. Set MS_MICROSERVICE_RUN_PERF_TESTS=1 to run.",
+        "count": 19
+      },
+      {
+        "reason": "Set RUN_MESSAGING_INTEGRATION_TESTS=true for mandatory PostgreSQL/RabbitMQ integration checks.",
+        "count": 12
+      },
+      {
+        "reason": "Set MS_MEDIA_MIGAN_MODEL to a verified local MI-GAN pipeline to run actual model integration.",
+        "count": 11
+      },
+      {
+        "reason": "Set MS_MEDIA_MIGAN_MODEL and MS_MEDIA_WATERMARK_PYTHON with the pinned video dependencies and FFmpeg installed.",
+        "count": 10
+      },
+      {
+        "reason": "Set RUN_MEDIA_FFMPEG_TESTS=true to run the installed ffprobe HTTP integration.",
+        "count": 8
+      },
+      {
+        "reason": "Set MS_MEDIA_MIGAN_MODEL, MS_MEDIA_WATERMARK_PYTHON and MS_MEDIA_WATERMARK_MODEL for real local automatic removal.",
+        "count": 7
+      },
+      {
+        "reason": "Set MS_MEDIA_SWIN2SR_MODEL for real local twofold CPU inference.",
+        "count": 6
+      },
+      {
+        "reason": "Set LIBREOFFICE_TEST_PATH to an installed LibreOffice soffice.com executable.",
+        "count": 6
+      },
+      {
+        "reason": "Configure all three existing image-model/Python variables for real automatic video removal.",
+        "count": 5
+      },
+      {
+        "reason": "Set RUN_LAB_TOOL_NATIVE_TESTS=true after preparing the fixed local models, Python and FFmpeg.",
+        "count": 5
+      },
+      {
+        "reason": "Set MS_MEDIA_BIREFNET_MODEL to the fixed local BiRefNet-lite ONNX for actual CPU inference.",
+        "count": 3
+      },
+      {
+        "reason": "Set MS_MEDIA_MIGAN_MODEL to run actual model integration.",
+        "count": 3
+      },
+      {
+        "reason": "Set MS_CACHE_REDIS_TEST_CONNECTION to run against a real Redis instance.",
+        "count": 1
+      },
+      {
+        "reason": "Set RUN_LAB_TOOL_NATIVE_TESTS=true on Windows to run installed browser rendering.",
+        "count": 1
+      },
+      {
+        "reason": "Set RUN_LAB_TOOL_NATIVE_TESTS=true and LIBREOFFICE_TEST_PATH on Windows to run actual LibreOffice conversion.",
+        "count": 1
+      }
+    ],
+    "failedTests": []
+  },
+  "api": {
+    "status": "passed",
+    "baselineCommit": "883b907c733d75093f79a0fa20639023ac3167fd",
+    "sourceHead": "80c0335ca1a8b376faa233d9cab1b106e45d47fb",
+    "source": "working-tree",
+    "validatedAtUtc": "2026-10-24T06:36:29.9692259+00:00",
+    "report": "artifacts/validation/api-compatibility-final.json",
+    "packages": [
+      {
+        "module": "MS.Microservice.AI.Abstractions",
+        "result": "passed",
+        "baselineSha256": "0262D4859AC35044E314F557F7885251D8B6465C9DEFF22631D8D0AB45B8A916",
+        "currentSha256": "F805BB139313BA02B4259653E41730ADA770228DAE069CFA9ED509809D7F709C"
+      },
+      {
+        "module": "MS.Microservice.Threading",
+        "result": "passed",
+        "baselineSha256": "0BFF3F937377C945A19972E77C898B6EFE4A89C9F31FE7670E18EB831C945D99",
+        "currentSha256": "11DCB55D4390F0040752E5E636F0126FD056A59AA080785DA47F40E7640ADBE1"
+      },
+      {
+        "module": "MS.Microservice.AI.Core",
+        "result": "passed",
+        "baselineSha256": "2F5C313BD13701FFC384B2829458966363D704207D1C379F7FDC155316F23312",
+        "currentSha256": "5484AC0364B94B8522AB8A20E1211D1A90DA4D927C9B27D1EDEFB9088070164E"
+      },
+      {
+        "module": "MS.Microservice.Domain.Primitives",
+        "result": "passed",
+        "baselineSha256": "C0A6248EB1EA9D276CFB646EA7FEF6374F5CBB4AEF5CDD3AB5657C159E8A9D02",
+        "currentSha256": "8DB7EAAABB0B0064BA4836856011B852C40FD6066EA65E7384C422DD96B0C374"
+      },
+      {
+        "module": "MS.Microservice.Core",
+        "result": "passed",
+        "baselineSha256": "FD5864542347A0BB69BA0BE43F42F649D0EA7E1CD067EE3D595AB2B16AE6E409",
+        "currentSha256": "4FFE0014EBB6EB559D633F9AB5A728A775AE890DB378B676FA79B4F24478F153"
+      },
+      {
+        "module": "MS.Microservice.AspNetCore",
+        "result": "passed",
+        "baselineSha256": "5DFE97717795C736EEA509EFF97D800FF49BB253EB3E1AF4CF34EBE10D9003BF",
+        "currentSha256": "CDB8BDEECABB8CD774A038047FBAFF67913F8A03667ED6CE711C09B1DD851DE7"
+      },
+      {
+        "module": "MS.Microservice.Audio",
+        "result": "passed",
+        "baselineSha256": "4FFF6B839D18A11938E5F59FC1F2CA808A2D9B08E77B5DD83B9D68D8F93AC2D9",
+        "currentSha256": "BEFC69FF9A2E7BB017BFDF541D330F932D7BA9A8E4B6FE8A52AF24BFC3F15192"
+      },
+      {
+        "module": "MS.Microservice.Caching",
+        "result": "passed",
+        "baselineSha256": "B30DD8892B239A519BA3E03708E766F96C923C0602DB8C7F7689E8ECA8488D96",
+        "currentSha256": "37B515DBB908E2A8D75B71D9975C3BF2D6E430D985AD2D6AA582708CDB6CBFE6"
+      },
+      {
+        "module": "MS.Microservice.EventSourcing",
+        "result": "passed",
+        "baselineSha256": "89A6C0FA20E32F42CE70B9303A316E2130C7866D8C41D3F2C2AB188EE1E89D35",
+        "currentSha256": "EFD251B39AF56AF27C5EB1B43CCD00D90E7CDF136EFEEDB98E48DFB8CC7907FE"
+      },
+      {
+        "module": "MS.Microservice.Http.Resilience",
+        "result": "passed",
+        "baselineSha256": "7E706E8C8074DEE830822664784EFAE66338C0C62F2C2B574CE4B1ED300B3EE7",
+        "currentSha256": "0A05F402F84367AF5DE2AF0AFE0A667D91F4652EB7CFDCD3FD302D0DD4744B55"
+      },
+      {
+        "module": "MS.Microservice.Logging.Core",
+        "result": "passed",
+        "baselineSha256": "9200BCF42666BB9600DA2877B5D446BB61C265BFC37ED17D39AD4EA0D6CBD7ED",
+        "currentSha256": "47C2C6F412EA922712595C4778566F00CFB080CE0D83B0B3BECD2EC5EC3E8ED2"
+      },
+      {
+        "module": "MS.Microservice.Logging.AspNetCore",
+        "result": "passed",
+        "baselineSha256": "240A63B98A819C9CE3F231C5A213CB5C7AFE99AAA7DD8592BA70462E9F9F086B",
+        "currentSha256": "8751C49A5AA1361A33919BD3EC83FD4490962BADD57D7DBC89C99AF9D6942F12"
+      },
+      {
+        "module": "MS.Microservice.Messaging.Abstractions",
+        "result": "passed",
+        "baselineSha256": "A0517BD4063EEFA1ECE168F7C360CF201EF95694CCB9F9518E1F006F19061E77",
+        "currentSha256": "5DBEE5228D91F13FCE52BE925025749BE8E1BD9BC7513173B20017C1339A25E7"
+      },
+      {
+        "module": "MS.Microservice.Messaging.SelfManaged.EFCore",
+        "result": "passed",
+        "baselineSha256": "B7E20467171E9F981EBDF1C0DB8DF2FA54F3BBC008557DB611661D6E043156EC",
+        "currentSha256": "BDE5D2DDFAB74A43B6EEF83AF737D70E477FCF57942CD3053427E26B07A56089"
+      },
+      {
+        "module": "MS.Microservice.Tasks",
+        "result": "passed",
+        "baselineSha256": "58C08D18228554A3916C520950824B69FFD07DFEA73462FE1A3624720D499D86",
+        "currentSha256": "614CBFD98E4A7A100006714F599B93CB0721E6315C4FA5EB4096849E779D6FE2"
+      },
+      {
+        "module": "MS.Microservice.Tasks.EFCore",
+        "result": "passed",
+        "baselineSha256": "C3A5DA2A6D3DF33A749803450CB2CF2F3E5F4C42A1EE073D50F05ACA32E85C1E",
+        "currentSha256": "A9737484D731D9B4619503C763E684BE1E9173F6123823F06E7F90FFC559460B"
+      }
+    ]
+  },
+  "consumerEvidenceReuse": {
+    "source": "slice-06-results.json",
+    "validatedAtUtc": "2026-10-24T05:12:38.2445307+00:00",
+    "exportedInputsUnchanged": 48,
+    "packageHashesRechecked": 5,
+    "projectReferences": 0,
+    "checks": [
+      "threading.singleflight",
+      "threading.lease-release",
+      "caching.di-source-coalescing",
+      "caching.scope-isolation",
+      "http.get-retry",
+      "http.post-no-retry",
+      "messaging.first-context.commit-rollback-serialization-deduplication",
+      "messaging.second-context.commit-rollback-serialization-deduplication"
+    ],
+    "selfTest": [
+      {
+        "case": "baseline",
+        "exitCode": 0,
+        "result": "passed"
+      },
+      {
+        "case": "unchanged",
+        "exitCode": 0,
+        "result": "passed"
+      },
+      {
+        "case": "additive",
+        "exitCode": 0,
+        "result": "passed"
+      },
+      {
+        "case": "removed",
+        "exitCode": 1,
+        "result": "passed"
+      }
+    ]
+  },
+  "closeout": {
+    "harnessCheckExitCode": 0,
+    "harnessCloseoutExitCode": 0,
+    "result": "passed",
+    "errors": 0,
+    "warnings": 0,
+    "localLinksChecked": 151,
+    "missingLocalLinks": 0,
+    "diffCheckExitCode": 0,
+    "report": "artifacts/validation/code-optimization-closeout.json"
+  }
+}

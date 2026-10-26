@@ -26,11 +26,13 @@ internal abstract class OpenAICompatibleMediaProviderBase
     protected OpenAICompatibleMediaProviderBase(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(concurrency);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -44,7 +46,7 @@ internal abstract class OpenAICompatibleMediaProviderBase
         }
 
         _providerOptions = providerOptions;
-        _concurrencyGate = new SemaphoreSlim(providerOptions.ConcurrencyLimit, providerOptions.ConcurrencyLimit);
+        _concurrencyGate = concurrency.GetRequired(Name);
     }
 
     public abstract string Name { get; }
@@ -236,7 +238,8 @@ internal abstract class OpenAICompatibleMediaProviderBase
         {
             var client = _httpClientFactory.CreateClient(HttpClientName);
             using var request = createRequest();
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, token).ConfigureAwait(false);
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            await AIResponseReader.BufferAsync(response, _providerOptions, Name, capability, model, requestId, token).ConfigureAwait(false);
             return await parseResponseAsync(response, token).ConfigureAwait(false);
         }, cancellationToken);
     private HttpRequestMessage CreateRequest(string relativePath, string? accept)

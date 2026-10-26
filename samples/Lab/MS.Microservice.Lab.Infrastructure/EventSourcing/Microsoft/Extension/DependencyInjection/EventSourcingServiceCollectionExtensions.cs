@@ -35,7 +35,9 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.AddSingleton(eventTypeRegistry);
             services.AddSingleton<SystemTextJsonEventSerializer>();
-            services.AddScoped<IEventStore, PostgresEventStore>();
+            services.AddScoped<PostgresEventStore>();
+            services.AddScoped<IEventStore>(provider => provider.GetRequiredService<PostgresEventStore>());
+            services.AddScoped<IEventBatchReader>(provider => provider.GetRequiredService<PostgresEventStore>());
             services.AddScoped<ISnapshotStore, PostgresSnapshotStore>();
             services.AddScoped<IProjectionCheckpointStore, PostgresProjectionCheckpointStore>();
             services.AddScoped<OrderCommandService>();

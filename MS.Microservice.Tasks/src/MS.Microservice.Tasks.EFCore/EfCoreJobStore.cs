@@ -8,7 +8,7 @@ namespace MS.Microservice.Tasks.EFCore;
 
 /// <summary>Stores jobs in the host model; Stage joins its transaction and all other operations use fresh scopes.</summary>
 public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceScopeFactory scopes, TimeProvider clock)
-    : IJobStore where TContext : DbContext
+    : IJobStore, IJobRetentionStore where TContext : DbContext
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     public async Task<JobSnapshot> SubmitAsync(JobSubmission submission, CancellationToken cancellationToken = default)
@@ -251,6 +251,33 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
                     .SetProperty(entry => entry.Version, entry => entry.Version + 1), cancellationToken);
             return changed == 1 ? JobUpdateResult.Applied
                 : await query.AnyAsync(cancellationToken) ? JobUpdateResult.Rejected : JobUpdateResult.NotFound;
+        });
+    }
+
+    public Task<int> PruneAsync(string scope, JobState terminalState, DateTimeOffset finishedBeforeUtc, int take = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var hash = ScopeHash(scope);
+        ValidateTake(take);
+        if (terminalState is not (JobState.Succeeded or JobState.Failed or JobState.Cancelled or JobState.Interrupted))
+            throw new ArgumentOutOfRangeException(nameof(terminalState), "Retention requires a terminal job state.");
+        var cutoff = finishedBeforeUtc.UtcTicks;
+        if (cutoff > clock.GetUtcNow().UtcTicks)
+            throw new ArgumentOutOfRangeException(nameof(finishedBeforeUtc), "The retention cutoff cannot be in the future.");
+        return IndependentlyAsync(async context =>
+        {
+            var eligible = Jobs(context).Where(entry => entry.ScopeHash == hash && entry.State == terminalState
+                && entry.FinishedAtUtcTicks < cutoff);
+            var candidates = await eligible.OrderBy(entry => entry.FinishedAtUtcTicks).ThenBy(entry => entry.Id)
+                .Take(take).Select(entry => new { entry.Id, entry.Version }).ToListAsync(cancellationToken);
+            var deleted = 0;
+            foreach (var candidate in candidates)
+            {
+                // Retry changes the version and eligibility; recheck both in the deletion itself.
+                deleted += await eligible.Where(entry => entry.Id == candidate.Id && entry.Version == candidate.Version)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+            return deleted;
         });
     }
 

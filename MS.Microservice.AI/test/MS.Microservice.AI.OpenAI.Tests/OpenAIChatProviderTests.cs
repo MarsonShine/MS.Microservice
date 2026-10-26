@@ -272,6 +272,7 @@ public sealed class OpenAIChatProviderTests
         return new OpenAIChatProvider(
             new TestHttpClientFactory(handler),
             Options.Create(options),
+            new AIProviderConcurrency(Options.Create(options)),
             TimeProvider.System,
             NullLogger<OpenAIChatProvider>.Instance);
     }

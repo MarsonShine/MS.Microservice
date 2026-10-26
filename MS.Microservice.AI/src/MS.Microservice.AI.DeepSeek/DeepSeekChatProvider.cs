@@ -9,9 +9,10 @@ internal sealed class DeepSeekChatProvider : OpenAICompatibleChatProviderBase
     public DeepSeekChatProvider(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger<DeepSeekChatProvider> logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

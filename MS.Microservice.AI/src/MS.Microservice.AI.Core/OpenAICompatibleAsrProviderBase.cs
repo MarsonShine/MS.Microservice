@@ -10,9 +10,10 @@ internal abstract class OpenAICompatibleAsrProviderBase : OpenAICompatibleMediaP
     protected OpenAICompatibleAsrProviderBase(
         IHttpClientFactory httpClientFactory,
         IOptions<AIOptions> options,
+        AIProviderConcurrency concurrency,
         TimeProvider timeProvider,
         ILogger logger)
-        : base(httpClientFactory, options, timeProvider, logger)
+        : base(httpClientFactory, options, concurrency, timeProvider, logger)
     {
     }
 

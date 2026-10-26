@@ -83,7 +83,7 @@ builder.ConfigureMsNLog(options =>
 
 var app = builder.Build();
 
-// Step 3 — add middleware (order: before endpoints, after auth if needed)
+// Step 3 — wrap exception and timeout handling so completion logs see their final status
 app.UseMsRequestLogging();
 
 app.MapGet("/", () => "Hello");
@@ -99,6 +99,16 @@ curl -H "requestId: req-001" -H "platformId: mobile" -H "userflag: internal" htt
 ```
 
 NLog output includes `requestId=req-001 platformId=mobile userflag=internal dur=12ms`.
+
+Register request logging before exception/developer-exception and request-timeout middleware. When using `UsePlatformHttp()`, call `UseMsRequestLogging()` first. In a manually composed pipeline, keep trusted forwarded-header handling before logging and authentication. The request log scope then remains available inside exception handlers as well as endpoints.
+
+| EventId | Level | Request outcome |
+| --- | --- | --- |
+| `5000` | Information | The pipeline returned normally, including handled 409/500/504 responses. The existing `HTTP {Method} {Path} -> {StatusCode} in {ElapsedMs}ms` format is preserved. |
+| `5001` | Warning | An exception escaped the pipeline. `FailureType` contains only its type name; the original exception is rethrown. |
+| `5002` | Information | `RequestAborted` was canceled, including when downstream code returned normally. `FailureType` is null if no exception escaped. |
+
+For failed or canceled requests, nullable `StatusCode` is populated only after the response has started. A known status such as 200 on event `5001` does not imply successful completion. No exception message or object is passed to these completion logs. Consumers that previously parsed every outcome as event `5000` should account for events `5001` and `5002`. `EmitCompletionLog=false` disables all three outcomes; each otherwise follows its own log-level filter.
 
 ### Quick Start — Worker/Console + NLog (no ASP.NET)
 
@@ -148,7 +158,7 @@ builder.Services.AddMsRequestLogging(options =>
     options.RequestIdHeaderName = "x-request-id";
     options.PlatformIdHeaderName = "x-platform-id";
     options.UserFlagHeaderName = "x-user-flag";
-    options.EmitCompletionLog = true; // set false to suppress "HTTP GET /path -> 200 in 5ms"
+    options.EmitCompletionLog = true; // set false to suppress completed, failed, and canceled request logs
 });
 ```
 

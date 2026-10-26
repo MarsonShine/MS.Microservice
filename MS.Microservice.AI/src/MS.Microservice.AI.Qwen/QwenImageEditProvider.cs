@@ -9,8 +9,9 @@ namespace MS.Microservice.AI.Qwen;
 internal sealed class QwenImageEditProvider(
     IHttpClientFactory httpClientFactory,
     IOptions<AIOptions> options,
+    AIProviderConcurrency concurrency,
     TimeProvider timeProvider,
-    ILogger<QwenImageEditProvider> logger) : OpenAICompatibleImageEditProviderBase(httpClientFactory, options, timeProvider, logger)
+    ILogger<QwenImageEditProvider> logger) : OpenAICompatibleImageEditProviderBase(httpClientFactory, options, concurrency, timeProvider, logger)
 {
     public override string Name => QwenProviderDefaults.ProviderName;
 
