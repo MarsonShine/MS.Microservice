@@ -130,6 +130,10 @@ public sealed class ReferenceHostTests
         using var changed = await fixture.Client.PatchAsJsonAsync($"/api/v1/profiles/{profile.Id}", new ChangeProfile("second", ["editor"], 1));
         Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
         Assert.Equal(2, (await changed.Content.ReadFromJsonAsync<ProfileView>())!.Version);
+        Assert.Equal($"/api/v1/profiles/{profile.Id}", created.Headers.Location?.OriginalString);
+        using var missing = await fixture.Client.PatchAsJsonAsync($"/api/v1/profiles/{Guid.NewGuid()}", new ChangeProfile("missing", [], 1));
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        await AssertProblemCodeAsync(missing, "not_found");
         using var stale = await fixture.Client.PatchAsJsonAsync($"/api/v1/profiles/{profile.Id}", new ChangeProfile("third", [], 1));
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
         await AssertProblemCodeAsync(stale, "conflict");
@@ -1217,6 +1221,10 @@ public sealed class ReferenceHostTests
         using var response = await fixture.Client.PostAsJsonAsync("/api/v1/profiles", new CreateProfile("", "subject", "name", []));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await AssertProblemCodeAsync(response, "validation");
+
+        using var invalidOrder = await fixture.Client.PostAsJsonAsync("/api/v1/orders", new CreateOrder("SKU-1", 0));
+        Assert.Equal(HttpStatusCode.BadRequest, invalidOrder.StatusCode);
+        await AssertProblemCodeAsync(invalidOrder, "validation");
     }
 
     private static async Task AssertProblemCodeAsync(HttpResponseMessage response, string code)
