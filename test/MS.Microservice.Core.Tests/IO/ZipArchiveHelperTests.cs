@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using MS.Microservice.Core.IO;
+using ZipExtractionOptions = MS.Microservice.Core.IO.ZipExtractionOptions;
 
 namespace MS.Microservice.Core.Tests.IO;
 

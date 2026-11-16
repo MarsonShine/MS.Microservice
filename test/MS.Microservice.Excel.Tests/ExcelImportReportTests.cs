@@ -408,6 +408,31 @@ public sealed class ExcelImportReportTests
         finally { helper.Workbook?.Dispose(); }
     }
 
+    [Fact]
+    public void NumericAndFormulaCellsUseDecimalPrecisionAndReportOverflow()
+    {
+        using var workbook = new XSSFWorkbook();
+        var sheet = workbook.CreateSheet("Data");
+        sheet.CreateRow(0).CreateCell(0).SetCellValue("Amount");
+        sheet.CreateRow(1).CreateCell(0).SetCellValue(-99.99);
+        sheet.CreateRow(2).CreateCell(0).SetCellValue(0.000000012345);
+        sheet.CreateRow(3).CreateCell(0).SetCellValue(123456789012345000000d);
+        sheet.CreateRow(4).CreateCell(0).SetCellFormula("99.99");
+        sheet.CreateRow(5).CreateCell(0).SetCellValue(1e30);
+        using var input = Serialize(workbook);
+        var helper = CreateHelper();
+        try
+        {
+            var report = helper.ImportWithReport<DecimalRow>("rows.xlsx", input);
+            Assert.Equal(new[] { -99.99m, 0.000000012345m, 123456789012345000000m, 99.99m },
+                report.Rows.Select(row => row.Value.Amount));
+            var error = Assert.Single(report.Errors);
+            Assert.Equal(6, error.RowNumber);
+            Assert.Equal(ExcelImportErrorKind.Conversion, error.Kind);
+        }
+        finally { helper.Workbook?.Dispose(); }
+    }
+
     private sealed class InitializedRow
     {
         [ExcelColumn("名称", Required = true)]
@@ -417,6 +442,11 @@ public sealed class ExcelImportReportTests
     {
         [ExcelColumn("ID")]
         public int Id { get; set; }
+    }
+    private sealed class DecimalRow
+    {
+        [ExcelColumn("Amount")]
+        public decimal Amount { get; set; }
     }
     private sealed class AliasedColumnsRow
     {
