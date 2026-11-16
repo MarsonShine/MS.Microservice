@@ -10,6 +10,8 @@
 
 先保存占位记录使同键并发请求在执行第二次业务操作之前发生数据库写冲突。赢家提交后，输家必须退出并回滚自己的事务，再用新的上下文调用 `FindAsync`：相同指纹返回已保存响应；不同指纹返回 `DifferentRequest`。如果查不到记录，应报告原数据库错误或按照调用方明确的重试策略处理，不能假定任意数据库异常都是幂等键冲突。赢家失败并回滚时，占位记录也回滚，后续请求可以执行。
 
+`FindResultAsync` 提供 C# 15 联合类型 `IdempotencyLookupResult`，其分支分别是 `IdempotencyMissing`、可直接重放的 `IdempotencyResponse` 和 `IdempotencyDifferentRequest`。调用方可按分支类型匹配；冲突分支不携带已存响应。联合类型的 `default` 没有有效分支，不应把它当作未命中：遇到空内容应停止处理。原 `FindAsync` 和 `IdempotencyLookup` 仍可使用；`ToLegacyLookup()` 将有效联合结果转换为旧契约，并拒绝未初始化结果。语言行为详见 [C# 联合类型](https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/union)。
+
 `IdempotencyRequest.Create` 接收稳定的操作名、已认证身份、一个请求键和调用方选定的请求表示字节。键最多 128 个可见 ASCII 字符；请求表示最多 1 MiB。库仅保存三项 SHA-256 哈希，不保存原始键或请求。调用方须先拒绝多个 `Idempotency-Key` 请求头，并确定“同一请求”的比较规则。Reference 执行器把 Method、Path、QueryString、完整的 Content-Type 和 Body 表示纳入指纹：UTF-8 JSON 直接解析，标为 `charset=utf-16` 的 JSON 先解码；随后递归按对象字段名排序并忽略字符串之外的空白，数组保持原顺序。非 JSON 使用原始 Body 字节。JSON 同一对象内的字段名重复，包括只差大小写的字段名，会在绑定前被拒绝。此规则由 Reference 实现，EFCore 存储组件不解析 HTTP 或 JSON。身份必须来自已经验证的认证信息，重放前仍须执行授权。
 
 可保存响应的状态码是 200–499，正文最多 64 KiB。`Content-Type` 可为空，例如 `204 No Content` 可以保存空正文，之后按原状态和空正文重放。调用方应让初次响应与重放响应都使用 `IdempotencyResponse` 中的状态码、可为空的内容类型、`Location` 和正文；动态响应头和服务器错误不属于重放契约。Reference 的 HTTP 执行器进一步限定只保存 `2xx`，并在响应写入暂存流时执行 64 KiB 上限，超过时回滚事务。存储原响应正文意味着它可能包含个人信息，应按业务数据控制访问与保留期限。`PruneExpiredAsync` 删除到期记录，但不会自动运行：宿主必须安排清理。到期后、实际删除前继续重放；删除后同键可以重新执行。客户端应在最早可能清理记录之前完成重试，并确保服务端仍保留该记录。

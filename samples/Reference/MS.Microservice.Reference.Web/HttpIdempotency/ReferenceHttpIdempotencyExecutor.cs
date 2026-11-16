@@ -78,16 +78,19 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
         http.Request.Body = body;
         try
         {
-            var existing = await store.FindAsync(request, http.RequestAborted);
-            if (existing.Kind == IdempotencyLookupKind.Replay)
+            var existing = await store.FindResultAsync(request, http.RequestAborted);
+            switch (existing)
             {
-                await WriteStoredAsync(http, existing.Response!);
-                return false;
-            }
-            if (existing.Kind == IdempotencyLookupKind.DifferentRequest)
-            {
-                await WriteDifferentRequestAsync(http);
-                return false;
+                case IdempotencyResponse response:
+                    await WriteStoredAsync(http, response);
+                    return false;
+                case IdempotencyDifferentRequest:
+                    await WriteDifferentRequestAsync(http);
+                    return false;
+                case IdempotencyMissing:
+                    break;
+                default:
+                    throw new InvalidOperationException("The idempotency lookup returned an unknown result.");
             }
 
             var originalStatus = http.Response.StatusCode;
@@ -118,18 +121,20 @@ internal sealed class ReferenceHttpIdempotencyExecutor(
                 RestoreResponse(http, originalStatus, originalHeaders);
                 await using var scope = scopes.CreateAsyncScope();
                 var freshStore = scope.ServiceProvider.GetRequiredService<EfCoreIdempotencyStore<ReferenceDbContext>>();
-                var winner = await freshStore.FindAsync(request, http.RequestAborted);
-                if (winner.Kind == IdempotencyLookupKind.Replay)
+                var winner = await freshStore.FindResultAsync(request, http.RequestAborted);
+                switch (winner)
                 {
-                    await WriteStoredAsync(http, winner.Response!);
-                    return invoked;
+                    case IdempotencyResponse response:
+                        await WriteStoredAsync(http, response);
+                        return invoked;
+                    case IdempotencyDifferentRequest:
+                        await WriteDifferentRequestAsync(http);
+                        return invoked;
+                    case IdempotencyMissing:
+                        throw;
+                    default:
+                        throw new InvalidOperationException("The idempotency lookup returned an unknown result.");
                 }
-                if (winner.Kind == IdempotencyLookupKind.DifferentRequest)
-                {
-                    await WriteDifferentRequestAsync(http);
-                    return invoked;
-                }
-                throw;
             }
             catch
             {
