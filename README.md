@@ -1,6 +1,6 @@
 # MS.Microservice
 
-面向 .NET 10 的可复用组件与教学仓库。通用组件可以独立引用或复制；生产参考服务展示完整接入，Lab 保留本地登录、事件溯源、函数式、文件和其他实验。
+面向 .NET 11 的可复用组件与教学仓库。通用组件可以独立引用或复制；生产参考服务展示完整接入，Lab 保留本地登录、事件溯源、函数式、文件和其他实验。
 
 | 入口 | 用途 |
 | --- | --- |
@@ -8,6 +8,7 @@
 | [Harness 接入与恢复](docs/harness.md) | 工作协议、各 agent 适配器，以及没有 AI 工具时的恢复步骤。 |
 | [总体架构与设计理由](docs/Architecture-Overview.md) | 先理解 Core、模块、Reference 和 Lab 各自解决什么问题。 |
 | [快速启动](docs/Getting-Started.md) | 一个脚本准备 Reference 或 Lab，并演练消息恢复。 |
+| [.NET 11 升级过程](docs/NET11-Upgrade-Union-Async-Validation.md) | 从运行环境升级到存量 union 与异步验证迁移。 |
 | [六个递进 Lab](docs/labs/README.md) | 分层、事务、可靠消息、故障、诊断与组件替换。 |
 | [源码复制与包消费](docs/components/consumption.md) | 依赖闭包导出和仓库外接入验证。 |
 | [生产参考服务](samples/Reference/MS.Microservice.Reference.Web/README.md) | 外部 JWT/OIDC 身份、用户档案、业务角色、审计和可靠消息。 |
@@ -37,7 +38,9 @@ Reference 是完整接入的参考应用，不是新的底层框架；使用模�
 项目拆分理由和代价见[Reference 说明](samples/Reference/README.md)。
 ## 构建
 
-SDK 基线为 `10.0.401`，由 `global.json` 定义；包版本见 `Directory.Packages.props`。依赖安全维护见 [依赖基线](docs/Dependency-Baseline.md)。
+SDK 基线为 `11.0.100`，由 `global.json` 定义；包版本见 `Directory.Packages.props`。依赖安全维护见 [依赖基线](docs/Dependency-Baseline.md)。EF Core 和 PostgreSQL 提供程序目前保留 10.x 基线。
+
+.NET 11 中，后台服务未处理的异常在默认停止宿主行为下会由 `RunAsync` 抛出；部署时应检查进程退出与重启策略。Core 的公开命名空间 `Microsoft.System` 会与 .NET 11 验证源生成器生成的名称冲突；Reference Web 通过 Core 程序集别名保留请求验证，其他使用 `AddValidation` 的宿主也可能需要同样处理。
 
 ```powershell
 dotnet restore --configfile nuget.config
