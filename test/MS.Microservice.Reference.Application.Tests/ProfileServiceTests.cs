@@ -57,6 +57,27 @@ public sealed class ProfileServiceTests
     }
 
     [Fact]
+    public async Task ChangedProfilePreservesResultAndClearsEventsAfterCommit()
+    {
+        var repository = Substitute.For<IProfileRepository>();
+        var profile = UserProfile.Create("https://issuer.example", "subject", "name", [], DateTimeOffset.UtcNow);
+        profile.ClearDomainEvents();
+        repository.GetAsync(profile.Id, Arg.Any<CancellationToken>()).Returns(profile);
+        var publisher = Substitute.For<IIntegrationEventPublisher>();
+        var service = new ProfileService(repository, new Unit(), publisher, TimeProvider.System);
+
+        var result = await service.ChangeAsync(profile.Id, new("changed", ["reader"], 1), new("https://issuer.example", "admin"));
+
+        Assert.True(result.IsRight);
+        Assert.Equal(profile.Id, result.Right.Id);
+        Assert.Equal("changed", result.Right.DisplayName);
+        Assert.Equal(2, result.Right.Version);
+        Assert.Equal(["reader"], result.Right.Roles);
+        Assert.Empty(profile.DomainEvents);
+        await publisher.Received(1).EnqueueAsync(Arg.Any<IIntegrationEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task MissingProfileReturnsNotFoundWithoutPublishing()
     {
         var repository = Substitute.For<IProfileRepository>();

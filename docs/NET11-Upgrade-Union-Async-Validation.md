@@ -17,14 +17,14 @@
 
 C# 15 的 union 将一组互斥的类型作为结果分支；`switch` 可以按类型处理。语言与默认值规则见 [微软联合类型文档](https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/union)。
 
-此前 [ProfileService](../samples/Reference/MS.Microservice.Reference.Application/ProfileService.cs) 在工作单元中直接返回 `Either<Error, ProfileView>`：查到重复身份返回 Left，保存成功返回 Right。现在工作单元使用私有 `Outcome(Error, ProfileView)`，业务分支直接返回 `Error` 或 `ProfileView`，服务在原有公开方法边界转换回 `Either`。变更资料的未找到和版本冲突，以及 [OrderService](../samples/Reference/MS.Microservice.Reference.Application/OrderService.cs) 的创建路径采用相同方式。未初始化的 union 没有有效 case，转换时显式抛出异常，不把它当成成功或未找到。
+此前 [ProfileService](../samples/Reference/MS.Microservice.Reference.Application/ProfileService.cs) 在工作单元中直接返回 `Either<Error, ProfileView>`：查到重复身份返回 Left，保存成功返回 Right。现在工作单元使用内部泛型 `Outcome<ProfileView>`（包含 `Error` 或 `ProfileView`），业务分支直接返回 `Error` 或 `ProfileView`，服务在原有公开方法边界转换回 `Either`。变更资料的未找到和版本冲突，以及 [OrderService](../samples/Reference/MS.Microservice.Reference.Application/OrderService.cs) 的创建路径采用相同方式。未初始化的 union 没有有效 case，转换时显式抛出异常，不把它当成成功或未找到。
 
 核心变化是事务里的结果类型，公开方法仍在最后转换：
 
 ```csharp
-private union Outcome(Error, ProfileView);
+internal union Outcome<T>(Error, T) where T : class;
 
-var result = await unit.ExecuteAsync<Outcome>(async token =>
+var result = await unit.ExecuteAsync<Outcome<ProfileView>>(async token =>
 {
     if (await profiles.FindAsync(profile.Issuer, profile.Subject, token) is not null)
         return Error.Conflict("A profile already exists for this external identity.");
@@ -32,7 +32,7 @@ var result = await unit.ExecuteAsync<Outcome>(async token =>
     await EnqueueChangesAsync(profile, actor, token);
     return ProfileView.From(profile);
 }, cancellationToken);
-return ToEither(result); // 省略成功后的领域事件清理
+return result.ToEither("A profile operation returned no result."); // 省略成功后的领域事件清理
 ```
 
 事务与消息行为仍由工作单元控制：两个提供程序都把结果当作普通返回值，异常、取消或已标记回滚的嵌套失败会阻止提交；只有成功分支清除领域事件。外部服务签名与 HTTP 响应没有改变。自定义工作单元如果按 `ExecuteAsync<T>` 的具体 `T` 特判，需要适配新的内部结果类型；仓库内两个实现不这样做。幂等存储的 [类型化查询](../MS.Microservice.Idempotency/README.md)同样在 Reference Web 的首次查询和竞争后重查中使用 union，旧 `FindAsync` 仍可供现有调用方使用。
