@@ -2,7 +2,7 @@
 更新：2026-11-17
 Status: idle
 Task: none
-Next: 审核 Reference 泛型 Outcome 提交；在具备所需服务的环境验证容器与真实后端。
-Baseline: 4aa1b47e71344964120cda8f901392f5ec0e17dd；后续提交包含本次泛型提取。
+Next: 审核 .NET 11 特性对比和消息元数据提交；在具备所需服务的环境验证容器与真实后端。
+Baseline: 9466209；后续提交包含本次审查。
 
-[泛型 Outcome 验收](validation/REFERENCE-GENERIC-OUTCOME/summary.md)：应用层 11 项和 Web 79 项测试通过。[.NET 11 升级过程](NET11-Upgrade-Union-Async-Validation.md)记录迁移及兼容边界；真实数据库、消息服务和容器未在本次验证。
+[升级前后对照](NET11-Optimization-Comparison.md)记录嵌套循环扫描和主要特性选择；[验收记录](validation/DOTNET11-OPTIMIZATION-AUDIT/summary.md)记录 78 项定向测试及构建。真实服务和性能未验证。

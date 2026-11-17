@@ -58,6 +58,8 @@ var valid = await Validator.TryValidateObjectAsync(validation,
 
 Excel/CSV 的既有报告导入仍支持同步业务回调；如业务规则确实需要异步服务，可显式使用 [异步数据注解导入入口](../src/MS.Microservice.Excel/README.md#导入与错误报告)。它只验证转换成功的行，不递归对象图；规则可能并发访问同一行的依赖服务，调用方须管理作用域和并发安全。
 
+关于嵌套循环和其他新特性的逐项适用性，见 [.NET 11 升级前后对照](NET11-Optimization-Comparison.md)。
+
 ## 检查升级结果
 
 项目级命令仍以 [README](../README.md#构建) 和 CI 为准。验证需要覆盖旧行为与新路径：Reference 应用及 HTTP 测试检查成功、验证失败、冲突、未找到和默认结果；Lab 测试检查异步查询、目录错误、取消与失败不持久化。全量测试和本机环境限制记录在 [本次验收](validation/DOTNET11-EXISTING-MIGRATION/summary.md)，此前版本升级的原始证据保留在 [.NET 11 升级验收](validation/DOTNET-11-UPGRADE/summary.md)。真实 PostgreSQL、MySQL、RabbitMQ 与容器验证需要相应环境，不能由内存或 SQLite 测试推断通过。
