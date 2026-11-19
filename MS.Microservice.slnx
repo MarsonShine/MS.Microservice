@@ -38,6 +38,7 @@
     <Project Path="samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj" />
   </Folder>
   <Folder Name="/samples/Lab/">
+    <Project Path="samples/Lab/MS.Microservice.Lab.Azure/MS.Microservice.Lab.Azure.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.DatabaseMigrator/MS.Microservice.Lab.DatabaseMigrator.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />

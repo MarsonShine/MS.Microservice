@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="../../docs/azure.md" Pack="true" PackagePath="/" />
+    <None Include="../../docs/azure-configuration.md" Pack="true" PackagePath="/" />
     <ProjectReference Include="../MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
     <ProjectReference Include="../MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
   </ItemGroup>

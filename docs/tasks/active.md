@@ -1,6 +1,6 @@
 # 当前任务
 Status: idle
 Task: none
-Next: 在具备 Azure 资源和部署的环境验证真实调用。
+Next: 用 Azure Lab 验证后续新增或替换的部署。
 
-AzureCloud 的交付范围、分片验收和待联调项见[验收记录](../validation/AZURE-CLOUD-APIS/summary.md)。
+Azure 文档更新、Lab 的真实调用和结果文件见[验收记录](../validation/AZURE-CLOUD-LAB/summary.md)。
