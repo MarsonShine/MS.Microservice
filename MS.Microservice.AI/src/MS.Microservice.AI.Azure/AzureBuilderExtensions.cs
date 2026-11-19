@@ -29,6 +29,8 @@ public static class AzureBuilderExtensions
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
             .RedactLoggedHeaders(static _ => true);
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIChatProvider, AzureChatProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageGenerationProvider, AzureImageProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageEditProvider, AzureImageProvider>());
         return builder;
     }
 }

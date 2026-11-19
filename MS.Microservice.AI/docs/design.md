@@ -13,7 +13,7 @@ QuestionGeneration 则在中立模型客户端之上组织生成、检查、修�
 
 同一个 Azure OpenAI 模型在不同地区的可用性可能不同，部署名称也由各资源独立设置。业务场景用逻辑别名调用 Core。Azure Provider 再按配置顺序选中首个启用且所属资源也启用的部署，用该资源的终结点和密钥发送请求，并把部署名称写入请求的 `model` 字段。[区域可用性](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability)
 
-部署选择在启动时校验。每次调用及其重试使用同一部署。需要调整目标资源时，更新候选项并重启宿主。Azure Provider 复用 Core 的 Chat HTTP、SSE 解析和运行策略，资源寻址和认证留在 Azure 模块。[Azure 配置](azure.md)
+部署选择在启动时校验。聊天、图像生成和图像编辑各自配置候选列表，因此同一个资源可以服务多种能力，也可以按能力选择不同地区。每次调用及其重试使用同一部署。需要调整目标资源时，更新候选项并重启宿主。Azure Provider 复用 Core 的 HTTP、SSE 和图像响应解析。资源寻址、认证和 GPT Image 请求格式由 Azure 模块适配。[Azure 配置](azure.md)
 
 ## 为什么共享执行策略，不合并所有解析
 
