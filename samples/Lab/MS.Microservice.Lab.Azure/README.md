@@ -22,4 +22,44 @@ dotnet run --project samples/Lab/MS.Microservice.Lab.Azure -c Release -- "$env:U
 
 结果目录保存四次聊天的文本、Speech MP3、PNG、`cache-tokens.csv` 和 `summary.json`。CSV 的 `cached_tokens` 与 `cache_write_tokens` 保留 Azure 实际报告的值。先看首轮是否写入，再看第二轮是否命中。请求失败时，程序把该步骤的错误写入摘要，其余独立步骤仍会运行，最后以非零状态退出。
 
-配置怎么绑定、什么时候保留 `Assistant` 场景，以及超时、并发和响应预算的默认值，见 [Azure 接入指南](../../../MS.Microservice.AI/docs/azure.md)和[参数参考](../../../MS.Microservice.AI/docs/azure-configuration.md)。
+## 用 Assistant 场景切换模型
+
+`Assistant` 是应用给聊天用途起的名字。已有的 `AzureCloud.CHAT.Models` 继续保存模型到 Azure 资源和部署的映射。新增的场景只选其中一个模型键，并提供默认输出上限。[appsettings.Assistant.json](appsettings.Assistant.json)
+
+| 配置项 | 示例值 | 作用 |
+| --- | --- | --- |
+| `AI:Models:Chat:Assistant:Provider` | `Azure` | 选择 Azure 适配器。 |
+| `AI:Models:Chat:Assistant:Model` | `gpt-6.1-sol` | 引用 `AzureCloud.CHAT.Models` 的键。该条目指向 `east2` 上的部署。 |
+| `AI:Models:Chat:Assistant:MaxOutputTokens` | `384` | 提供默认输出上限，与直接指定模型的示例相同。 |
+
+给同一组 `messages` 发起请求时，直接调用在 C# 里写出三个值。场景调用把这三个值交给配置。两种写法使用同一个 `IAIChatClient`。[调用代码](AzureLabScenario.cs)
+
+```csharp
+// 直接调用
+await chat.GetResponseAsync(new AIChatRequest
+{
+    Provider = "Azure",
+    Model = "gpt-6.1-sol",
+    MaxOutputTokens = 384,
+    Messages = messages,
+}, cancellationToken);
+
+// 按场景调用
+await chat.GetResponseAsync(new AIChatRequest
+{
+    Scenario = "Assistant",
+    Messages = messages,
+}, cancellationToken);
+```
+
+`--assistant` 加载场景配置，只需要两把聊天资源的密钥。它发送两轮聊天并保存回复和缓存 CSV。首次运行选 `gpt-6.1-sol`。随后在当前 PowerShell 会话覆盖场景的 `Model`，相同的调用代码就会选到 `fztest001` 上的 `gpt-6.1-terra`。
+
+```powershell
+$env:AI__Models__Chat__Assistant__Model = $null
+dotnet run --project samples/Lab/MS.Microservice.Lab.Azure -c Release -- --assistant "$env:USERPROFILE\Downloads"
+
+$env:AI__Models__Chat__Assistant__Model = 'gpt-6.1-terra'
+dotnet run --project samples/Lab/MS.Microservice.Lab.Azure -c Release -- --assistant "$env:USERPROFILE\Downloads"
+```
+
+查看每次运行的 `summary.json`，对比 `Assistant` 解析到的模型和 Azure 返回的模型。显式在请求里传 `Model` 会跳过场景解析。超时、并发和响应预算的默认值见 [Azure 接入指南](../../../MS.Microservice.AI/docs/azure.md)和[参数参考](../../../MS.Microservice.AI/docs/azure-configuration.md)。

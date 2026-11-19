@@ -17,20 +17,16 @@ internal sealed class AzureLabScenario(IAIChatClient chat, IAITtsClient speech, 
 
     public async Task<int> RunAsync()
     {
-        var prompt = $"This is a synthetic logistics benchmark. Reply with exactly the phrase Azure smoke test OK. " +
-            $"The fictional inventory below is padding for a repeatable prompt caching measurement. Run {Path.GetFileName(output)}.\n" +
-            string.Join('\n', Enumerable.Range(1, 90).Select(row =>
-                $"Inventory manifest row {row:D3}: The fictional harbor warehouse stores copper coils, paper lanterns, painted flour barrels, green canvas and numbered wooden crates."));
-
-        var sol = RunChatAsync(Sol, prompt);
-        var terra = RunChatAsync(Terra, prompt);
+        var prompt = CreatePrompt();
+        var sol = RunChatAsync(Sol, DirectChatRequest(Sol, prompt));
+        var terra = RunChatAsync(Terra, DirectChatRequest(Terra, prompt));
         var audio = RunCallAsync("speech", SpeechModel, null, SynthesizeAsync);
         var image = RunCallAsync("image", ImageModel, null, GenerateImageAsync);
         await Task.WhenAll(sol, terra, audio, image);
 
         var chats = (await sol).Concat(await terra).ToArray();
         var calls = chats.Concat([await audio, await image]).ToArray();
-        await File.WriteAllTextAsync(Path.Combine(output, "summary.json"), JsonSerializer.Serialize(new
+        await WriteReportsAsync(chats, new
         {
             CompletedAtUtc = DateTimeOffset.UtcNow,
             ImagePrompt,
@@ -38,31 +34,66 @@ internal sealed class AzureLabScenario(IAIChatClient chat, IAITtsClient speech, 
             ImageQuality = "low",
             SpeechInput,
             Calls = calls,
-        }, ReportJson));
+        });
 
+        return calls.Length == 6 && calls.All(call => call.Error is null) ? 0 : 1;
+    }
+
+    public async Task<int> RunAssistantAsync(IAIModelResolver modelResolver)
+    {
+        var request = new AIChatRequest
+        {
+            Scenario = "Assistant",
+            Messages = [new AIChatMessage("user", CreatePrompt())],
+        };
+        var resolved = modelResolver.ResolveChatModel(request);
+        Console.WriteLine($"Scenario {resolved.Scenario} -> {resolved.Provider}/{resolved.Model} (MaxOutputTokens={resolved.MaxOutputTokens})");
+        var calls = await RunChatAsync(resolved.Model, request);
+        await WriteReportsAsync(calls, new
+        {
+            CompletedAtUtc = DateTimeOffset.UtcNow,
+            Mode = "Assistant",
+            resolved.Scenario,
+            resolved.Provider,
+            resolved.Model,
+            resolved.MaxOutputTokens,
+            Calls = calls,
+        });
+
+        return calls.Count == 2 && calls.All(call => call.Error is null) ? 0 : 1;
+    }
+
+    private async Task WriteReportsAsync(IEnumerable<CallResult> chats, object summary)
+    {
+        await File.WriteAllTextAsync(Path.Combine(output, "summary.json"), JsonSerializer.Serialize(summary, ReportJson));
         var rows = new List<string>
         {
             "deployment,run,input_tokens,cached_tokens,cache_write_tokens,output_tokens,reasoning_tokens,total_tokens,elapsed_seconds,http_status",
         };
         rows.AddRange(chats.Select(CsvRow));
         await File.WriteAllLinesAsync(Path.Combine(output, "cache-tokens.csv"), rows);
-
-        return calls.Length == 6 && calls.All(call => call.Error is null) ? 0 : 1;
     }
 
-    private async Task<List<CallResult>> RunChatAsync(string model, string prompt)
+    private string CreatePrompt() =>
+        $"This is a synthetic logistics benchmark. Reply with exactly the phrase Azure smoke test OK. " +
+        $"The fictional inventory below is padding for a repeatable prompt caching measurement. Run {Path.GetFileName(output)}.\n" +
+        string.Join('\n', Enumerable.Range(1, 90).Select(row =>
+            $"Inventory manifest row {row:D3}: The fictional harbor warehouse stores copper coils, paper lanterns, painted flour barrels, green canvas and numbered wooden crates."));
+
+    private static AIChatRequest DirectChatRequest(string model, string prompt) => new()
     {
-        var request = new AIChatRequest
-        {
-            Provider = "Azure",
-            Model = model,
-            Messages = [new AIChatMessage("user", prompt)],
-            MaxOutputTokens = 384,
-        };
+        Provider = "Azure",
+        Model = model,
+        Messages = [new AIChatMessage("user", prompt)],
+        MaxOutputTokens = 384,
+    };
+
+    private async Task<List<CallResult>> RunChatAsync(string model, AIChatRequest request)
+    {
         var results = new List<CallResult>(capacity: 2);
         for (var attempt = 1; attempt <= 2; attempt++)
         {
-            var file = $"{model}-{attempt:00}.txt";
+            var file = $"{request.Scenario ?? model}-{attempt:00}.txt";
             var result = await RunCallAsync("chat", model, attempt, async () =>
             {
                 var response = await chat.GetResponseAsync(request, cancellationToken);

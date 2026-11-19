@@ -61,7 +61,7 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
 
 两个聊天部署走 Azure 资源级 Responses API。文生图走资源级 v1 Images API，复用 `east2` 的终结点和密钥。`CHAT.Resources` 和 `IMAGE.Resources` 各自查找资源，因此示例在两个节点中都声明 `east2`。`TTS` 使用独立的 Speech 密钥和区域，模块将区域地址解析为 `https://eastus.tts.speech.microsoft.com/cognitiveservices/v1`，用 SSML 发起合成。[Azure Responses API](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses) · [Azure 图像生成 API](https://learn.microsoft.com/en-us/azure/foundry/reference/rest/images-create-image) · [Azure Speech REST](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech)
 
-Lab 在请求中直接指定 `Provider` 和 `Model`，可以省略 `AI:Models:Chat:Assistant`。如果应用仍通过 `Scenario = "Assistant"` 选择模型，保留该场景并让它的 `Model` 指向 `AzureCloud.CHAT.Models` 中的键。[场景参数参考](azure-configuration.md)
+默认的 Lab 直接指定 `Provider` 和 `Model`，可以省略 `AI:Models:Chat:Assistant`。如果应用通过 `Scenario = "Assistant"` 选择模型，保留该场景并让它的 `Model` 指向 `AzureCloud.CHAT.Models` 中的键。[Lab 场景示例](../../samples/Lab/MS.Microservice.Lab.Azure/README.md#用-assistant-场景切换模型) · [场景参数参考](azure-configuration.md)
 
 `AI:Providers:Azure` 中的超时、重试、并发量和响应预算适用于整个 Azure Provider。示例给图像生成留出 330 秒，设置 `MaxRetryAttempts: 0` 让每次 Lab 操作只发出一个请求。Lab 由模块管理请求超时。生产宿主如需超过 `HttpClient` 的默认超时，也要配置命名客户端 `MS.Microservice.AI.Azure` 的 `HttpClient.Timeout`。完整默认值、单位和覆盖规则见 [Azure 配置参数参考](azure-configuration.md)。
 

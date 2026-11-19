@@ -3,25 +3,34 @@ using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.Lab.Azure;
 
-if (args.Length > 1 || args is ["-h" or "--help"])
+var assistantMode = args is ["--assistant", ..];
+var outputArgs = assistantMode ? args[1..] : args;
+if (outputArgs.Length > 1 || outputArgs is ["-h" or "--help"])
 {
-    Console.WriteLine("Usage: dotnet run --project samples/Lab/MS.Microservice.Lab.Azure -c Release -- [output-parent-directory]");
-    return args.Length > 1 ? 2 : 0;
+    Console.WriteLine("Usage: dotnet run --project samples/Lab/MS.Microservice.Lab.Azure -c Release -- [--assistant] [output-parent-directory]");
+    return outputArgs.Length > 1 ? 2 : 0;
 }
 
-var configuration = new ConfigurationBuilder()
+var configurationBuilder = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json")
-    .AddEnvironmentVariables()
-    .Build();
+    .AddJsonFile("appsettings.json");
+if (assistantMode)
+{
+    configurationBuilder.AddJsonFile("appsettings.Assistant.json");
+}
+
+var configuration = configurationBuilder.AddEnvironmentVariables().Build();
 
 var secretNames = new Dictionary<string, string>
 {
     ["AzureCloud:CHAT:Resources:east2:Secret"] = "AZURE_ESAT2_CHAT_API_KEY",
     ["AzureCloud:CHAT:Resources:terra:Secret"] = "AZURE_FZTEST001_CHAT_API_KEY",
-    ["AzureCloud:TTS:Secret"] = "AZURE_SPEECH_KEY",
-    ["AzureCloud:IMAGE:Resources:east2:Secret"] = "AZURE_ESAT2_CHAT_API_KEY",
 };
+if (!assistantMode)
+{
+    secretNames["AzureCloud:TTS:Secret"] = "AZURE_SPEECH_KEY";
+    secretNames["AzureCloud:IMAGE:Resources:east2:Secret"] = "AZURE_ESAT2_CHAT_API_KEY";
+}
 
 foreach (var (path, name) in secretNames)
 {
@@ -46,7 +55,19 @@ foreach (var (path, name) in secretNames)
 }
 
 var services = new ServiceCollection();
-services.AddMicroserviceAI(configuration).AddAzure();
+var ai = services.AddMicroserviceAI(configuration);
+if (assistantMode)
+{
+    var chatConfiguration = new ConfigurationBuilder()
+        .AddInMemoryCollection(configuration.GetSection("AzureCloud:CHAT").AsEnumerable())
+        .Build();
+    ai.AddAzure(chatConfiguration.GetSection("AzureCloud"));
+}
+else
+{
+    ai.AddAzure();
+}
+
 services.AddTransient<AzureUsageCaptureHandler>();
 // Azure's configured request timeout also covers image generations that take longer than HttpClient's default.
 services.AddHttpClient("MS.Microservice.AI.Azure", client => client.Timeout = Timeout.InfiniteTimeSpan)
@@ -60,11 +81,13 @@ Console.CancelKeyPress += (_, signal) =>
     cancellation.Cancel();
 };
 
-var parent = args.SingleOrDefault() ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+var parent = outputArgs.SingleOrDefault() ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 var runName = $"Azure-Lab-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss'Z'}-{Guid.NewGuid().ToString("N")[..8]}";
 var output = Directory.CreateDirectory(Path.Combine(Path.GetFullPath(parent), runName)).FullName;
 Console.WriteLine($"Artifacts: {output}");
 
 var lab = new AzureLabScenario(provider.GetRequiredService<IAIChatClient>(), provider.GetRequiredService<IAITtsClient>(),
     provider.GetRequiredService<IAIImageGenerationClient>(), output, cancellation.Token);
-return await lab.RunAsync();
+return assistantMode
+    ? await lab.RunAssistantAsync(provider.GetRequiredService<IAIModelResolver>())
+    : await lab.RunAsync();
