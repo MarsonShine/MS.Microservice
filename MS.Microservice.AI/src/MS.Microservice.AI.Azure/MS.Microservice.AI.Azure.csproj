@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.Azure</PackageId>
+    <Title>MS.Microservice AI Azure OpenAI Provider</Title>
+    <Description>Azure OpenAI provider with configurable resource and deployment routing.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;azure;openai</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="../MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
+  </ItemGroup>
+</Project>

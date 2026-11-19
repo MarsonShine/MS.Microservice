@@ -9,6 +9,12 @@ Abstractions 定义中立输入输出；Core 解析模型配置并组织策略�
 Core 不是新的业务 Domain。它是 AI 调用基础设施。
 QuestionGeneration 则在中立模型客户端之上组织生成、检查、修复与预算，是可选的上层 Harness。
 
+## Azure 的资源与模型部署
+
+同一个 Azure OpenAI 模型在不同地区的可用性可能不同，部署名称也由各资源独立设置。业务场景用逻辑别名调用 Core。Azure Provider 再按配置顺序选中首个启用且所属资源也启用的部署，用该资源的终结点和密钥发送请求，并把部署名称写入请求的 `model` 字段。[区域可用性](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability)
+
+部署选择在启动时校验。每次调用及其重试使用同一部署。需要调整目标资源时，更新候选项并重启宿主。Azure Provider 复用 Core 的 Chat HTTP、SSE 解析和运行策略，资源寻址和认证留在 Azure 模块。[Azure 配置](azure.md)
+
 ## 为什么共享执行策略，不合并所有解析
 
 Chat 与 Media 遇到超时、限流、网络故障时需要一致的重试规则，
