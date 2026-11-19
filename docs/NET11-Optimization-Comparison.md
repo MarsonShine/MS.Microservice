@@ -2,6 +2,20 @@
 
 本记录面向维护者，比较项目中已有实现与 .NET 11／C# 15 的对应能力。这里的“优化”分别指代码可读性、接口能力或运行时性能；没有基准数据的改写不视为性能提升。完整升级背景见 [.NET 11 升级过程](NET11-Upgrade-Union-Async-Validation.md)。
 
+## NuGet 依赖对齐
+
+项目目标仍为 `net11.0`，SDK 仍为 `11.0.100`。中央 NuGet 清单按各包的发行版本对齐。
+
+| 依赖 | 原版本 | 升级后 |
+| --- | --- | --- |
+| ASP.NET Core TestHost、JwtBearer、Microsoft.Extensions 系列 | `10.0.6`；Hybrid、HTTP Resilience 为 `10.5.0` | `11.0.0` |
+| `Microsoft.Build.Tasks.Git` | `10.0.303` | `11.0.100`，与 SDK 版本一致 |
+| `System.IO.Packaging`、`System.Security.Cryptography.Pkcs` 和 `.Xml` | `10.0.12` 或 `10.0.13` | `11.0.0` |
+| `System.IdentityModel.Tokens.Jwt` | `8.14.0` | `8.19.2`，满足 `JwtBearer 11.0.0` 的传递依赖 |
+| EF Core 及 `dotnet-ef` | `10.0.6` | `10.0.15`，保留 PostgreSQL 提供程序所支持的主版本 |
+
+截至 2026-11-19，[Npgsql EF Core 提供程序稳定版](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL/10.0.3)要求 EF Core `< 11.0.0`；[11 RC](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL/11.0.0-rc.3)精确依赖一个 EF Core RC 版本，无法搭配 `11.0.0` 正式版。等支持 EF Core 11 正式版的提供程序发布后，再一起升级 EF Core、提供程序和本地 CLI，验证 PostgreSQL 与 SQLite。测试 SDK、Application Insights、ONNX Runtime、Playwright 等按各自版本线维护。
+
 ## 嵌套循环和标签跳转
 
 C# 15 允许为外围循环命名，并从内部用 `break label;` 或 `continue label;` 控制该循环。它主要替代跨层传播的布尔标志或 `goto`，不是加速嵌套循环的算法。语法与跳转范围见 [微软语言文档](https://learn.microsoft.com/dotnet/csharp/language-reference/statements/jump-statements)。

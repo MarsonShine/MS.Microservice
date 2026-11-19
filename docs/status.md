@@ -2,7 +2,7 @@
 更新：2026-11-19
 Status: idle
 Task: none
-Next: 用 Azure Lab 验证后续新增或替换的部署。
-Baseline: 1cb983a
+Next: 等待支持 EF Core 11 正式版的 PostgreSQL 提供程序发布，再一起评估升级；后续新增或替换的 Azure 部署仍用 Lab 验证。
+Baseline: d6fc973
 
-Azure Lab 已验证同一个 `Assistant` 场景能通过配置切换两个 Chat 部署。用法见 [Lab 场景示例](../samples/Lab/MS.Microservice.Lab.Azure/README.md#用-assistant-场景切换模型)，请求结果见[验收记录](validation/AZURE-ASSISTANT-LAB/summary.md)。
+.NET 11 官方包已对齐，EF Core 与 CLI 保持兼容的 `10.0.15`，详见[验收记录](validation/NET11-OFFICIAL-PACKAGES/summary.md)。Azure Lab 已验证同一个 `Assistant` 场景可切换两个真实 Chat 部署，见[Azure 验收记录](validation/AZURE-ASSISTANT-LAB/summary.md)。
