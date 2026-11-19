@@ -51,7 +51,7 @@ Briefly report the root cause, invariant, fix layer, changed behavior, verificat
 
 ## Project
 
-- Stack: .NET 10 (`global.json` 10.0.401); PostgreSQL, RabbitMQ, and Keycloak for local runs.
+- Stack: .NET 11 (`global.json` 11.0.100); PostgreSQL, RabbitMQ, and Keycloak for local runs.
 - Build: `dotnet restore --configfile nuget.config`, then `dotnet build --no-restore -c Release`.
 - Test: `dotnet test --no-build -c Release`; integration, container, and vulnerability checks are in `.github/workflows/dotnet-ci.yml`.
 - Commands: [README](README.md) and [docs/Getting-Started.md](docs/Getting-Started.md) are authoritative; do not copy them here.

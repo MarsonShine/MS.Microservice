@@ -8,9 +8,20 @@ public partial class ExcelHelper
     /// <summary>Reads a header-first CSV using the same model mapping and validation as Excel reports.</summary>
     /// <remarks>Leaves input open. Report row numbers are logical CSV records; SheetName is CSV.
     /// MaximumRows bounds data records, including invalid rows. Sheet/row initialization applies only to Excel.</remarks>
-    public async Task<ExcelImportReport<T>> ImportCsvWithReportAsync<T>(Stream source,
+    public Task<ExcelImportReport<T>> ImportCsvWithReportAsync<T>(Stream source,
         Func<T, IEnumerable<ExcelRowValidationError>>? validateRow = null,
         CsvOptions? options = null, int maximumRows = 10000, CancellationToken cancellationToken = default)
+        => ImportCsvReportCoreAsync(source, validateRow, false, null, options, maximumRows, cancellationToken);
+
+    /// <summary>Imports CSV rows and asynchronously validates their data annotations.</summary>
+    public Task<ExcelImportReport<T>> ImportCsvWithDataAnnotationsAsync<T>(Stream source,
+        IServiceProvider? services = null, CsvOptions? options = null, int maximumRows = 10000,
+        CancellationToken cancellationToken = default)
+        => ImportCsvReportCoreAsync<T>(source, null, true, services, options, maximumRows, cancellationToken);
+
+    private async Task<ExcelImportReport<T>> ImportCsvReportCoreAsync<T>(Stream source,
+        Func<T, IEnumerable<ExcelRowValidationError>>? validateRow, bool validateAnnotations,
+        IServiceProvider? services, CsvOptions? options, int maximumRows, CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumRows);
         cancellationToken.ThrowIfCancellationRequested();
@@ -59,6 +70,9 @@ public partial class ExcelHelper
             if (errors.Count != errorCount) continue;
             if (validateRow is not null)
                 ValidateBusinessRow(value, validateRow, meta, map, map.Length, rowIndex, "CSV", errors, cancellationToken);
+            if (validateAnnotations)
+                await ValidateAnnotationsRowAsync(value, services, meta, map, map.Length, rowIndex, "CSV", errors, cancellationToken)
+                    .ConfigureAwait(false);
             if (errors.Count == errorCount) rows.Add(new((int)record.RowNumber, value));
         }
         cancellationToken.ThrowIfCancellationRequested();

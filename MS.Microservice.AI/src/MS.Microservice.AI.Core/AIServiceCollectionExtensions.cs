@@ -60,7 +60,7 @@ public static class AIServiceCollectionExtensions
         services.AddAIPayloadLimits(section.GetSection(AIPayloadLimitOptions.SectionName));
         services.AddAICostAccounting(section.GetSection(AICostAccountingOptions.SectionName));
 
-        return new AIBuilder(services);
+        return new AIBuilder(services, section);
     }
 
     /// <summary>Registers the AI rate limiter abstraction and built-in fixed-window implementation.</summary>

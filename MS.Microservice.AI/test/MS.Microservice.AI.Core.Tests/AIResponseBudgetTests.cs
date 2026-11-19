@@ -235,26 +235,27 @@ public sealed class AIResponseBudgetTests
     [InlineData("MaxErrorResponseBytes", "2147483648")]
     [InlineData("MaxStreamLineCharacters", "0")]
     [InlineData("MaxStreamLineCharacters", "-1")]
-    public void InvalidResponseBudgetsFailStartupValidation(string option, string value)
+    public async Task InvalidResponseBudgetsFailStartupValidation(string option, string value)
     {
         using var handler = new ResponseHandler(_ => SpeechResponse());
         using var services = CreateContainer(handler, new() { [option] = value });
 
-        var failure = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IStartupValidator>().Validate());
+        var failure = await Assert.ThrowsAsync<OptionsValidationException>(
+            () => services.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None));
 
         Assert.Contains(failure.Failures, message => message.Contains("AI:Providers:OpenAI:" + option, StringComparison.Ordinal));
         Assert.Equal(0, handler.Calls);
     }
 
     [Fact]
-    public void ResponseBudgetValidationAcceptsInclusiveLimits()
+    public async Task ResponseBudgetValidationAcceptsInclusiveLimits()
     {
         using var handler = new ResponseHandler(_ => SpeechResponse());
         using var services = CreateContainer(handler, new()
         {
             ["MaxResponseBytes"] = "2147483647", ["MaxErrorResponseBytes"] = "1", ["MaxStreamLineCharacters"] = "1"
         });
-        services.GetRequiredService<IStartupValidator>().Validate();
+        await services.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(CancellationToken.None);
         Assert.Equal(0, handler.Calls);
     }
 

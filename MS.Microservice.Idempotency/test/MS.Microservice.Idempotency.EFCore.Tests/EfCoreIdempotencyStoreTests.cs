@@ -10,6 +10,56 @@ public sealed class EfCoreIdempotencyStoreTests
     private static readonly DateTimeOffset InitialTime = new(2026, 9, 23, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public async Task TypedLookupPreservesMissingReplayAndConflictAndOriginalContract()
+    {
+        await using var database = await Database.OpenAsync();
+        var request = Request("first");
+        await using var context = database.CreateContext();
+        var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
+
+        var missing = await store.FindResultAsync(request);
+        Assert.IsType<IdempotencyMissing>(missing.Value);
+        Assert.Equal(new IdempotencyLookup(IdempotencyLookupKind.Missing, null), missing.ToLegacyLookup());
+        Assert.Equal(missing.ToLegacyLookup(), await store.FindAsync(request));
+
+        await SaveAsync(database, request);
+        var replay = await store.FindResultAsync(request);
+        var response = Assert.IsType<IdempotencyResponse>(replay.Value);
+        Assert.Equal(201, response.StatusCode);
+        Assert.Equal("application/json", response.ContentType);
+        Assert.Equal("/api/v1/profiles/1", response.Location);
+        Assert.Equal("{\"id\":1}", Encoding.UTF8.GetString(response.Body.Span));
+        Assert.Same(response, replay.ToLegacyLookup().Response);
+        var legacy = await store.FindAsync(request);
+        Assert.Equal(IdempotencyLookupKind.Replay, legacy.Kind);
+        Assert.Equal(response.Body.ToArray(), legacy.Response!.Body.ToArray());
+
+        var conflict = await store.FindResultAsync(Request("changed"));
+        Assert.IsType<IdempotencyDifferentRequest>(conflict.Value);
+        Assert.Equal(new IdempotencyLookup(IdempotencyLookupKind.DifferentRequest, null), conflict.ToLegacyLookup());
+        Assert.Equal(conflict.ToLegacyLookup(), await store.FindAsync(Request("changed")));
+    }
+
+    [Fact]
+    public void DefaultTypedLookupCannotBeMistakenForMissing()
+    {
+        IdempotencyLookupResult result = default;
+        Assert.Null(result.Value);
+        Assert.Throws<InvalidOperationException>(() => result.ToLegacyLookup());
+    }
+
+    [Fact]
+    public async Task BothLookupContractsPropagateCancellation()
+    {
+        await using var database = await Database.OpenAsync();
+        await using var context = database.CreateContext();
+        var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
+        var canceled = new CancellationToken(canceled: true);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.FindResultAsync(Request("first"), canceled));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.FindAsync(Request("first"), canceled));
+    }
+
+    [Fact]
     public async Task ClaimBusinessWriteAndResponseCommitTogether_AndReplayDoesNotRunBusinessAgain()
     {
         await using var database = await Database.OpenAsync();
@@ -100,6 +150,8 @@ public sealed class EfCoreIdempotencyStoreTests
 
         var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.FindAsync(request));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.FindResultAsync(request));
+        Assert.IsType<IdempotencyDifferentRequest>((await store.FindResultAsync(Request("changed"))).Value);
     }
 
     [Fact]

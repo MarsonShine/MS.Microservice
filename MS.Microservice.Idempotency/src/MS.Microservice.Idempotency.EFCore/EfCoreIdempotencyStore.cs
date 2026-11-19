@@ -6,24 +6,56 @@ public enum IdempotencyLookupKind { Missing, Replay, DifferentRequest }
 
 public readonly record struct IdempotencyLookup(IdempotencyLookupKind Kind, IdempotencyResponse? Response);
 
+/// <summary>No committed record exists for this operation, actor and key.</summary>
+public sealed class IdempotencyMissing
+{
+    internal static IdempotencyMissing Instance { get; } = new();
+    private IdempotencyMissing() { }
+}
+
+/// <summary>The key belongs to a request with a different representation.</summary>
+public sealed class IdempotencyDifferentRequest
+{
+    internal static IdempotencyDifferentRequest Instance { get; } = new();
+    private IdempotencyDifferentRequest() { }
+}
+
+/// <summary>A missing key, a replayable response, or a key used for a different request.</summary>
+public union IdempotencyLookupResult(IdempotencyMissing, IdempotencyResponse, IdempotencyDifferentRequest)
+{
+    /// <summary>Maps this result to the original lookup contract.</summary>
+    public IdempotencyLookup ToLegacyLookup() => this switch
+    {
+        IdempotencyMissing => new(IdempotencyLookupKind.Missing, null),
+        IdempotencyResponse response => new(IdempotencyLookupKind.Replay, response),
+        IdempotencyDifferentRequest => new(IdempotencyLookupKind.DifferentRequest, null),
+        null => throw new InvalidOperationException("An uninitialized idempotency lookup has no result.")
+    };
+}
+
 /// <summary>Stores a response in the caller-owned business transaction; it never commits that transaction.</summary>
 public sealed class EfCoreIdempotencyStore<TContext>(TContext context, TimeProvider clock) where TContext : DbContext
 {
-    public async Task<IdempotencyLookup> FindAsync(IdempotencyRequest request,
+    /// <summary>Returns a typed result for the request key without changing the caller's transaction.</summary>
+    public async Task<IdempotencyLookupResult> FindResultAsync(IdempotencyRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         EnsureModel();
         var record = await context.Set<IdempotencyRecord>().AsNoTracking().SingleOrDefaultAsync(
             row => row.ScopeHash == request.ScopeHash && row.KeyHash == request.KeyHash, cancellationToken);
-        if (record is null) return new(IdempotencyLookupKind.Missing, null);
+        if (record is null) return IdempotencyMissing.Instance;
         if (!string.Equals(record.RequestHash, request.RequestHash, StringComparison.Ordinal))
-            return new(IdempotencyLookupKind.DifferentRequest, null);
+            return IdempotencyDifferentRequest.Instance;
         if (record.CompletedAtUtcTicks is null || record.StatusCode is null || record.Body is null)
             throw new InvalidOperationException("A committed idempotency record has no completed response.");
-        return new(IdempotencyLookupKind.Replay,
-            new IdempotencyResponse(record.StatusCode.Value, record.ContentType, record.Body, record.Location));
+        return new IdempotencyResponse(record.StatusCode.Value, record.ContentType, record.Body, record.Location);
     }
+
+    /// <summary>Returns a lookup using the original enum-and-response contract.</summary>
+    public async Task<IdempotencyLookup> FindAsync(IdempotencyRequest request,
+        CancellationToken cancellationToken = default)
+        => (await FindResultAsync(request, cancellationToken)).ToLegacyLookup();
 
     /// <summary>
     /// Claims the key before invoking the business operation and completes the response before returning.

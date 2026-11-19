@@ -57,19 +57,31 @@ public sealed class MessageContractRegistryTests
         yield return [new string('中', 86), null!, null!, false];
         yield return [null!, new string('p', 129), null!, false];
         yield return [null!, null!, new string('s', 513), false];
+        var high = new string((char)0xd800, 1);
+        var low = new string((char)0xdc00, 1);
+        var supplementary = high + low;
+        yield return [null!, supplementary, supplementary, true];
+        yield return [null!, new string('p', 126) + supplementary, new string('s', 510) + supplementary, true];
     }
 
     [Fact]
     public void UnpairedSurrogateCannotBeStoredInAnyMetadataField()
     {
         var invalid = new string((char)0xd800, 1);
+        var low = new string((char)0xdc00, 1);
         var message = NewEvent();
         var serialized = _registry.Serialize(message);
         foreach (var (correlationId, traceParent, traceState) in new[]
                  {
                      (invalid, (string?)null, (string?)null),
                      (null, invalid, null),
-                     (null, null, invalid)
+                     (null, null, invalid),
+                     (null, low, null),
+                     (null, null, low),
+                     (null, low + invalid, null),
+                     (null, null, low + invalid),
+                     (null, "x" + invalid + "y", null),
+                     (null, null, "x" + invalid + "y")
                  })
         {
             Assert.False(MessageMetadataLimits.AreValid(correlationId, traceParent, traceState));

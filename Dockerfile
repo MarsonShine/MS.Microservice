@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100 AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props global.json nuget.config ./
 COPY MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/MS.Microservice.Idempotency.EFCore.csproj MS.Microservice.Idempotency/src/MS.Microservice.Idempotency.EFCore/
@@ -21,7 +21,7 @@ COPY src/MS.Microservice.Observability/MS.Microservice.Observability.csproj src/
 RUN dotnet restore samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj
 COPY . .
 RUN dotnet publish samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj -c Release --no-restore -o /app/publish /p:UseAppHost=false
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 8080

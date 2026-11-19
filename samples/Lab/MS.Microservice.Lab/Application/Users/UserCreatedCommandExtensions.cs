@@ -71,7 +71,7 @@ namespace MS.Microservice.Lab.Application.Users
 
             public Either<Error, UserCreatedCommand> EnsureRolesExistEither(IReadOnlyCollection<Role> roles)
                 => request.EnsureRolesExist(roles).Match<Either<Error, UserCreatedCommand>>(
-                    none: () => (Either<Error, UserCreatedCommand>)F.Left(Error.Validation("角色校验失败", ["传入的角色 Id 在系统中不存在。"])),
+                    none: () => (Either<Error, UserCreatedCommand>)F.Left(UserRoleCatalogValidation.InvalidRoles()),
                     some: validRequest => (Either<Error, UserCreatedCommand>)F.Right(validRequest));
 
             /// <summary>

@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | 工作簿导入／导出 | `ExcelHelper.Import` / `Export` 及异步重载 | [导入设计](docs/import-reports-design.md) |
 | 带校验的导入 | `ImportWithReport` / `ImportWithReportAsync` | [报告与映射](docs/import-reports-design.md) |
+| 异步数据注解 | `ImportWithDataAnnotationsAsync` / `ImportCsvWithDataAnnotationsAsync` | .NET 11 异步行校验，显式启用 |
 | 模板填充 | `OpenExcel`、`DynamicExcelBuilder` | 公共接口注释 |
 | CSV 记录读写 | `CsvHelper.ReadAsync` / `WriteAsync` | [CSV 设计](docs/csv-design.md) |
 | CSV 模型导入／导出 | `ExcelHelper.ImportCsvWithReportAsync` / `ExportCsvAsync` | 复用 Excel 列映射、校验和错误报告；[DataTransfer 流程](../../docs/components/data-transfer.md) |
@@ -54,6 +55,51 @@ public sealed class OrderRow
 | `Errors` | 工作表、行列、属性、错误类型、消息及原始值，可用已有 `Export` 导出 |
 
 报告有错误时仍可能包含其他有效行，业务自行决定是否部分接收。非必填空值保留默认值，已有物理空行参与校验。
+
+需要异步规则时，可使用 .NET 11 的 `AsyncValidationAttribute` 或 `IAsyncValidatableObject`：
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+using MS.Microservice.Infrastructure.Utils;
+using MS.Microservice.Infrastructure.Utils.Excel;
+
+public interface ISkuCatalog
+{
+    Task<bool> ExistsAsync(string sku, CancellationToken cancellationToken);
+}
+
+public sealed class KnownSkuAttribute : AsyncValidationAttribute
+{
+    protected override ValidationResult? IsValid(object? value, ValidationContext context)
+        => throw new InvalidOperationException("请使用异步校验。");
+
+    protected override async Task<ValidationResult?> IsValidAsync(object? value, ValidationContext context,
+        CancellationToken cancellationToken)
+    {
+        var catalog = (ISkuCatalog?)context.GetService(typeof(ISkuCatalog))
+            ?? throw new InvalidOperationException("未注册商品目录。");
+        if (value is string sku && await catalog.ExistsAsync(sku, cancellationToken))
+            return ValidationResult.Success;
+        return new ValidationResult("商品不存在。", [context.MemberName!]);
+    }
+}
+
+public sealed class ProductRow
+{
+    [ExcelColumn("SKU", Required = true), KnownSku] public string Sku { get; set; } = "";
+}
+
+public static class ProductImport
+{
+    // services 是调用方管理生命周期的 IServiceProvider。
+    public static ValueTask<ExcelImportReport<ProductRow>> ReadAsync(ExcelHelper helper, Stream input,
+        IServiceProvider services, CancellationToken cancellationToken)
+        => helper.ImportWithDataAnnotationsAsync<ProductRow>("products.xlsx", input, services, cancellationToken);
+    // CSV 使用 ImportCsvWithDataAnnotationsAsync<ProductRow>(input, services, cancellationToken: cancellationToken)。
+}
+```
+
+这些入口只校验列及类型转换成功的行，错误写入 `BusinessValidation`；`ValidationResult.MemberNames` 中的每个成员对应一个错误，无成员时是行级错误。自定义属性需要列定位时，应把 `context.MemberName` 放入结果。调用方负责依赖及其生命周期；校验器异常和取消直接传播。每行依次校验，但 .NET 可能并发执行同一行内的规则，依赖服务须支持该并发。数据注解仅校验当前对象，不递归校验嵌套对象。
 
 旧 `Import` 保持宽松行为：无法转换的值可能保留默认值，不强制 `Required`。ExcelHelper 的列名比较区分大小写；读取、导出及模板实例不应并发复用。调用方负责释放工作簿（模板由 `builder.Workbook` 提供），输入输出流保持打开。
 

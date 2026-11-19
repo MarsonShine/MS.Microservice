@@ -6,7 +6,7 @@
 |---|---|
 | AI.Abstractions | 请求、响应、能力和调用接口；业务按能力依赖它 |
 | AI.Core | 配置解析、路由、限流/熔断/报告管线和公共传输逻辑 |
-| AI.OpenAI / DeepSeek / Qwen | 各 Provider 的端点、能力差异与数据映射 |
+| AI.OpenAI / Azure / DeepSeek / Qwen | 各 Provider 的端点、能力差异与数据映射 |
 | AI.QuestionGeneration | 可单独使用的题目生成 Harness，不属于教育图像场景 |
 
 打开 [MS.Microservice.AI.slnx](MS.Microservice.AI.slnx) 即可集中开发这个模块。
@@ -21,7 +21,7 @@
 
 ## MS.Microservice.AI
 
-Independent AI module family for MS.Microservice. It provides provider-neutral Chat, structured JSON output, TTS, ASR, image generation, image edit, educational image prompt planning, and a bounded question-generation Harness with concrete providers for OpenAI, DeepSeek, and Qwen.
+Independent AI module family for MS.Microservice. It provides provider-neutral Chat, structured JSON output, TTS, ASR, image generation, image edit, educational image prompt planning, and a bounded question-generation Harness with providers for OpenAI, Azure, DeepSeek, and Qwen.
 
 ### Packages
 
@@ -31,6 +31,7 @@ Independent AI module family for MS.Microservice. It provides provider-neutral C
 | `MS.Microservice.AI.Core` | Options binding, model resolution, routing clients, DI entry point, shared resilience, OpenAI-compatible HTTP/SSE implementations for chat, audio, and image capabilities. Also includes **`Images/`** — educational flashcard image prompt planning, scene grouping, structured edit delta, and batch generation pipeline. |
 | `MS.Microservice.AI.QuestionGeneration` | Business-neutral question contracts and a bounded Draft → Validate → Review → Repair Harness, strict JSON Schema integration, Attempt auditing, budgets, repair allowlists, and pluggable question definitions. |
 | `MS.Microservice.AI.OpenAI` | OpenAI chat, TTS, ASR, image generation, and image edit provider registration and validation. |
+| `MS.Microservice.AI.Azure` | Azure Responses and Chat Completions, Azure AI Speech synthesis, Azure OpenAI audio, and GPT Image generation and editing. Supports `AzureCloud` mappings. See the [Azure setup guide](docs/azure.md) and [configuration reference](docs/azure-configuration.md). |
 | `MS.Microservice.AI.DeepSeek` | DeepSeek chat provider registration and validation. DeepSeek is currently enforced as chat-only. |
 | `MS.Microservice.AI.Qwen` | Qwen chat, TTS, ASR, image generation, image edit, and **reference-image edit** (via `IQwenImageReferenceEditClient` + `QwenReferenceImageEditAdapter`) provider registration and validation through compatible-mode endpoints. |
 
@@ -97,6 +98,7 @@ The framework contains no fixed educational question codes or database projectio
 | Provider | Chat | JSON Object | JSON Schema request | TTS | ASR | Image Generation | Image Edit | Reference Image Edit |
 |---|---|---|---|---|---|---|---|---|
 | OpenAI | Yes | Yes | Yes, model-dependent | Yes | Yes | Yes | Yes | No |
+| Azure | Yes | Yes, model-dependent | Yes, model-dependent | Yes | Yes | Yes, GPT Image | Yes, GPT Image | No |
 | DeepSeek | Yes | Yes, model-dependent | Requested with automatic fallback | No | No | No | No | No |
 | Qwen | Yes | Yes, model-dependent | Requested with automatic fallback | Yes | Yes | Yes | Yes | Yes |
 

@@ -26,21 +26,34 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
             "image_edit",
             model,
             request.RequestId,
-            () => CreateMultipartRequest(RelativeImageEditPath, CreateMultipartContent(model, request)),
+            () =>
+            {
+                var (target, bodyModel, imagePartName) = ResolveImageTarget(model, RelativeImageEditPath);
+                return CreateMultipartRequest(target, CreateMultipartContent(model, request, bodyModel, imagePartName));
+            },
             (httpResponse, requestCancellationToken) => ParseImageResponseAsync(httpResponse, AICapability.ImageEdit, model, request.RequestId, requestCancellationToken),
             cancellationToken));
     }
 
     protected virtual string RelativeImageEditPath => "images/edits";
 
-    private MultipartFormDataContent CreateMultipartContent(AIResolvedModel model, AIImageEditRequest request)
+    private MultipartFormDataContent CreateMultipartContent(
+        AIResolvedModel model, AIImageEditRequest request, string? bodyModel, string imagePartName)
     {
+        var responseFormat = GetImageResponseFormat(model);
         var content = new MultipartFormDataContent();
-        content.Add(CreateBinaryContent(request.Image), "image", request.Image.FileName ?? "image.png");
-        content.Add(new StringContent(model.Model), "model");
+        content.Add(CreateBinaryContent(request.Image), imagePartName, request.Image.FileName ?? "image.png");
+        if (bodyModel is not null)
+        {
+            content.Add(new StringContent(bodyModel), "model");
+        }
+
         content.Add(new StringContent(request.Prompt), "prompt");
         content.Add(new StringContent((model.Count ?? 1).ToString(System.Globalization.CultureInfo.InvariantCulture)), "n");
-        content.Add(new StringContent(model.ResponseFormat ?? "b64_json"), "response_format");
+        if (responseFormat is not null)
+        {
+            content.Add(new StringContent(responseFormat), "response_format");
+        }
 
         if (!string.IsNullOrWhiteSpace(model.Size))
         {

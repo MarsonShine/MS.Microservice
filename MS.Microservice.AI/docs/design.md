@@ -9,6 +9,16 @@ Abstractions 定义中立输入输出；Core 解析模型配置并组织策略�
 Core 不是新的业务 Domain。它是 AI 调用基础设施。
 QuestionGeneration 则在中立模型客户端之上组织生成、检查、修复与预算，是可选的上层 Harness。
 
+## Azure 的资源与模型部署
+
+使用 `AzureCloud.CHAT` 时，每个模型键直接引用本组资源和部署。直接指定模型的业务可以使用这个键发起调用。需要按业务场景配置默认参数时，Core 场景仍可引用同一个键。选定部署后，Azure 聊天适配器根据 `Api` 构建 Responses 或 Chat Completions 请求。Responses 每次发送完整消息并设置 `store: false`，从终止事件取得完成状态和用量。
+
+`AzureCloud.TTS` 指向 Speech 资源。Speech 适配器负责区域终结点、订阅密钥头和 SSML，复用通用并发、超时、重试和响应预算。Azure OpenAI 的语音部署仍可通过它的模型别名调用。
+
+`AzureCloud.IMAGE` 为图像生成和编辑提供一组资源与部署映射。部署级 API 将部署名写入路径，资源级 v1 API 将其写入请求体。两者复用图像响应解析和执行策略。
+
+`AI:Providers:Azure` 仍支持按能力配置候选列表，按顺序选择首个启用且所属资源也启用的部署。`AzureCloud` 和候选列表在启动时校验。要调整路由，修改配置后重启宿主。每次调用及其重试使用同一目标。[Azure 配置](azure.md)
+
 ## 为什么共享执行策略，不合并所有解析
 
 Chat 与 Media 遇到超时、限流、网络故障时需要一致的重试规则，

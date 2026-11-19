@@ -44,7 +44,7 @@ HTTP CSP 头包含 sandbox、默认拒绝、脚本／框架／对象／连接／
 
 ## 部署元数据
 
-目录部署必须包含 Rendering DLL、它自己的 runtimeconfig／deps，以及 SDK 的 `.playwright` 文件。ProjectReference 通过 `None` 项目复制运行元数据；NuGet 将元数据显式放在 `tools/net10.0`，再由 `buildTransitive` 复制到消费者目录。SDK 自己的 targets 负责驱动复制。
+目录部署必须包含 Rendering DLL、它自己的 runtimeconfig／deps，以及 SDK 的 `.playwright` 文件。ProjectReference 通过 `None` 项目复制运行元数据；NuGet 将元数据显式放在 `tools/net11.0`，再由 `buildTransitive` 复制到消费者目录。SDK 自己的 targets 负责驱动复制。
 
 启动受监督 worker 时，入口仍为 Rendering DLL，但 `dotnet exec` 使用消费者的 runtimeconfig／deps。消费者可能升级传递依赖，或由 ASP.NET Core 共享框架提供 DLL 而不在输出目录复制；重用库打包时的独立 console 元数据会使这些已解析依赖在 worker 中缺失。`APP_CONTEXT_DEPS_FILES` 的第一项是应用依赖清单，去掉完整 `.deps.json` 后缀可取得标准同名 runtimeconfig；缺失时明确拒绝，不回退选取框架清单或库自己的旧依赖图。VSTest 的入口是 `testhost`，实际应用清单却属于测试项目，因此不能通过入口程序集名猜测配置。标准 Console、ASP.NET Core、项目引用、NuGet 及目录发布均沿用同一规则；自定义原生宿主或不提供匹配配置的动态插件加载不在支持范围。运行时清单与探测规则见 [.NET 官方文档](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/default-probing)。
 

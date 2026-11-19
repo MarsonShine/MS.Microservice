@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -59,6 +58,9 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
     protected TimeProvider TimeProvider { get; }
 
     protected virtual string RelativeChatCompletionsPath => "chat/completions";
+
+    protected virtual OpenAICompatibleRequestTarget ResolveTarget(AIResolvedModel model, string relativePath)
+        => new(new Uri(new Uri(GetBaseAddress()), relativePath), model.Model, _providerOptions.ApiKey);
 
     public async ValueTask<AIChatResponse> GetResponseAsync(AIResolvedModel model, AIChatRequest request, CancellationToken cancellationToken = default)
     {
@@ -189,9 +191,10 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         }, cancellationToken);
     private HttpRequestMessage CreateHttpRequestMessage(AIResolvedModel model, AIChatRequest request, bool isStreaming)
     {
+        var target = ResolveTarget(model, RelativeChatCompletionsPath);
         var payload = new OpenAICompatibleChatCompletionRequest
         {
-            Model = model.Model,
+            Model = target.Model,
             Messages = request.Messages.Select(message => new OpenAICompatibleChatMessage
             {
                 Role = message.Role,
@@ -207,15 +210,7 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
 
         CustomizeRequest(payload, request, model);
 
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(GetBaseAddress()), RelativeChatCompletionsPath));
-        requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _providerOptions.ApiKey);
-        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(isStreaming ? "text/event-stream" : "application/json"));
-
-        foreach (var header in _providerOptions.Headers)
-        {
-            requestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
+        var requestMessage = target.CreateRequest(isStreaming ? "text/event-stream" : "application/json", _providerOptions.Headers);
         requestMessage.Content = JsonContent.Create(payload, options: SerializerOptions);
         return requestMessage;
     }
@@ -436,7 +431,10 @@ internal abstract partial class OpenAICompatibleChatProviderBase : IAIChatProvid
         public double? TopP { get; init; }
 
         [JsonPropertyName("max_tokens")]
-        public int? MaxTokens { get; init; }
+        public int? MaxTokens { get; set; }
+
+        [JsonPropertyName("max_completion_tokens")]
+        public int? MaxCompletionTokens { get; set; }
 
         [JsonPropertyName("stream")]
         public bool Stream { get; init; }

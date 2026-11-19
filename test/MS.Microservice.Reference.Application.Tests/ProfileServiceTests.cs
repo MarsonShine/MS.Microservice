@@ -57,6 +57,74 @@ public sealed class ProfileServiceTests
     }
 
     [Fact]
+    public async Task ChangedProfilePreservesResultAndClearsEventsAfterCommit()
+    {
+        var repository = Substitute.For<IProfileRepository>();
+        var profile = UserProfile.Create("https://issuer.example", "subject", "name", [], DateTimeOffset.UtcNow);
+        profile.ClearDomainEvents();
+        repository.GetAsync(profile.Id, Arg.Any<CancellationToken>()).Returns(profile);
+        var publisher = Substitute.For<IIntegrationEventPublisher>();
+        var service = new ProfileService(repository, new Unit(), publisher, TimeProvider.System);
+
+        var result = await service.ChangeAsync(profile.Id, new("changed", ["reader"], 1), new("https://issuer.example", "admin"));
+
+        Assert.True(result.IsRight);
+        Assert.Equal(profile.Id, result.Right.Id);
+        Assert.Equal("changed", result.Right.DisplayName);
+        Assert.Equal(2, result.Right.Version);
+        Assert.Equal(["reader"], result.Right.Roles);
+        Assert.Empty(profile.DomainEvents);
+        await publisher.Received(1).EnqueueAsync(Arg.Any<IIntegrationEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task MissingProfileReturnsNotFoundWithoutPublishing()
+    {
+        var repository = Substitute.For<IProfileRepository>();
+        var publisher = Substitute.For<IIntegrationEventPublisher>();
+        var service = new ProfileService(repository, new Unit(), publisher, TimeProvider.System);
+
+        var result = await service.ChangeAsync(Guid.NewGuid(), new("changed", [], 1), new("https://issuer.example", "admin"));
+
+        Assert.True(result.IsLeft);
+        Assert.Equal("not_found", result.Left.Code);
+        await publisher.DidNotReceive().EnqueueAsync(Arg.Any<IIntegrationEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task InvalidProfileReturnsValidationWithoutAddingOrPublishing()
+    {
+        var repository = Substitute.For<IProfileRepository>();
+        var publisher = Substitute.For<IIntegrationEventPublisher>();
+        var service = new ProfileService(repository, new Unit(), publisher, TimeProvider.System);
+
+        var result = await service.CreateAsync(new("", "subject", "name", []), new("https://issuer.example", "admin"));
+
+        Assert.True(result.IsLeft);
+        Assert.Equal("validation", result.Left.Code);
+        repository.DidNotReceive().Add(Arg.Any<UserProfile>());
+        await publisher.DidNotReceive().EnqueueAsync(Arg.Any<IIntegrationEvent>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OrderCreationPreservesSuccessAndValidationResults()
+    {
+        var repository = Substitute.For<IOrderRepository>();
+        var service = new OrderService(repository, new Unit(), TimeProvider.System);
+        var actor = new AuditActor("https://issuer.example", "subject");
+
+        var created = await service.CreateAsync(new(" SKU-1 ", 2), actor);
+        var invalid = await service.CreateAsync(new("SKU-1", 0), actor);
+
+        Assert.True(created.IsRight);
+        Assert.Equal("SKU-1", created.Right.Sku);
+        Assert.Equal(2, created.Right.Quantity);
+        Assert.True(invalid.IsLeft);
+        Assert.Equal("validation", invalid.Left.Code);
+        repository.Received(1).Add(Arg.Any<Order>());
+    }
+
+    [Fact]
     public async Task AuditBusinessKeyPreventsAnotherEffectForADifferentMessageId()
     {
         var repository = Substitute.For<IProfileAuditRepository>();

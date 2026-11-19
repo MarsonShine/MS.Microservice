@@ -899,7 +899,9 @@ public partial class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport
                 value = (float)numericValue;
                 return true;
             case TypeCode.Decimal:
-                value = (decimal)numericValue;
+                // Preserve the 15-digit decimal interpretation used before .NET 11.
+                value = decimal.Parse(numericValue.ToString("G15", CultureInfo.InvariantCulture),
+                    NumberStyles.Float, CultureInfo.InvariantCulture);
                 return true;
             case TypeCode.Int32:
                 if (numericValue != Math.Truncate(numericValue))

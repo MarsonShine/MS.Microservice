@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MS.Microservice.AI.Core;
@@ -17,6 +18,13 @@ public sealed class AIBuilder
     {
         Services = services;
     }
+
+    internal AIBuilder(IServiceCollection services, IConfigurationSection section) : this(services)
+    {
+        Section = section;
+    }
+
+    internal IConfigurationSection? Section { get; }
 
     /// <summary>The application service collection for further registration.</summary>
     public IServiceCollection Services { get; }

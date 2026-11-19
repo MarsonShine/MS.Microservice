@@ -22,14 +22,18 @@ internal abstract class OpenAICompatibleAsrProviderBase : OpenAICompatibleMediaP
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(request);
 
-        var responseFormat = model.ResponseFormat?.Trim() ?? "verbose_json";
+        var responseFormat = GetTranscriptionResponseFormat(model);
 
         return new ValueTask<AIAsrResponse>(ExecuteAsync(
             AICapability.Asr,
             "transcription",
             model,
             request.RequestId,
-            () => CreateMultipartRequest(RelativeTranscriptionsPath, CreateMultipartContent(model, request, responseFormat)),
+            () =>
+            {
+                var target = ResolveTarget(model, RelativeTranscriptionsPath);
+                return CreateMultipartRequest(target, CreateMultipartContent(model, request, target.Model, responseFormat));
+            },
             async (httpResponse, requestCancellationToken) =>
             {
                 if (!httpResponse.IsSuccessStatusCode)
@@ -91,12 +95,14 @@ internal abstract class OpenAICompatibleAsrProviderBase : OpenAICompatibleMediaP
 
     protected virtual string RelativeTranscriptionsPath => "audio/transcriptions";
 
-    private MultipartFormDataContent CreateMultipartContent(AIResolvedModel model, AIAsrRequest request, string responseFormat)
+    protected virtual string GetTranscriptionResponseFormat(AIResolvedModel model) => model.ResponseFormat?.Trim() ?? "verbose_json";
+
+    private MultipartFormDataContent CreateMultipartContent(AIResolvedModel model, AIAsrRequest request, string deploymentModel, string responseFormat)
     {
         var content = new MultipartFormDataContent();
         var filePart = CreateBinaryContent(request.Audio);
         content.Add(filePart, "file", request.Audio.FileName ?? "audio.wav");
-        content.Add(new StringContent(model.Model), "model");
+        content.Add(new StringContent(deploymentModel), "model");
 
         if (!string.IsNullOrWhiteSpace(model.Language))
         {

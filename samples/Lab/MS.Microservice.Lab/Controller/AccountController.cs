@@ -86,8 +86,7 @@ public class AccountController : ControllerBase
     /// <returns></returns>
     [HttpGet("auth")]
     [Authorize(Policy = "Manage")]
-    [ProducesResponseType(typeof(ResultDto<Domain.Identity.ActionResult>), (int)HttpStatusCode.OK)]
-    [ProducesResponseType((int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(Domain.Identity.ActionResult), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> Auth()
     {
         var account = User.FindFirst(JwtClaimTypes.PhoneNumber)?.Value;

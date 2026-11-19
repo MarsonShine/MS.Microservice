@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>MS.Microservice.AI.Azure</PackageId>
+    <Title>MS.Microservice AI Azure Provider</Title>
+    <Description>Azure Foundry chat and image deployment routing, Azure OpenAI audio, and Azure AI Speech synthesis.</Description>
+    <Authors>MS.Microservice</Authors>
+    <PackageTags>ai;azure;foundry;speech;openai</PackageTags>
+    <PackageReadmeFile>azure.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="../../docs/azure.md" Pack="true" PackagePath="/" />
+    <None Include="../../docs/azure-configuration.md" Pack="true" PackagePath="/" />
+    <ProjectReference Include="../MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <ProjectReference Include="../MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
+  </ItemGroup>
+</Project>

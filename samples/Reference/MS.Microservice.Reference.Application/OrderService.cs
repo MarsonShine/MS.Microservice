@@ -13,12 +13,14 @@ public sealed class OrderService(IOrderRepository orders, IUnitOfWork unit, Time
         try
         {
             var order = Order.Create(request.Sku, request.Quantity, actor.Issuer, actor.Subject, clock.GetUtcNow());
-            return await unit.ExecuteAsync<Either<Error, OrderView>>(_ =>
+            var result = await unit.ExecuteAsync<Outcome<OrderView>>(_ =>
             {
                 orders.Add(order);
-                return Task.FromResult<Either<Error, OrderView>>(Right(OrderView.From(order)));
+                return Task.FromResult<Outcome<OrderView>>(OrderView.From(order));
             }, cancellationToken);
+            return result.ToEither("An order operation returned no result.");
         }
         catch (OrderValidationException exception) { return Left(Error.Validation(exception.Message)); }
     }
+
 }

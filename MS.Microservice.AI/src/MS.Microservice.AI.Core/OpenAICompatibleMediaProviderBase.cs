@@ -62,6 +62,9 @@ internal abstract class OpenAICompatibleMediaProviderBase
     /// </summary>
     protected AIProviderRegistrationOptions ProviderOptions => _providerOptions;
 
+    protected virtual OpenAICompatibleRequestTarget ResolveTarget(AIResolvedModel model, string relativePath)
+        => new(new Uri(new Uri(GetBaseAddress()), relativePath), model.Model, _providerOptions.ApiKey);
+
     protected Task<TResult> ExecuteAsync<TResult>(
         AICapability capability,
         string operationName,
@@ -74,15 +77,15 @@ internal abstract class OpenAICompatibleMediaProviderBase
         return ExecuteCoreAsync(capability, operationName, model, requestId, createRequest, parseResponseAsync, cancellationToken);
     }
 
-    protected HttpRequestMessage CreateJsonRequest(string relativePath, object payload, string? accept = null)
+    protected HttpRequestMessage CreateJsonRequest(OpenAICompatibleRequestTarget target, object payload, string? accept = null)
     {
-        var request = CreateRequest(relativePath, accept);
+        var request = target.CreateRequest(accept, _providerOptions.Headers);
         request.Content = JsonContent.Create(payload, options: SerializerOptions);
         return request;
     }
 
     /// <summary>
-    /// Creates a JSON POST request to an absolute endpoint URI (bypassing <see cref="BaseAddress"/>).
+    /// Creates a JSON POST request to an absolute endpoint URI.
     /// Used for provider-specific endpoints that require a different base URL.
     /// </summary>
     protected HttpRequestMessage CreateJsonRequest(Uri endpoint, object payload, string? accept = null)
@@ -104,9 +107,9 @@ internal abstract class OpenAICompatibleMediaProviderBase
         return request;
     }
 
-    protected HttpRequestMessage CreateMultipartRequest(string relativePath, MultipartFormDataContent content, string? accept = null)
+    protected HttpRequestMessage CreateMultipartRequest(OpenAICompatibleRequestTarget target, MultipartFormDataContent content)
     {
-        var request = CreateRequest(relativePath, accept);
+        var request = target.CreateRequest(null, _providerOptions.Headers);
         request.Content = content;
         return request;
     }
@@ -242,24 +245,6 @@ internal abstract class OpenAICompatibleMediaProviderBase
             await AIResponseReader.BufferAsync(response, _providerOptions, Name, capability, model, requestId, token).ConfigureAwait(false);
             return await parseResponseAsync(response, token).ConfigureAwait(false);
         }, cancellationToken);
-    private HttpRequestMessage CreateRequest(string relativePath, string? accept)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(GetBaseAddress()), relativePath));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _providerOptions.ApiKey);
-
-        if (!string.IsNullOrWhiteSpace(accept))
-        {
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
-        }
-
-        foreach (var header in _providerOptions.Headers)
-        {
-            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        return request;
-    }
-
     private string GetBaseAddress()
     {
         var baseAddress = string.IsNullOrWhiteSpace(_providerOptions.BaseAddress)

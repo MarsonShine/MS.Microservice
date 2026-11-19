@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Unicode;
 
 namespace MS.Microservice.Messaging;
 
@@ -18,11 +19,11 @@ public static class MessageMetadataLimits
             || traceState?.Length > TraceStateMaxLength) return false;
         try
         {
-            // CorrelationId is an AMQP short string. Validate the other headers' UTF-8 round-trip too.
+            // CorrelationId is an AMQP short string and must also fit its UTF-8 byte limit.
             if (correlationId is not null && Utf8.GetByteCount(correlationId) > CorrelationIdMaxUtf8Bytes)
                 return false;
-            if (traceParent is not null) Utf8.GetByteCount(traceParent);
-            if (traceState is not null) Utf8.GetByteCount(traceState);
+            if (traceParent is not null && !Utf16.IsValid(traceParent)) return false;
+            if (traceState is not null && !Utf16.IsValid(traceState)) return false;
             return true;
         }
         catch (EncoderFallbackException) { return false; }

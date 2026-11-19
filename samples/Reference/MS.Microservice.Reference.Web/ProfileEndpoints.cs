@@ -1,7 +1,9 @@
+extern alias core;
+
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Routing;
 using MS.Microservice.AspNetCore;
-using MS.Microservice.Core.Functional;
+using core::MS.Microservice.Core.Functional;
 using MS.Microservice.Messaging;
 using MS.Microservice.Reference.Application;
 using MS.Microservice.Reference.Domain;

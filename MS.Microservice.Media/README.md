@@ -1,6 +1,6 @@
 # 媒体处理
 
-引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片／视频自动去水印、区域修复、OCR、表格、抠图和超分辨率使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 10。
+引用 `MS.Microservice.Media` 可处理静态图片、添加图片／视频水印、生成和识别二维码、编辑与拼接视频。图片／视频自动去水印、区域修复、OCR、表格、抠图和超分辨率使用可选的 `MS.Microservice.Media.Inference`。两者均使用 .NET 11。
 
 | 入口 | 功能 |
 | --- | --- |

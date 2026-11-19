@@ -38,6 +38,7 @@
     <Project Path="samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj" />
   </Folder>
   <Folder Name="/samples/Lab/">
+    <Project Path="samples/Lab/MS.Microservice.Lab.Azure/MS.Microservice.Lab.Azure.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.DatabaseMigrator/MS.Microservice.Lab.DatabaseMigrator.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Domain/MS.Microservice.Lab.Domain.csproj" />
     <Project Path="samples/Lab/MS.Microservice.Lab.Infrastructure/MS.Microservice.Lab.Infrastructure.csproj" />
@@ -93,6 +94,7 @@
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">
     <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
+    <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Azure/MS.Microservice.AI.Azure.csproj" />
     <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
     <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.DeepSeek/MS.Microservice.AI.DeepSeek.csproj" />
     <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.OpenAI/MS.Microservice.AI.OpenAI.csproj" />
@@ -100,6 +102,7 @@
     <Project Path="MS.Microservice.AI/src/MS.Microservice.AI.Qwen/MS.Microservice.AI.Qwen.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/test/">
+    <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Azure.Tests/MS.Microservice.AI.Azure.Tests.csproj" />
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.Core.Tests/MS.Microservice.AI.Core.Tests.csproj" />
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.DeepSeek.Tests/MS.Microservice.AI.DeepSeek.Tests.csproj" />
     <Project Path="MS.Microservice.AI/test/MS.Microservice.AI.OpenAI.Tests/MS.Microservice.AI.OpenAI.Tests.csproj" />
