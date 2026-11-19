@@ -6,8 +6,9 @@ namespace MS.Microservice.AI.Azure;
 internal sealed class AzureCloudOptions
 {
     public AzureCloudModelOptions? Chat { get; set; }
+    public AzureSpeechTtsOptions? Tts { get; set; }
 
-    public bool IsConfigured => Chat is not null;
+    public bool IsConfigured => Chat is not null || Tts is not null;
 }
 
 internal sealed class AzureCloudModelOptions
@@ -25,9 +26,25 @@ internal sealed class AzureCloudRegistration(IOptions<AzureOptions> azure) : IPo
 {
     public void PostConfigure(string? name, AIOptions options)
     {
-        if (azure.Value.Cloud.IsConfigured && !AIOptionsLookup.TryGetProvider(options, AzureOptions.ProviderName, out _))
+        var cloud = azure.Value.Cloud;
+        if (!cloud.IsConfigured)
         {
-            options.Providers.Add(AzureOptions.ProviderName, new AIProviderRegistrationOptions());
+            return;
+        }
+
+        if (!AIOptionsLookup.TryGetProvider(options, AzureOptions.ProviderName, out var provider))
+        {
+            provider = new AIProviderRegistrationOptions();
+            options.Providers.Add(AzureOptions.ProviderName, provider);
+        }
+
+        if (provider.Enabled && cloud.Tts is not null && !options.Models.Tts.ContainsKey("Default"))
+        {
+            options.Models.Tts.Add("Default", new AITtsModelOptions
+            {
+                Provider = AzureOptions.ProviderName,
+                Model = AzureSpeechTtsOptions.ModelAlias,
+            });
         }
     }
 }

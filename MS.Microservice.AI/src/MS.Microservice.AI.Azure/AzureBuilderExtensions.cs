@@ -41,6 +41,8 @@ public static class AzureBuilderExtensions
         builder.Services.TryAddSingleton<AzureDeploymentRouter>();
         builder.Services.TryAddSingleton<AzureChatCompletionsAdapter>();
         builder.Services.TryAddSingleton<AzureResponsesChatAdapter>();
+        builder.Services.TryAddSingleton<AzureOpenAITtsAdapter>();
+        builder.Services.TryAddSingleton<AzureSpeechTtsAdapter>();
         builder.Services.AddHttpClient(AzureOptions.HttpClientName)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
             .RedactLoggedHeaders(static _ => true);

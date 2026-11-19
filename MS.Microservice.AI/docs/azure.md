@@ -1,6 +1,6 @@
 # 接入 Azure AI 服务
 
-先在 Azure 中创建资源并部署所需模型。模型是否可部署取决于区域、版本和部署类型。为同一个业务场景更换区域时，可以保留应用中的模型别名，只调整它指向的部署配置。[Microsoft Foundry 区域可用性](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability)
+先在 Azure 中准备所用服务的资源。使用 Foundry 模型时，在资源上部署需要的模型。可用的模型因区域、版本和部署类型而异。更换区域时，可以保留应用中的模型别名，调整它指向的资源和部署。[Microsoft Foundry 区域可用性](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability)
 
 宿主引用 `MS.Microservice.AI.Azure`，通过现有 AI 注册入口启用 Azure。
 
@@ -15,7 +15,7 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
 
 `AddAzure()` 的聊天适配访问 Azure 资源级 `/openai/v1/`，通过资源密钥 `api-key` 认证。每个部署选择 Responses 或 Chat Completions。使用这些接口和认证方式的 Foundry 第三方模型也能用同一套资源和部署配置。在部署详情核对所需接口和参数。[Foundry v1 模型支持](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle#model-support) · [Foundry 模型终结点](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/endpoints)
 
-项目级终结点和 Microsoft Entra ID 认证需要相应的调用适配。语音合成示例调用 Azure OpenAI 的音频接口。使用 Azure AI Speech 的应用按 Speech SDK 或 Speech REST 的终结点和认证方式接入。[Foundry 项目级聊天示例](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-chat-reasoning) · [Azure AI Speech REST](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech)
+Foundry 项目级终结点和 Microsoft Entra ID 认证需要相应的调用适配。`AzureCloud.TTS` 使用独立的 Azure AI Speech REST 接口。基于 Azure OpenAI 模型部署的语音配置也可继续使用。[Foundry 项目级聊天示例](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-chat-reasoning) · [Azure AI Speech REST](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech)
 
 ## 使用 `AzureCloud.CHAT` 配置聊天
 
@@ -38,7 +38,7 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
 }
 ```
 
-分别为宿主提供 `AzureCloud__CHAT__Resources__main__Secret` 和 `AzureCloud__CHAT__Resources__terra__Secret`，值是对应资源的 API 密钥。调用 `IAIChatClient` 时传 `Provider = "Azure"` 和 `Model = "DeepSeek-V4.1-Flash-1017"`，模块选出 `terra` 并把部署名写入请求。也可以在 `AI:Models:Chat` 中配置业务场景，让场景的 `Model` 指向 `AzureCloud.CHAT.Models` 的键。
+启用环境变量配置源后，分别设置 `AzureCloud__CHAT__Resources__main__Secret` 和 `AzureCloud__CHAT__Resources__terra__Secret`，值是对应资源的 API 密钥。调用 `IAIChatClient` 时传 `Provider = "Azure"` 和 `Model = "DeepSeek-V4.1-Flash-1017"`，模块选出 `terra` 并把部署名写入请求。也可以在 `AI:Models:Chat` 中配置业务场景，让场景的 `Model` 指向 `AzureCloud.CHAT.Models` 的键。
 
 `Api: "Responses"` 使用 `/openai/v1/responses`，并把 `MaxOutputTokens` 映射为 `max_output_tokens`。对支持 Responses 的新部署，可显式选择这个接口。原配置省略 `Api` 时使用 `ChatCompletions`，也可显式填写。它调用 `/openai/v1/chat/completions`，默认使用 `max_completion_tokens`。有的兼容部署要求 `max_tokens`，这时在该部署上加 `"MaxTokenParameter": "max_tokens"`。支持的参数以部署的调用示例为准。[Azure Responses API](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses) · [DeepSeek 参数示例](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/tutorials/get-started-deepseek-r1#parameters)
 
@@ -158,7 +158,27 @@ var response = await chat.GetResponseAsync(new AIChatRequest
 
 生成和编辑分别调用 `/openai/v1/images/generations?api-version=preview` 和 `/openai/v1/images/edits?api-version=preview`。编辑请求以 multipart 的 `image[]` 字段上传图像，也可带一个 `mask`。应用可以省略 `ResponseFormat` 或指定 `b64_json`。适配器省略 Azure 请求中的 `response_format` 字段，将返回的 base64 图像解码为 `AIImageResponse.Images` 中的 PNG 内容。配置或调用中指定 `url` 会在发送请求前报错。[Azure 图像指南](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/dall-e) · [Azure 媒体 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest)
 
-## 合成和转录语音
+## 使用 `AzureCloud.TTS` 合成语音
+
+`TTS` 使用 Speech 资源的密钥和区域。以下配置可和 `AzureCloud.CHAT` 放在同一个根节点。用 `AzureCloud__TTS__Secret` 向宿主提供 Speech 资源的密钥，对应原配置里的 `Secret`。
+
+```json
+{
+  "AzureCloud": {
+    "TTS": {
+      "Region": "eastus",
+      "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+      "Voice": "zh-CN-XiaoxiaoNeural"
+    }
+  }
+}
+```
+
+East US 的区域 Cognitive Services 地址可用于获取 Speech 令牌。把它作为 `Endpoint` 时，模块根据 `Region` 选取 `https://eastus.tts.speech.microsoft.com/cognitiveservices/v1`，直接以 `Ocp-Apim-Subscription-Key` 认证并发送 SSML。省略 `Endpoint` 也使用区域合成地址。有自定义终结点时，填 Speech 资源的 HTTPS 根地址或合成地址。配置里的区域应与 Speech 资源匹配。[Speech 认证和标准合成终结点](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech)
+
+启用 `AzureCloud.TTS` 时，`azure-speech` 是为 Speech 保留的模型别名。应用没有配置 `AI:Models:Tts:Default` 时，模块把默认 TTS 场景指向该别名。业务可直接调用 `IAITtsClient.SynthesizeAsync(new AITtsRequest { Input = "你好" })`，也可以显式传 `Provider = "Azure"`、`Model = "azure-speech"`。在配置或请求中提供 `Voice`，两处都有值时以请求为准。输出默认 `mp3`，也支持 `wav`、`opus`（Ogg）和 `pcm`，`Speed` 范围为 `0.5` 到 `2`。
+
+## 使用 Azure OpenAI 合成和转录语音
 
 通过 `IAITtsClient` 调用 `Narration` 场景，通过 `IAIAsrClient` 调用 `Transcript` 场景。请求携带所选资源的 `api-key`。两个接口使用 Azure OpenAI v1 预览终结点。[Azure 媒体 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest)
 

@@ -50,9 +50,13 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
                 continue;
             }
 
-            if (!enabled || !Supports(capability) || AzureDeploymentRouter.Select(azure.Value, capability, getModel(model)) is null)
+            var alias = getModel(model);
+            var isSpeech = capability is AICapability.Tts && azure.Value.Cloud.Tts is not null
+                && AzureSpeechTtsOptions.IsSpeechModel(alias);
+            if (!enabled || !Supports(capability)
+                || (!isSpeech && AzureDeploymentRouter.Select(azure.Value, capability, alias) is null))
             {
-                failures.Add($"AI:Models:{capability}:{scenario} requires an enabled Azure deployment for model '{getModel(model)}'.");
+                failures.Add($"AI:Models:{capability}:{scenario} requires an enabled Azure target for model '{alias}'.");
             }
         }
     }
@@ -63,6 +67,24 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         if (options.Cloud.Chat is { } chat)
         {
             ValidateCloudModels(chat, AICapability.Chat, "AzureCloud:CHAT", failures);
+        }
+
+        if (options.Cloud.Tts is { } tts)
+        {
+            if (string.IsNullOrWhiteSpace(tts.Secret) || tts.Secret.Any(char.IsWhiteSpace) || tts.Secret.Any(char.IsControl))
+            {
+                failures.Add("AzureCloud:TTS:Secret requires a Speech resource key without whitespace or control characters.");
+            }
+
+            if (tts.GetSynthesisEndpoint() is null)
+            {
+                failures.Add("AzureCloud:TTS requires a valid Region and, when supplied, an HTTPS Speech endpoint matching that region.");
+            }
+
+            if (AzureDeploymentRouter.Select(options, AICapability.Tts, AzureSpeechTtsOptions.ModelAlias) is not null)
+            {
+                failures.Add($"'{AzureSpeechTtsOptions.ModelAlias}' is reserved for AzureCloud:TTS when Azure AI Speech is configured.");
+            }
         }
 
         if (options.Cloud.IsConfigured && options.Resources.Count == 0 && options.Deployments.Count == 0)

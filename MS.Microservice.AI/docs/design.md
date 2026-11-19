@@ -13,6 +13,8 @@ QuestionGeneration 则在中立模型客户端之上组织生成、检查、修�
 
 使用 `AzureCloud.CHAT` 时，每个模型键直接引用本组资源和部署。直接指定模型的业务可以使用这个键发起调用。需要按业务场景配置默认参数时，Core 场景仍可引用同一个键。选定部署后，Azure 聊天适配器根据 `Api` 构建 Responses 或 Chat Completions 请求。Responses 每次发送完整消息并设置 `store: false`，从终止事件取得完成状态和用量。
 
+`AzureCloud.TTS` 指向 Speech 资源。Speech 适配器负责区域终结点、订阅密钥头和 SSML，复用通用并发、超时、重试和响应预算。Azure OpenAI 的语音部署仍可通过它的模型别名调用。
+
 同一个 Azure OpenAI 模型在不同地区的可用性可能不同，部署名称也由各资源独立设置。业务场景用逻辑别名调用 Core。Azure Provider 再按配置顺序选中首个启用且所属资源也启用的部署，用该资源的终结点和密钥发送请求，并把部署名称写入请求的 `model` 字段。[区域可用性](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability)
 
 部署选择在启动时校验。聊天、图像生成、图像编辑、语音合成和语音转录各自配置候选列表，因此同一个资源可以服务多种能力，也可以按能力选择不同地区。每次调用及其重试使用同一部署。需要调整目标资源时，更新候选项并重启宿主。Azure Provider 复用 Core 的 HTTP、SSE 和媒体响应解析。资源寻址、认证和 Azure 请求格式由 Azure 模块适配。[Azure 配置](azure.md)
