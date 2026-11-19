@@ -13,9 +13,9 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
 
 ## 当前支持的接口
 
-`AddAzure()` 访问 Azure 资源级 `/openai/v1/` 接口，通过资源密钥 `api-key` 认证。聊天调用 Chat Completions。Foundry 中提供同一接口和认证方式的非 OpenAI 部署，例如部分 DeepSeek 和 Grok 模型，也可以使用这里的资源和部署配置。在 Foundry 的部署详情核对调用路径、认证方式和所需参数。配置里的 `Deployment` 填 Azure 部署名，模块按配置查找部署。[Foundry v1 模型支持](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle#model-support) · [Foundry 模型终结点](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/endpoints)
+`AddAzure()` 的聊天适配访问 Azure 资源级 `/openai/v1/`，通过资源密钥 `api-key` 认证。每个部署选择 Responses 或 Chat Completions。使用这些接口和认证方式的 Foundry 第三方模型也能用同一套资源和部署配置。在部署详情核对所需接口和参数。[Foundry v1 模型支持](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle#model-support) · [Foundry 模型终结点](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/endpoints)
 
-部署如果使用项目级终结点、Responses API 或 Microsoft Entra ID，需要相应的调用适配。语音合成示例调用 Azure OpenAI 的音频接口。使用 Azure AI Speech 的应用按 Speech SDK 或 Speech REST 的终结点和认证方式接入。[Foundry 项目级聊天示例](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-chat-reasoning) · [Azure AI Speech REST](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech)
+项目级终结点和 Microsoft Entra ID 认证需要相应的调用适配。语音合成示例调用 Azure OpenAI 的音频接口。使用 Azure AI Speech 的应用按 Speech SDK 或 Speech REST 的终结点和认证方式接入。[Foundry 项目级聊天示例](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-chat-reasoning) · [Azure AI Speech REST](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech)
 
 ## 使用 `AzureCloud.CHAT` 配置聊天
 
@@ -30,8 +30,8 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
         "terra": { "Endpoint": "https://aoai-contoso-terra.openai.azure.com/" }
       },
       "Models": {
-        "gpt-5.4": { "Resource": "main", "Deployment": "gpt-5.4" },
-        "DeepSeek-V4.1-Flash-1017": { "Resource": "terra", "Deployment": "DeepSeek-V4.1-Flash-1017" }
+        "gpt-5.4": { "Resource": "main", "Deployment": "gpt-5.4", "Api": "Responses" },
+        "DeepSeek-V4.1-Flash-1017": { "Resource": "terra", "Deployment": "DeepSeek-V4.1-Flash-1017", "Api": "ChatCompletions" }
       }
     }
   }
@@ -39,6 +39,8 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
 ```
 
 分别为宿主提供 `AzureCloud__CHAT__Resources__main__Secret` 和 `AzureCloud__CHAT__Resources__terra__Secret`，值是对应资源的 API 密钥。调用 `IAIChatClient` 时传 `Provider = "Azure"` 和 `Model = "DeepSeek-V4.1-Flash-1017"`，模块选出 `terra` 并把部署名写入请求。也可以在 `AI:Models:Chat` 中配置业务场景，让场景的 `Model` 指向 `AzureCloud.CHAT.Models` 的键。
+
+`Api: "Responses"` 使用 `/openai/v1/responses`，并把 `MaxOutputTokens` 映射为 `max_output_tokens`。对支持 Responses 的新部署，可显式选择这个接口。原配置省略 `Api` 时使用 `ChatCompletions`，也可显式填写。它调用 `/openai/v1/chat/completions`，默认使用 `max_completion_tokens`。有的兼容部署要求 `max_tokens`，这时在该部署上加 `"MaxTokenParameter": "max_tokens"`。支持的参数以部署的调用示例为准。[Azure Responses API](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/responses) · [DeepSeek 参数示例](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/tutorials/get-started-deepseek-r1#parameters)
 
 设置 `AzureCloud.CHAT` 后，Azure 聊天统一从这一组资源和部署取值。其他能力仍可读取 `AI:Providers:Azure`。通过根配置调用 `AddMicroserviceAI(configuration).AddAzure()` 会读取根节点的 `AzureCloud`。宿主如果传的是独立的 AI 配置段，可以用 `.AddAzure(configuration.GetSection("AzureCloud"))` 显式绑定。
 
@@ -137,7 +139,7 @@ var response = await chat.GetResponseAsync(new AIChatRequest
 }, cancellationToken);
 ```
 
-普通响应和 SSE 流式响应共用 `/openai/v1/chat/completions`。使用 JSON Object 或 JSON Schema 时，选择支持所需格式的部署并使用非流式调用。设置采样参数前，确认所选模型支持这些参数。[Azure Chat REST 参考](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat) · [Azure v1 API](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle) · [推理模型参数](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
+普通响应和 SSE 流式响应都使用部署所选的 API。使用 JSON Object 或 JSON Schema 时，选择支持所需格式的部署并使用非流式调用。设置采样参数前，确认所选模型支持这些参数。[Azure Chat REST 参考](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat) · [Azure v1 API](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle) · [推理模型参数](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
 
 ## 按能力添加图像和语音场景
 

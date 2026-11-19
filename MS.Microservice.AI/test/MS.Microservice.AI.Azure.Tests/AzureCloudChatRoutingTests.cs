@@ -15,10 +15,10 @@ public sealed class AzureCloudChatRoutingTests
     private const string Chat = "AzureCloud:CHAT";
 
     [Theory]
-    [InlineData("gpt-6.2-astra", "main.azure.invalid", "main-key", "astra-deployment")]
-    [InlineData("DEEPSEEK-V4.1-FLASH-1017", "terra.azure.invalid", "terra-key", "deepseek-deployment")]
+    [InlineData("gpt-6.2-astra", "main.azure.invalid", "main-key", "astra-deployment", "max_completion_tokens")]
+    [InlineData("DEEPSEEK-V4.1-FLASH-1017", "terra.azure.invalid", "terra-key", "deepseek-deployment", "max_tokens")]
     public async Task AzureCloudOnlyRoutesByModelAndUsesTheSelectedResourceKey(
-        string model, string host, string key, string deployment)
+        string model, string host, string key, string deployment, string tokenParameter)
     {
         using var handler = new RecordingHandler(async (request, cancellationToken) =>
         {
@@ -29,11 +29,20 @@ public sealed class AzureCloudChatRoutingTests
 
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
             Assert.Equal(deployment, body.RootElement.GetProperty("model").GetString());
+            Assert.Equal(256, body.RootElement.GetProperty(tokenParameter).GetInt32());
+            Assert.False(body.RootElement.TryGetProperty(tokenParameter == "max_tokens" ? "max_completion_tokens" : "max_tokens", out _));
         });
-        using var services = BuildServices(CreateSettings(), handler);
+        var settings = CreateSettings();
+        if (tokenParameter == "max_tokens")
+        {
+            settings[$"{Chat}:Models:{model}:Api"] = "ChatCompletions";
+            settings[$"{Chat}:Models:{model}:MaxTokenParameter"] = tokenParameter;
+        }
+
+        using var services = BuildServices(settings, handler);
         var client = services.GetRequiredService<IAIChatClient>();
 
-        var response = await client.GetResponseAsync(CreateRequest(model));
+        var response = await client.GetResponseAsync(CreateRequest(model, 256));
 
         Assert.Equal("Azure", response.Provider);
         Assert.Equal("Hello from Azure", response.Text);
@@ -63,6 +72,8 @@ public sealed class AzureCloudChatRoutingTests
     [Theory]
     [InlineData(Chat + ":Models:gpt-6.2-astra:Resource", "missing", "gpt-6.2-astra")]
     [InlineData(Chat + ":Resources:terra:Secret", "", "terra")]
+    [InlineData(Chat + ":Models:gpt-6.2-astra:Api", "999", "Api")]
+    [InlineData(Chat + ":Models:gpt-6.2-astra:MaxTokenParameter", "max_output_tokens", "MaxTokenParameter")]
     public void InvalidAzureCloudChatIsRejectedDuringOptionsValidation(string path, string value, string errorDetail)
     {
         var settings = CreateSettings();
@@ -89,10 +100,11 @@ public sealed class AzureCloudChatRoutingTests
         [Chat + ":Models:DeepSeek-V4.1-Flash-1017:Deployment"] = "deepseek-deployment",
     };
 
-    private static AIChatRequest CreateRequest(string model) => new()
+    private static AIChatRequest CreateRequest(string model, int? maxOutputTokens = null) => new()
     {
         Provider = "Azure",
         Model = model,
+        MaxOutputTokens = maxOutputTokens,
         Messages = [new AIChatMessage("user", "Hello")],
     };
 

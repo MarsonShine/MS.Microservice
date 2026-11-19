@@ -95,6 +95,7 @@ internal static class AIProviderErrors
         return GetHeaderValue(response.Headers, "x-request-id")
             ?? GetHeaderValue(response.Headers, "request-id")
             ?? GetHeaderValue(response.Headers, "x-openai-request-id")
+            ?? GetHeaderValue(response.Headers, "apim-request-id")
             ?? GetHeaderValue(response.Headers, "x-dashscope-request-id");
     }
 
@@ -110,6 +111,7 @@ internal static class AIProviderErrors
 
         var value = $"{providerCode} {message}";
         var mentionsFormat = value.Contains("response_format", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("text.format", StringComparison.OrdinalIgnoreCase)
             || value.Contains("json_schema", StringComparison.OrdinalIgnoreCase)
             || value.Contains("json object", StringComparison.OrdinalIgnoreCase);
         var unsupported = value.Contains("unsupported", StringComparison.OrdinalIgnoreCase)

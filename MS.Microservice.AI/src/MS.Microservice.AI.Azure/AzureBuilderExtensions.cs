@@ -39,6 +39,8 @@ public static class AzureBuilderExtensions
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<AIOptions>, AzureCloudRegistration>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, AzureOptionsValidator>());
         builder.Services.TryAddSingleton<AzureDeploymentRouter>();
+        builder.Services.TryAddSingleton<AzureChatCompletionsAdapter>();
+        builder.Services.TryAddSingleton<AzureResponsesChatAdapter>();
         builder.Services.AddHttpClient(AzureOptions.HttpClientName)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
             .RedactLoggedHeaders(static _ => true);

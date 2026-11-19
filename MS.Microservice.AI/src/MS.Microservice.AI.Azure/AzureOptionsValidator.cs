@@ -62,7 +62,7 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         const string path = AzureOptions.ConfigurationPath;
         if (options.Cloud.Chat is { } chat)
         {
-            ValidateCloudModels(chat, "AzureCloud:CHAT", failures);
+            ValidateCloudModels(chat, AICapability.Chat, "AzureCloud:CHAT", failures);
         }
 
         if (options.Cloud.IsConfigured && options.Resources.Count == 0 && options.Deployments.Count == 0)
@@ -88,13 +88,13 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
             {
                 foreach (var candidate in candidates)
                 {
-                    ValidateDeployment(candidate, options.Resources, $"{path}:Deployments:{capability}:{alias}", failures);
+                    ValidateDeployment(candidate, options.Resources, capability, $"{path}:Deployments:{capability}:{alias}", failures);
                 }
             }
         }
     }
 
-    private static void ValidateCloudModels(AzureCloudModelOptions group, string path, ICollection<string> failures)
+    private static void ValidateCloudModels(AzureCloudModelOptions group, AICapability capability, string path, ICollection<string> failures)
     {
         if (group.Resources.Count == 0 || group.Models.Count == 0)
         {
@@ -104,7 +104,7 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         ValidateResources(group.Resources, $"{path}:Resources", "Secret", failures);
         foreach (var (alias, deployment) in group.Models)
         {
-            ValidateDeployment(deployment, group.Resources, $"{path}:Models:{alias}", failures);
+            ValidateDeployment(deployment, group.Resources, capability, $"{path}:Models:{alias}", failures);
         }
     }
 
@@ -131,12 +131,28 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
     }
 
     private static void ValidateDeployment<T>(AzureDeploymentOptions deployment, IReadOnlyDictionary<string, T> resources,
-        string path, ICollection<string> failures)
+        AICapability capability, string path, ICollection<string> failures)
     {
-        if (deployment.Enabled && (string.IsNullOrWhiteSpace(deployment.Deployment) || string.IsNullOrWhiteSpace(deployment.Resource)
-            || !resources.ContainsKey(deployment.Resource)))
+        if (!deployment.Enabled)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(deployment.Deployment) || string.IsNullOrWhiteSpace(deployment.Resource)
+            || !resources.ContainsKey(deployment.Resource))
         {
             failures.Add($"{path} requires a deployment name and a configured resource for each enabled candidate.");
+        }
+
+        if (deployment.Api is { } api && (capability != AICapability.Chat || api is not (AzureDeploymentApi.ChatCompletions or AzureDeploymentApi.Responses)))
+        {
+            failures.Add($"{path}:Api is not supported for Azure {capability}.");
+        }
+
+        if (deployment.MaxTokenParameter is { } parameter && (capability != AICapability.Chat
+            || deployment.Api is AzureDeploymentApi.Responses || parameter is not ("max_tokens" or "max_completion_tokens")))
+        {
+            failures.Add($"{path}:MaxTokenParameter must be max_tokens or max_completion_tokens and applies to Chat Completions only.");
         }
     }
 

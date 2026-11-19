@@ -27,6 +27,14 @@ internal sealed class AzureDeploymentOptions
     public bool Enabled { get; set; } = true;
     public string? Resource { get; set; }
     public string? Deployment { get; set; }
+    public AzureDeploymentApi? Api { get; set; }
+    public string? MaxTokenParameter { get; set; }
+}
+
+internal enum AzureDeploymentApi
+{
+    ChatCompletions = 1,
+    Responses,
 }
 
 internal sealed class AzureResourceSecrets(IAISecretProvider secrets) : IPostConfigureOptions<AzureOptions>
