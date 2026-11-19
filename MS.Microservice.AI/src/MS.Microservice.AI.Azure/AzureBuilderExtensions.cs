@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
@@ -8,8 +9,18 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class AzureBuilderExtensions
 {
-    /// <summary>Registers Azure OpenAI using resources and deployments from the Azure provider configuration.</summary>
+    /// <summary>Registers Azure using the host's AzureCloud section and Azure provider options.</summary>
     public static AIBuilder AddAzure(this AIBuilder builder)
+        => AddAzureCore(builder, null);
+
+    /// <summary>Registers Azure with an explicit AzureCloud configuration section.</summary>
+    public static AIBuilder AddAzure(this AIBuilder builder, IConfigurationSection azureCloud)
+    {
+        ArgumentNullException.ThrowIfNull(azureCloud);
+        return AddAzureCore(builder, azureCloud);
+    }
+
+    private static AIBuilder AddAzureCore(AIBuilder builder, IConfigurationSection? azureCloud)
     {
         ArgumentNullException.ThrowIfNull(builder);
         var section = builder.Section?.GetSection("Providers").GetSection(AzureOptions.ProviderName)
@@ -21,8 +32,11 @@ public static class AzureBuilderExtensions
             return builder;
         }
 
-        builder.Services.AddOptions<AzureOptions>().Bind(section);
+        builder.Services.AddOptions<AzureOptions>().Bind(section)
+            .Configure<IConfiguration>((options, configuration) =>
+                (azureCloud ?? configuration.GetSection("AzureCloud")).Bind(options.Cloud));
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<AzureOptions>, AzureResourceSecrets>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<AIOptions>, AzureCloudRegistration>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AIOptions>, AzureOptionsValidator>());
         builder.Services.TryAddSingleton<AzureDeploymentRouter>();
         builder.Services.AddHttpClient(AzureOptions.HttpClientName)

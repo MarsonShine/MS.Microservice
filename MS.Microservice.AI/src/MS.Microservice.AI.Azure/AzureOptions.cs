@@ -11,9 +11,10 @@ internal sealed class AzureOptions
 
     public Dictionary<string, AzureResourceOptions> Resources { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<AICapability, Dictionary<string, AzureDeploymentOptions[]>> Deployments { get; } = [];
+    internal AzureCloudOptions Cloud { get; } = new();
 }
 
-internal sealed class AzureResourceOptions
+internal class AzureResourceOptions
 {
     public bool Enabled { get; set; } = true;
     public string? Endpoint { get; set; }

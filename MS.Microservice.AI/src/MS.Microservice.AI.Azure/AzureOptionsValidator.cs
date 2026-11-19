@@ -11,7 +11,7 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         const string path = AzureOptions.ConfigurationPath;
         if (!AIOptionsLookup.TryGetProvider(options, AzureOptions.ProviderName, out var provider))
         {
-            return ValidateOptionsResult.Fail($"{path} is required when AddAzure() is registered.");
+            return ValidateOptionsResult.Fail($"AzureCloud or {path} is required when AddAzure() is registered.");
         }
 
         var failures = new List<string>();
@@ -60,28 +60,22 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
     private static void ValidateResourcesAndDeployments(AzureOptions options, ICollection<string> failures)
     {
         const string path = AzureOptions.ConfigurationPath;
+        if (options.Cloud.Chat is { } chat)
+        {
+            ValidateCloudModels(chat, "AzureCloud:CHAT", failures);
+        }
+
+        if (options.Cloud.IsConfigured && options.Resources.Count == 0 && options.Deployments.Count == 0)
+        {
+            return;
+        }
+
         if (options.Resources.Count == 0 || options.Deployments.Count == 0)
         {
             failures.Add($"{path} requires Resources and Deployments.");
         }
 
-        foreach (var (name, resource) in options.Resources)
-        {
-            if (!resource.Enabled)
-            {
-                continue;
-            }
-
-            if (AzureDeploymentRouter.GetApiBase(resource.Endpoint) is null)
-            {
-                failures.Add($"{path}:Resources:{name}:Endpoint must be an HTTPS resource URL or Azure OpenAI v1 base URL.");
-            }
-
-            if (string.IsNullOrWhiteSpace(resource.ApiKey) || resource.ApiKey.Any(char.IsWhiteSpace) || resource.ApiKey.Any(char.IsControl))
-            {
-                failures.Add($"{path}:Resources:{name}:ApiKey must resolve to a non-empty key without whitespace or control characters.");
-            }
-        }
+        ValidateResources(options.Resources, $"{path}:Resources", "ApiKey", failures);
 
         foreach (var (capability, aliases) in options.Deployments)
         {
@@ -92,15 +86,57 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
 
             foreach (var (alias, candidates) in aliases)
             {
-                foreach (var candidate in candidates.Where(candidate => candidate.Enabled))
+                foreach (var candidate in candidates)
                 {
-                    if (string.IsNullOrWhiteSpace(candidate.Deployment) || string.IsNullOrWhiteSpace(candidate.Resource)
-                        || !options.Resources.ContainsKey(candidate.Resource))
-                    {
-                        failures.Add($"{path}:Deployments:{capability}:{alias} requires a deployment name and a configured resource for each enabled candidate.");
-                    }
+                    ValidateDeployment(candidate, options.Resources, $"{path}:Deployments:{capability}:{alias}", failures);
                 }
             }
+        }
+    }
+
+    private static void ValidateCloudModels(AzureCloudModelOptions group, string path, ICollection<string> failures)
+    {
+        if (group.Resources.Count == 0 || group.Models.Count == 0)
+        {
+            failures.Add($"{path} requires Resources and Models.");
+        }
+
+        ValidateResources(group.Resources, $"{path}:Resources", "Secret", failures);
+        foreach (var (alias, deployment) in group.Models)
+        {
+            ValidateDeployment(deployment, group.Resources, $"{path}:Models:{alias}", failures);
+        }
+    }
+
+    private static void ValidateResources<T>(IReadOnlyDictionary<string, T> resources, string path, string keyProperty, ICollection<string> failures)
+        where T : AzureResourceOptions
+    {
+        foreach (var (name, resource) in resources)
+        {
+            if (!resource.Enabled)
+            {
+                continue;
+            }
+
+            if (AzureDeploymentRouter.GetApiBase(resource.Endpoint) is null)
+            {
+                failures.Add($"{path}:{name}:Endpoint must be an HTTPS resource URL or Azure OpenAI v1 base URL.");
+            }
+
+            if (string.IsNullOrWhiteSpace(resource.ApiKey) || resource.ApiKey.Any(char.IsWhiteSpace) || resource.ApiKey.Any(char.IsControl))
+            {
+                failures.Add($"{path}:{name}:{keyProperty} must resolve to a non-empty key without whitespace or control characters.");
+            }
+        }
+    }
+
+    private static void ValidateDeployment<T>(AzureDeploymentOptions deployment, IReadOnlyDictionary<string, T> resources,
+        string path, ICollection<string> failures)
+    {
+        if (deployment.Enabled && (string.IsNullOrWhiteSpace(deployment.Deployment) || string.IsNullOrWhiteSpace(deployment.Resource)
+            || !resources.ContainsKey(deployment.Resource)))
+        {
+            failures.Add($"{path} requires a deployment name and a configured resource for each enabled candidate.");
         }
     }
 
