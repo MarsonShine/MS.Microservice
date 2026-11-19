@@ -1,8 +1,8 @@
 # 当前状态
 更新：2026-11-19
-Status: in_progress
-Task: AZURE-AI
-Next: 按活动任务交付 Azure Chat、图像和语音适配。
+Status: idle
+Task: none
+Next: 在具备 Azure 资源和部署的环境验证真实调用。
 Baseline: d0e8bac
 
-见[活动任务](tasks/active.md)。
+Azure OpenAI 已接入聊天、图像和语音能力。配置和部署选择见 [Azure 接入指南](../MS.Microservice.AI/docs/azure.md)，本地验证见[验收记录](validation/AZURE-AI/summary.md)。

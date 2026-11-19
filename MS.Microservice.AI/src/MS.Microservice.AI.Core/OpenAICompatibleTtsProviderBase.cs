@@ -34,14 +34,18 @@ internal abstract class OpenAICompatibleTtsProviderBase : OpenAICompatibleMediaP
             "speech",
             model,
             request.RequestId,
-            () => CreateJsonRequest(RelativeSpeechPath, new
+            () =>
             {
-                model = model.Model,
-                input = request.Input,
-                voice,
-                response_format = responseFormat,
-                speed = model.Speed,
-            }, "application/octet-stream"),
+                var target = ResolveTarget(model, RelativeSpeechPath);
+                return CreateJsonRequest(target, new
+                {
+                    model = target.Model,
+                    input = request.Input,
+                    voice,
+                    response_format = responseFormat,
+                    speed = model.Speed,
+                }, "application/octet-stream");
+            },
             async (httpResponse, requestCancellationToken) =>
             {
                 if (!httpResponse.IsSuccessStatusCode)

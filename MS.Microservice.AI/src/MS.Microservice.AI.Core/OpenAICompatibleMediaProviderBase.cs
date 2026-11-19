@@ -77,13 +77,6 @@ internal abstract class OpenAICompatibleMediaProviderBase
         return ExecuteCoreAsync(capability, operationName, model, requestId, createRequest, parseResponseAsync, cancellationToken);
     }
 
-    protected HttpRequestMessage CreateJsonRequest(string relativePath, object payload, string? accept = null)
-    {
-        var request = CreateRequest(relativePath, accept);
-        request.Content = JsonContent.Create(payload, options: SerializerOptions);
-        return request;
-    }
-
     protected HttpRequestMessage CreateJsonRequest(OpenAICompatibleRequestTarget target, object payload, string? accept = null)
     {
         var request = target.CreateRequest(accept, _providerOptions.Headers);
@@ -111,13 +104,6 @@ internal abstract class OpenAICompatibleMediaProviderBase
         }
 
         request.Content = JsonContent.Create(payload, options: SerializerOptions);
-        return request;
-    }
-
-    protected HttpRequestMessage CreateMultipartRequest(string relativePath, MultipartFormDataContent content, string? accept = null)
-    {
-        var request = CreateRequest(relativePath, accept);
-        request.Content = content;
         return request;
     }
 
@@ -259,24 +245,6 @@ internal abstract class OpenAICompatibleMediaProviderBase
             await AIResponseReader.BufferAsync(response, _providerOptions, Name, capability, model, requestId, token).ConfigureAwait(false);
             return await parseResponseAsync(response, token).ConfigureAwait(false);
         }, cancellationToken);
-    private HttpRequestMessage CreateRequest(string relativePath, string? accept)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, new Uri(new Uri(GetBaseAddress()), relativePath));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _providerOptions.ApiKey);
-
-        if (!string.IsNullOrWhiteSpace(accept))
-        {
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
-        }
-
-        foreach (var header in _providerOptions.Headers)
-        {
-            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        return request;
-    }
-
     private string GetBaseAddress()
     {
         var baseAddress = string.IsNullOrWhiteSpace(_providerOptions.BaseAddress)

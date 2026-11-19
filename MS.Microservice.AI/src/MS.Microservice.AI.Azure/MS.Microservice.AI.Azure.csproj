@@ -6,8 +6,10 @@
     <Description>Azure OpenAI provider with configurable resource and deployment routing.</Description>
     <Authors>MS.Microservice</Authors>
     <PackageTags>ai;azure;openai</PackageTags>
+    <PackageReadmeFile>azure.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../docs/azure.md" Pack="true" PackagePath="/" />
     <ProjectReference Include="../MS.Microservice.AI.Abstractions/MS.Microservice.AI.Abstractions.csproj" />
     <ProjectReference Include="../MS.Microservice.AI.Core/MS.Microservice.AI.Core.csproj" />
   </ItemGroup>

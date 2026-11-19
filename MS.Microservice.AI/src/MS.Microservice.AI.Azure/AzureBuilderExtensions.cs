@@ -31,6 +31,8 @@ public static class AzureBuilderExtensions
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIChatProvider, AzureChatProvider>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageGenerationProvider, AzureImageProvider>());
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIImageEditProvider, AzureImageProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAITtsProvider, AzureTtsProvider>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIAsrProvider, AzureAsrProvider>());
         return builder;
     }
 }

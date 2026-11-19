@@ -117,7 +117,7 @@ public sealed class AIConcurrencyLeaseTests
 
         public Task<int> Execute(CancellationToken token) => ExecuteAsync(
             AICapability.ImageGeneration, "image", Model, null,
-            () => CreateJsonRequest("images/generations", new { prompt = "test" }),
+            () => CreateJsonRequest(ResolveTarget(Model, "images/generations"), new { prompt = "test" }),
             (_, _) => Task.FromResult(42), token);
     }
 

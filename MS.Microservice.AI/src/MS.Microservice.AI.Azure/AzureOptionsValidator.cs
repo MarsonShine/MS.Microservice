@@ -107,5 +107,5 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
     private static bool IsAzure(string? name) => string.Equals(name, AzureOptions.ProviderName, StringComparison.OrdinalIgnoreCase);
 
     private static bool Supports(AICapability capability)
-        => capability is AICapability.Chat or AICapability.ImageGeneration or AICapability.ImageEdit;
+        => capability is AICapability.Chat or AICapability.ImageGeneration or AICapability.ImageEdit or AICapability.Tts or AICapability.Asr;
 }
