@@ -11,6 +11,8 @@ builder.Services.AddMicroserviceAI(builder.Configuration)
     .AddAzure();
 ```
 
+将应用用到的 `CHAT`、`TTS` 和 `IMAGE` 放在同一个 `AzureCloud` 节点下。`AI` 仍可设置业务场景、重试和响应预算。
+
 ## 当前支持的接口
 
 `AddAzure()` 的聊天适配访问 Azure 资源级 `/openai/v1/`，通过资源密钥 `api-key` 认证。每个部署选择 Responses 或 Chat Completions。使用这些接口和认证方式的 Foundry 第三方模型也能用同一套资源和部署配置。在部署详情核对所需接口和参数。[Foundry v1 模型支持](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle#model-support) · [Foundry 模型终结点](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/endpoints)
@@ -141,22 +143,35 @@ var response = await chat.GetResponseAsync(new AIChatRequest
 
 普通响应和 SSE 流式响应都使用部署所选的 API。使用 JSON Object 或 JSON Schema 时，选择支持所需格式的部署并使用非流式调用。设置采样参数前，确认所选模型支持这些参数。[Azure Chat REST 参考](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat) · [Azure v1 API](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle) · [推理模型参数](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
 
-## 按能力添加图像和语音场景
+## 使用 `AzureCloud.IMAGE` 生成和编辑图像
 
-媒体能力也用同一套映射。把部署候选加在 `AI:Providers:Azure:Deployments:<能力>:<别名>`，把场景加在 `AI:Models:<能力>:<场景名>`，场景里的 `Provider` 填 `Azure`，`Model` 填表中的应用别名。候选的 `Resource` 指向实际承载该部署的资源。
+`IMAGE` 与 `CHAT` 使用相同的 `Resources` 和 `Models` 结构。两组资源独立配置。部署名从承载该模型的 Azure 资源中复制。在下面的示例中，`poster` 使用支持部署级接口的 GPT Image 1.5 部署，`retouch` 使用资源级 v1 接口的 GPT Image 2 部署。
 
-| 能力 | 应用场景名 | 应用 `Model` 别名 | Azure 模型 ID 示例 | Azure `Deployment` 示例 |
-| --- | --- | --- | --- | --- |
-| `ImageGeneration` | `Poster` | `poster` | `gpt-image-2` | `gpt-image-poster` |
-| `ImageEdit` | `Retouch` | `retouch` | `gpt-image-2` | `gpt-image-retouch` |
-| `Tts` | `Narration` | `narration` | `gpt-4o-mini-tts` | `tts-narration` |
-| `Asr` | `Transcript` | `transcriber` | `gpt-4o-mini-transcribe` | `audio-transcriber` |
+```json
+{
+  "AzureCloud": {
+    "IMAGE": {
+      "Resources": {
+        "main": { "Endpoint": "https://aoai-contoso-image.openai.azure.com/" },
+        "v1": { "Endpoint": "https://aoai-contoso-image-v1.openai.azure.com/" }
+      },
+      "Models": {
+        "poster": { "Resource": "main", "Deployment": "gpt-image-1.5", "Api": "Deployment" },
+        "retouch": { "Resource": "v1", "Deployment": "gpt-image-2", "Api": "OpenAIV1" }
+      }
+    }
+  }
+}
+```
 
-## 生成和编辑图像
+通过 `AzureCloud__IMAGE__Resources__main__Secret` 和 `AzureCloud__IMAGE__Resources__v1__Secret` 注入对应资源的密钥。调用 `IAIImageGenerationClient` 或 `IAIImageEditClient` 时传 `Provider = "Azure"` 和相应的 `Model`，例如 `poster` 或 `retouch`。也可以在 `AI:Models:ImageGeneration` 或 `AI:Models:ImageEdit` 中用场景引用这些别名。设置 `AzureCloud.IMAGE` 后，两种图像能力都从这里查找部署。
 
-在 Azure 中部署 GPT Image 模型后，通过 `IAIImageGenerationClient` 调用 `Poster` 场景，通过 `IAIImageEditClient` 调用 `Retouch` 场景。两种能力可以指向同一个部署，也可以选择各自的资源和部署。
+| `Api` | 生成和编辑的请求格式 |
+| --- | --- |
+| `Deployment` | `AzureCloud.IMAGE` 的默认值。请求走 `/openai/deployments/<部署名>/images/generations` 或 `/openai/deployments/<部署名>/images/edits`，查询参数 `api-version` 默认是 `2025-04-01-preview`。可在模型条目中用 `ApiVersion` 指定部署支持的版本。编辑请求使用 multipart 的 `image` 字段。 |
+| `OpenAIV1` | 请求走 `/openai/v1/images/generations?api-version=preview` 或 `/openai/v1/images/edits?api-version=preview`，部署名写入 `model`，编辑请求使用 multipart 的 `image[]` 字段。既有 `AI:Providers:Azure` 图像部署省略 `Api` 时沿用此接口。 |
 
-生成和编辑分别调用 `/openai/v1/images/generations?api-version=preview` 和 `/openai/v1/images/edits?api-version=preview`。编辑请求以 multipart 的 `image[]` 字段上传图像，也可带一个 `mask`。应用可以省略 `ResponseFormat` 或指定 `b64_json`。适配器省略 Azure 请求中的 `response_format` 字段，将返回的 base64 图像解码为 `AIImageResponse.Images` 中的 PNG 内容。配置或调用中指定 `url` 会在发送请求前报错。[Azure 图像指南](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/dall-e) · [Azure 媒体 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest)
+两种编辑接口都接受 `mask`。应用可以省略 `ResponseFormat` 或指定 `b64_json`，适配器将返回的 base64 图像解码为 PNG。指定 `url` 会在发送请求前报错。[Azure 图像指南](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/dall-e) · [部署级图像 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview) · [资源级图像 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest)
 
 ## 使用 `AzureCloud.TTS` 合成语音
 
@@ -180,7 +195,7 @@ East US 的区域 Cognitive Services 地址可用于获取 Speech 令牌。把�
 
 ## 使用 Azure OpenAI 合成和转录语音
 
-通过 `IAITtsClient` 调用 `Narration` 场景，通过 `IAIAsrClient` 调用 `Transcript` 场景。请求携带所选资源的 `api-key`。两个接口使用 Azure OpenAI v1 预览终结点。[Azure 媒体 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest)
+在 `AI:Providers:Azure:Deployments:Tts` 或 `AI:Providers:Azure:Deployments:Asr` 配置部署后，可分别通过 `IAITtsClient` 和 `IAIAsrClient` 调用。需要场景时，可在 `AI:Models:Tts` 或 `AI:Models:Asr` 中用 `Provider: Azure` 和对应部署别名配置 `Narration` 或 `Transcript`。两个接口使用 Azure OpenAI v1 预览终结点和所选资源的 `api-key`。[Azure 媒体 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/openai/reference-preview-latest)
 
 语音合成向 `/openai/v1/audio/speech?api-version=preview` 发送 JSON，从 `AITtsResponse.Audio.Content` 读取音频字节。调用需要提供 `Voice`，也可以在 `AI:Models:Tts:Narration` 中设置默认值，例如 `alloy`。按部署选择支持的 `ResponseFormat` 和 `Speed`。[语音合成 REST 参考](https://learn.microsoft.com/en-us/azure/foundry/reference/rest/audio-create-speech)
 

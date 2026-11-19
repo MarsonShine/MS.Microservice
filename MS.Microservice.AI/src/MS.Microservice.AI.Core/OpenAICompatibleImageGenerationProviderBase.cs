@@ -36,12 +36,19 @@ internal abstract class OpenAICompatibleImageGenerationProviderBase : OpenAIComp
 
     protected virtual string? GetImageResponseFormat(AIResolvedModel model) => model.ResponseFormat ?? "b64_json";
 
+    protected virtual (OpenAICompatibleRequestTarget Target, string? BodyModel, string ImagePartName) ResolveImageTarget(
+        AIResolvedModel model, string relativePath)
+    {
+        var target = ResolveTarget(model, relativePath);
+        return (target, target.Model, "image");
+    }
+
     private HttpRequestMessage CreateImageGenerationRequest(AIResolvedModel model, AIImageGenerationRequest request)
     {
-        var target = ResolveTarget(model, RelativeImageGenerationPath);
+        var (target, bodyModel, _) = ResolveImageTarget(model, RelativeImageGenerationPath);
         return CreateJsonRequest(target, new
         {
-            model = target.Model,
+            model = bodyModel,
             prompt = request.Prompt,
             n = model.Count ?? 1,
             size = model.Size,

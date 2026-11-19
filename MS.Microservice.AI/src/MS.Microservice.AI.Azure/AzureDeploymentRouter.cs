@@ -23,11 +23,18 @@ internal sealed class AzureDeploymentRouter(IOptions<AzureOptions> azure, IOptio
     internal static AzureDeploymentTarget? Select(
         AzureOptions options, AICapability capability, string model)
     {
-        if (capability is AICapability.Chat && options.Cloud.Chat is { } chat)
+        (AzureCloudModelOptions? Group, AzureDeploymentApi? DefaultApi) cloud = capability switch
         {
-            return chat.Models.TryGetValue(model, out var deployment) && deployment.Enabled && deployment.Resource is not null
-                && chat.Resources.TryGetValue(deployment.Resource, out var resource) && resource.Enabled
-                ? new AzureDeploymentTarget(deployment, resource)
+            AICapability.Chat => (options.Cloud.Chat, null),
+            AICapability.ImageGeneration or AICapability.ImageEdit => (options.Cloud.Image, AzureDeploymentApi.Deployment),
+            _ => (null, null),
+        };
+
+        if (cloud.Group is { } group)
+        {
+            return group.Models.TryGetValue(model, out var deployment) && deployment.Enabled && deployment.Resource is not null
+                && group.Resources.TryGetValue(deployment.Resource, out var resource) && resource.Enabled
+                ? new AzureDeploymentTarget(deployment, resource, cloud.DefaultApi)
                 : null;
         }
 
@@ -69,9 +76,19 @@ internal sealed class AzureDeploymentRouter(IOptions<AzureOptions> azure, IOptio
     }
 }
 
-internal readonly record struct AzureDeploymentTarget(AzureDeploymentOptions Deployment, AzureResourceOptions Resource)
+internal readonly record struct AzureDeploymentTarget(
+    AzureDeploymentOptions Deployment, AzureResourceOptions Resource, AzureDeploymentApi? DefaultApi = null)
 {
+    public AzureDeploymentApi? Api => Deployment.Api ?? DefaultApi;
+
     public OpenAICompatibleRequestTarget CreateRequestTarget(string relativePath)
         => new(new Uri(AzureDeploymentRouter.GetApiBase(Resource.Endpoint!)!, relativePath),
             Deployment.Deployment!, Resource.ApiKey, "api-key");
+
+    public OpenAICompatibleRequestTarget CreateDeploymentRequestTarget(string operationPath)
+    {
+        var deployment = Uri.EscapeDataString(Deployment.Deployment!);
+        var apiVersion = Deployment.ApiVersion ?? "2025-04-01-preview";
+        return CreateRequestTarget($"/openai/deployments/{deployment}/{operationPath}?api-version={apiVersion}");
+    }
 }

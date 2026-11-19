@@ -7,8 +7,9 @@ internal sealed class AzureCloudOptions
 {
     public AzureCloudModelOptions? Chat { get; set; }
     public AzureSpeechTtsOptions? Tts { get; set; }
+    public AzureCloudModelOptions? Image { get; set; }
 
-    public bool IsConfigured => Chat is not null || Tts is not null;
+    public bool IsConfigured => Chat is not null || Tts is not null || Image is not null;
 }
 
 internal sealed class AzureCloudModelOptions

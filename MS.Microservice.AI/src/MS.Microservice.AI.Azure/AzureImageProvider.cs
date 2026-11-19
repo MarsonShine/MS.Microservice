@@ -18,12 +18,18 @@ internal sealed class AzureImageProvider(
     protected override string HttpClientName => AzureOptions.HttpClientName;
     protected override string DefaultBaseAddress => throw new InvalidOperationException("Azure requires a configured deployment endpoint.");
 
-    protected override string RelativeImageGenerationPath => "images/generations?api-version=preview";
-    protected override string RelativeImageEditPath => "images/edits?api-version=preview";
-    protected override string ImagePartName => "image[]";
+    protected override (OpenAICompatibleRequestTarget Target, string? BodyModel, string ImagePartName) ResolveImageTarget(
+        AIResolvedModel model, string relativePath)
+    {
+        var deployment = deployments.ResolveDeployment(model);
+        if (deployment.Api is AzureDeploymentApi.Deployment)
+        {
+            return (deployment.CreateDeploymentRequestTarget(relativePath), null, "image");
+        }
 
-    protected override OpenAICompatibleRequestTarget ResolveTarget(AIResolvedModel model, string relativePath)
-        => deployments.Resolve(model, relativePath);
+        var target = deployment.CreateRequestTarget($"{relativePath}?api-version=preview");
+        return (target, target.Model, "image[]");
+    }
 
     protected override string? GetImageResponseFormat(AIResolvedModel model)
     {

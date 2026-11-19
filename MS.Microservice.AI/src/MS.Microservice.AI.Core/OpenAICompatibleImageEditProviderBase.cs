@@ -28,8 +28,8 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
             request.RequestId,
             () =>
             {
-                var target = ResolveTarget(model, RelativeImageEditPath);
-                return CreateMultipartRequest(target, CreateMultipartContent(model, request, target.Model));
+                var (target, bodyModel, imagePartName) = ResolveImageTarget(model, RelativeImageEditPath);
+                return CreateMultipartRequest(target, CreateMultipartContent(model, request, bodyModel, imagePartName));
             },
             (httpResponse, requestCancellationToken) => ParseImageResponseAsync(httpResponse, AICapability.ImageEdit, model, request.RequestId, requestCancellationToken),
             cancellationToken));
@@ -37,14 +37,17 @@ internal abstract class OpenAICompatibleImageEditProviderBase : OpenAICompatible
 
     protected virtual string RelativeImageEditPath => "images/edits";
 
-    protected virtual string ImagePartName => "image";
-
-    private MultipartFormDataContent CreateMultipartContent(AIResolvedModel model, AIImageEditRequest request, string deploymentModel)
+    private MultipartFormDataContent CreateMultipartContent(
+        AIResolvedModel model, AIImageEditRequest request, string? bodyModel, string imagePartName)
     {
         var responseFormat = GetImageResponseFormat(model);
         var content = new MultipartFormDataContent();
-        content.Add(CreateBinaryContent(request.Image), ImagePartName, request.Image.FileName ?? "image.png");
-        content.Add(new StringContent(deploymentModel), "model");
+        content.Add(CreateBinaryContent(request.Image), imagePartName, request.Image.FileName ?? "image.png");
+        if (bodyModel is not null)
+        {
+            content.Add(new StringContent(bodyModel), "model");
+        }
+
         content.Add(new StringContent(request.Prompt), "prompt");
         content.Add(new StringContent((model.Count ?? 1).ToString(System.Globalization.CultureInfo.InvariantCulture)), "n");
         if (responseFormat is not null)

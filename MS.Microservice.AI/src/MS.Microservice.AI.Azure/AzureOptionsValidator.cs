@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using MS.Microservice.AI.Abstractions;
 using MS.Microservice.AI.Core;
@@ -69,6 +70,11 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
             ValidateCloudModels(chat, AICapability.Chat, "AzureCloud:CHAT", failures);
         }
 
+        if (options.Cloud.Image is { } image)
+        {
+            ValidateCloudModels(image, AICapability.ImageGeneration, "AzureCloud:IMAGE", failures, AzureDeploymentApi.Deployment);
+        }
+
         if (options.Cloud.Tts is { } tts)
         {
             if (string.IsNullOrWhiteSpace(tts.Secret) || tts.Secret.Any(char.IsWhiteSpace) || tts.Secret.Any(char.IsControl))
@@ -116,7 +122,8 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         }
     }
 
-    private static void ValidateCloudModels(AzureCloudModelOptions group, AICapability capability, string path, ICollection<string> failures)
+    private static void ValidateCloudModels(AzureCloudModelOptions group, AICapability capability, string path,
+        ICollection<string> failures, AzureDeploymentApi? defaultApi = null)
     {
         if (group.Resources.Count == 0 || group.Models.Count == 0)
         {
@@ -126,7 +133,7 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         ValidateResources(group.Resources, $"{path}:Resources", "Secret", failures);
         foreach (var (alias, deployment) in group.Models)
         {
-            ValidateDeployment(deployment, group.Resources, capability, $"{path}:Models:{alias}", failures);
+            ValidateDeployment(deployment, group.Resources, capability, $"{path}:Models:{alias}", failures, defaultApi);
         }
     }
 
@@ -153,7 +160,7 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
     }
 
     private static void ValidateDeployment<T>(AzureDeploymentOptions deployment, IReadOnlyDictionary<string, T> resources,
-        AICapability capability, string path, ICollection<string> failures)
+        AICapability capability, string path, ICollection<string> failures, AzureDeploymentApi? defaultApi = null)
     {
         if (!deployment.Enabled)
         {
@@ -166,9 +173,20 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
             failures.Add($"{path} requires a deployment name and a configured resource for each enabled candidate.");
         }
 
-        if (deployment.Api is { } api && (capability != AICapability.Chat || api is not (AzureDeploymentApi.ChatCompletions or AzureDeploymentApi.Responses)))
+        var api = deployment.Api ?? defaultApi;
+        if (api is { } specifiedApi && !SupportsApi(capability, specifiedApi))
         {
             failures.Add($"{path}:Api is not supported for Azure {capability}.");
+        }
+
+        if (api is AzureDeploymentApi.Deployment && deployment.Deployment is "." or "..")
+        {
+            failures.Add($"{path}:Deployment cannot be a path dot segment.");
+        }
+
+        if (deployment.ApiVersion is { } apiVersion && (api != AzureDeploymentApi.Deployment || !IsDatedApiVersion(apiVersion)))
+        {
+            failures.Add($"{path}:ApiVersion applies to the Deployment API and must be a date in yyyy-MM-dd or yyyy-MM-dd-preview format.");
         }
 
         if (deployment.MaxTokenParameter is { } parameter && (capability != AICapability.Chat
@@ -176,6 +194,19 @@ internal sealed class AzureOptionsValidator(IOptions<AzureOptions> azure) : IVal
         {
             failures.Add($"{path}:MaxTokenParameter must be max_tokens or max_completion_tokens and applies to Chat Completions only.");
         }
+    }
+
+    private static bool SupportsApi(AICapability capability, AzureDeploymentApi api) => capability switch
+    {
+        AICapability.Chat => api is AzureDeploymentApi.ChatCompletions or AzureDeploymentApi.Responses,
+        AICapability.ImageGeneration or AICapability.ImageEdit => api is AzureDeploymentApi.Deployment or AzureDeploymentApi.OpenAIV1,
+        _ => false,
+    };
+
+    private static bool IsDatedApiVersion(string value)
+    {
+        var date = value.EndsWith("-preview", StringComparison.Ordinal) ? value.AsSpan(0, value.Length - 8) : value.AsSpan();
+        return DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
     }
 
     private static bool IsAzure(string? name) => string.Equals(name, AzureOptions.ProviderName, StringComparison.OrdinalIgnoreCase);
