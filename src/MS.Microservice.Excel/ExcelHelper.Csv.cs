@@ -92,18 +92,25 @@ public partial class ExcelHelper
 
         IEnumerable<IReadOnlyList<string?>> Records()
         {
-            yield return meta.Slots.Select(slot => (string?)slot.ColumnName).ToArray();
+            // WriteAsync finishes the yielded row before asking this private iterator for the next one.
+            var fields = new string?[meta.Slots.Length];
+            for (int i = 0; i < fields.Length; i++) fields[i] = meta.Slots[i].ColumnName;
+            yield return fields;
             foreach (var row in source)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 ArgumentNullException.ThrowIfNull(row);
-                yield return meta.Slots.Select(slot => slot.Getter(row!) switch
+                for (int i = 0; i < fields.Length; i++)
                 {
-                    null => null,
-                    DateTime date => date.ToString("O", CultureInfo.InvariantCulture),
-                    IFormattable formatted => formatted.ToString(null, CultureInfo.InvariantCulture),
-                    object value => value.ToString()
-                }).ToArray();
+                    fields[i] = meta.Slots[i].Getter(row!) switch
+                    {
+                        null => null,
+                        DateTime date => date.ToString("O", CultureInfo.InvariantCulture),
+                        IFormattable formatted => formatted.ToString(null, CultureInfo.InvariantCulture),
+                        object value => value.ToString()
+                    };
+                }
+                yield return fields;
             }
         }
     }

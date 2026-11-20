@@ -284,6 +284,17 @@ public sealed class CsvHelperTests
     }
 
     [Fact]
+    public async Task WriteAsync_EscapesQuotesAcrossOutputBlocksAndWritesOnlyTheLastValidCharacters()
+    {
+        string value = new string('"', 4096) + "😀\r\n";
+        IReadOnlyList<string?>[] rows = [[new string('a', 4095), value, "tail"], ["x"]];
+        using var stream = new MemoryStream();
+        await CsvHelper.WriteAsync(stream, rows);
+        var expected = new string('a', 4095) + ",\"" + new string('"', 8192) + "😀\r\n\",tail\r\nx\r\n";
+        Assert.Equal(Encoding.UTF8.GetBytes(expected), stream.ToArray());
+    }
+
+    [Fact]
     public async Task WriteAsync_BomEncodingAndCurrentPosition_AreExplicit()
     {
         var options = new CsvOptions { Encoding = new UTF8Encoding(true, true) };

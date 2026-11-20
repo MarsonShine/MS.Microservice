@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -17,6 +18,9 @@ public sealed class CsvFormatException(string message, long rowNumber, int colum
 /// <summary>Bounded, asynchronous CSV record reading and writing on caller-owned streams.</summary>
 public static class CsvHelper
 {
+    private const int WriteBlockSize = 4096;
+    private static readonly SearchValues<char> CommaSyntax = SearchValues.Create(",\"\r\n");
+
     /// <summary>
     /// Reads from the current position using the specified encoding, preserving field text and embedded newlines.
     /// Accepts CRLF/LF/CR and one initial encoding marker, keeping the caller stream open.
@@ -162,7 +166,10 @@ public static class CsvHelper
         cancellationToken.ThrowIfCancellationRequested();
 
         var writer = new StreamWriter(destination, options.Encoding, bufferSize: 4096, leaveOpen: true);
-        var delimiter = options.Delimiter.ToString();
+        var syntax = options.Delimiter == ',' ? CommaSyntax : SearchValues.Create([options.Delimiter, '"', '\r', '\n']);
+        var block = ArrayPool<char>.Shared.Rent(WriteBlockSize);
+        int used = 0;
+        int maximumUsed = 0;
         long rowNumber = 0;
         IEnumerator<IReadOnlyList<string?>>? enumerator = null;
         try
@@ -187,33 +194,61 @@ public static class CsvHelper
                     if (recordChars > options.MaxRecordChars)
                         throw new CsvFormatException("The record exceeds MaxRecordChars.", rowNumber, column + 1);
                     var quote = value.StartsWith('\uFEFF');
-                    long quoteCount = 0;
-                    foreach (var character in value)
+                    int quotes = 0;
+                    for (int offset = 0; offset < value.Length;)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        if (character == '"')
-                            quoteCount++;
-                        if (character == options.Delimiter || character is '"' or '\r' or '\n')
-                            quote = true;
+                        var part = value.AsSpan(offset, Math.Min(value.Length - offset, WriteBlockSize));
+                        quote = quote || part.ContainsAny(syntax);
+                        if (quote) quotes += part.Count('"');
+                        offset += part.Length;
                     }
                     if (quote)
-                        recordChars += quoteCount + 2;
+                        recordChars += (long)quotes + 2;
                     if (recordChars > options.MaxRecordChars)
                         throw new CsvFormatException("The record exceeds MaxRecordChars.", rowNumber, column + 1);
 
-                    if (column != 0)
-                        await writer.WriteAsync(delimiter.AsMemory(), cancellationToken).ConfigureAwait(false);
-                    if (quote)
+                    if (WriteBlockSize - used < 2) await WriteBlockAsync().ConfigureAwait(false);
+                    if (column != 0) block[used++] = options.Delimiter;
+                    if (quote) block[used++] = '"';
+                    if (quotes == 0)
                     {
-                        await writer.WriteAsync("\"".AsMemory(), cancellationToken).ConfigureAwait(false);
-                        await writer.WriteAsync(value.Replace("\"", "\"\"", StringComparison.Ordinal).AsMemory(), cancellationToken).ConfigureAwait(false);
-                        await writer.WriteAsync("\"".AsMemory(), cancellationToken).ConfigureAwait(false);
+                        if (value.Length > WriteBlockSize - used) await WriteBlockAsync().ConfigureAwait(false);
+                        if (value.Length > WriteBlockSize)
+                            await writer.WriteAsync(value.AsMemory(), cancellationToken).ConfigureAwait(false);
+                        else
+                        {
+                            value.CopyTo(0, block, used, value.Length);
+                            used += value.Length;
+                        }
                     }
                     else
-                        await writer.WriteAsync(value.AsMemory(), cancellationToken).ConfigureAwait(false);
+                    {
+                        for (int offset = 0; offset < value.Length;)
+                        {
+                            // Even an all-quote piece fits once every quote has been doubled.
+                            int count = Math.Min(value.Length - offset, WriteBlockSize / 2);
+                            if (2 * count > WriteBlockSize - used) await WriteBlockAsync().ConfigureAwait(false);
+                            for (int i = offset; i < offset + count; i++)
+                            {
+                                char c = value[i];
+                                block[used++] = c;
+                                if (c == '"') block[used++] = c;
+                            }
+                            offset += count;
+                        }
+                    }
+                    if (quote)
+                    {
+                        if (used == WriteBlockSize) await WriteBlockAsync().ConfigureAwait(false);
+                        block[used++] = '"';
+                    }
                 }
 
-                await writer.WriteAsync(options.NewLine.AsMemory(), cancellationToken).ConfigureAwait(false);
+                if (options.NewLine.Length > WriteBlockSize - used) await WriteBlockAsync().ConfigureAwait(false);
+                options.NewLine.CopyTo(0, block, used, options.NewLine.Length);
+                used += options.NewLine.Length;
+                await WriteBlockAsync().ConfigureAwait(false);
             }
 
             var completedEnumerator = enumerator;
@@ -242,8 +277,23 @@ public static class CsvHelper
             }
             throw;
         }
+        finally
+        {
+            // Include data from earlier submissions and a partially filled block on failure.
+            block.AsSpan(0, Math.Max(used, maximumUsed)).Clear();
+            ArrayPool<char>.Shared.Return(block);
+        }
 
         await writer.DisposeAsync().ConfigureAwait(false);
+
+        Task WriteBlockAsync()
+        {
+            if (used == 0) return Task.CompletedTask;
+            int count = used;
+            maximumUsed = Math.Max(maximumUsed, count);
+            used = 0;
+            return writer.WriteAsync(block.AsMemory(0, count), cancellationToken);
+        }
     }
 
     private enum FieldState { Start, Unquoted, Quoted, AfterQuote }
