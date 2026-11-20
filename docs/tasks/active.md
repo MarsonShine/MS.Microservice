@@ -1,6 +1,6 @@
 # 当前任务
 Status: idle
 Task: none
-Next: 等待支持 EF Core 11 正式版的 PostgreSQL 提供程序发布，再一起评估升级。后续新增或替换的 Azure 部署仍用 Lab 验证。
+Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
 
-最近完成的项目目录整理见[验收记录](../validation/PROJECT-DIRECTORY-LAYOUT/summary.md)。
+最近完成的 Audio 四项修复见[回归验收](../validation/AUDIO-ENCODING-REGRESSIONS/summary.md)。

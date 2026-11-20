@@ -52,13 +52,19 @@ await processor.CombineAudioFilesAsync(
 
 转换、混音及文件转流入口会在成功或失败后释放已打开的输入文件，包括后续输入打开失败的情况。
 
+`ConvertMonoToStereoAsync` 按目标采样率输出双声道。混音和声道转换写 MP3 时按实际提供的浮点样本格式编码。PCM8 WAV 合并用 `0x80` 填充每段末尾的静音，解码后的振幅为零。
+
 ## 运行要求
 
 标准 PCM／float WAV 的编辑不需要 Windows 媒体解码器；MP3 解码、其他压缩格式和部分转换路径依赖 Windows ACM／Media Foundation。MP3 编码需要与进程架构匹配的 LAME 原生库。部署前应在目标平台验证实际使用的编解码路径。
 
 MP3 有损编码和补帧会影响解码后的末尾时长；压缩音频的定位精度受解码器限制。`AudioEditor.EditAsync` 在处理块之间检查取消，单次原生调用无法强制中断；旧合并、混音和转换入口没有取消参数。输出目录由宿主保持可信且稳定。
 
-源码或包的引用方式见[组件消费](../../docs/components/consumption.md)。维护说明：[编辑与发布](docs/audio-editor-design.md)、[格式探测与已有基准](docs/format-detection-design.md)、[静音缓冲](docs/silence-buffer-design.md)。
+源码或包的引用方式见[组件消费](../../docs/components/consumption.md)。维护说明：[编辑与发布](docs/audio-editor-design.md)、[静音缓冲](docs/silence-buffer-design.md)。
+
+读缓冲怎样跨片段复用、写缓冲怎样合并短写入，以及混音怎样整块写出浮点样本，见[音频优化前后源码对照](docs/wav-processing-performance.md)。公开 API 的耗时、托管分配和复测方法见[音频处理性能验收](../../docs/validation/AUDIO-PROCESSING-PERF/summary.md)。
+
+读文件头与查元数据的前后代码见[格式探测与文件大小](docs/format-detection-design.md)。四帧淡变、静音尾块、返回数组的复制、批量调度及转换边界见[其余公开入口的源码导读](docs/audio-api-walkthrough.md)。
 
 ## 批量转换并发
 
