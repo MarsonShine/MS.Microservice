@@ -6,6 +6,12 @@ namespace MS.Microservice.Core.Tests.Cryptology;
 
 public sealed class HmacSha256Tests
 {
+    [Theory]
+    [InlineData("", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")]
+    [InlineData("订单🔐", "23862f7e75ed64a25d20c9e674d0979dcbbba98e3758c6f1dd118e9a809d74e8")]
+    public void UnkeyedSha256ReturnsLowercaseHexOfUtf8(string input, string expected)
+        => Assert.Equal(expected, CryptologyHelper.SHA256(input));
+
     [Fact]
     public void ExplicitKeyPreservesStandardHmacSha256Result()
     {

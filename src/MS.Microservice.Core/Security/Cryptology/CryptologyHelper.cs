@@ -40,19 +40,10 @@ namespace MS.Microservice.Core.Security.Cryptology
 
         public static string SHA256(string value)
         {
-			// 使用 SHA1 创建哈希值
-			using SHA256 sha256 = System.Security.Cryptography.SHA256.Create();
-			byte[] inputBytes = Encoding.UTF8.GetBytes(value);
-			byte[] hashBytes = sha256.ComputeHash(inputBytes);
-
-			// 将字节数组转换成十六进制字符串
-			StringBuilder sb = new();
-			foreach (byte b in hashBytes)
-			{
-				sb.Append(b.ToString("x2"));
-			}
-			return sb.ToString();
-		}
+            Span<byte> digest = stackalloc byte[System.Security.Cryptography.SHA256.HashSizeInBytes];
+            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(value), digest);
+            return Convert.ToHexStringLower(digest);
+        }
 
         #endregion
     }
