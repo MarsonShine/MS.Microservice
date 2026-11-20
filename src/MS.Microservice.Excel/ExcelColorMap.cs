@@ -7,30 +7,12 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
 {
     public class ExcelColorMap
     {
-        public Dictionary<string, short>? Colors;
+        private static readonly Dictionary<string, short> DefaultColors = typeof(HSSFColor).GetNestedTypes()
+            .Where(typeof(HSSFColor).IsAssignableFrom)
+            .ToDictionary(type => type.Name, type => (short)type.GetField("Index")!.GetValue(null)!);
 
-        public ExcelColorMap()
-        {
-            Init();
-        }
-
-        private void Init()
-        {
-            var nestedTypes = typeof(HSSFColor).GetNestedTypes()
-                .Where(p => typeof(HSSFColor).IsAssignableFrom(p))
-                .ToArray();
-            if (nestedTypes.Length == 0)
-                return;
-
-            Colors = new Dictionary<string, short>(nestedTypes.Length);
-            foreach (var t in nestedTypes)
-            {
-                var obj = Activator.CreateInstance(t);
-                var key = t.Name;
-                var value = (short)t!.GetField("Index")!.GetValue(obj)!;
-                Colors.Add(key, value);
-            }
-        }
+        // The public map is mutable. Share the reflection result and give each caller its own dictionary.
+        public Dictionary<string, short>? Colors = new(DefaultColors);
 
         public bool TryGetColor(string color, out short value)
         {
