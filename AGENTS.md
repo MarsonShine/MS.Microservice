@@ -49,6 +49,10 @@ Complete the fix when the invariant is restored and credible evidence covers the
 
 Briefly report the root cause, invariant, fix layer, changed behavior, verification performed or reused, and remaining uncertainty.
 
+## C# 扩展成员
+
+本仓库新增 C# 扩展方法时，统一使用 C# 14 引入的扩展块语法。例如，在静态类中用 `extension(ILogger logger)` 声明接收者，再在块内声明实例扩展方法。同一接收者的相关方法放在同一个块中。修改已有扩展方法时一并迁移该方法的旧式 `this` 首参数声明，保留原有可见性、调用方式和行为。
+
 ## Markdown 文档配图
 
 编写或更新本仓库的文档时，如果图能帮助读者看清数据如何流动、调用按什么顺序发生，或两组结果相差多少，就主动配图。根据读者要弄懂的问题，优先选择适合目标 Markdown 渲染器的格式：
