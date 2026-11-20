@@ -1,21 +1,21 @@
 # Root-Cause Bug Fix Protocol
 
-<!-- harness:managed v1 sha256:4748970e5308f31520e3ca033395a1248dd88a993327b29cc9a56f36b9784f50 -->
+<!-- harness:managed v2 sha256:42d3afbf18f5cd42f5eccda2780d359e6e568c3437aaa64259a87b2c2ed8d03f -->
 ## Working Agreement
 
-- Keep exactly one task `in_progress`. Do not start a second task until the first has passing acceptance evidence.
+- Keep one current task per working tree. Give independent concurrent tasks separate Git worktrees and distinct task IDs; a new chat in the same directory shares that directory's changes.
 - Before editing, state the task's in-scope paths, out-of-scope work, and acceptance command.
 - A change outside the declared scope is a scope violation: revert it or split it into a new task.
 - Done means the acceptance command passed and its output is recorded. Code inspection is not evidence.
-- A one-file edit may skip the task card, but must still state its acceptance check in the commit or report.
-- Record the current state in `docs/status.md` and the active task in `docs/tasks/active.md`.
+- For a parallel task, keep its ID, status and next action in the worktree-root `HANDOFF.md`. Check that tree with `closeout --worktree-task`. Archive its result before retiring the tree.
+- The integrator owns `docs/status.md` and `docs/tasks/active.md`; single-task work keeps the existing workflow. A small single-task edit may report its acceptance check without a separate task card.
 - Project facts belong in `README.md` and the `## Project` section. Do not copy commands into this block.
 - This block is generated. Change the baseline and run `harness sync`; do not edit it by hand.
 <!-- /harness:managed -->
 
 Current state: [docs/status.md](docs/status.md). Decisions: [docs/decisions/](docs/decisions/README.md). Remaining work: [docs/framework-optimization-roadmap.md](docs/framework-optimization-roadmap.md). Harness recovery: [docs/harness.md](docs/harness.md).
 
-Start from the current-state and active-task links. Follow [session lifecycle](docs/worktree-handoff.md) for closeout and resumption; open historical material only when needed.
+In a parallel task worktree, resume from its root HANDOFF.md. In the integration checkout, follow the current-state and active-task links. See [session lifecycle](docs/worktree-handoff.md) for closeout and resumption.
 
 When handling a bug, failure, unexpected behavior, or edge case, do not optimize only for the reported example. Treat it as evidence of a potentially broader defect.
 

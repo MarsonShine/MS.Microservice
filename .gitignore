@@ -12,5 +12,6 @@ logs
 /.tools
 TestResults/
 /copilot-worktrees
+/HANDOFF.md
 
 /artifacts/

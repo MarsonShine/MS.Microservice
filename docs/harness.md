@@ -1,7 +1,7 @@
 # Harness 接入与恢复
 
-版本：v1
-更新时间：2026-10-21
+版本：v2
+更新时间：2026-11-20
 本文件是本仓库的 harness 恢复记录。即使所有 AI 工具都不可用，按这里的步骤也能恢复工作协议。
 
 ## 四层结构
@@ -9,7 +9,7 @@
 | 层 | 位置 | 作用 |
 | --- | --- | --- |
 | 全局触发 | `~/.dsh/AGENTS.md`、`~/.codex/AGENTS.md`、`~/.claude/CLAUDE.md` | 发现仓库缺少托管块时提醒初始化 |
-| 引擎 | `~/.agents/harness/`（`harness.py` + `templates/`） | 执行 `init / adopt / sync / check` |
+| 引擎 | `~/.agents/harness/` | 管理托管块、核对收尾范围并读取各工作树任务卡 |
 | 项目 | `AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md` | 托管块、适配器、项目事实 |
 | 技能 | ai-skills 的 `bootstrap-harness` | 让 agent 知道何时调用引擎 |
 
@@ -21,7 +21,7 @@
 - `CLAUDE.md`：`@AGENTS.md`。
 - `.github/copilot-instructions.md`：顶部同一托管块。
 - [docs/status.md](status.md)：当前分支、验证、阻塞、下一步、VCR。
-- [docs/tasks/active.md](tasks/active.md)：当前唯一任务契约。
+- [docs/tasks/active.md](tasks/active.md)：集成工作树的当前任务契约；并行工作树各自维护根部 `HANDOFF.md`。
 - [.github/pull_request_template.md](../.github/pull_request_template.md)：任务、验收、范围检查。
 - 队列与未完成事项：[framework-optimization-roadmap.md](framework-optimization-roadmap.md)。
 - 设计取舍：[docs/decisions](decisions/README.md)。
@@ -48,7 +48,7 @@ python "$HOME/.agents/harness/harness.py" check
 
 ## 只读会话收尾检查
 
-安装带 closeout 子命令的 ai-skills 引擎后，从仓库根运行：
+集成者在集成工作树根目录检查项目状态页与集成任务卡。
 
 ```powershell
 python "$HOME/.agents/harness/harness.py" closeout --root . --state docs/status.md --task docs/tasks/active.md
@@ -58,7 +58,22 @@ python "$HOME/.agents/harness/harness.py" closeout --root . --state docs/status.
 
 命令只读并输出 JSON：退出码 0 表示所选结构检查通过，1 表示检查失败。它检查 Status/Task/Next、状态页与任务卡一致性、内联文件链接及未说明的改动；不会验证业务正确性、远端 CI 或全部忽略文件，也不会删除文件、执行文档命令或修改托管块。blocked 交接还需 Blocker；未完成交接可通过普通检查，但不能通过 --complete。
 
-任务完成后将契约和结果保存到 docs/validation/<task>/，再把状态页和活动入口设为 idle/none。详细生命周期见 [跨会话约定](worktree-handoff.md)。
+集成任务完成后将契约和结果保存到 `docs/validation/<task>/`，再把状态页和集成任务卡设为 idle/none。
+
+在独立工作树根目录，使用该工作树的 `HANDOFF.md` 进行收尾。以下以 `T-EXCEL-CSV` 为例，范围应按实际改动填写。
+
+```powershell
+# 查看本仓库各个本地工作树登记的卡片
+python "$HOME/.agents/harness/harness.py" tasks --root .
+
+# 接手续做或记录阻塞时检查当前工作树
+python "$HOME/.agents/harness/harness.py" closeout --root . --worktree-task --scope src/MS.Microservice.Excel --scope test/MS.Microservice.Excel.Tests
+
+# 本任务已标记 completed 且验收材料已归档时
+python "$HOME/.agents/harness/harness.py" closeout --root . --worktree-task --complete --scope src/MS.Microservice.Excel --scope test/MS.Microservice.Excel.Tests --scope docs/validation/T-EXCEL-CSV
+```
+
+工作树模式只收尾当前卡片。另一工作树可以继续 `in_progress`，集成任务卡保持由集成者维护。任务 ID、阻塞和验收链接的写法见[并行工作与接续](worktree-handoff.md#并行工作与接续)。
 
 ## 没有 AI 工具时
 
@@ -66,21 +81,21 @@ python "$HOME/.agents/harness/harness.py" closeout --root . --state docs/status.
 2. 托管块丢失时，从下方“基线快照”复制正文；标记和哈希可在下次运行 `sync --write` 时补上。
 3. 确认 `CLAUDE.md` 含 `@AGENTS.md`。
 4. 确认 `.github/copilot-instructions.md` 顶部有同一段托管块。
-5. 在 `docs/status.md` 写当前分支、验证、阻塞、下一步。
-6. 在 `docs/tasks/active.md` 只保留一个 `in_progress` 任务，并写验收命令。
+5. 集成者在 `docs/status.md` 写集成分支、验证、阻塞和下一步，在 `docs/tasks/active.md` 保留集成任务及其验收命令。
+6. 独立工作树从各自根部的 `HANDOFF.md` 读取任务 ID、状态、下一步和证据；按 `git worktree list` 列出的本地路径可手工查看其他工作树的卡片。
 
 如果连 Python 也没有，只能手工维护上述文件；此时在 `docs/status.md` 的验证一栏写明“未运行 harness check”。
 
-## 基线快照（v1）
+## 基线快照（v2）
 
 ## Working Agreement
 
-- Keep exactly one task `in_progress`. Do not start a second task until the first has passing acceptance evidence.
+- Keep one current task per working tree. Give independent concurrent tasks separate Git worktrees and distinct task IDs; a new chat in the same directory shares that directory's changes.
 - Before editing, state the task's in-scope paths, out-of-scope work, and acceptance command.
 - A change outside the declared scope is a scope violation: revert it or split it into a new task.
 - Done means the acceptance command passed and its output is recorded. Code inspection is not evidence.
-- A one-file edit may skip the task card, but must still state its acceptance check in the commit or report.
-- Record the current state in `docs/status.md` and the active task in `docs/tasks/active.md`.
+- For a parallel task, keep its ID, status and next action in the worktree-root `HANDOFF.md`. Check that tree with `closeout --worktree-task`. Archive its result before retiring the tree.
+- The integrator owns `docs/status.md` and `docs/tasks/active.md`; single-task work keeps the existing workflow. A small single-task edit may report its acceptance check without a separate task card.
 - Project facts belong in `README.md` and the `## Project` section. Do not copy commands into this block.
 - This block is generated. Change the baseline and run `harness sync`; do not edit it by hand.
 
