@@ -32,6 +32,31 @@ Lab 的文本比较入口调用 `TextDiff.Compare`。旧版一开始就拆完两
 
 工作量上限仍按去掉公共首尾后的行数计算，重复行出现多个等长解时沿用原来的选择顺序。基准里，首尾各有 1024 行相同文本、只改中间一行时，每次少分配 **164,000 B**。两边各 96 行且完全不同时，可省的公共行消失了，耗时中位数约从 117.5 µs 到 119.3 µs，分配仍从 24,888 B 降到 23,008 B。读这项优化时，要同时看这两组输入。[现有重建与工作上限测试](../../../test/MS.Microservice.Core.Tests/Text/TextDiffTests.cs) · [全表和复测命令](../../../docs/validation/CORE-PERFORMANCE/summary.md)
 
+> 差异一：内存分配
+>
+> `SplitLines` 每行都 `text[a..b]` **复制出一个新 string**，10 MB 文本会分配 30 MB 堆内存，而且这些字符串会活到调用方释放为止，单行超过 85 KB 还会直接进 LOH，触发大对象堆碎片。
+>
+> `FindLines` 只装 `Range`，这是一个 8 字节的 struct，`List<Range>` 底层是连续数组，缓存友好，扫描全程零字符串分配。
+>
+> 有意思的是“5 MB 单行”那行：`SplitLines` 也是 0 分配，因为 `text[0..text.Length]` 命中 `Substring` 返回原实例的优化。所以**分配差距只在“多行”时体现**，但扫描速度差距一直都在。
+>
+> 差异二：扫描速度（`IndexOfAny` 是向量化的）
+>
+> `text.AsSpan(start).IndexOfAny('\r', '\n')` 走的是 `SpanHelpers` 里 **SIMD 向量化**的实现，一次比较 16~32 个 char；而 `SplitLines` 是 C# 逐字符循环加边界检查。所以哪怕不分配（无换行场景），前者仍快 15 倍。
+>
+> 注意 `AsSpan(start)` 每轮都创建 span，但 span 是 ref struct，**不分配**，开销可忽略。
+>
+> 差异三：语义
+>
+> |                 | SplitLines                 | FindLines                               |
+> | :-------------- | :------------------------- | --------------------------------------- |
+> | 产物            | 行内容副本                 | 行在原文中的**坐标**                    |
+> | 位置信息        | 丢失（除非调用方自己累计） | 保留，可做 offset→行号 二分映射         |
+> | 随机访问第 n 行 | 直接索引                   | 直接索引后还需 `text[range]` 才拿到内容 |
+> | 生命周期        | 字符串独立存在             | 依赖原文存活                            |
+>
+> **关键限制**：`Range` 拿不到零分配的 span。`text[range]` 对 string 走的是 `Substring`，**仍然分配字符串**。所以 FindLines 的“零分配”只有在消费端也只做位置计算、或自己 `text.AsSpan(r.Start.Value, r.End.Value - r.Start.Value)` 时才成立。如果下游反正要 `string`，你只是把分配推迟了一次，总量省不下那 30 MB。
+
 ## 全模块检查范围
 
 盘点覆盖 `src/MS.Microservice.Core` 中的 116 个生产 C# 文件，排除生成目录。同样检查了没有落地改动的路径。下表按源码归属计数。
