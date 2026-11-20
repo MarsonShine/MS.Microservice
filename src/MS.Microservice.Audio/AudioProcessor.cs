@@ -3,6 +3,7 @@ using NAudio.Dmo;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,6 +16,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
     /// </summary>
     public class AudioProcessor : IAudioProcessor
     {
+        private const int CopyBufferSize = 4096;
+
         // Writers only read these private buffers; audio readers never use them.
         private static readonly byte[] SilenceBuffer = new byte[4096];
         private static readonly byte[] UnsignedPcm8SilenceBuffer = Enumerable.Repeat((byte)0x80, SilenceBuffer.Length).ToArray();
@@ -212,7 +215,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                         mixer.AddMixerInput(sampleProvider);
                     }
 
-                    WriteAudioToFile(mixer, outputFile, outputFormat, targetFormat, options);
+                    WriteAudioToFile(mixer, outputFile, outputFormat, options);
                 }
                 finally
                 {
@@ -268,25 +271,24 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
 
             await Task.Run(() =>
             {
+                var outputFormat = GetOutputFormat(outputFile);
                 using var reader = new AudioFileReader(inputFile);
 
-                if (reader.WaveFormat.Channels == 2)
+                if (reader.WaveFormat.Channels == 2 && reader.WaveFormat.Equals(options.TargetFormat)
+                    && CanCopyStereoInput(inputFile, outputFormat, options))
                 {
-                    // 已经是立体声，直接复制或转换格式
-                    if (reader.WaveFormat.Equals(options.TargetFormat))
-                    {
-                        File.Copy(inputFile, outputFile, true);
-                        return;
-                    }
+                    File.Copy(inputFile, outputFile, true);
+                    return;
                 }
 
                 var stereoProvider = ConvertToStereo(reader);
-                var outputFormat = GetOutputFormat(outputFile);
+                if (stereoProvider.WaveFormat.SampleRate != options.TargetFormat.SampleRate)
+                    stereoProvider = new WdlResamplingSampleProvider(stereoProvider, options.TargetFormat.SampleRate);
 
                 switch (outputFormat)
                 {
                     case AudioFormat.Mp3:
-                        WriteSampleProviderToMp3(stereoProvider, outputFile, options.TargetFormat, options.Mp3Preset);
+                        WriteSampleProviderToMp3(stereoProvider, outputFile, options.Mp3Preset);
                         break;
                     case AudioFormat.Wav:
                         WriteSampleProviderToWav(stereoProvider, outputFile);
@@ -351,6 +353,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         private static void CombineAudioSourcesAsMp3(IAudioSource[] sources, object output, WaveFormat targetFormat, AudioCombineOptions options)
         {
             using var mp3Writer = CreateMp3Writer(output, targetFormat);
+            // 每段同步写完才处理下一段，整次合并可以反复填充同一个数组。
+            var buffer = new byte[CopyBufferSize];
 
             foreach (var source in sources)
             {
@@ -362,7 +366,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                         ResamplerQuality = options.ResamplerQuality
                     };
 
-                    CopyAudioDataToMp3(resampler, mp3Writer);
+                    CopyAudioData(resampler, mp3Writer, buffer);
 
                     if (options.SilenceDuration > 0)
                     {
@@ -381,7 +385,12 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         /// </summary>
         private static void CombineAudioSourcesAsWav(IAudioSource[] sources, object output, WaveFormat targetFormat, AudioCombineOptions options)
         {
-            using var waveWriter = CreateWaveWriter(output, targetFormat);
+            var waveWriter = CreateWaveWriter(output, targetFormat);
+            // Coalesce short segments before WaveFileWriter queries the file length on each write.
+            using Stream destination = output is string && sources.Length > 1
+                ? new BufferedStream(waveWriter, CopyBufferSize)
+                : waveWriter;
+            var buffer = new byte[CopyBufferSize];
 
             foreach (var source in sources)
             {
@@ -394,16 +403,16 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                         {
                             ResamplerQuality = options.ResamplerQuality
                         };
-                        CopyAudioDataToWav(resampler, waveWriter);
+                        CopyAudioData(resampler, destination, buffer);
                     }
                     else
                     {
-                        CopyAudioDataToWav(reader, waveWriter);
+                        CopyAudioData(reader, destination, buffer);
                     }
 
                     if (options.SilenceDuration > 0)
                     {
-                        WriteSilence(waveWriter, targetFormat, options.SilenceDuration);
+                        WriteSilence(destination, targetFormat, options.SilenceDuration);
                     }
                 }
                 finally
@@ -529,15 +538,15 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         /// <summary>
         /// 写入音频到文件 - 统一混音输出方法
         /// </summary>
-        private static void WriteAudioToFile(ISampleProvider mixer, string outputFile, AudioFormat outputFormat, WaveFormat targetFormat, AudioMixOptions options)
+        private static void WriteAudioToFile(ISampleProvider mixer, string outputFile, AudioFormat outputFormat, AudioMixOptions options)
         {
             switch (outputFormat)
             {
                 case AudioFormat.Mp3:
-                    WriteMixedAudioToMp3(mixer, outputFile, targetFormat, options);
+                    WriteSampleProviderToMp3(mixer, outputFile, LAMEPreset.STANDARD);
                     break;
                 case AudioFormat.Wav:
-                    WriteMixedAudioToWav(mixer, outputFile, options);
+                    WriteSampleProviderToWav(mixer, outputFile, options.BufferSize);
                     break;
                 default:
                     throw new NotSupportedException($"不支持的输出格式: {outputFormat}");
@@ -634,27 +643,6 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             return input.WaveFormat.Channels == 2 ? input : new MonoToStereoSampleProvider(input);
         }
 
-        private static void WriteMixedAudioToMp3(ISampleProvider mixer, string outputFile, WaveFormat targetFormat, AudioMixOptions options)
-        {
-            using var mp3Writer = new LameMP3FileWriter(outputFile, targetFormat, LAMEPreset.STANDARD);
-
-            // 需要将ISampleProvider转换为字节流
-            var waveProvider = mixer.ToWaveProvider();
-            CopyAudioDataToMp3(waveProvider, mp3Writer);
-        }
-
-        private static void WriteMixedAudioToWav(ISampleProvider mixer, string outputFile, AudioMixOptions options)
-        {
-            using var waveWriter = new WaveFileWriter(outputFile, mixer.WaveFormat);
-            var buffer = new float[options.BufferSize];
-            int samplesRead;
-
-            while ((samplesRead = mixer.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                waveWriter.WriteSamples(buffer, 0, samplesRead);
-            }
-        }
-
         private static void WriteConvertedAudio(IWaveProvider source, string outputFile, AudioFormat outputFormat, AudioConvertOptions options)
         {
             switch (outputFormat)
@@ -662,53 +650,54 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 case AudioFormat.Mp3:
                     using (var mp3Writer = new LameMP3FileWriter(outputFile, options.TargetFormat, options.Mp3Preset))
                     {
-                        CopyAudioDataToMp3(source, mp3Writer);
+                        CopyAudioData(source, mp3Writer);
                     }
                     break;
                 case AudioFormat.Wav:
                     using (var waveWriter = new WaveFileWriter(outputFile, options.TargetFormat))
                     {
-                        CopyAudioDataToWav(source, waveWriter);
+                        CopyAudioData(source, waveWriter);
                     }
                     break;
             }
         }
 
-        private static void WriteSampleProviderToMp3(ISampleProvider sampleProvider, string outputFile, WaveFormat targetFormat, LAMEPreset preset)
+        private static void WriteSampleProviderToMp3(ISampleProvider sampleProvider, string outputFile, LAMEPreset preset)
         {
-            using var mp3Writer = new LameMP3FileWriter(outputFile, targetFormat, preset);
-
-            // 将ISampleProvider转换为IWaveProvider
             var waveProvider = sampleProvider.ToWaveProvider();
-            CopyAudioDataToMp3(waveProvider, mp3Writer);
+            using var mp3Writer = new LameMP3FileWriter(outputFile, waveProvider.WaveFormat, preset);
+            CopyAudioData(waveProvider, mp3Writer);
         }
 
-        private static void WriteSampleProviderToWav(ISampleProvider sampleProvider, string outputFile)
+        private static void WriteSampleProviderToWav(ISampleProvider sampleProvider, string outputFile, int samplesPerRead = 4096)
         {
             using var waveWriter = new WaveFileWriter(outputFile, sampleProvider.WaveFormat);
-            var buffer = new float[4096];
-            int samplesRead;
-
-            while ((samplesRead = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
+            // Preserve the array-length overflow for negative sample counts.
+            var byteCount = checked((int)((uint)samplesPerRead * sizeof(float)));
+            var bytes = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
             {
-                waveWriter.WriteSamples(buffer, 0, samplesRead);
+                // NAudio's WaveBuffer exposes both views over the same IEEE float samples.
+                var samples = new WaveBuffer(bytes).FloatBuffer;
+                int samplesRead;
+                while ((samplesRead = sampleProvider.Read(samples, 0, samplesPerRead)) > 0)
+                {
+                    if (BitConverter.IsLittleEndian)
+                        waveWriter.Write(bytes, 0, samplesRead * sizeof(float));
+                    else
+                        waveWriter.WriteSamples(samples, 0, samplesRead);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(bytes, clearArray: true);
             }
         }
 
-        // 修正后的数据复制方法
-        private static void CopyAudioDataToWav(IWaveProvider source, WaveFileWriter destination)
+        private static void CopyAudioData(IWaveProvider source, Stream destination, byte[]? buffer = null)
         {
-            var buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                destination.Write(buffer, 0, bytesRead);
-            }
-        }
-
-        private static void CopyAudioDataToMp3(IWaveProvider source, LameMP3FileWriter destination)
-        {
-            var buffer = new byte[4096];
+            // 合并时借用调用方的数组，单次转换省略参数时在这里分配一次。
+            buffer ??= new byte[CopyBufferSize];
             int bytesRead;
             while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
             {
@@ -743,6 +732,53 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 new Guid(extra.ExtraData.AsSpan(6, 16)) == AudioMediaSubtypes.MEDIASUBTYPE_PCM,
             _ => false
         };
+
+        private static bool CanCopyStereoInput(string inputFile, AudioFormat outputFormat, AudioConvertOptions options)
+        {
+            if (AudioFileFormatDetector.GetFormatFromExtension(inputFile) != outputFormat)
+                return false;
+            if (outputFormat == AudioFormat.Wav)
+            {
+                // AudioFileReader 提供解码后的浮点格式，直拷前还需核对 WAV 头中的原始编码。
+                using var wav = new WaveFileReader(inputFile);
+                return wav.WaveFormat.Equals(options.TargetFormat);
+            }
+            return options.Mp3Preset == LAMEPreset.STANDARD
+                && HasMatchingStereoMp3Frame(inputFile, options.TargetFormat.SampleRate);
+        }
+
+        private static bool HasMatchingStereoMp3Frame(string inputFile, int sampleRate)
+        {
+            using var input = File.OpenRead(inputFile);
+            var header = new byte[10];
+            if (input.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length)
+                return false;
+
+            long frameOffset = 0;
+            if (header.AsSpan(0, 3).SequenceEqual("ID3"u8))
+            {
+                // ID3v2 用每字节的低七位记录标签长度，直接跳过封面等标签数据。
+                if (header[3] is < 2 or > 4)
+                    return false;
+                int tagSize = 0;
+                foreach (byte part in header.AsSpan(6, 4))
+                {
+                    if (part >= 0x80) return false;
+                    tagSize = (tagSize << 7) | part;
+                }
+                bool hasFooter = header[3] == 4 && (header[5] & 0x10) != 0;
+                frameOffset = header.Length + tagSize + (hasFooter ? 10 : 0);
+                input.Position = frameOffset;
+                if (input.ReadAtLeast(header.AsSpan(0, 4), 4, throwOnEndOfStream: false) < 4)
+                    return false;
+            }
+
+            // 只让帧解析器看指定位置的四个字节，避免在其他容器的内部搜索到同步字。
+            using var frameHeader = new MemoryStream(header, 0, 4, writable: false);
+            var frame = Mp3Frame.LoadFromStream(frameHeader, readData: false);
+            return frame is { MpegLayer: MpegLayer.Layer3 } && frame.SampleRate == sampleRate
+                && frame.ChannelMode != ChannelMode.Mono && frame.FrameLength <= input.Length - frameOffset;
+        }
 
         private static IWaveProvider CreateAudioReaderFromStream(Stream stream)
         {

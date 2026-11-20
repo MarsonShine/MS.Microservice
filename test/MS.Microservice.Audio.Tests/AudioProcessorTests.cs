@@ -211,6 +211,30 @@ namespace MS.Microservice.Infrastructure.Tests.Common.NAudio
         }
 
         [Fact]
+        public async Task MixAudioFilesAsync_WritesExactFloatSamplesThroughPartialLastBlock()
+        {
+            var format = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+            var first = Path.Combine(_testDataDirectory, "left-right.wav");
+            var second = Path.Combine(_testDataDirectory, "shorter.wav");
+            using (var writer = new WaveFileWriter(first, format))
+                writer.WriteSamples([0.75f, -0.5f, 0.25f, -0.125f, -0.25f, 0.5f], 0, 6);
+            using (var writer = new WaveFileWriter(second, format))
+                writer.WriteSamples([0.75f, -0.75f], 0, 2);
+
+            var output = Path.Combine(_outputDirectory, "exact-mix.wav");
+            await _audioProcessor.MixAudioFilesAsync([first, second], output,
+                new AudioMixOptions { TargetFormat = format, BufferSize = 4 });
+
+            using var reader = new WaveFileReader(output);
+            Assert.Equal(format, reader.WaveFormat);
+            float[] expected = [1.5f, -1.25f, 0.25f, -0.125f, -0.25f, 0.5f];
+            Assert.Equal(expected.Length * sizeof(float), reader.Length);
+            var actual = new float[expected.Length];
+            Assert.Equal(actual.Length, reader.ToSampleProvider().Read(actual, 0, actual.Length));
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
         public async Task MixAudioFilesAsync_WithEmptyInputFiles_ShouldThrowArgumentException()
         {
             // Arrange
@@ -753,12 +777,13 @@ namespace MS.Microservice.Infrastructure.Tests.Common.NAudio
             await _audioProcessor.CombineAudioDataAsync(audioData, outputFile, options);
 
             // Assert
-            Assert.True(File.Exists(outputFile));
+            var expected = await _audioProcessor.CombineAudioDataAsync(audioData, AudioFormat.Wav, options);
+            var actual = await File.ReadAllBytesAsync(outputFile);
+            Assert.Equal(expected, actual);
 
-            using var reader = new WaveFileReader(outputFile);
+            using var reader = new WaveFileReader(new MemoryStream(actual));
             Assert.Equal(44100, reader.WaveFormat.SampleRate);
             Assert.Equal(2, reader.WaveFormat.Channels);
-            // 3个2秒文件 + 2个0.1秒间隔 = 约6.2秒
             Assert.True(reader.TotalTime.TotalSeconds > 6.0);
         }
 
@@ -857,5 +882,186 @@ namespace MS.Microservice.Infrastructure.Tests.Common.NAudio
         }
 
         #endregion
+
+        [Theory]
+        [InlineData(true, 44100)]
+        [InlineData(false, 44100)]
+        [InlineData(false, 48000)]
+        public async Task EncodingRegression_Mp3PreservesOneSecondMonoToneInBothChannels(bool mix, int outputRate)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var input = Path.Combine(_testDataDirectory, "mono.wav");
+            var output = Path.Combine(_outputDirectory, "tone.mp3");
+
+            if (mix)
+                await _audioProcessor.MixAudioFilesAsync([input], output);
+            else if (outputRate == 44100)
+                await _audioProcessor.ConvertMonoToStereoAsync(input, output);
+            else
+                await _audioProcessor.ConvertMonoToStereoAsync(input, output,
+                    new AudioConvertOptions { TargetFormat = new WaveFormat(outputRate, 16, 2) });
+
+            AssertMp3Tone(output, outputRate);
+        }
+
+        [Fact]
+        public async Task EncodingRegression_MatchingStereoFormatStillEncodesTheRequestedMp3()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var input = CreateFloatStereoWav();
+            var output = Path.Combine(_outputDirectory, "encoded.mp3");
+
+            await _audioProcessor.ConvertMonoToStereoAsync(input, output,
+                new AudioConvertOptions { TargetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2) });
+
+            Assert.Equal(AudioFormat.Mp3, AudioFileFormatDetector.DetectActualFormat(output));
+            AssertMp3Tone(output, 44100);
+        }
+
+        [Fact]
+        public async Task EncodingRegression_MatchingStereoFormatRejectsUnsupportedOutput()
+        {
+            var input = CreateFloatStereoWav();
+            var output = Path.Combine(_outputDirectory, "encoded.unsupported");
+
+            await Assert.ThrowsAsync<NotSupportedException>(() => _audioProcessor.ConvertMonoToStereoAsync(input, output,
+                new AudioConvertOptions { TargetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2) }).AsTask());
+
+            Assert.False(File.Exists(output));
+        }
+
+        [Fact]
+        public async Task EncodingRegression_StereoPcm16WavIsConvertedWhenFloatWavIsRequested()
+        {
+            var input = Path.Combine(_testDataDirectory, "stereo.wav");
+            var output = Path.Combine(_outputDirectory, "converted-float.wav");
+            var format = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+
+            await _audioProcessor.ConvertMonoToStereoAsync(input, output, new AudioConvertOptions { TargetFormat = format });
+
+            using var reader = new WaveFileReader(output);
+            Assert.Equal(format, reader.WaveFormat);
+            Assert.Equal(44100 * format.BlockAlign, reader.Length);
+        }
+
+        [Fact]
+        public async Task EncodingRegression_AlreadyMatchingFloatStereoWavPreservesOtherRiffChunks()
+        {
+            var input = CreateFloatStereoWav();
+            using (var stream = File.Open(input, FileMode.Open, FileAccess.ReadWrite))
+            using (var writer = new BinaryWriter(stream))
+            {
+                stream.Position = stream.Length;
+                writer.Write("JUNK"u8);
+                writer.Write(4);
+                writer.Write("mark"u8);
+                stream.Position = 4;
+                writer.Write(checked((uint)(stream.Length - 8)));
+            }
+            var output = Path.Combine(_outputDirectory, "with-chunk.wav");
+
+            await _audioProcessor.ConvertMonoToStereoAsync(input, output,
+                new AudioConvertOptions { TargetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2) });
+
+            Assert.Equal(await File.ReadAllBytesAsync(input), await File.ReadAllBytesAsync(output));
+        }
+
+        private string CreateFloatStereoWav()
+        {
+            var input = Path.Combine(_testDataDirectory, "float-stereo.wav");
+            using var source = new AudioFileReader(Path.Combine(_testDataDirectory, "stereo.wav"));
+            WaveFileWriter.CreateWaveFile(input, source);
+            return input;
+        }
+
+        private static void AssertMp3Tone(string file, int sampleRate)
+        {
+            using var reader = new Mp3FileReader(file);
+            Assert.Equal(sampleRate, reader.WaveFormat.SampleRate);
+            Assert.Equal(2, reader.WaveFormat.Channels);
+            Assert.InRange(reader.TotalTime.TotalSeconds, 0.99, 1.15);
+
+            var provider = reader.ToSampleProvider();
+            var samples = new float[sampleRate / 2 * 2];
+            int offset = 0;
+            while (offset < samples.Length)
+            {
+                int read = provider.Read(samples, offset, samples.Length - offset);
+                Assert.True(read > 0, "Expected at least half a second of decoded stereo samples.");
+                offset += read;
+            }
+
+            // The middle quarter second of the 440 Hz fixture has 110 positive zero crossings per channel.
+            for (int channel = 0; channel < 2; channel++)
+            {
+                int crossings = 0;
+                float peak = 0;
+                for (int i = sampleRate / 4 * 2 + channel; i < samples.Length; i += 2)
+                {
+                    if (samples[i - 2] <= 0 && samples[i] > 0) crossings++;
+                    peak = Math.Max(peak, Math.Abs(samples[i]));
+                }
+                Assert.InRange(crossings, 108, 112);
+                Assert.InRange(peak, 0.15f, 0.35f);
+            }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task EncodingRegression_MatchingStereoMp3PreservesTaggedFileUnlessPresetChanges(bool leadingTag, bool changePreset)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var input = Path.Combine(_testDataDirectory, "tagged.mp3");
+            using (var source = new WaveFileReader(Path.Combine(_testDataDirectory, "stereo.wav")))
+            using (var encoder = new global::NAudio.Lame.LameMP3FileWriter(input, source.WaveFormat, global::NAudio.Lame.LAMEPreset.STANDARD))
+                source.CopyTo(encoder);
+            if (leadingTag)
+            {
+                var audio = await File.ReadAllBytesAsync(input);
+                var id3v2 = Id3v2Tag.Create([new("TIT2", new string('A', 1100))]);
+                using var tagged = File.Create(input);
+                tagged.Write(id3v2.RawData);
+                tagged.Write(audio);
+            }
+            var tag = new byte[128];
+            "TAGfixture title"u8.CopyTo(tag);
+            using (var append = File.Open(input, FileMode.Append, FileAccess.Write))
+                append.Write(tag);
+            using (var stream = File.OpenRead(input))
+                Assert.Equal(leadingTag, Id3v2Tag.ReadTag(stream) is not null);
+
+            var output = Path.Combine(_outputDirectory, "out.mp3");
+            var options = new AudioConvertOptions { TargetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2) };
+            if (changePreset) options.Mp3Preset = global::NAudio.Lame.LAMEPreset.INSANE;
+            await _audioProcessor.ConvertMonoToStereoAsync(input, output, options);
+
+            var original = await File.ReadAllBytesAsync(input);
+            var result = await File.ReadAllBytesAsync(output);
+            if (!changePreset)
+            {
+                Assert.Equal(original, result);
+                return;
+            }
+            Assert.NotEqual(original, result);
+            using var reader = new Mp3FileReader(output);
+            Assert.Equal(320_000, reader.ReadNextFrame().BitRate);
+        }
+
+        [Fact]
+        public async Task EncodingRegression_Mp3ExtensionOnStereoWavStillRequiresEncoding()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var input = Path.Combine(_testDataDirectory, "misnamed.mp3");
+            File.Move(CreateFloatStereoWav(), input);
+            var output = Path.Combine(_outputDirectory, "encoded.mp3");
+
+            await _audioProcessor.ConvertMonoToStereoAsync(input, output,
+                new AudioConvertOptions { TargetFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2) });
+
+            Assert.Equal(AudioFormat.Mp3, AudioFileFormatDetector.DetectActualFormat(output));
+            AssertMp3Tone(output, 44100);
+        }
     }
 }
