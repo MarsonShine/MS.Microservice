@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 4a735c7
+Baseline: 4ae3623
+
+Core 已完成全模块性能检查，函数式链表保留不可变结构、惰性投影与左折叠。见[源码导读](../src/MS.Microservice.Core/docs/performance-review.md)和[验收记录](validation/CORE-PERFORMANCE/summary.md)。
 
 Audio 的 WAV 混音、单声道转立体声和多段合并已降低耗时与托管分配，见[优化笔记](../src/MS.Microservice.Audio/docs/wav-processing-performance.md)和[性能验收](validation/AUDIO-PROCESSING-PERF/summary.md)。
 

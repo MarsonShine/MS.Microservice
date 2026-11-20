@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="380" viewBox="0 0 800 380" role="img" aria-labelledby="title desc">
+<title id="title">同一条不可变链表，两种枚举路径</title>
+<desc id="desc">旧版取 A、B、C、D 分别要经过一、二、三、四层链表迭代器。新版只向前访问四个节点，再将每个节点投影成对应的值。</desc>
+<style>text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#203641}.h{font-size:24px;font-weight:700}.sub,.item{font-size:15px}.label{font-size:18px;font-weight:650}.node{font:600 16px monospace;text-anchor:middle;fill:#203641}.arrow{fill:none;stroke:#60747a;stroke-width:1.5}</style>
+<rect width="800" height="380" rx="14" fill="#f7faf9"/>
+<text x="28" y="41" class="h">从 A → B → C → D 依次取值</text>
+<text x="28" y="70" class="sub">方块表示本次取值经过的链表节点。两种写法返回的值和顺序相同。</text>
+<path d="M28 89h744 M420 107v207 M28 326h744" stroke="#c8d7d7"/>
+<text x="110" y="125" class="label">旧版 · 尾部递归转发</text>
+<text x="454" y="125" class="label">新版 · 惰性遍历，再投影</text>
+<text x="30" y="171" class="item">取 A</text>
+<rect x="110" y="151" width="43" height="29" rx="5" fill="#c4dfed"/><text x="131.5" y="171" class="node">A</text>
+<rect x="454" y="151" width="43" height="29" rx="5" fill="#c4dfed"/><text x="475.5" y="171" class="node">A</text><path d="M503 165h22m-4 -4 4 4 -4 4" class="arrow"/><text x="540" y="171" class="item">取当前节点的 head</text>
+<text x="30" y="214" class="item">取 B</text>
+<rect x="110" y="194" width="43" height="29" rx="5" fill="#c2e3d5"/><text x="131.5" y="214" class="node">B</text>
+<path d="M155 208h12m-4 -4 4 4 -4 4" class="arrow"/>
+<rect x="172" y="194" width="43" height="29" rx="5" fill="#c4dfed"/><text x="193.5" y="214" class="node">A</text>
+<rect x="454" y="194" width="43" height="29" rx="5" fill="#c2e3d5"/><text x="475.5" y="214" class="node">B</text><path d="M503 208h22m-4 -4 4 4 -4 4" class="arrow"/><text x="540" y="214" class="item">取当前节点的 head</text>
+<text x="30" y="257" class="item">取 C</text>
+<rect x="110" y="237" width="43" height="29" rx="5" fill="#f4d9ab"/><text x="131.5" y="257" class="node">C</text>
+<path d="M155 251h12m-4 -4 4 4 -4 4" class="arrow"/>
+<rect x="172" y="237" width="43" height="29" rx="5" fill="#c2e3d5"/><text x="193.5" y="257" class="node">B</text>
+<path d="M217 251h12m-4 -4 4 4 -4 4" class="arrow"/>
+<rect x="234" y="237" width="43" height="29" rx="5" fill="#c4dfed"/><text x="255.5" y="257" class="node">A</text>
+<rect x="454" y="237" width="43" height="29" rx="5" fill="#f4d9ab"/><text x="475.5" y="257" class="node">C</text><path d="M503 251h22m-4 -4 4 4 -4 4" class="arrow"/><text x="540" y="257" class="item">取当前节点的 head</text>
+<text x="30" y="300" class="item">取 D</text>
+<rect x="110" y="280" width="43" height="29" rx="5" fill="#ddcfed"/><text x="131.5" y="300" class="node">D</text>
+<path d="M155 294h12m-4 -4 4 4 -4 4" class="arrow"/>
+<rect x="172" y="280" width="43" height="29" rx="5" fill="#f4d9ab"/><text x="193.5" y="300" class="node">C</text>
+<path d="M217 294h12m-4 -4 4 4 -4 4" class="arrow"/>
+<rect x="234" y="280" width="43" height="29" rx="5" fill="#c2e3d5"/><text x="255.5" y="300" class="node">B</text>
+<path d="M279 294h12m-4 -4 4 4 -4 4" class="arrow"/>
+<rect x="296" y="280" width="43" height="29" rx="5" fill="#c4dfed"/><text x="317.5" y="300" class="node">A</text>
+<rect x="454" y="280" width="43" height="29" rx="5" fill="#ddcfed"/><text x="475.5" y="300" class="node">D</text><path d="M503 294h22m-4 -4 4 4 -4 4" class="arrow"/><text x="540" y="300" class="item">取当前节点的 head</text>
+<text x="28" y="357" class="label">节点层合计</text><text x="159" y="357" class="label">1 + 2 + 3 + 4 = 10 次</text><text x="454" y="357" class="label">4 次节点访问，4 次取值投影</text>
+</svg>

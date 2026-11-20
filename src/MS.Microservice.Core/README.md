@@ -183,3 +183,7 @@ services.AddHttpClient("remote-api").AddHttpMessageHandler<LoggingHttpClientHand
 | `HmacSha256` | 显式提供密钥；普通 SHA-256 摘要不替代消息认证 |
 
 依赖与复制方式见[组件消费](../../docs/components/consumption.md)，JSON 对象序列化配置见[配置说明](Serialization/json-configuration-reuse.md)。
+
+## 源码与性能
+
+从四个链表节点、三个差异行、一次 HTTP 请求等具体输入对照代码，见 [Core 性能源码导读](docs/performance-review.md)。各入口的 Release 耗时、托管分配和复测方法见[性能验收](../../docs/validation/CORE-PERFORMANCE/summary.md)。
