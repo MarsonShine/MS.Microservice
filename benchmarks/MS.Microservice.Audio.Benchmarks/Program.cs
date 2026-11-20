@@ -1,16 +1,32 @@
 using System.Diagnostics;
 using MS.Microservice.Infrastructure.Common.NAudio;
 
+if (args is ["--processing"])
+{
+    await ProcessingBenchmarks.RunAsync();
+    return;
+}
+
+if (args is ["--inspection"])
+{
+    InspectionBenchmarks.Run();
+    return;
+}
+
 const int iterations = 100_000;
 const int rounds = 5;
 
 using var wav = new MemoryStream([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45]);
 using var id3 = new MemoryStream([0x49, 0x44, 0x33, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 using var unknown = new MemoryStream(new byte[1024]);
+var falseSyncBytes = new byte[1024];
+for (int i = 0; i < falseSyncBytes.Length; i += 2) falseSyncBytes[i] = 0xff;
+using var falseSync = new MemoryStream(falseSyncBytes);
 
 Measure("WAV header", wav);
 Measure("MP3 ID3 header", id3);
 Measure("unknown 1024-byte header", unknown);
+Measure("repeated false MP3 sync", falseSync);
 
 void Measure(string name, Stream stream)
 {
