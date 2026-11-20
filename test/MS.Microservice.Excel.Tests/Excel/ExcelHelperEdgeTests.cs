@@ -48,6 +48,29 @@ namespace MS.Microservice.Infrastructure.Tests.Utils.Excel
         }
 
         [Fact]
+        public void SparseImportPreservesPresentEmptyRowsWithoutReservingSpaceForAbsentRows()
+        {
+            using var bytes = new MemoryStream();
+            using (var workbook = new XSSFWorkbook())
+            {
+                var sheet = workbook.CreateSheet("S");
+                sheet.CreateRow(0).CreateCell(0).SetCellValue("ID");
+                sheet.CreateRow(1).CreateCell(0).SetCellValue(7);
+                sheet.CreateRow(2);
+                sheet.CreateRow(80_000).CreateCell(0).SetCellValue(9);
+                workbook.Write(bytes, leaveOpen: true);
+            }
+            var helper = new ExcelHelper().InitSheetIndex(0).InitStartReadRowIndex(0, 1);
+            try
+            {
+                var rows = helper.Import<NullableRow>("sparse.xlsx", bytes);
+                Assert.Equal(new int?[] { 7, null, 9 }, rows.Select(value => value.Id));
+                Assert.InRange(rows.Capacity, rows.Count, helper.Workbook!.GetSheetAt(0).PhysicalNumberOfRows);
+            }
+            finally { helper.Workbook?.Dispose(); }
+        }
+
+        [Fact]
         public void Import_NullCell_ShouldUseDefault()
         {
             var wb = new XSSFWorkbook();

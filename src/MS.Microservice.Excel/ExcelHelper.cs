@@ -243,7 +243,9 @@ public partial class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport
 
     private List<T> ReadBody<T>(ExcelTypeMeta meta, int[] columnIndexMap, int columnCount, DataFormatter formatter, IFormulaEvaluator evaluator)
     {
-        var list = new List<T>(Math.Max(sheet!.LastRowNum - contentRowIndex + 1, 0));
+        var targetSheet = sheet!;
+        var logicalRows = Math.Max(targetSheet.LastRowNum - contentRowIndex + 1, 0);
+        var list = new List<T>(Math.Min(logicalRows, targetSheet.PhysicalNumberOfRows));
         ReadRows<T>(meta, columnIndexMap, columnCount, formatter, evaluator, (_, value) => list.Add(value));
         return list;
     }
@@ -256,15 +258,23 @@ public partial class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport
         var targetSheet = sheet ?? throw new InvalidOperationException("未找到工作表");
         var slots = meta.Slots;
         var factory = meta.Factory;
+        int missingRows = 0;
         for (int i = contentRowIndex; i <= targetSheet.LastRowNum; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             IRow? row = targetSheet.GetRow(i);
             if (row == null)
             {
+                // A full physical scan only pays off after at least that many empty index lookups.
+                if (++missingRows >= targetSheet.PhysicalNumberOfRows)
+                {
+                    i = NextPhysicalRow(targetSheet, i, cancellationToken) - 1;
+                    missingRows = 0;
+                }
                 continue;
             }
 
+            missingRows = 0;
             T obj = (T)factory();
             var errorCount = errors?.Count ?? 0;
             for (int j = 0; j < columnCount; j++)
@@ -309,6 +319,20 @@ public partial class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport
             if (errors is null || errors.Count == errorCount)
                 acceptRow(i + 1, obj);
         }
+    }
+
+    private static int NextPhysicalRow(ISheet sheet, int after, CancellationToken cancellationToken)
+    {
+        int next = sheet.LastRowNum + 1;
+        foreach (IRow row in sheet)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int index = row.RowNum;
+            // A callback can change RowNum without moving the sheet's lookup key. Keep index order in that case.
+            if (!ReferenceEquals(sheet.GetRow(index), row)) return after + 1;
+            if (index > after && index < next) next = index;
+        }
+        return next;
     }
 
     public List<T> Import<T>(string fileName, byte[] data)

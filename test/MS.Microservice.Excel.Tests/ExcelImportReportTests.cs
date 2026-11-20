@@ -389,6 +389,40 @@ public sealed class ExcelImportReportTests
         finally { helper.Workbook?.Dispose(); }
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void SparseReportReflectsCallbackChangesToLaterRows(bool xls, bool changeReportedRowNumber)
+    {
+        using IWorkbook workbook = xls ? new HSSFWorkbook() : new XSSFWorkbook();
+        var sheet = workbook.CreateSheet("Data");
+        sheet.CreateRow(0).CreateCell(0).SetCellValue("ID");
+        sheet.CreateRow(12).CreateCell(0).SetCellValue(1);
+        sheet.CreateRow(80).CreateCell(0).SetCellValue(3);
+        using var input = Serialize(workbook);
+        var helper = CreateHelper();
+        try
+        {
+            var report = helper.ImportWithReport<NumberRow>(xls ? "rows.xls" : "rows.xlsx", input, value =>
+            {
+                if (value.Id == 1)
+                {
+                    var current = helper.Workbook!.GetSheetAt(0);
+                    current.RemoveRow(current.GetRow(80));
+                    current.CreateRow(60).CreateCell(0).SetCellValue(4);
+                    current.CreateRow(40).CreateCell(0).SetCellValue(2);
+                    if (changeReportedRowNumber)
+                        current.GetRow(60).RowNum = 90; // NPOI still indexes the row at 60.
+                }
+                return [];
+            });
+            Assert.Equal(new[] { 13, 41, 61 }, report.Rows.Select(row => row.RowNumber));
+            Assert.Equal(new[] { 1, 2, 4 }, report.Rows.Select(row => row.Value.Id));
+        }
+        finally { helper.Workbook?.Dispose(); }
+    }
+
     [Fact]
     public void BinaryXlsAndSparseRowsPreserveRealExcelLocations()
     {
