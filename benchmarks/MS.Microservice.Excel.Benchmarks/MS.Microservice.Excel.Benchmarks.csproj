@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/MS.Microservice.Excel/MS.Microservice.Excel.csproj" />
+  </ItemGroup>
+</Project>
