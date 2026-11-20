@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <EmbeddedResource Include="Program.cs" LogicalName="MS.Microservice.Core.Benchmarks.Sample.txt" />
+  </ItemGroup>
+</Project>
