@@ -1,4 +1,6 @@
 using System.Data.Common;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Transactions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +65,47 @@ public sealed class OrderReadModelProjectorPersistenceTests
         using var canceled = new CancellationTokenSource();
         canceled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => reader.ReadBatchAsync<OrderEvent>(0, cancellationToken: canceled.Token));
+        Assert.Empty(database.Context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task ReadingRepeatedMetadataHonorsCustomConvertersForEveryRecord()
+    {
+        await using var database = await ProjectionDatabase.CreateAsync();
+        var order = Guid.NewGuid();
+        await database.SeedAsync(new OrderCreated(order, "customer", "CNY"), new OrderConfirmed(order));
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new CountingMetadataConverter());
+        var serializer = new SystemTextJsonEventSerializer(
+            new EventTypeRegistry().Register<OrderCreated>().Register<OrderConfirmed>(), options);
+        var store = new PostgresEventStore(database.Context, serializer);
+
+        var result = await store.ReadAllAsync<OrderEvent>(0);
+
+        Assert.Equal(new[] { 1, 2 }, result.Select(item => item.Metadata.SchemaVersion));
+    }
+
+    [Fact]
+    public async Task ReadingAcrossMetadataRunsPreservesCaseSensitiveCorrelationIds()
+    {
+        await using var database = await ProjectionDatabase.CreateAsync();
+        var order = Guid.NewGuid();
+        OrderEvent[] events =
+        [
+            new OrderCreated(order, "customer", "CNY"), new OrderItemAdded(order, "a", 1m, 1),
+            new OrderItemAdded(order, "b", 2m, 1), new OrderConfirmed(order)
+        ];
+        string[] ids = ["request", "request", "Request", "request"];
+        var index = 0;
+        var store = database.Events;
+        await store.AppendToStreamAsync(OrderAggregate.GetStreamId(order), OrderAggregate.StreamType, 0, events,
+            _ => new EventMetadata(CorrelationId: ids[index++]));
+        database.Context.ChangeTracker.Clear();
+
+        var result = await store.LoadStreamAsync<OrderEvent>(OrderAggregate.GetStreamId(order));
+
+        Assert.Equal(ids, result.Select(envelope => envelope.Metadata.CorrelationId));
+        Assert.Equal(events, result.Select(envelope => envelope.Data));
         Assert.Empty(database.Context.ChangeTracker.Entries());
     }
 
@@ -242,6 +285,19 @@ public sealed class OrderReadModelProjectorPersistenceTests
             await Assert.ThrowsAsync<InvalidOperationException>(() => database.Projector.ProjectAsync());
         Assert.Empty(await database.Context.OrderReadModels.AsNoTracking().ToListAsync());
         Assert.Empty(await database.Context.ProjectionCheckpoints.AsNoTracking().ToListAsync());
+    }
+
+    private sealed class CountingMetadataConverter : JsonConverter<EventMetadata>
+    {
+        private int _reads;
+        public override EventMetadata Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            reader.Skip();
+            return new EventMetadata(SchemaVersion: ++_reads);
+        }
+
+        public override void Write(Utf8JsonWriter writer, EventMetadata value, JsonSerializerOptions options)
+            => throw new NotSupportedException();
     }
 
     private sealed class CheckpointProbe(IProjectionCheckpointStore inner) : IProjectionCheckpointStore

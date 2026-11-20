@@ -37,10 +37,12 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Serialization
     {
         private readonly EventTypeRegistry _eventTypeRegistry;
         private readonly JsonSerializerOptions _serializerOptions;
+        internal bool UsesDefaultOptions { get; }
 
         public SystemTextJsonEventSerializer(EventTypeRegistry eventTypeRegistry, JsonSerializerOptions? serializerOptions = null)
         {
             _eventTypeRegistry = eventTypeRegistry;
+            UsesDefaultOptions = serializerOptions is null;
             _serializerOptions = serializerOptions ?? new JsonSerializerOptions(JsonSerializerDefaults.Web);
         }
 

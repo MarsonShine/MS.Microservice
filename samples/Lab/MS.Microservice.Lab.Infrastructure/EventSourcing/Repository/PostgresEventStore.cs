@@ -27,13 +27,11 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Repository
             CancellationToken cancellationToken = default)
             where TEvent : class, IEventSourcedEvent
         {
-            var events = await _dbContext.EventStore
+            var records = _dbContext.EventStore
                 .AsNoTracking()
                 .Where(x => x.StreamId == streamId && x.Version >= fromVersion)
-                .OrderBy(x => x.Version)
-                .ToListAsync(cancellationToken);
-
-            return events.Select(Map<TEvent>).ToArray();
+                .OrderBy(x => x.Version);
+            return Map<TEvent>(await records.ToListAsync(cancellationToken));
         }
 
         public async Task<IReadOnlyList<EventEnvelope<TEvent>>> ReadAllAsync<TEvent>(
@@ -42,11 +40,8 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Repository
             CancellationToken cancellationToken = default)
             where TEvent : class, IEventSourcedEvent
         {
-            var events = await EventsAfter(afterGlobalPosition, streamType)
-                .OrderBy(x => x.GlobalPosition)
-                .ToListAsync(cancellationToken);
-
-            return events.Select(Map<TEvent>).ToArray();
+            var records = EventsAfter(afterGlobalPosition, streamType).OrderBy(x => x.GlobalPosition);
+            return Map<TEvent>(await records.ToListAsync(cancellationToken));
         }
 
         public async Task<IReadOnlyList<EventEnvelope<TEvent>>> ReadBatchAsync<TEvent>(
@@ -57,9 +52,8 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Repository
             where TEvent : class, IEventSourcedEvent
         {
             if (take is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(take));
-            var events = await EventsAfter(afterGlobalPosition, streamType)
-                .OrderBy(x => x.GlobalPosition).Take(take).ToListAsync(cancellationToken);
-            return events.Select(Map<TEvent>).ToArray();
+            var records = EventsAfter(afterGlobalPosition, streamType).OrderBy(x => x.GlobalPosition).Take(take);
+            return Map<TEvent>(await records.ToListAsync(cancellationToken));
         }
 
         private IQueryable<EventStoreRecord> EventsAfter(long afterGlobalPosition, string? streamType)
@@ -129,20 +123,26 @@ namespace MS.Microservice.Infrastructure.EventSourcing.Repository
             }
         }
 
-        private EventEnvelope<TEvent> Map<TEvent>(EventStoreRecord record)
+        private EventEnvelope<TEvent>[] Map<TEvent>(List<EventStoreRecord> records)
             where TEvent : class, IEventSourcedEvent
         {
-            var @event = _serializer.Deserialize<TEvent>(record.EventType, record.Payload);
-            var metadata = _serializer.DeserializeMetadata(record.Metadata);
-            return new EventEnvelope<TEvent>(
-                record.EventId,
-                record.StreamId,
-                record.StreamType,
-                record.Version,
-                record.GlobalPosition,
-                @event,
-                metadata,
-                record.CreatedAt);
+            if (records.Count == 0) return [];
+            var result = new EventEnvelope<TEvent>[records.Count];
+            string? previousJson = null;
+            EventMetadata? metadata = null;
+            for (var index = 0; index < records.Count; index++)
+            {
+                var record = records[index];
+                var payload = _serializer.Deserialize<TEvent>(record.EventType, record.Payload);
+                if (!_serializer.UsesDefaultOptions || metadata is null || record.Metadata != previousJson)
+                {
+                    metadata = _serializer.DeserializeMetadata(record.Metadata);
+                    previousJson = record.Metadata;
+                }
+                result[index] = new(record.EventId, record.StreamId, record.StreamType, record.Version,
+                    record.GlobalPosition, payload, metadata, record.CreatedAt);
+            }
+            return result;
         }
     }
 }
