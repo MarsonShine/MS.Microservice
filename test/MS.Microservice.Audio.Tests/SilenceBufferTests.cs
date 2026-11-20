@@ -89,6 +89,42 @@ public sealed class SilenceBufferTests(ITestOutputHelper output)
     }
 
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task WavCombine_AppendsUnsignedPcm8SilenceAfterEachClip(bool extensible, bool useFormatFromReader)
+    {
+        WaveFormat format = extensible ? new WaveFormatExtensible(8000, 8, 1) : new WaveFormat(8000, 8, 1);
+        byte[] first = [0, 64, 128, 255];
+        byte[] second = [200, 33];
+        var firstWav = Wav(first, format);
+        using var input = new WaveFileReader(new MemoryStream(firstWav));
+        const int silenceSamples = 4097; // one full 4 KiB block and a one-sample tail
+        var silence = Enumerable.Repeat((byte)0x80, silenceSamples).ToArray();
+
+        var combined = await new AudioProcessor().CombineAudioDataAsync(
+            [firstWav, Wav(second, format)], AudioFormat.Wav,
+            new AudioCombineOptions
+            {
+                TargetFormat = useFormatFromReader ? input.WaveFormat : format,
+                SilenceDuration = silenceSamples / 8000f
+            });
+
+        using var reader = new WaveFileReader(new MemoryStream(combined));
+        var actual = new byte[checked((int)reader.Length)];
+        reader.ReadExactly(actual);
+        byte[] expected = [.. first, .. silence, .. second, .. silence];
+        Assert.Equal(expected, actual);
+        if (!extensible)
+        {
+            reader.Position = first.Length;
+            var samples = new float[silenceSamples];
+            Assert.Equal(samples.Length, reader.ToSampleProvider().Read(samples, 0, samples.Length));
+            Assert.All(samples, sample => Assert.Equal(0f, sample));
+        }
+    }
+
+    [Theory]
     [InlineData(0.01f)]
     [InlineData(0.75f)]
     [InlineData(1.5f)]

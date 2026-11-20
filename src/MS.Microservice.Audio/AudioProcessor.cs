@@ -1,4 +1,5 @@
 ﻿using NAudio.Lame;
+using NAudio.Dmo;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using System;
@@ -14,8 +15,9 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
     /// </summary>
     public class AudioProcessor : IAudioProcessor
     {
-        // Writers only read this private input buffer; audio readers never use it.
+        // Writers only read these private buffers; audio readers never use them.
         private static readonly byte[] SilenceBuffer = new byte[4096];
+        private static readonly byte[] UnsignedPcm8SilenceBuffer = Enumerable.Repeat((byte)0x80, SilenceBuffer.Length).ToArray();
 
         /// <summary>
         /// 合并多个音频文件为一个文件
@@ -723,13 +725,24 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             int totalSamples = checked((int)(samplesPerSecond * durationSeconds));
             int remaining = checked(totalSamples * bytesPerSample);
             ArgumentOutOfRangeException.ThrowIfNegative(remaining, nameof(durationSeconds));
+            var buffer = format.BitsPerSample == 8 && IsPcm(format) ? UnsignedPcm8SilenceBuffer : SilenceBuffer;
             while (remaining > 0)
             {
-                int count = Math.Min(remaining, SilenceBuffer.Length);
-                output.Write(SilenceBuffer, 0, count);
+                int count = Math.Min(remaining, buffer.Length);
+                output.Write(buffer, 0, count);
                 remaining -= count;
             }
         }
+
+        private static bool IsPcm(WaveFormat format) => format switch
+        {
+            { Encoding: WaveFormatEncoding.Pcm } => true,
+            WaveFormatExtensible extensible => extensible.SubFormat == AudioMediaSubtypes.MEDIASUBTYPE_PCM,
+            // WaveFileReader exposes extensible headers as extra data: valid bits (2), channel mask (4), subtype GUID (16).
+            WaveFormatExtraData { Encoding: WaveFormatEncoding.Extensible, ExtraSize: >= 22 } extra =>
+                new Guid(extra.ExtraData.AsSpan(6, 16)) == AudioMediaSubtypes.MEDIASUBTYPE_PCM,
+            _ => false
+        };
 
         private static IWaveProvider CreateAudioReaderFromStream(Stream stream)
         {
