@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="src/MS.Microservice.Caching/README.md" />
+    <File Path="src/MS.Microservice.Caching.Redis/README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Caching/MS.Microservice.Caching.csproj" />
+    <Project Path="src/MS.Microservice.Caching.Redis/MS.Microservice.Caching.Redis.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Caching.Tests/MS.Microservice.Caching.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Caching.Redis.Tests/MS.Microservice.Caching.Redis.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -64,7 +64,7 @@ app.UseAuthorization();
 
 Use `Microsoft.AspNetCore.Authorization` for the policy builder. Configure the identity before registration; the same `ExternalIdentityOptions` instance is available from DI for host identity mapping. `AddExternalJwtIdentity` validates Authority, Audience and subject/role mappings without requiring any permission settings or registering named application policies. `RequireExternalScope` validates its subject mapping, permission claim mapping and explicit permission when the policy is built. It includes authentication and subject requirements because named policies do not inherit the default policy.
 
-The component validates external tokens and does not issue tokens or store passwords. Its fallback policy protects endpoints unless they explicitly allow anonymous access. Development may use an HTTP identity provider. [Reference](../../samples/Reference/MS.Microservice.Reference.Web/README.md) registers its own profile and message-operation policies with the generic scope helper.
+The component validates external tokens and does not issue tokens or store passwords. Its fallback policy protects endpoints unless they explicitly allow anonymous access. Development may use an HTTP identity provider. [Reference](../../../samples/Reference/MS.Microservice.Reference.Web/README.md) registers its own profile and message-operation policies with the generic scope helper.
 
 ### Compatibility registration
 
@@ -140,4 +140,4 @@ builder.Services.AddControllers().AddAutomaticAuditOperations(options =>
 
 The filter opens one scoped operation around a tagged action, supplies a trace correlation ID and disposes the scope on completion. Untagged actions do not create an operation; a null identity returns 403 before invoking a tagged action. The host still applies authorization, validates the claims and chooses tenant/actor semantics. Do not resolve identity from an untrusted request parameter.
 
-This adapter supplies operation identity, not entity interception. Pair it with [AuditedDbContext and field declarations](../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing). It does not inspect request/result bodies or intercept arbitrary service methods. Background jobs and non-MVC endpoints begin an `AuditOperationContext` explicitly. Register it as scoped when using only the persistence component.
+This adapter supplies operation identity, not entity interception. Pair it with [AuditedDbContext and field declarations](../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/README.md#automatic-business-auditing). It does not inspect request/result bodies or intercept arbitrary service methods. Background jobs and non-MVC endpoints begin an `AuditOperationContext` explicitly. Register it as scoped when using only the persistence component.

@@ -1,8 +1,8 @@
 # Reference 为什么调用 `AddValidation()`
 
-访问 `GET /api/v1/profiles?take=201` 时，`take` 能解析成整数，但超过了列表接口允许的 200 条上限。Reference 以前在端点方法中手写范围判断，超出范围时同样返回 `400`。后来把约束移到端点参数上的 `[Range(1, 200)]`。**仅写属性并不会让 Minimal API 自动执行它**；宿主还要调用 [`builder.Services.AddValidation()`](../../../samples/Reference/MS.Microservice.Reference.Web/ReferenceHost.cs)，才能在端点方法运行前拒绝越界值。
+访问 `GET /api/v1/profiles?take=201` 时，`take` 能解析成整数，但超过了列表接口允许的 200 条上限。Reference 以前在端点方法中手写范围判断，超出范围时同样返回 `400`。后来把约束移到端点参数上的 `[Range(1, 200)]`。**仅写属性并不会让 Minimal API 自动执行它**；宿主还要调用 [`builder.Services.AddValidation()`](../../../../samples/Reference/MS.Microservice.Reference.Web/ReferenceHost.cs)，才能在端点方法运行前拒绝越界值。
 
-这一修改没有新增分页规则。它把原来分散在档案列表、审计列表和失败消息列表中的判断放到各自的参数声明处，同时保留省略参数时的默认值。实际定义见 [`ProfileEndpoints.Map`](../../../samples/Reference/MS.Microservice.Reference.Web/ProfileEndpoints.cs)：`skip` 为 0 到 `int.MaxValue`，两个列表的 `take` 为 1 到 200，失败消息的 `limit` 为 1 到 1000。
+这一修改没有新增分页规则。它把原来分散在档案列表、审计列表和失败消息列表中的判断放到各自的参数声明处，同时保留省略参数时的默认值。实际定义见 [`ProfileEndpoints.Map`](../../../../samples/Reference/MS.Microservice.Reference.Web/ProfileEndpoints.cs)：`skip` 为 0 到 `int.MaxValue`，两个列表的 `take` 为 1 到 200，失败消息的 `limit` 为 1 到 1000。
 
 档案列表的关键签名是：
 
@@ -14,7 +14,7 @@ profiles.MapGet("", async (IProfileRepository repository, CancellationToken toke
 
 ## 四种输入为什么得到不同结果
 
-以下请求假设调用方已经通过相应端点的授权。表中的结果由 [`ReferenceHostTests`](../../../test/MS.Microservice.Reference.Web.Tests/ReferenceHostTests.cs) 的 TestServer 测试覆盖；表只列出测试已断言的状态和关键调用，不假定所有 `400` 具有相同的响应体。
+以下请求假设调用方已经通过相应端点的授权。表中的结果由 [`ReferenceHostTests`](../../../../test/MS.Microservice.Reference.Web.Tests/ReferenceHostTests.cs) 的 TestServer 测试覆盖；表只列出测试已断言的状态和关键调用，不假定所有 `400` 具有相同的响应体。
 
 | 输入 | 结果 | 拒绝或处理的位置 |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ Minimal API 先按端点签名绑定参数。对 `int take = 50`，没有提供 
 
 ## 哪些规则还留在业务层
 
-[`CreateProfile` 和 `ChangeProfile`](../../../samples/Reference/MS.Microservice.Reference.Application/Contracts.cs) 没有声明 DataAnnotations。`AddValidation()` 不会凭 DTO 的属性名推断身份、名称或角色是否合法。创建和修改档案时，[`UserProfile`](../../../samples/Reference/MS.Microservice.Reference.Domain/UserProfile.cs) 检查外部身份、名称长度和角色目录；[`ProfileService`](../../../samples/Reference/MS.Microservice.Reference.Application/ProfileService.cs) 还检查修改请求的预期版本。这些规则在非 HTTP 调用路径也必须成立，所以不能只放在端点属性上。
+[`CreateProfile` 和 `ChangeProfile`](../../../../samples/Reference/MS.Microservice.Reference.Application/Contracts.cs) 没有声明 DataAnnotations。`AddValidation()` 不会凭 DTO 的属性名推断身份、名称或角色是否合法。创建和修改档案时，[`UserProfile`](../../../../samples/Reference/MS.Microservice.Reference.Domain/UserProfile.cs) 检查外部身份、名称长度和角色目录；[`ProfileService`](../../../../samples/Reference/MS.Microservice.Reference.Application/ProfileService.cs) 还检查修改请求的预期版本。这些规则在非 HTTP 调用路径也必须成立，所以不能只放在端点属性上。
 
 业务层返回的 `Error.Validation` 经 [`ApplicationErrorResults`](../ApplicationErrorResults.cs) 映射成带 `code=validation` 的 ProblemDetails。自动参数校验由 ASP.NET Core 产生自己的验证错误响应；目前测试只断言它返回 `400` 且不调用仓储，并未固定完整 JSON 格式。调用方若需要统一两类错误的字段，应先明确响应契约，再添加相应的集成测试。
 

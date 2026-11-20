@@ -24,7 +24,7 @@ L2 是单线程顺序读取，禁用本地读写且源工厂一旦运行就抛�
 
 先建立连接并主动写入，验证 Redis 已存入数据，再开始预热和采样。首次连接、集群发现及连接重试不计入命中数据。L1 预热后执行 5 轮、每轮每场景 500,000 次，轮换顺序，报告批次均值的中位数和当前线程分配。L2 两条路径轮换执行 3 轮、每轮 1,000 次，记录每次等待完成的时间；包含计时和取消预算检查。
 
-这是一次当前测试网络下的热读取测量，不能用平均延迟倒算最大 TPS。没有覆盖并发容量、大 DTO、故障切换、认证／TLS 或完整 HTTP 请求。没有通过停服、改配置或清空数据制造故障。原生 L2 故障语义的依据见 [设计文档](../../src/MS.Microservice.Caching.Redis/docs/design.md#异常与降级)。
+这是一次当前测试网络下的热读取测量，不能用平均延迟倒算最大 TPS。没有覆盖并发容量、大 DTO、故障切换、认证／TLS 或完整 HTTP 请求。没有通过停服、改配置或清空数据制造故障。原生 L2 故障语义的依据见 [设计文档](../../MS.Microservice.Caching/src/MS.Microservice.Caching.Redis/docs/design.md#异常与降级)。
 
 基准使用随机键前缀，只精确删除创建的一个键，清理已成功；55 秒操作预算之外最多 5 秒清理。报告在测量和清理都成功后才落盘。
 
@@ -37,7 +37,7 @@ L2 是单线程顺序读取，禁用本地读写且源工厂一旦运行就抛�
 ~~~powershell
 $env:MS_CACHE_REDIS_TEST_CONNECTION = '<Redis 连接配置>'
 $env:MS_CACHE_REDIS_TEST_PREFIX = 'framework-cache-check:'
-dotnet test test/MS.Microservice.Caching.Redis.Tests -c Release --filter RedisIntegrationTests
+dotnet test MS.Microservice.Caching/test/MS.Microservice.Caching.Redis.Tests -c Release --filter RedisIntegrationTests
 ~~~
 
 未设置连接时，实库测试明确跳过。测试保留原生连接配置与集群发现重试，总预算 40 秒、清理预算 8 秒。不要为缩短用例禁用连接重试，否则副本 seed 的初始拓扑发现可能尚未完成，测试就无法路由写入。失败后的清理不覆盖原始异常；不确定的写入仍只尝试清理确定的键，条目另设 30 秒 TTL。

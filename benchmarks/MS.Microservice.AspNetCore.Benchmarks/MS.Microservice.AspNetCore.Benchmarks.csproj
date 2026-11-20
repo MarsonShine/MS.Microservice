@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
+    <ProjectReference Include="../../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
   </ItemGroup>
 </Project>

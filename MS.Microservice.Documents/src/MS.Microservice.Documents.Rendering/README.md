@@ -1,6 +1,6 @@
 # 文档排版与 PDF 转换（Windows，可选）
 
-`MS.Microservice.Documents.Rendering` 用已安装的 Edge／Chrome 排版静态 HTML，用已安装的 LibreOffice 将 DOCX 转为 PDF。它是独立的可选组件，普通 [Documents](../MS.Microservice.Documents/README.md) 使用者无需携带浏览器驱动；[源码与包接入方式](../../docs/components/consumption.md)。
+`MS.Microservice.Documents.Rendering` 用已安装的 Edge／Chrome 排版静态 HTML，用已安装的 LibreOffice 将 DOCX 转为 PDF。它是独立的可选组件，普通 [Documents](../MS.Microservice.Documents/README.md) 使用者无需携带浏览器驱动；[源码与包接入方式](../../../docs/components/consumption.md)。
 
 当前只支持 Windows，需要可用的 `dotnet` 主机，以及对应功能的排版引擎。组件不会下载或安装浏览器、LibreOffice，不使用用户登录或 Office 配置。HTML 转换要求浏览器沙箱可用，宿主运行身份及额外进程沙箱策略须允许浏览器创建上下文和页面。Playwright 依赖包约 203.6 MiB，本机 Windows 驱动复制约 102.2 MiB；发布时须保留驱动目录及 worker 文件。
 

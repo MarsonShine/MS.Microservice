@@ -2,6 +2,6 @@
   <PropertyGroup><IsPackable>true</IsPackable></PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <ProjectReference Include="../../../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -52,7 +52,7 @@ var details = await database.ForAuditScope(tenantId)
     .ToListAsync(cancellationToken);
 ```
 
-The [MVC adapter](../../../src/MS.Microservice.AspNetCore/README.md#automatic-audit-operations) opens this operation automatically for `[AuditOperation]` actions. Business methods only change entities and save. Four changed entities across three tables produce four detail rows sharing one `OperationId`; repeated saves use increasing `SaveSequence` values. Existing EF transactions include both business and audit rows.
+The [MVC adapter](../../../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/README.md#automatic-audit-operations) opens this operation automatically for `[AuditOperation]` actions. Business methods only change entities and save. Four changed entities across three tables produce four detail rows sharing one `OperationId`; repeated saves use increasing `SaveSequence` values. Existing EF transactions include both business and audit rows.
 
 | Setting / input | Default or requirement |
 | --- | --- |

@@ -22,6 +22,9 @@ public sealed class ComponentBoundaryTests
 
     [Theory]
     [InlineData("MS.Microservice.AI")]
+    [InlineData("MS.Microservice.AspNetCore")]
+    [InlineData("MS.Microservice.Caching")]
+    [InlineData("MS.Microservice.Documents")]
     [InlineData("MS.Microservice.Logging")]
     [InlineData("MS.Microservice.Tasks")]
     [InlineData("MS.Microservice.Messaging")]

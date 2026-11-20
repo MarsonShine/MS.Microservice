@@ -18,4 +18,4 @@
 
 大小、类型策略和错误消息属于 HTTP 入口；随机保存与文件生命周期属于 Core 或宿主适配。Lab 的目录约束、配置和书籍分类导入规则继续留在 Lab，通用组件不反向依赖它们。
 
-维护时应保留边界大小、短读、错误 MIME／扩展名、仅签名内容、取消和流释放的回归。测试入口为 [AspNetCore.Tests](../../../test/MS.Microservice.AspNetCore.Tests) 中的上传测试，Lab 调用链另由 [Lab.Tests](../../../test/MS.Microservice.Lab.Tests) 验证。
+维护时应保留边界大小、短读、错误 MIME／扩展名、仅签名内容、取消和流释放的回归。测试入口为 [AspNetCore.Tests](../../../test/MS.Microservice.AspNetCore.Tests) 中的上传测试，Lab 调用链另由 [Lab.Tests](../../../../test/MS.Microservice.Lab.Tests) 验证。

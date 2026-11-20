@@ -24,7 +24,7 @@ CryptographicOperations.ZeroMemory(bytes.AsSpan(0, 2));
 
 例如，请求发送 `{"sku":"SKU-42","quantity":2}`。清零后，执行器当前持有的正文数组中这段内容变成零；若不清零，已经持有该数组引用的代码在流释放后仍可通过 `GetBuffer()` 看到正文。两种情况下客户端得到的 `201` 或重放响应相同。这里的 `Idempotency-Key` 是 HTTP 请求头中的字符串，并不会被这些正文数组清零调用擦除。
 
-[身份作用域代码](../samples/Reference/MS.Microservice.Reference.Web/HttpIdempotency/ReferenceIdempotencyActorScope.cs)清理的是另一块数组：把 issuer 和 subject 序列化后用于哈希的临时字节。它不清理认证中间件持有的 claims。[解密模型绑定器](../src/MS.Microservice.AspNetCore.Encryption/ApiDecryptModelBinder.cs)中的用法更直接：RSA 解出的 AES 密钥转成 `byte[]`，用完后在 `finally` 中清除该密钥数组。
+[身份作用域代码](../samples/Reference/MS.Microservice.Reference.Web/HttpIdempotency/ReferenceIdempotencyActorScope.cs)清理的是另一块数组：把 issuer 和 subject 序列化后用于哈希的临时字节。它不清理认证中间件持有的 claims。[解密模型绑定器](../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore.Encryption/ApiDecryptModelBinder.cs)中的用法更直接：RSA 解出的 AES 密钥转成 `byte[]`，用完后在 `finally` 中清除该密钥数组。
 
 ## 不写会有什么影响
 

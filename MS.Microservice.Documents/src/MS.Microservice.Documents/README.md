@@ -1,6 +1,6 @@
 # 文档处理
 
-`MS.Microservice.Documents` 提供 PDF 页面处理、文本提取、PNG 渲染，以及 DOCX 文本提取和内容控件模板填充。引用项目或包即可使用；[源码与包接入方式](../../docs/components/consumption.md)。
+`MS.Microservice.Documents` 提供 PDF 页面处理、文本提取、PNG 渲染，以及 DOCX 文本提取和内容控件模板填充。引用项目或包即可使用；[源码与包接入方式](../../../docs/components/consumption.md)。
 
 HTML 转 PDF 位于可选的 [Documents.Rendering](../MS.Microservice.Documents.Rendering/README.md) 组件，目前支持 Windows；普通 PDF／DOCX 使用者无需引用它。
 
@@ -47,7 +47,7 @@ await processor.SelectPagesAsync(input, output, [1], cancellationToken: cancella
 - 文字提取不自动执行 OCR；复杂版面不保证自然阅读顺序。
 - 改写结果不保留数字签名有效性，也不保证全部目录、表单关系和文档级结构。
 - PNG 渲染和文字提取输出明文。渲染需可用的 PDFium／Skia 原生运行时，支持 Windows、Linux、macOS 桌面部署，目标系统需验证对应依赖。
-- 透明 PNG 会拉伸到整页可见区域。文字／Logo 可先用 [Media 水印接口](../../MS.Microservice.Media/README.md)生成透明叠加图，再传给 `AddOverlayAsync`。
+- 透明 PNG 会拉伸到整页可见区域。文字／Logo 可先用 [Media 水印接口](../../../MS.Microservice.Media/README.md)生成透明叠加图，再传给 `AddOverlayAsync`。
 
 实现、资源生命周期和密码验证规则见 [PDF 设计](docs/pdf-design.md)。
 
