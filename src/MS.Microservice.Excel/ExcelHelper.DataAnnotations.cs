@@ -33,11 +33,12 @@ public partial class ExcelHelper
             }, wrapErrors: false);
 
         var accepted = new List<ExcelImportRow<T>>(parsed.Rows.Count);
+        var validationResults = new List<ValidationResult>();
         foreach (var row in parsed.Rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var count = parsed.Errors.Count;
-            await ValidateAnnotationsRowAsync(row.Value, services, parsed.Meta, parsed.Map, parsed.Map.Length,
+            await ValidateAnnotationsRowAsync(row.Value, services, validationResults, parsed.Meta, parsed.Map, parsed.Map.Length,
                 row.RowNumber - 1, parsed.Source, parsed.Errors, cancellationToken).ConfigureAwait(false);
             if (parsed.Errors.Count == count) accepted.Add(row);
         }
@@ -47,18 +48,25 @@ public partial class ExcelHelper
         return new(accepted.AsReadOnly(), errorsInRowOrder.AsReadOnly());
     }
 
-    private static async Task ValidateAnnotationsRowAsync<T>(T value, IServiceProvider? services,
+    private static async Task ValidateAnnotationsRowAsync<T>(T value, IServiceProvider? services, List<ValidationResult> results,
         ExcelTypeMeta meta, int[] map, int count, int row, string sourceName,
         List<ExcelImportError> errors, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var context = new ValidationContext(value!, services, items: null);
-        var results = new List<ValidationResult>();
+        // Rows are awaited in sequence. Findings from the previous row have already been consumed.
+        results.Clear();
         await Validator.TryValidateObjectAsync(value!, context, results, validateAllProperties: true, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        var findings = results.SelectMany(result => result.MemberNames.Select(name => (string?)name).DefaultIfEmpty(null),
-            (result, member) => new ExcelRowValidationError(result.ErrorMessage ?? "Validation failed.", member));
-        ValidateBusinessRow(value, _ => findings, meta, map, count, row, sourceName, errors, cancellationToken);
+        foreach (var result in results)
+        {
+            foreach (var member in result.MemberNames.DefaultIfEmpty(null))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                errors.Add(CreateBusinessError(meta, map, count, row, sourceName,
+                    member, result.ErrorMessage ?? "Validation failed."));
+            }
+        }
     }
 }

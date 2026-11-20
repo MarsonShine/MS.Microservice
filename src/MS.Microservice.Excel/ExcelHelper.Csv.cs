@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using MS.Microservice.Infrastructure.Utils.Excel;
 
@@ -34,6 +35,7 @@ public partial class ExcelHelper
         var errors = ValidateReportColumns(meta, map, map.Length, "CSV", 0);
         var rows = new List<ExcelImportRow<T>>();
         if (errors.Count != 0) return new(rows.AsReadOnly(), errors.AsReadOnly());
+        List<ValidationResult>? validationResults = validateAnnotations ? [] : null;
 
         while (await records.MoveNextAsync().ConfigureAwait(false))
         {
@@ -70,8 +72,8 @@ public partial class ExcelHelper
             if (errors.Count != errorCount) continue;
             if (validateRow is not null)
                 ValidateBusinessRow(value, validateRow, meta, map, map.Length, rowIndex, "CSV", errors, cancellationToken);
-            if (validateAnnotations)
-                await ValidateAnnotationsRowAsync(value, services, meta, map, map.Length, rowIndex, "CSV", errors, cancellationToken)
+            if (validationResults is not null)
+                await ValidateAnnotationsRowAsync(value, services, validationResults, meta, map, map.Length, rowIndex, "CSV", errors, cancellationToken)
                     .ConfigureAwait(false);
             if (errors.Count == errorCount) rows.Add(new((int)record.RowNumber, value));
         }

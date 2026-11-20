@@ -743,13 +743,23 @@ public partial class ExcelHelper : IExcelImport, IExcelExport, IAsyncExcelImport
         {
             cancellationToken.ThrowIfCancellationRequested();
             ArgumentNullException.ThrowIfNull(error);
-            var slotIndex = Array.FindIndex(meta.Slots, slot => slot.PropertyName == error.PropertyName);
-            int? column = null;
-            for (var j = 0; j < count; j++)
-                if (map[j] == slotIndex && slotIndex >= 0) { column = j; break; }
-            errors.Add(CreateTableImportError(sourceName, ExcelImportErrorKind.BusinessValidation, row, column,
-                slotIndex < 0 ? null : meta.Slots[slotIndex], error.Message, propertyName: error.PropertyName));
+            errors.Add(CreateBusinessError(meta, map, count, row, sourceName, error.PropertyName, error.Message));
         }
+    }
+
+    private static ExcelImportError CreateBusinessError(ExcelTypeMeta meta, int[] map, int count, int row,
+        string sourceName, string? propertyName, string message)
+    {
+        for (int i = 0; i < meta.Slots.Length; i++)
+        {
+            var slot = meta.Slots[i];
+            if (slot.PropertyName != propertyName) continue;
+            int column = Array.IndexOf(map, i, 0, count);
+            return CreateTableImportError(sourceName, ExcelImportErrorKind.BusinessValidation, row,
+                column < 0 ? null : column, slot, message, propertyName: propertyName);
+        }
+        return CreateTableImportError(sourceName, ExcelImportErrorKind.BusinessValidation, row,
+            null, null, message, propertyName: propertyName);
     }
 
     [Conditional("MS_Microservice_DIAGNOSTICS")]
