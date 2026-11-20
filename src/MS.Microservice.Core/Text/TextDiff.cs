@@ -22,32 +22,52 @@ public static class TextDiff
         ArgumentNullException.ThrowIfNull(original);
         ArgumentNullException.ThrowIfNull(updated);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumComparisonWork);
-        var left = SplitLines(original);
-        var right = SplitLines(updated);
+        var leftLines = FindLines(original);
+        var rightLines = ReferenceEquals(original, updated) ? leftLines : FindLines(updated);
         var prefix = 0;
-        while (prefix < left.Length && prefix < right.Length && left[prefix] == right[prefix])
+        while (prefix < leftLines.Count && prefix < rightLines.Count
+            && original.AsSpan(leftLines[prefix]).SequenceEqual(updated.AsSpan(rightLines[prefix])))
             prefix++;
 
         var suffix = 0;
-        while (suffix < left.Length - prefix && suffix < right.Length - prefix
-            && left[^(suffix + 1)] == right[^(suffix + 1)])
+        while (suffix < leftLines.Count - prefix && suffix < rightLines.Count - prefix
+            && original.AsSpan(leftLines[^(suffix + 1)]).SequenceEqual(updated.AsSpan(rightLines[^(suffix + 1)])))
             suffix++;
 
-        var leftCount = left.Length - prefix - suffix;
-        var rightCount = right.Length - prefix - suffix;
+        var leftCount = leftLines.Count - prefix - suffix;
+        var rightCount = rightLines.Count - prefix - suffix;
         if (2L * leftCount * rightCount > maximumComparisonWork)
             throw new ArgumentException("The line comparison exceeds the configured work limit.", nameof(maximumComparisonWork));
 
-        var result = new List<TextDiffLine>();
-        var forward = new int[rightCount + 1];
-        var backward = new int[rightCount + 1];
+        var result = new List<TextDiffLine>(Math.Max(leftLines.Count, rightLines.Count));
         for (var index = 0; index < prefix; index++)
-            result.Add(new(TextDiffKind.Unchanged, left[index]));
+            result.Add(new(TextDiffKind.Unchanged, original[leftLines[index]]));
 
-        Match(prefix, leftCount, prefix, rightCount);
-        for (var index = left.Length - suffix; index < left.Length; index++)
-            result.Add(new(TextDiffKind.Unchanged, left[index]));
+        if (leftCount == 0 || rightCount == 0)
+        {
+            for (var i = 0; i < leftCount; i++)
+                result.Add(new(TextDiffKind.Removed, original[leftLines[prefix + i]]));
+            for (var i = 0; i < rightCount; i++)
+                result.Add(new(TextDiffKind.Added, updated[rightLines[prefix + i]]));
+        }
+        else
+        {
+            var left = new string[leftCount];
+            var right = new string[rightCount];
+            for (var i = 0; i < left.Length; i++) left[i] = original[leftLines[prefix + i]];
+            for (var i = 0; i < right.Length; i++) right[i] = updated[rightLines[prefix + i]];
+            AppendChanges(left, right, result);
+        }
+        for (var index = leftLines.Count - suffix; index < leftLines.Count; index++)
+            result.Add(new(TextDiffKind.Unchanged, original[leftLines[index]]));
         return result;
+    }
+
+    private static void AppendChanges(string[] left, string[] right, List<TextDiffLine> result)
+    {
+        var forward = new int[right.Length + 1];
+        var backward = new int[right.Length + 1];
+        Match(0, left.Length, 0, right.Length);
 
         void Match(int aStart, int aCount, int bStart, int bCount)
         {
@@ -114,22 +134,23 @@ public static class TextDiff
         }
     }
 
-    private static string[] SplitLines(string text)
+    private static List<Range> FindLines(string text)
     {
-        var lines = new List<string>();
+        var lines = new List<Range>();
         var start = 0;
-        for (var index = 0; index < text.Length; index++)
+        while (start < text.Length)
         {
-            if (text[index] is not ('\r' or '\n'))
-                continue;
-            if (text[index] == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
-                index++;
-            lines.Add(text[start..(index + 1)]);
-            start = index + 1;
+            var offset = text.AsSpan(start).IndexOfAny('\r', '\n');
+            if (offset < 0)
+            {
+                lines.Add(start..text.Length);
+                break;
+            }
+            var end = start + offset + 1;
+            if (text[end - 1] == '\r' && end < text.Length && text[end] == '\n') end++;
+            lines.Add(start..end);
+            start = end;
         }
-
-        if (start < text.Length)
-            lines.Add(text[start..]);
-        return lines.ToArray();
+        return lines;
     }
 }
