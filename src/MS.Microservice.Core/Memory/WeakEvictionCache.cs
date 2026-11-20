@@ -40,28 +40,19 @@ public class WeakEvictionCache<TKey, TValue> where TValue : class
 
     public void DoWeakEviction()
     {
-        List<TKey> toRemove = new List<TKey>();
-        foreach (var strongToWeakReference in _items)
+        if (_items.Count == 0) return;
+        var now = DateTime.Now;
+        foreach (var (key, reference) in _items)
         {
-            var reference = strongToWeakReference.Value;
-            var target = reference.Target;
-            if (target != null)
+            if (reference.Target is null)
             {
-                if (DateTime.Now.Subtract(reference.StrongTime) >= _weakEvictionThreshold)
-                {
-                    reference.MakeWeak();
-                }
+                // Dictionary.Remove preserves active enumerators on the supported .NET runtime.
+                _items.Remove(key);
             }
-            else
+            else if (now - reference.StrongTime >= _weakEvictionThreshold)
             {
-                // 清除已失效的弱引用
-                toRemove.Add(strongToWeakReference.Key);
+                reference.MakeWeak();
             }
-        }
-
-        foreach (var key in toRemove)
-        {
-            _items.Remove(key);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 using MS.Microservice.Core.Memory;
 using Xunit;
@@ -65,6 +66,29 @@ public sealed class WeakEvictionCacheTests
         cache.TryGet("key", out var retrieved).Should().BeTrue();
         retrieved.Should().BeSameAs(value);
     }
+
+    [Fact]
+    public void DoWeakEviction_RemovesCollectedEntriesAndKeepsLiveNeighbors()
+    {
+        var cache = new WeakEvictionCache<int, Holder>(TimeSpan.Zero);
+        var live = new Holder("live");
+        AddTransient(cache, 1);
+        AddTransient(cache, 2);
+        cache.Add(3, live);
+        cache.DoWeakEviction();
+        GC.Collect();
+
+        cache.DoWeakEviction();
+
+        cache.Add(1, live);
+        cache.Add(2, live);
+        Assert.True(cache.TryGet(3, out var retrieved));
+        Assert.Same(live, retrieved);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void AddTransient(WeakEvictionCache<int, Holder> cache, int key)
+        => cache.Add(key, new Holder("transient"));
 
     [Fact]
     public void MultipleAdds_TryGetEach_ReturnsCorrectValues()
