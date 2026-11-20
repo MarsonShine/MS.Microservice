@@ -49,6 +49,16 @@ Complete the fix when the invariant is restored and credible evidence covers the
 
 Briefly report the root cause, invariant, fix layer, changed behavior, verification performed or reused, and remaining uncertainty.
 
+## Markdown 文档配图
+
+编写或更新本仓库的文档时，如果图能帮助读者看清数据如何流动、调用按什么顺序发生，或两组结果相差多少，就主动配图。根据读者要弄懂的问题，优先选择适合目标 Markdown 渲染器的格式：
+
+- **Mermaid** 适合流程、调用时序、状态转换和组件关系。目标渲染器支持时，直接使用 `mermaid` 代码块，方便随正文一起修改。
+- **Vega-Lite / Plotly** 适合用数据说明趋势、分布和性能对比。标明单位和测量条件。若目标渲染器无法直接显示图表，就导出静态 SVG 并用相对路径嵌入，同时保留可编辑的图表定义。
+- **SVG** 适合需要精确布局的示意图，例如缓冲区中的字节如何排列、对象由谁持有，或优化前后哪一步消失了。将 SVG 放在文档旁的资源目录，用带替代文本的 Markdown 图片语法引用。
+
+把图放在它解释的段落、代码或数据旁。图中沿用源码里的方法名、变量名和正文里的示例数值，用一句话指出读者应关注的变化。交付前在目标 Markdown 预览中检查图能否显示、标签是否清晰，并核对箭头方向、数值和单位。
+
 ## Project
 
 - Stack: .NET 11 (`global.json` 11.0.100); PostgreSQL, RabbitMQ, and Keycloak for local runs.
