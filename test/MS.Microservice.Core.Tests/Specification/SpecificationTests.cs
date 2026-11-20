@@ -56,6 +56,23 @@ namespace MS.Microservice.Core.Tests.Specification
         }
 
         [Fact]
+        public void Where_RebindsOuterReferencesInsideNestedLambdaAndShortCircuits()
+        {
+            var spec = new TestProductSpec();
+            Expression<Func<Product, bool>> left = first => first.Name != null;
+            Expression<Func<Product, bool>> right = second => second.Name.Any(c => c == second.Name[0]);
+            spec.ApplyWhere(left);
+            spec.ApplyWhere(right);
+
+            var combined = spec.Criteria!;
+            Assert.Same(left.Parameters[0], combined.Parameters[0]);
+            Assert.Equal(ExpressionType.AndAlso, combined.Body.NodeType);
+            var matches = combined.Compile();
+            Assert.True(matches(new Product { Name = "A" }));
+            Assert.False(matches(new Product { Name = null! }));
+        }
+
+        [Fact]
         public void OrWhere_CombinesWithOr()
         {
             var spec = new TestProductSpec();
