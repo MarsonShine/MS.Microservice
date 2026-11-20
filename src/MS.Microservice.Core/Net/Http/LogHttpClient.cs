@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
@@ -12,10 +11,12 @@ namespace MS.Microservice.Core.Net.Http;
 /// <remarks>业务重试由调用方决定；默认诊断不记录 URL 参数或正文，避免把凭据和业务数据带进日志。</remarks>
 public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
 {
+    private static readonly JavaScriptEncoder DefaultEncoder = JavaScriptEncoder.Create(UnicodeRanges.All);
+
     public JsonSerializerOptions JsonSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        Encoder = DefaultEncoder
     };
 
     public void Configure(string baseAddress, TimeSpan timeout)
@@ -44,27 +45,34 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
         cancellationToken.ThrowIfCancellationRequested();
         using var request = new HttpRequestMessage(method, url);
         if (method == HttpMethod.Post)
-            request.Content = new StringContent(JsonSerializer.Serialize(body, JsonSerializerOptions), Encoding.UTF8, "application/json");
+        {
+            request.Content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerOptions));
+            // 固定协议值可直接写入每条请求的头集合，读取强类型头时再解析。
+            request.Content.Headers.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
+        }
         if (headers is not null)
             foreach (var (name, value) in headers) request.Headers.Add(name, value);
 
         var id = Guid.NewGuid();
         var started = Stopwatch.GetTimestamp();
-        logger.LogInformation("HTTP {RequestId} {Method} started", id, method.Method);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("HTTP {RequestId} {Method} started", id, method.Method);
         try
         {
             using var response = await httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<T>(JsonSerializerOptions, cancellationToken);
-            logger.LogInformation("HTTP {RequestId} {Method} completed {StatusCode} in {ElapsedMs} ms",
-                id, method.Method, (int)response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            if (logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation("HTTP {RequestId} {Method} completed {StatusCode} in {ElapsedMs} ms",
+                    id, method.Method, (int)response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             return result;
         }
         catch (Exception exception)
         {
             // URLs, bodies and exception messages may contain credentials or personal data.
-            logger.LogInformation("HTTP {RequestId} {Method} ended {FailureType} in {ElapsedMs} ms",
-                id, method.Method, exception.GetType().Name, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            if (logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation("HTTP {RequestId} {Method} ended {FailureType} in {ElapsedMs} ms",
+                    id, method.Method, exception.GetType().Name, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
             throw;
         }
     }

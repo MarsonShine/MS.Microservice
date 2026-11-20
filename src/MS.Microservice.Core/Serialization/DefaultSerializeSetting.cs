@@ -16,11 +16,13 @@ namespace MS.Microservice.Core.Serialization
 
         public static JsonSerializerOptions Default = jsonSerializerOptions;
 
-        public static JavaScriptEncoder ChineseEncoder => JavaScriptEncoder.Create(
+        private static readonly Lazy<JavaScriptEncoder> ChineseEncoding = new(() => JavaScriptEncoder.Create(
             UnicodeRanges.BasicLatin,
             UnicodeRanges.CjkUnifiedIdeographs,
             UnicodeRanges.CjkUnifiedIdeographsExtensionA,
             UnicodeRanges.CjkSymbolsandPunctuation,
-            UnicodeRanges.HalfwidthandFullwidthForms);
+            UnicodeRanges.HalfwidthandFullwidthForms));
+
+        public static JavaScriptEncoder ChineseEncoder => ChineseEncoding.Value;
     }
 }

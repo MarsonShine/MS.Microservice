@@ -37,6 +37,28 @@ public sealed class LogHttpClientTests
     }
 
     [Fact]
+    public async Task PostAsync_PreservesUtf8WireFormatAndClientSpecificSettings()
+    {
+        byte[] expected = """{"userName":"张\u0026三"}"""u8.ToArray();
+        var handler = new RecordingHandler(async request =>
+        {
+            var content = Assert.IsAssignableFrom<HttpContent>(request.Content);
+            Assert.Equal("application/json", content.Headers.ContentType!.MediaType);
+            Assert.Equal("utf-8", content.Headers.ContentType.CharSet);
+            Assert.Equal((long)expected.Length, content.Headers.ContentLength);
+            Assert.Equal(expected, await content.ReadAsByteArrayAsync());
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(1) };
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
+        var logger = new CapturingLogger<LogHttpClient>();
+        var client = new LogHttpClient(logger, http);
+        client.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        Assert.Null(new LogHttpClient(logger, http).JsonSerializerOptions.PropertyNamingPolicy);
+
+        Assert.Equal(1, await client.PostAsync<int>("orders", new { UserName = "张&三" }));
+    }
+
+    [Fact]
     public async Task PostAsync_WithHeaders_ShouldSendHeadersAndReturnModel()
     {
         var logger = new CapturingLogger<LogHttpClient>();
