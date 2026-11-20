@@ -55,24 +55,18 @@ public class LogHttpClient(ILogger<LogHttpClient> logger, HttpClient httpClient)
 
         var id = Guid.NewGuid();
         var started = Stopwatch.GetTimestamp();
-        if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("HTTP {RequestId} {Method} started", id, method.Method);
+        logger.HttpRequestStarted(id, method);
         try
         {
             using var response = await httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<T>(JsonSerializerOptions, cancellationToken);
-            if (logger.IsEnabled(LogLevel.Information))
-                logger.LogInformation("HTTP {RequestId} {Method} completed {StatusCode} in {ElapsedMs} ms",
-                    id, method.Method, (int)response.StatusCode, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            logger.HttpRequestCompleted(id, method, response.StatusCode, started);
             return result;
         }
         catch (Exception exception)
         {
-            // URLs, bodies and exception messages may contain credentials or personal data.
-            if (logger.IsEnabled(LogLevel.Information))
-                logger.LogInformation("HTTP {RequestId} {Method} ended {FailureType} in {ElapsedMs} ms",
-                    id, method.Method, exception.GetType().Name, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            logger.HttpRequestFailed(id, method, exception, started);
             throw;
         }
     }
