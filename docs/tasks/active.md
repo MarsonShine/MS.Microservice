@@ -1,6 +1,6 @@
 # 当前任务
 Status: idle
 Task: none
-Next: 用 Azure Lab 验证后续新增或替换的部署。
+Next: 等待支持 EF Core 11 正式版的 PostgreSQL 提供程序发布，再一起评估升级；后续新增或替换的 Azure 部署仍用 Lab 验证。
 
-`Assistant` 场景示例和真实 Azure 请求结果见[验收记录](../validation/AZURE-ASSISTANT-LAB/summary.md)。
+已完成的 .NET 11 官方包对齐见[验收记录](../validation/NET11-OFFICIAL-PACKAGES/summary.md)。
