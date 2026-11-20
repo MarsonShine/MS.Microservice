@@ -7,6 +7,14 @@ namespace MS.Microservice.Core.Tests.Common;
 public sealed class TextNormalizerTests
 {
     [Fact]
+    public void Normalize_PreservesUtf16AndCollapsesUnicodeWhitespace()
+    {
+        Assert.Equal("📚, A\u200b B.", TextNormalizer.Normalize("\u2028📚，\u0085\u2003A\u200b\u2029B。\u3000"));
+        string onlyWhitespace = "\u2003\u0085\u2028";
+        Assert.Same(onlyWhitespace, TextNormalizer.Normalize(onlyWhitespace));
+    }
+
+    [Fact]
     public void Normalize_ShouldReturnOriginal_WhenInputIsNullOrWhitespace()
     {
         TextNormalizer.Normalize(null).Should().BeNull();

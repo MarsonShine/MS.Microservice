@@ -1,7 +1,4 @@
-﻿using MS.Microservice.Core.Extension;
-using System.Text.RegularExpressions;
-
-namespace MS.Microservice.Core.Common;
+﻿namespace MS.Microservice.Core.Common;
 
 public class TextNormalizer
 {
@@ -11,33 +8,60 @@ public class TextNormalizer
     /// </summary>
     public static string? Normalize(string? title)
     {
-        if (title.IsNullOrWhiteSpace())
+        var text = title.AsSpan().Trim();
+        if (text.IsEmpty)
             return title;
 
-        string normalized = title!;
+        // Printable ASCII needs normalization only when two spaces are adjacent.
+        if (!text.ContainsAnyExceptInRange(' ', '~') && !text.Contains("  ", StringComparison.Ordinal))
+            return text.Length == title!.Length ? title : text.ToString();
 
-        // 中文标点 → 英文标点
-        normalized = normalized
-            .Replace('\uFF0C', ',')  // 中文逗号 ，
-            .Replace('\u3001', ',')  // 顿号 、
-            .Replace('\uFF0E', '.')  // 中文句号 。
-            .Replace('\u3002', '.')  // 中文句号 。
-            .Replace('\uFF08', '(')  // 中文左括号 （
-            .Replace('\uFF09', ')')  // 中文右括号 ）
-            .Replace('\uFF1A', ':')  // 中文冒号 ：
-            .Replace('\uFF1B', ';')  // 中文分号 ；
-            .Replace('\uFF1F', '?')  // 中文问号 ？
-            .Replace('\uFF01', '!')  // 中文感叹号 ！
-            .Replace('\u201C', '"')  // 中文左双引号 "
-            .Replace('\u201D', '"')  // 中文右双引号 "
-            .Replace('\u2018', '\'') // 中文左单引号 '
-            .Replace('\u2019', '\'') // 中文右单引号 '
-            .Replace('\u3000', ' ')  // 全角空格
-            .Replace('\u00A0', ' '); // 不换行空格
+        int length = text.Length;
+        bool changed = false;
+        char previous = '\0';
+        foreach (char character in text)
+        {
+            char normalized = NormalizeCharacter(character);
+            if (normalized == ' ' && previous == ' ')
+            {
+                length--;
+                changed = true;
+            }
+            else if (normalized != character)
+            {
+                changed = true;
+            }
+            previous = normalized;
+        }
 
-        // 合并连续空白，去首尾空白
-        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+        if (!changed)
+            return length == title!.Length ? title : text.ToString();
 
-        return normalized;
+        return string.Create(length, title!, static (destination, original) =>
+        {
+            int written = 0;
+            foreach (char character in original.AsSpan().Trim())
+            {
+                char normalized = NormalizeCharacter(character);
+                if (normalized == ' ' && written > 0 && destination[written - 1] == ' ')
+                    continue;
+                destination[written++] = normalized;
+            }
+        });
     }
+
+    private static char NormalizeCharacter(char character) => character switch
+    {
+        '，' or '、' => ',',
+        '．' or '。' => '.',
+        '（' => '(',
+        '）' => ')',
+        '：' => ':',
+        '；' => ';',
+        '？' => '?',
+        '！' => '!',
+        '“' or '”' => '"',
+        '‘' or '’' => '\'',
+        _ => char.IsWhiteSpace(character) ? ' ' : character
+    };
 }
