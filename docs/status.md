@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 4ae3623
+Baseline: 39a704c
+
+EventSourcing 的 Lab 读取适配器和 Excel 的 CSV、工作簿、校验及颜色表已完成性能检查。见[前后基准与验收](validation/EVENTSOURCING-EXCEL-PERF/summary.md)。
 
 Core 已完成全模块性能检查，函数式链表保留不可变结构、惰性投影与左折叠。见[源码导读](../src/MS.Microservice.Core/docs/performance-review.md)和[验收记录](validation/CORE-PERFORMANCE/summary.md)。
 

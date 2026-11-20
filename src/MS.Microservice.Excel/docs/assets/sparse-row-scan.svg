@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="322" viewBox="0 0 840 322" role="img" aria-labelledby="title desc">
+  <title id="title">从下标 1 走到下标 40000</title>
+  <desc id="desc">工作表有四个物理行。旧代码依次查询每个下标。新代码遇到四个连续空位后遍历四个物理行，找到下一个最小行号 40000。</desc>
+  <style>
+    text { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #193747 }
+    .title { font-size: 24px; font-weight: 700 } .label { font-size: 16px; font-weight: 600 }
+    .body { font-size: 15px } .idx { font: 16px Consolas, monospace; text-anchor: middle; fill: #193747 }
+    .arrow { fill: none; stroke: #546e7a; stroke-width: 2 }
+  </style>
+  <rect width="840" height="322" rx="14" fill="#f6faf9"/>
+  <text x="26" y="41" class="title">遇到大片空位，下一次 GetRow 去哪里？</text>
+  <text x="26" y="73" class="body">标题下标 0，数据下标 1、40000、80000。下图画出前两条数据之间的查找步骤。</text>
+  <path d="M26 94h788 M26 182h788" stroke="#c9d8dc"/>
+  <text x="26" y="141" class="label">旧 · 依次查下标</text>
+  <rect x="164" y="117" width="64" height="39" rx="5" fill="#b9dfcf"/><text x="196" y="143" class="idx">1</text>
+  <rect x="255" y="117" width="380" height="39" rx="5" fill="#e3eaf0"/><text x="445" y="143" class="idx">2, 3, 4, 5, 6, …, 39999</text>
+  <rect x="689" y="117" width="113" height="39" rx="5" fill="#b9dfcf"/><text x="745" y="143" class="idx">40000</text>
+  <path class="arrow" d="M231 137h19m-5-5 5 5-5 5 M639 137h43m-5-5 5 5-5 5"/>
+  <text x="26" y="228" class="label">新 · 跳过空洞</text>
+  <rect x="164" y="204" width="64" height="39" rx="5" fill="#b9dfcf"/><text x="196" y="230" class="idx">1</text>
+  <rect x="255" y="204" width="135" height="39" rx="5" fill="#e3eaf0"/><text x="322" y="230" class="idx">2, 3, 4, 5</text>
+  <rect x="420" y="204" width="215" height="39" rx="5" fill="#ffdfab"/><text x="436" y="230" class="body">扫描 4 个物理行，找后继</text>
+  <rect x="689" y="204" width="113" height="39" rx="5" fill="#b9dfcf"/><text x="745" y="230" class="idx">40000</text>
+  <path class="arrow" d="M231 224h19m-5-5 5 5-5 5 M394 224h21m-5-5 5 5-5 5 M639 224h43m-5-5 5 5-5 5"/>
+  <text x="26" y="285" class="body">连续缺失数达到物理行数才扫描。处理完下一条数据后，仍以工作表当时的状态继续读取。</text>
+</svg>

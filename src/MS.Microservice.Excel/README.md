@@ -2,6 +2,8 @@
 
 `ExcelHelper` 提供 XLS/XLSX 导入、导出、模板填充和逐行错误报告；`CsvHelper` 提供有记录限额的异步 CSV 读写。`MiniExcelHelper` 使用 MiniExcel 自身的模型映射，不能混用 `ExcelColumnAttribute` 与 MiniExcel 的映射特性。
 
+性能源码导读涵盖[CSV 写出与转义](docs/csv-performance.md)、[稀疏行与模板样式](docs/workbook-performance.md)、[校验结果与颜色表](docs/validation-palette-performance.md)。各场景的时间和分配见[同机验收](../../docs/validation/EVENTSOURCING-EXCEL-PERF/summary.md)。
+
 | 能力 | 入口 | 设计说明 |
 | --- | --- | --- |
 | 工作簿导入／导出 | `ExcelHelper.Import` / `Export` 及异步重载 | [导入设计](docs/import-reports-design.md) |

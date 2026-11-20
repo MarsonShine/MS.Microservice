@@ -9,3 +9,5 @@
 页大小约束事件数量，不约束单个事件的序列化大小，也不表示读取开始时的固定快照。持续写入时，循环读取可能继续处理新事件；调用方应传递取消令牌并自行决定执行窗口。
 
 Lab 中的 PostgreSQL 适配器同时实现两个接口，并在同一 DI scope 中映射到同一个实例。订单投影的事务、跟踪与使用边界见 [Lab Infrastructure](../../samples/Lab/MS.Microservice.Lab.Infrastructure/README.md)。
+
+同一批事件的元数据何时可以复用、为什么保留数据库读取器的释放时机，见[回放代码前后对照](docs/read-performance.md)。
