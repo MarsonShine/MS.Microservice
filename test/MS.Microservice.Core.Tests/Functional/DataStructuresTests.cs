@@ -12,6 +12,52 @@ namespace MS.Microservice.Core.Tests.Functional
     public class DataStructuresTests
     {
         [Fact]
+        public void ReadOnlyListTraversalVisitsLongChainInOrderAndStopsWhenTheCallbackThrows()
+        {
+            const int count = 8192;
+            var list = List(Enumerable.Range(0, count).ToArray());
+            Assert.Equal(count, list.Length());
+            Assert.Equal((Option<int>)Some(count - 1), list[count - 1]);
+            Assert.True(list[count].IsNone);
+            Assert.Equal(Enumerable.Range(0, count), list.AsEnumerable());
+            Assert.Equal(count * (count - 1) / 2, list.Aggregate(0, (sum, value) => sum + value));
+
+            int visited = 0;
+            var stop = new InvalidOperationException();
+            var error = Assert.Throws<InvalidOperationException>(() => list.ForEach(value =>
+            {
+                Assert.Equal(visited++, value);
+                if (value == count - 2) throw stop;
+            }));
+            Assert.Same(stop, error);
+            Assert.Equal(count - 1, visited);
+        }
+
+        [Fact]
+        public void LeftFoldAndPartialEnumerationPreserveTheSharedTail()
+        {
+            var tail = List(2, 3);
+            var list = tail.Add(1);
+            using var prefix = list.AsEnumerable().GetEnumerator();
+            Assert.True(prefix.MoveNext());
+            Assert.Equal(1, prefix.Current);
+
+            Assert.Equal(4123, list.Aggregate(4, (digits, next) => digits * 10 + next));
+            Assert.Equal(423, tail.Aggregate(4, (digits, next) => digits * 10 + next));
+            Assert.Same(tail, list.Tail.GetOrElse(() => throw new InvalidOperationException()));
+            Assert.True(prefix.MoveNext());
+            Assert.Equal(2, prefix.Current);
+            Assert.Equal(new[] { 1, 2, 3 }, list.AsEnumerable());
+        }
+
+        [Fact]
+        public void EmptyFoldReturnsSeedWithoutInvokingAReducer()
+        {
+            var seed = new object();
+            Assert.Same(seed, List<int>().Aggregate(seed, null!));
+        }
+
+        [Fact]
         public void InsertAt_InsertsValueAtGivenIndex()
         {
             var list = List(1, 2, 4);

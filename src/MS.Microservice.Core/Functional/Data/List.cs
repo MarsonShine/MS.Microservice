@@ -29,19 +29,18 @@
            (_, tail) => (Option<List<T>>)Some(tail));
 
         public Option<T> this[int index] => index < 0
-           ? (Option<T>)None
-           : Match(
-              () => (Option<T>)None,
-              (head, tail) => index == 0 ? (Option<T>)Some(head) : tail[index - 1]);
+            ? None
+            : NonEmptyNodes().Skip(index).Select(static node => node.Head).FirstOrDefault();
 
-        public IEnumerable<T> AsEnumerable()
+        public IEnumerable<T> AsEnumerable() => NonEmptyNodes().Map(static node => node.head!);
+
+        internal Acc Fold<Acc>(Acc seed, Func<Acc, T, Acc> step)
+            => NonEmptyNodes().Aggregate(seed, (state, node) => step(state, node.head!));
+
+        private IEnumerable<List<T>> NonEmptyNodes()
         {
-            if (isEmpty) 
-                yield break;
-
-            yield return head!;
-            foreach (T t in tail!.AsEnumerable())
-                yield return t;
+            for (var node = this; !node.isEmpty; node = node.tail!)
+                yield return node;
         }
 
         public override string ToString() => Match(
@@ -58,9 +57,7 @@
            => items.Reverse().Aggregate(new List<T>()
               , (tail, head) => List(head, tail));
 
-        public static int Length<T>(this List<T> @this) => @this.Match(
-           () => 0,
-           (t, ts) => 1 + ts.Length());
+        public static int Length<T>(this List<T> @this) => @this.Aggregate(0, static (count, _) => count + 1);
 
         public static List<T> Add<T>(this List<T> @this, T value)
            => List(value, @this);
@@ -112,10 +109,11 @@
               (head, tail) => List(f(head), tail.Map(f)));
 
         public static Unit ForEach<T>(this List<T> @this, Action<T> action)
-        {
-            @this.Map(action.ToFunc());
-            return UnitValue;
-        }
+            => @this.Aggregate(UnitValue, (unit, item) =>
+            {
+                action(item);
+                return unit;
+            });
 
         public static List<R> Bind<T, R>(this List<T> @this, Func<T, List<R>> f)
            => @this.Map(f).Join();
@@ -125,9 +123,7 @@
            (xs, xss) => concat(xs, Join(xss)));
 
         public static Acc Aggregate<T, Acc>(this List<T> @this, Acc acc, Func<Acc, T, Acc> f)
-           => @this.Match(
-              () => acc,
-              (head, tail) => Aggregate(tail, f(acc, head), f));
+            => @this.Fold(acc, f);
 
         public static IEnumerable<T> TakeWhile<T>(IEnumerable<T> source, Func<T, bool> predicate)
         {
