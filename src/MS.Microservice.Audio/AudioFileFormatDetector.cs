@@ -8,6 +8,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
     /// </summary>
     public static class AudioFileFormatDetector
     {
+        private const int MaxProbeBytes = 1024;
+
         /// <summary>
         /// 检测音频文件的真实格式
         /// </summary>
@@ -15,17 +17,29 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         /// <returns>真实的音频格式</returns>
         public static AudioFormat DetectActualFormat(string filePath)
         {
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException($"文件不存在: {filePath}");
-
             try
             {
-                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                return DetectFormatFromStream(fileStream);
+                using var fileStream = OpenProbeFile(filePath);
+                if (fileStream is not null)
+                    return DetectFormatFromStream(fileStream);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"无法检测文件格式: {filePath}, 错误: {ex.Message}", ex);
+            }
+            throw new FileNotFoundException($"文件不存在: {filePath}");
+        }
+
+        private static FileStream? OpenProbeFile(string filePath)
+        {
+            try
+            {
+                return new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, MaxProbeBytes);
+            }
+            catch (Exception) when (!File.Exists(filePath))
+            {
+                // 只在打开失败时区分路径不存在与其他 I/O 错误。
+                return null;
             }
         }
 
@@ -36,7 +50,8 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         /// <returns>检测到的格式</returns>
         public static AudioFormat DetectFormatFromStream(Stream stream)
         {
-            if (stream.Length < 12)
+            var length = stream.Length;
+            if (length < 12)
                 throw new InvalidOperationException("文件太小，无法确定格式");
 
             var originalPosition = stream.Position;
@@ -46,39 +61,16 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             {
                 Span<byte> header = stackalloc byte[12];
                 stream.ReadExactly(header);
-
                 // 检测 WAV 格式 (RIFF....WAVE)
-                if (header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46 && // "RIFF"
-                    header[8] == 0x57 && header[9] == 0x41 && header[10] == 0x56 && header[11] == 0x45)   // "WAVE"
-                {
+                if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                    && header[8] == 'W' && header[9] == 'A' && header[10] == 'V' && header[11] == 'E')
                     return AudioFormat.Wav;
-                }
-
-                // 检测 MP3 格式
-                stream.Position = 0;
-                if (IsMp3Format(stream))
-                {
+                if (header[0] == 'I' && header[1] == 'D' && header[2] == '3')
                     return AudioFormat.Mp3;
-                }
 
-                // 检测其他可能的格式
-                stream.Position = 0;
-                Span<byte> firstBytes = stackalloc byte[4];
-                stream.ReadExactly(firstBytes);
-
-                // 检测 FLAC 格式
-                if (firstBytes[0] == 0x66 && firstBytes[1] == 0x4C && firstBytes[2] == 0x61 && firstBytes[3] == 0x43) // "fLaC"
-                {
-                    return AudioFormat.Auto; // 暂时归类为Auto，后续可以扩展
-                }
-
-                // 检测 OGG 格式
-                if (firstBytes[0] == 0x4F && firstBytes[1] == 0x67 && firstBytes[2] == 0x67 && firstBytes[3] == 0x53) // "OggS"
-                {
-                    return AudioFormat.Auto;
-                }
-
-                return AudioFormat.Auto; // 未知格式
+                return HasMp3Frame(stream, header, (int)Math.Min(length, MaxProbeBytes))
+                    ? AudioFormat.Mp3
+                    : AudioFormat.Auto;
             }
             finally
             {
@@ -86,33 +78,20 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             }
         }
 
-        /// <summary>
-        /// 检测是否为MP3格式
-        /// </summary>
-        private static bool IsMp3Format(Stream stream)
+        private static bool HasMp3Frame(Stream stream, ReadOnlySpan<byte> header, int probeLength)
         {
-            Span<byte> buffer = stackalloc byte[10];
-            stream.ReadExactly(buffer);
+            Span<byte> probe = stackalloc byte[probeLength];
+            header.CopyTo(probe);
+            stream.ReadExactly(probe[header.Length..]);
 
-            // 检测 ID3v2 标签
-            if (buffer[0] == 0x49 && buffer[1] == 0x44 && buffer[2] == 0x33) // "ID3"
+            // 先跳过首个候选之前的字节，再顺序检查相邻字节（含跨越文件头边界的字节对）。
+            int first = probe[..^1].IndexOf((byte)0xff);
+            if (first < 0)
+                return false;
+            for (int i = first; i < probe.Length - 1; i++)
             {
-                return true;
-            }
-
-            // 检测 MP3 帧头
-            stream.Position = 0;
-            Span<byte> searchBuffer = stackalloc byte[(int)Math.Min(1024L, stream.Length)];
-            stream.ReadExactly(searchBuffer);
-
-            for (int i = 0; i < searchBuffer.Length - 1; i++)
-            {
-                // MP3帧同步字：11111111 111xxxxx (0xFF 0xFx or 0xFF 0xEx)
-                if (searchBuffer[i] == 0xFF &&
-                    (searchBuffer[i + 1] & 0xE0) == 0xE0)
-                {
+                if (probe[i] == 0xff && (probe[i + 1] & 0xe0) == 0xe0)
                     return true;
-                }
             }
 
             return false;
@@ -141,15 +120,14 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
         /// <summary>
         /// 根据扩展名推断格式
         /// </summary>
-        private static AudioFormat GetFormatFromExtension(string filePath)
+        internal static AudioFormat GetFormatFromExtension(string filePath)
         {
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
-            return extension switch
-            {
-                ".mp3" => AudioFormat.Mp3,
-                ".wav" => AudioFormat.Wav,
-                _ => AudioFormat.Auto
-            };
+            var extension = Path.GetExtension(filePath.AsSpan());
+            if (extension.Equals(".mp3", StringComparison.OrdinalIgnoreCase))
+                return AudioFormat.Mp3;
+            if (extension.Equals(".wav", StringComparison.OrdinalIgnoreCase))
+                return AudioFormat.Wav;
+            return AudioFormat.Auto;
         }
 
         /// <summary>

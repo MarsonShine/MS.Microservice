@@ -172,7 +172,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                     if (!File.Exists(filePath))
                         return false;
 
-                    var fileInfo = GetAudioFileInfo(filePath);
+                    var fileInfo = GetExistingAudioFileInfo(filePath);
 
                     return fileInfo.FileSize > 0 &&
                            fileInfo.Duration > TimeSpan.Zero &&
@@ -194,14 +194,17 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             if (!File.Exists(filePath))
                 throw new FileNotFoundException($"文件不存在: {filePath}");
 
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return GetExistingAudioFileInfo(filePath);
+        }
 
-            return extension switch
-            {
-                ".wav" => GetWavFileInfo(filePath),
-                ".mp3" => GetMp3FileInfo(filePath),
-                _ => GetGenericAudioFileInfo(filePath)
-            };
+        private static AudioFileInfo GetExistingAudioFileInfo(string filePath)
+        {
+            var format = AudioFileFormatDetector.GetFormatFromExtension(filePath);
+            if (format is not (AudioFormat.Wav or AudioFormat.Mp3))
+                return GetGenericAudioFileInfo(filePath);
+
+            using var stream = File.OpenRead(filePath);
+            return GetWavOrMp3Info(stream, format, filePath);
         }
 
         /// <summary>
@@ -219,12 +222,9 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 var format = AudioFileFormatDetector.DetectFormatFromStream(audioStream);
                 audioStream.Position = 0;
 
-                return format switch
-                {
-                    AudioFormat.Mp3 => GetMp3StreamInfo(audioStream),
-                    AudioFormat.Wav => GetWavStreamInfo(audioStream),
-                    _ => GetGenericStreamInfo(audioStream)
-                };
+                return format is AudioFormat.Wav or AudioFormat.Mp3
+                    ? GetWavOrMp3Info(audioStream, format, "<Stream>")
+                    : GetGenericStreamInfo(audioStream);
             }
             finally
             {
@@ -232,9 +232,9 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
             }
         }
 
-        private static AudioFileInfo GetWavFileInfo(string filePath)
+        private static AudioFileInfo GetWavOrMp3Info(Stream stream, AudioFormat format, string filePath)
         {
-            using var reader = new WaveFileReader(filePath);
+            using WaveStream reader = format == AudioFormat.Wav ? new WaveFileReader(stream) : new Mp3FileReader(stream);
             return new AudioFileInfo
             {
                 FilePath = filePath,
@@ -242,21 +242,7 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 SampleRate = reader.WaveFormat.SampleRate,
                 Channels = reader.WaveFormat.Channels,
                 BitsPerSample = reader.WaveFormat.BitsPerSample,
-                FileSize = new FileInfo(filePath).Length
-            };
-        }
-
-        private static AudioFileInfo GetMp3FileInfo(string filePath)
-        {
-            using var reader = new Mp3FileReader(filePath);
-            return new AudioFileInfo
-            {
-                FilePath = filePath,
-                Duration = reader.TotalTime,
-                SampleRate = reader.WaveFormat.SampleRate,
-                Channels = reader.WaveFormat.Channels,
-                BitsPerSample = reader.WaveFormat.BitsPerSample,
-                FileSize = new FileInfo(filePath).Length
+                FileSize = stream.Length
             };
         }
 
@@ -271,34 +257,6 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 Channels = reader.WaveFormat.Channels,
                 BitsPerSample = reader.WaveFormat.BitsPerSample,
                 FileSize = new FileInfo(filePath).Length
-            };
-        }
-
-        private static AudioFileInfo GetWavStreamInfo(Stream stream)
-        {
-            using var reader = new WaveFileReader(stream);
-            return new AudioFileInfo
-            {
-                FilePath = "<Stream>",
-                Duration = reader.TotalTime,
-                SampleRate = reader.WaveFormat.SampleRate,
-                Channels = reader.WaveFormat.Channels,
-                BitsPerSample = reader.WaveFormat.BitsPerSample,
-                FileSize = stream.Length
-            };
-        }
-
-        private static AudioFileInfo GetMp3StreamInfo(Stream stream)
-        {
-            using var reader = new Mp3FileReader(stream);
-            return new AudioFileInfo
-            {
-                FilePath = "<Stream>",
-                Duration = reader.TotalTime,
-                SampleRate = reader.WaveFormat.SampleRate,
-                Channels = reader.WaveFormat.Channels,
-                BitsPerSample = reader.WaveFormat.BitsPerSample,
-                FileSize = stream.Length
             };
         }
 

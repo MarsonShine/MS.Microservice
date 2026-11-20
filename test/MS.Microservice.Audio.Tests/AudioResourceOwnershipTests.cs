@@ -1,4 +1,5 @@
 using MS.Microservice.Infrastructure.Common.NAudio;
+using NAudio.Lame;
 using NAudio.Wave;
 using Xunit;
 
@@ -12,6 +13,58 @@ public sealed class AudioResourceOwnershipTests : IDisposable
     private readonly AudioProcessor _processor = new();
 
     public AudioResourceOwnershipTests() => Directory.CreateDirectory(_directory);
+
+    [Theory]
+    [InlineData("metadata.WaV")]
+    [InlineData("metadata.Mp3")]
+    public void MetadataUsesContainerLengthAndLeavesTheSuppliedStreamOpen(string name)
+    {
+        var path = Path.Combine(_directory, name);
+        if (Path.GetExtension(path) == ".Mp3")
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            using var writer = new LameMP3FileWriter(path, Format, LAMEPreset.STANDARD);
+            var pcm = new byte[Format.AverageBytesPerSecond];
+            writer.Write(pcm, 0, pcm.Length);
+        }
+        else
+        {
+            CreateWav(name);
+        }
+
+        var encoded = File.ReadAllBytes(path);
+        var fileInfo = AudioProcessorExtensions.GetAudioFileInfo(path);
+        using var stream = new MemoryStream(encoded) { Position = 5 };
+        var streamInfo = AudioProcessorExtensions.GetAudioStreamInfo(stream);
+
+        Assert.Equal(path, fileInfo.FilePath);
+        Assert.Equal("<Stream>", streamInfo.FilePath);
+        Assert.Equal(encoded.LongLength, fileInfo.FileSize);
+        Assert.Equal(encoded.LongLength, streamInfo.FileSize);
+        Assert.Equal(Format.SampleRate, fileInfo.SampleRate);
+        Assert.Equal(Format.Channels, fileInfo.Channels);
+        Assert.Equal(Format.BitsPerSample, fileInfo.BitsPerSample);
+        Assert.Equal(fileInfo.Duration, streamInfo.Duration);
+        Assert.True(fileInfo.Duration > TimeSpan.Zero);
+        Assert.Equal(5, stream.Position);
+        Assert.Equal((int)encoded[5], stream.ReadByte());
+        AssertExclusiveAccess(path);
+    }
+
+    [Fact]
+    public void InvalidWavValidationReleasesFileAndFailedStreamLookupRestoresPosition()
+    {
+        var path = Path.Combine(_directory, "invalid.wav");
+        Assert.False(_processor.ValidateAudioFile(path));
+        var truncated = "RIFF0000WAVE"u8.ToArray();
+        File.WriteAllBytes(path, truncated);
+
+        Assert.False(_processor.ValidateAudioFile(path));
+        AssertExclusiveAccess(path);
+        using var stream = new MemoryStream(truncated) { Position = 2 };
+        Assert.ThrowsAny<Exception>(() => AudioProcessorExtensions.GetAudioStreamInfo(stream));
+        Assert.Equal(2, stream.Position);
+    }
 
     [Fact]
     public async Task SameFormatConversionReleasesInputAfterSuccess()
