@@ -143,23 +143,18 @@ namespace MS.Microservice.Infrastructure.Common.NAudio
                 var combinedData = await processor.CombineAudioDataAsync(audioDataList, AudioFormat.Wav);
                 await File.WriteAllBytesAsync("combined_data_output.wav", combinedData);
 
-                using var stream1 = new FileStream("audio1.wav", FileMode.Open, FileAccess.Read);
-                using var stream2 = new FileStream("audio2.wav", FileMode.Open, FileAccess.Read);
-                var streamList = new[] { stream1, stream2 };
+                // 每次合并都接管输入流。复用音频数据，为每次调用创建独立的流。
+                MemoryStream[] OpenInputStreams() => [new(audioData1, writable: false), new(audioData2, writable: false)];
+                await processor.CombineAudioStreamsAsync(OpenInputStreams(), "combined_from_streams.wav");
 
-                await processor.CombineAudioStreamsAsync(streamList, "combined_from_streams.wav");
-
-                stream1.Position = 0;
-                stream2.Position = 0;
-
-                using var resultStream = await processor.CombineAudioStreamsAsync(streamList, AudioFormat.Wav);
+                using var resultStream = await processor.CombineAudioStreamsAsync(OpenInputStreams(), AudioFormat.Wav);
                 using var outputFile = new FileStream("combined_stream_output.wav", FileMode.Create, FileAccess.Write);
                 await resultStream.CopyToAsync(outputFile);
 
                 await processor.CreateAudioFileFromDataAsync(audioData1, "single_from_data.wav");
 
-                stream1.Position = 0;
-                await processor.CreateAudioFileFromStreamAsync(stream1, "single_from_stream.wav");
+                using var singleInput = new MemoryStream(audioData1, writable: false);
+                await processor.CreateAudioFileFromStreamAsync(singleInput, "single_from_stream.wav");
             }
 
             /// <summary>
