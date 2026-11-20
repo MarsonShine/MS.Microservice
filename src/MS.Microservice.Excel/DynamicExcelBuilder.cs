@@ -28,15 +28,18 @@ namespace MS.Microservice.Infrastructure.Utils.Excel
             int itemCount = _items.Count;
             _sheet.ShiftRows(startRowIndex, _sheet.LastRowNum + itemCount + 1, itemCount);
 
-            for (int i = startRowIndex; i < startRowIndex + _items.Count; i++)
+            // Styles belong to this workbook. Resolve each header style once for this insertion.
+            var templateStyles = titleRow.Cells.Select(cell => (cell.ColumnIndex, cell.CellStyle)).ToArray();
+            var rowHeight = titleRow.Height;
+            for (int i = startRowIndex; i < startRowIndex + itemCount; i++)
             {
                 IRow contentRow = _sheet.CreateRow(i);
-                contentRow.Height = titleRow.Height;
+                contentRow.Height = rowHeight;
 
-                foreach (ICell cell in titleRow.Cells)
+                foreach (var (columnIndex, style) in templateStyles)
                 {
-                    ICell contentCell = contentRow.CreateCell(cell.ColumnIndex);
-                    contentCell.CellStyle = cell.CellStyle;
+                    ICell contentCell = contentRow.CreateCell(columnIndex);
+                    contentCell.CellStyle = style;
                 }
             }
             return this;

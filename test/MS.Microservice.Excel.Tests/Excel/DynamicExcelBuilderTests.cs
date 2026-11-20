@@ -67,6 +67,34 @@ public sealed class DynamicExcelBuilderTests
     }
 
     [Fact]
+    public void InitInsertRow_CopiesSparseStylesAndRefreshesThemOnEachInsertion()
+    {
+        using var workbook = new XSSFWorkbook();
+        var sheet = workbook.CreateSheet("S");
+        var header = sheet.CreateRow(0);
+        header.Height = 520;
+        var firstStyle = workbook.CreateCellStyle();
+        var otherStyle = workbook.CreateCellStyle();
+        CreateHeaderCell(header, 0, "编号", firstStyle);
+        CreateHeaderCell(header, 3, "备注", otherStyle);
+        var builder = new DynamicExcelBuilder<TemplateRow>(workbook, sheet, [new(), new()]);
+        builder.InitInsertRow(0, 1);
+
+        foreach (int row in new[] { 1, 2 })
+        {
+            Assert.Equal(header.Height, sheet.GetRow(row).Height);
+            Assert.Null(sheet.GetRow(row).GetCell(1));
+            Assert.Equal(firstStyle.Index, sheet.GetRow(row).GetCell(0).CellStyle.Index);
+            Assert.Equal(otherStyle.Index, sheet.GetRow(row).GetCell(3).CellStyle.Index);
+        }
+
+        header.GetCell(3).CellStyle = firstStyle;
+        builder.InitInsertRow(0, 1);
+        Assert.Equal(firstStyle.Index, sheet.GetRow(1).GetCell(3).CellStyle.Index);
+        Assert.Equal(otherStyle.Index, sheet.GetRow(3).GetCell(3).CellStyle.Index);
+    }
+
+    [Fact]
     public void DynamicExcelBuilder_ShouldMapByAttributeOrder_WhenTitleRowHasNoCells()
     {
         using var workbook = new XSSFWorkbook();
