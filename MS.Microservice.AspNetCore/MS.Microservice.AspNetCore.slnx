@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="src/MS.Microservice.AspNetCore/README.md" />
+    <File Path="src/MS.Microservice.AspNetCore.Encryption/README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
+    <Project Path="src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Dependencies/">
+    <Project Path="../src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
+    <Project Path="../src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
+    <Project Path="../src/MS.Microservice.Threading/MS.Microservice.Threading.csproj" />
+  </Folder>
+</Solution>

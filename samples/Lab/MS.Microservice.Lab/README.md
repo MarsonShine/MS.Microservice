@@ -8,7 +8,7 @@ Supply `LabTokenIssuer__SigningKey` with an externally generated key of at least
 
 The local account/password login is for this laboratory. Password request Base64 is an encoding, not encryption; company services use the separate reference host's external JWT/OIDC integration. Existing Activation/EventStore practice databases remain separate from reference databases.
 
-`ApiEncryptOptions:IsEnabled` defaults to `false`. When enabled, `/api/lab/encryption/echo` accepts a new RSA-OAEP + AES-GCM envelope for its registered DTO; `/api/lab/encryption/plain` keeps plain JSON through `[NoEncrypt]`. Supply the RSA private key as `ApiEncryptOptions__PrivateKey` from the deployment environment. The binder belongs to the optional AspNetCore.Encryption component; see [加密请求模型绑定](../../../src/MS.Microservice.AspNetCore.Encryption/docs/encrypted-model-binding.md).
+`ApiEncryptOptions:IsEnabled` defaults to `false`. When enabled, `/api/lab/encryption/echo` accepts a new RSA-OAEP + AES-GCM envelope for its registered DTO; `/api/lab/encryption/plain` keeps plain JSON through `[NoEncrypt]`. Supply the RSA private key as `ApiEncryptOptions__PrivateKey` from the deployment environment. The binder belongs to the optional AspNetCore.Encryption component; see [加密请求模型绑定](../../../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore.Encryption/docs/encrypted-model-binding.md).
 
 可靠消息实验通过 LabMessaging:Enabled=true 显式启用，使用
 ConnectionStrings:LabMessagingDatabase 和 Messaging 配置；默认 SelfManaged，也可选择 Wolverine。
@@ -88,7 +88,7 @@ curl.exe -X POST http://localhost:5210/api/lab/tools/images/process `
 
 上述具备默认值或可自动查找的配置，留空即可使用默认行为。显式填写的无效路径仍会报错；系统字体缺少所需字形时，请安装相应字体或设置 `FontFilePath`。
 
-缺少配置的功能返回 `503` 和对应配置键，其他工具仍可使用。PDF PNG 渲染依赖部署包内的 PDFium 原生库；部分音频编解码依赖 Windows 或原生 LAME。完整组件限制见 [Audio](../../../src/MS.Microservice.Audio/README.md)、[Documents／Rendering](../../../src/MS.Microservice.Documents.Rendering/README.md) 和 [Inference](../../../MS.Microservice.Media/src/MS.Microservice.Media.Inference/README.md)。
+缺少配置的功能返回 `503` 和对应配置键，其他工具仍可使用。PDF PNG 渲染依赖部署包内的 PDFium 原生库；部分音频编解码依赖 Windows 或原生 LAME。完整组件限制见 [Audio](../../../src/MS.Microservice.Audio/README.md)、[Documents／Rendering](../../../MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/README.md) 和 [Inference](../../../MS.Microservice.Media/src/MS.Microservice.Media.Inference/README.md)。
 
 同步演示统一限制每份上传 20 MiB、请求合计 25 MiB、下载结果 64 MiB；具体画布、页数等以各字段说明为准。媒体推理全局串行，原生模型按需加载并复用；抠图实测单任务峰值约 6.4 GiB，宿主仍须留足余量。自动识别、去水印、抠图和增强均需人工查看效果，不能据此证明原始细节或保证识别正确。
 
@@ -161,11 +161,11 @@ $env:ConnectionStrings__CacheRedis = "localhost:6379,ssl=false"
 $env:Caching__Redis__InstanceName = "lab-demo:"
 ```
 
-连接串中的凭据通过环境变量或用户机密提供。`prefix` 应写在 `InstanceName`，不要放进连接串；StackExchange.Redis 使用共享长连接，不接受其他客户端的 `poolsize` 参数。启用时未知后端、缺失连接或无效配置会在注册时失败；Redis 故障期间的读写行为见 [Redis 组件](../../../src/MS.Microservice.Caching.Redis/README.md)。连接由 Redis 缓存提供程序管理，业务 Redis 连接保持独立。
+连接串中的凭据通过环境变量或用户机密提供。`prefix` 应写在 `InstanceName`，不要放进连接串；StackExchange.Redis 使用共享长连接，不接受其他客户端的 `poolsize` 参数。启用时未知后端、缺失连接或无效配置会在注册时失败；Redis 故障期间的读写行为见 [Redis 组件](../../../MS.Microservice.Caching/src/MS.Microservice.Caching.Redis/README.md)。连接由 Redis 缓存提供程序管理，业务 Redis 连接保持独立。
 
 Redis 模式下，本地条目过期后可从共享层取值，此时 `sourceReads` 仍保持不变。API 返回的 `sharedTtlSeconds` 是策略值，只有 Redis 模式实际存在共享层。**示例源仍在本进程内存中，重启会重置；Redis 中未过期的旧缓存可以继续返回。** 它用于体验缓存行为，不能作为跨实例共享业务数据示例。测试时先 DELETE 清除本人键；生产中应使用共享数据库，并在提交成功后失效，其他实例的本地缓存仍可能保留至本地 TTL 到期。
 
-注册、指标及其他使用方式见 [缓存组件](../../../src/MS.Microservice.Caching/README.md)。Lab RBAC 始终实时查库，角色撤销不等待缓存过期；旧 `CacheOptions` 和自制 CacheManager 已移除。
+注册、指标及其他使用方式见 [缓存组件](../../../MS.Microservice.Caching/src/MS.Microservice.Caching/README.md)。Lab RBAC 始终实时查库，角色撤销不等待缓存过期；旧 `CacheOptions` 和自制 CacheManager 已移除。
 
 ## 自动业务审计示例
 

@@ -84,7 +84,7 @@ Lab 在 [PlatformWebHost.AddServices](../../../samples/Lab/MS.Microservice.Lab/H
 
 审计需要两层接入：
 
-- HTTP 操作身份：[AddAutomaticAuditOperations](../../MS.Microservice.AspNetCore/Auditing/AuditOperationFilter.cs#L21) 注册 scoped `AuditOperationContext` 和 MVC 过滤器。过滤器读取当前 endpoint 的 `[AuditOperation]`，从可信身份取得 Scope／Actor 并调用 `Begin()`；没有标记则直接继续，无法解析身份则拒绝执行。它不扫描请求字段的 `[Sensitive]`。非 MVC 工作流由宿主显式建立操作上下文。
+- HTTP 操作身份：[AddAutomaticAuditOperations](../../../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/Auditing/AuditOperationFilter.cs#L21) 注册 scoped `AuditOperationContext` 和 MVC 过滤器。过滤器读取当前 endpoint 的 `[AuditOperation]`，从可信身份取得 Scope／Actor 并调用 `Begin()`；没有标记则直接继续，无法解析身份则拒绝执行。它不扫描请求字段的 `[Sensitive]`。非 MVC 工作流由宿主显式建立操作上下文。
 - EF 模型与保存：[SensitiveDemoContext](../../../samples/Lab/MS.Microservice.Lab/Application/Tools/SensitiveDataDemo.cs#L8) 继承 `AuditedDbContext`，在模型中调用 `AddAuditRecords()` 映射审计表，再用 `AuditChanges(...)` 选择字段。实体上的 `[Sensitive]` 决定这些字段的快照保护方式。
 
 [AuditModelExtensions.AuditChanges](../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/Auditing/AuditModelExtensions.cs#L12) 在模型构建时解析字段表达式，将所选属性名写入 EF annotation。[AuditedDbContext.BuildRules](../../../MS.Microservice.Persistence/src/MS.Microservice.Persistence.EFCore/Auditing/AuditedDbContext.cs#L161) 在首次需要 `Plan` 时读取这些 annotation，扫描入选字段的属性分类，构建 `IProperty → SensitiveKind` 映射，并按 `IModel` 缓存。

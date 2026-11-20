@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="src/MS.Microservice.Documents/README.md" />
+    <File Path="src/MS.Microservice.Documents.Rendering/README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+    <Project Path="src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/MS.Microservice.Documents.Tests/MS.Microservice.Documents.Tests.csproj" />
+    <Project Path="test/MS.Microservice.Documents.Rendering.Tests/MS.Microservice.Documents.Rendering.Tests.csproj" />
+  </Folder>
+</Solution>

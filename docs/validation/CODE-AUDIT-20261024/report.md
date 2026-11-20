@@ -52,7 +52,7 @@
 
 ### 5. P2：HTTP 完成日志可能记录异常处理前的 200
 
-**证据。** [ReferenceHost](../../../samples/Reference/MS.Microservice.Reference.Web/ReferenceHost.cs) 第 122–123 行先 UsePlatformHttp，后 UseMsRequestLogging；[ServiceHost](../../../src/MS.Microservice.AspNetCore/ServiceHost.cs) 第 54 行在外层安装异常处理器。[日志中间件](../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MsRequestLoggingMiddleware.cs) 第 35–42 行在 finally 中立即读取 Response.StatusCode。异常返回时，内层日志先执行，外层才生成最终错误响应。
+**证据。** [ReferenceHost](../../../samples/Reference/MS.Microservice.Reference.Web/ReferenceHost.cs) 第 122–123 行先 UsePlatformHttp，后 UseMsRequestLogging；[ServiceHost](../../../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/ServiceHost.cs) 第 54 行在外层安装异常处理器。[日志中间件](../../../MS.Microservice.Logging/src/MS.Microservice.Logging.AspNetCore/MsRequestLoggingMiddleware.cs) 第 35–42 行在 finally 中立即读取 Response.StatusCode。异常返回时，内层日志先执行，外层才生成最终错误响应。
 
 **影响与建议。** 部分最终 409/500 请求可能记录为 200，排障和错误率判断受影响。应让完成日志覆盖异常处理后的结果，并明确未处理异常、取消、响应已开始的行为。适当调整宿主顺序与组件契约，不能对所有异常直接硬编码 500；需要保留请求作用域清理。
 
@@ -78,7 +78,7 @@
 
 ### 8. P2：通用认证组件移出示例宿主的具体权限策略
 
-**证据。** [ExternalIdentity](../../../src/MS.Microservice.AspNetCore/ExternalIdentity.cs) 第 18–19 行内置 profiles.manage、messaging.manage，第 59–62 行固定注册 Manage、MessagingOperations。JWT 验证、通用 scope 判定与 Reference 的策略定义被放在一个注册入口。
+**证据。** [ExternalIdentity](../../../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/ExternalIdentity.cs) 第 18–19 行内置 profiles.manage、messaging.manage，第 59–62 行固定注册 Manage、MessagingOperations。JWT 验证、通用 scope 判定与 Reference 的策略定义被放在一个注册入口。
 
 **建议。** 通用包保留身份验证、subject/scope 规则；策略名称和对应权限移到 Reference 组合根。必要时复用 requirement/handler，但无需引入业务 RBAC 或立即拆新程序集。这里收益是减少消费耦合，不预期显著减少行数；现有宿主的授权效果必须保持。
 
@@ -99,7 +99,7 @@
 
 **Tasks 生命周期的缺口。** [IJobStore](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks/JobContracts.cs) 没有清理契约，Job 持久保存 PayloadJson 和结果引用；[模型](../../../MS.Microservice.Tasks/src/MS.Microservice.Tasks.EFCore/JobModelBuilderExtensions.cs) 已有 Attempt 级联删除，可以复用。清理必须有批次上限，结果文件只能经过宿主明确提供的生命周期接口处理，不能根据任意引用删除。多实例方面，启动扫描当前会处理所有 Running，文档明确限定单执行宿主；继续单实例时可先增加第二宿主拒绝启动的保护。
 
-**已声明的边界不是遗漏缺陷。** [缓存设计](../../../src/MS.Microservice.Caching/docs/design.md) 已明确其他实例 L1 不会立即失效，以及旧加载回填窗口；[AES 格式说明](../../../src/MS.Microservice.Core/Security/Cryptology/authenticated-encryption.md) 已说明 v1 是格式版本而非 key ID。两项应按实际需求启动，不列为无条件紧急工作。
+**已声明的边界不是遗漏缺陷。** [缓存设计](../../../MS.Microservice.Caching/src/MS.Microservice.Caching/docs/design.md) 已明确其他实例 L1 不会立即失效，以及旧加载回填窗口；[AES 格式说明](../../../src/MS.Microservice.Core/Security/Cryptology/authenticated-encryption.md) 已说明 v1 是格式版本而非 key ID。两项应按实际需求启动，不列为无条件紧急工作。
 
 ## 次级观察与不建议扩张的方向
 

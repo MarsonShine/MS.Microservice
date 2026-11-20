@@ -18,7 +18,7 @@ Reference 回答“这些能力怎样组合成一个服务”，Lab 回答“为
 
 ## 目录为什么按模块分组
 
-AI、Logging、Messaging、Persistence、Idempotency 都有独立测试和自己的接入说明。
+AI、AspNetCore、Caching 和 Documents 等模块各自维护测试和接入说明。
 因此采用模块优先的组织方式：
 
     MS.Microservice.AI/

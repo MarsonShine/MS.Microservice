@@ -157,7 +157,7 @@ dotnet-counters ps
 dotnet-counters monitor --process-id 12345 --counters MS.Microservice.Caching
 ~~~
 
-使用仓库的 `AddMsOpenTelemetry(configuration)` 时已订阅缓存 Meter；设置 `OpenTelemetry:ConsoleExporterEnabled=true` 或 `OtlpExporterEnabled=true` 才会启用相应导出。导出配置见 [Observability](../MS.Microservice.Observability/README.md)。
+使用仓库的 `AddMsOpenTelemetry(configuration)` 时已订阅缓存 Meter；设置 `OpenTelemetry:ConsoleExporterEnabled=true` 或 `OtlpExporterEnabled=true` 才会启用相应导出。导出配置见 [Observability](../../../src/MS.Microservice.Observability/README.md)。
 
 独立宿主也可自行引用 OpenTelemetry.Extensions.Hosting 和所需导出器：
 
@@ -172,7 +172,7 @@ builder.Services.AddOpenTelemetry().WithMetrics(metrics =>
 
 ## 在 Lab 体验
 
-登录后连续调用 `GET /api/lab/tools/cache`，观察源读取次数不再增加；`PUT` 提交 `{ "value": "已更新" }`，再 GET 观察失效与加载；`DELETE` 可主动清除。与此同时观察上述 Meter 的 requests、loads 和 duration。界面步骤见 [Lab](../../samples/Lab/MS.Microservice.Lab/README.md#缓存治理示例)。
+登录后连续调用 `GET /api/lab/tools/cache`，观察源读取次数不再增加；`PUT` 提交 `{ "value": "已更新" }`，再 GET 观察失效与加载；`DELETE` 可主动清除。与此同时观察上述 Meter 的 requests、loads 和 duration。界面步骤见 [Lab](../../../samples/Lab/MS.Microservice.Lab/README.md#缓存治理示例)。
 
 Lab 默认没有共享后端，shared TTL 字段表示策略配置，不代表已经连接 Redis。示例源在内存中，重启重置；源读取计数是示例进程的全局计数。
 
@@ -192,4 +192,4 @@ Lab 默认没有共享后端，shared TTL 字段表示策略配置，不代表�
 | Core 弱引用容器 | 保留在 `Core.Memory`，作为内存生命周期工具，不承担业务缓存职责 |
 
 依赖、回源与失效流程、监测替换的完整取舍见[设计文档](docs/design.md)。
-本地热路径、指标监听和键构建的实测开销见[性能记录](../../docs/components/cache-sensitive-performance.md)，不等同于共享后端容量或完整接口延迟。
+本地热路径、指标监听和键构建的实测开销见[性能记录](../../../docs/components/cache-sensitive-performance.md)，不等同于共享后端容量或完整接口延迟。

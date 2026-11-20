@@ -22,12 +22,15 @@
 
 ## 按模块独立开发
 
-多项目模块把 docs、src、test 和独立解决方案放在同一目录；小型独立组件暂留根 src/test。
+每个多项目模块的目录包含源码、测试、文档和独立解决方案。小型独立组件放在根目录的 src 和 test 中。
 根解决方案覆盖全仓库，日常维护可以只打开对应模块：
 
 | 模块 | 独立解决方案 | 模块说明 |
 |---|---|---|
 | AI | [MS.Microservice.AI.slnx](MS.Microservice.AI/MS.Microservice.AI.slnx) | [说明](MS.Microservice.AI/docs/design.md) |
+| AspNetCore | [MS.Microservice.AspNetCore.slnx](MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.slnx) | [说明](MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/README.md) |
+| Caching | [MS.Microservice.Caching.slnx](MS.Microservice.Caching/MS.Microservice.Caching.slnx) | [说明](MS.Microservice.Caching/src/MS.Microservice.Caching/README.md) |
+| Documents | [MS.Microservice.Documents.slnx](MS.Microservice.Documents/MS.Microservice.Documents.slnx) | [说明](MS.Microservice.Documents/src/MS.Microservice.Documents/README.md) |
 | Logging | [MS.Microservice.Logging.slnx](MS.Microservice.Logging/MS.Microservice.Logging.slnx) | [说明](MS.Microservice.Logging/docs/design.md) |
 | Messaging | [MS.Microservice.Messaging.slnx](MS.Microservice.Messaging/MS.Microservice.Messaging.slnx) | [说明](MS.Microservice.Messaging/docs/design.md) |
 | Persistence | [MS.Microservice.Persistence.slnx](MS.Microservice.Persistence/MS.Microservice.Persistence.slnx) | [说明](MS.Microservice.Persistence/docs/design.md) |
@@ -81,10 +84,10 @@ Core、Domain.Primitives、Observability、Swagger、Logging、HTTP Resilience�
 
 | 工具组件 | 使用说明 |
 | --- | --- |
-| 缓存治理 | [Caching](src/MS.Microservice.Caching/README.md)：类型／Scope 隔离、固定 TTL、并发回源预算及显式失效 |
-| Redis 二级缓存 | [Caching.Redis](src/MS.Microservice.Caching.Redis/README.md)：可选共享后端，复用治理 API 与指标 |
+| 缓存治理 | [Caching](MS.Microservice.Caching/src/MS.Microservice.Caching/README.md)：类型／Scope 隔离、固定 TTL、并发回源预算及显式失效 |
+| Redis 二级缓存 | [Caching.Redis](MS.Microservice.Caching/src/MS.Microservice.Caching.Redis/README.md)：可选共享后端，复用治理 API 与指标 |
 | 图片、视频、二维码和水印 | [Media](MS.Microservice.Media/README.md)；图片／视频自动去水印、OCR、表格、抠图和增强使用可选 Inference |
-| PDF、Word 模板与 HTML／DOCX 排版 | [Documents](src/MS.Microservice.Documents/README.md)；HTML／DOCX 转 PDF 使用可选 Windows [Rendering](src/MS.Microservice.Documents.Rendering/README.md) |
+| PDF、Word 模板与 HTML／DOCX 排版 | [Documents](MS.Microservice.Documents/src/MS.Microservice.Documents/README.md)；HTML／DOCX 转 PDF 使用可选 Windows [Rendering](MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/README.md) |
 | 文件存储、哈希与 ZIP | [Core](src/MS.Microservice.Core/README.md)；对象存储使用可选 [S3](src/MS.Microservice.Storage.S3/README.md)；[Files 常用流程](docs/components/files.md) |
 | 音频 | [Audio](src/MS.Microservice.Audio/README.md)：剪辑、音量、淡入淡出、合并和转换 |
 | Excel 与 CSV | [Excel](src/MS.Microservice.Excel/README.md)：导入、导出和定位错误报告；[DataTransfer 常用流程](docs/components/data-transfer.md) |

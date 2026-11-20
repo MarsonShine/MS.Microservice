@@ -8,7 +8,7 @@
 |---|---|---|
 | 真实依赖故障矩阵执行 | [消息测试夹具](../MS.Microservice.Messaging/test/MS.Microservice.Messaging.IntegrationTests/README.md)已提供 | 支持的 PostgreSQL/RabbitMQ 容器环境中的执行结果与失败排查记录 |
 | HTTP 幂等的真实数据库并发验证 | [EF 幂等组件](../MS.Microservice.Idempotency/README.md)、Reference 的两套迁移和带键创建端点 | 在 PostgreSQL 下同时发送相同键/相同与不同正文，核对只有一次档案与 Outbox 效果，失败请求回滚后重放原 `201`；分别验证 SelfManaged 与 Wolverine |
-| 入口策略的实际容量验证 | [限流](../src/MS.Microservice.AspNetCore/docs/rate-limiting.md)、[请求超时](../src/MS.Microservice.AspNetCore/docs/request-timeouts.md)已可选接入 | 用预期并发和慢依赖检查 `429`、`504`、健康豁免及取消传播；多实例时在部署入口决定是否需要共享配额 |
+| 入口策略的实际容量验证 | [限流](../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/docs/rate-limiting.md)、[请求超时](../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/docs/request-timeouts.md)已可选接入 | 用预期并发和慢依赖检查 `429`、`504`、健康豁免及取消传播；多实例时在部署入口决定是否需要共享配额 |
 | 发布与部署验收 | Reference、显式 Migrator、本地启动脚本 | 实际镜像、运行平台、配置、迁移和恢复验证；此项尚未执行 |
 | 存量业务数据的 Provider 切换 | 两种具体 DbContext、独立迁移集、[独立库对照实验](labs/06-replacement.md) | 停写、备份、数据迁移、在途/死信处置及切换结果核对 |
 | 可重复性能报告 | [缓存／敏感字段本地对照](components/cache-sensitive-performance.md)及各组件基准 | 继续按真实工作负载报告环境、吞吐、延迟、分配与恢复；本地微基准不替代真实后端容量验收 |
@@ -45,7 +45,7 @@
 | --- | --- | --- |
 | 出现第二个同步调用的服务，且目标地址会随环境变化 | 服务发现适配 | 已有可选 [HTTP 韧性客户端](../src/MS.Microservice.Http.Resilience/README.md)。先用配置或部署平台的服务名连接两个测试实例；验证地址变化、一个实例失联、总超时与取消，不自建注册中心。 |
 | 应用需要保存由本框架加密的数据，并要求在不停读旧数据时轮换密钥 | 密钥来源和密钥 ID | [AES-GCM v1](../src/MS.Microservice.Core/Security/Cryptology/authenticated-encryption.md) 只有格式版本，没有密钥 ID。先确定实际密钥管理服务，再设计新封套版本、旧新密钥并存期限及错误密钥测试；不能把密钥写进仓库配置。 |
-| 多实例服务反复读取同一批数据，且能说明失效规则 | 共享缓存后端与失效广播验证 | [Caching](../src/MS.Microservice.Caching/README.md) 已统一键、策略、回源预算与监测，旧 Core／Lab 缓存已移除。显式 JSON 元数据入口已提供，但仍需选定真实后端，验证跨实例读取、过期、回源、主动失效、故障和所需的 AOT 发布；广播适配尚未实现。 |
+| 多实例服务反复读取同一批数据，且能说明失效规则 | 共享缓存后端与失效广播验证 | [Caching](../MS.Microservice.Caching/src/MS.Microservice.Caching/README.md) 已统一键、策略、回源预算与监测，旧 Core／Lab 缓存已移除。显式 JSON 元数据入口已提供，但仍需选定真实后端，验证跨实例读取、过期、回源、主动失效、故障和所需的 AOT 发布；广播适配尚未实现。 |
 | 业务文件必须跨实例访问，不能继续保存在单机目录 | 对象存储适配 | Lab 上传目前使用本地 `StorageDirectory`。先选定对象存储及权限模型，再验证大小限制、流式上传、取消、失败清理和下载授权；不把 Lab 文件接口直接升为通用 API。 |
 
 定时与后台业务任务已有 [Tasks／Coravel](../MS.Microservice.Tasks/README.md) 组件，后续编排优先复用其持久任务与执行能力。Saga、多租户等扩展仍需具体应用用例和独立验收条件。

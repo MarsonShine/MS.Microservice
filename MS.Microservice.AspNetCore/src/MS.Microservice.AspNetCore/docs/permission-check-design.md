@@ -12,7 +12,7 @@ The original `AddExternalIdentity` entry point is retained in [the compatibility
 
 ## Measurement boundary
 
-The [microbenchmark](../../../benchmarks/MS.Microservice.AspNetCore.Benchmarks/Program.cs) measures the public permission method on prebuilt principals, not HTTP throughput. The earlier implementation used `FindAll`, LINQ and `Split`; the revised scanner avoids token arrays and substrings. The comparison baseline was commit `7b1c78a`.
+The [microbenchmark](../../../../benchmarks/MS.Microservice.AspNetCore.Benchmarks/Program.cs) measures the public permission method on prebuilt principals, not HTTP throughput. The earlier implementation used `FindAll`, LINQ and `Split`; the revised scanner avoids token arrays and substrings. The comparison baseline was commit `7b1c78a`.
 
 Median values from five rounds of 200,000 calls, Windows x64, .NET 10.0.12 Release:
 

@@ -8,14 +8,8 @@
   </Folder>
   <Folder Name="/build/"><File Path="Directory.Build.props" /><File Path="Directory.Packages.props" /></Folder>
   <Folder Name="/src/">
-    <Project Path="src/MS.Microservice.Caching/MS.Microservice.Caching.csproj" />
-    <Project Path="src/MS.Microservice.Caching.Redis/MS.Microservice.Caching.Redis.csproj" />
-    <Project Path="src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
-    <Project Path="src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
     <Project Path="src/MS.Microservice.Audio/MS.Microservice.Audio.csproj" />
     <Project Path="src/MS.Microservice.Core/MS.Microservice.Core.csproj" />
-    <Project Path="src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
-    <Project Path="src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
     <Project Path="src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj" />
     <Project Path="src/MS.Microservice.EventBus/MS.Microservice.EventBus.csproj" />
     <Project Path="src/MS.Microservice.EventSourcing/MS.Microservice.EventSourcing.csproj" />
@@ -63,14 +57,9 @@
     <Project Path="samples/AI/MS.Microservice.Samples.EducationalImages/MS.Microservice.Samples.EducationalImages.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="test/MS.Microservice.Caching.Tests/MS.Microservice.Caching.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Caching.Redis.Tests/MS.Microservice.Caching.Redis.Tests.csproj" />
     <Project Path="test/MS.Microservice.Architecture.Tests/MS.Microservice.Architecture.Tests.csproj" />
-    <Project Path="test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
     <Project Path="test/MS.Microservice.Audio.Tests/MS.Microservice.Audio.Tests.csproj" />
     <Project Path="test/MS.Microservice.Core.Tests/MS.Microservice.Core.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Documents.Rendering.Tests/MS.Microservice.Documents.Rendering.Tests.csproj" />
-    <Project Path="test/MS.Microservice.Documents.Tests/MS.Microservice.Documents.Tests.csproj" />
     <Project Path="test/MS.Microservice.EventBus.Tests/MS.Microservice.EventBus.Tests.csproj" />
     <Project Path="test/MS.Microservice.Excel.Tests/MS.Microservice.Excel.Tests.csproj" />
     <Project Path="test/MS.Microservice.HealthChecks.Redis.Tests/MS.Microservice.HealthChecks.Redis.Tests.csproj" />
@@ -90,6 +79,32 @@
     <Project Path="test/MS.Microservice.Swagger.Tests/MS.Microservice.Swagger.Tests.csproj" />
     <Project Path="test/MS.Microservice.Threading.Tests/MS.Microservice.Threading.Tests.csproj" />
     <Project Path="test/ProcessFixture/ProcessFixture.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.AspNetCore/" />
+  <Folder Name="/MS.Microservice.AspNetCore/src/">
+    <Project Path="MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj" />
+    <Project Path="MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore.Encryption/MS.Microservice.AspNetCore.Encryption.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.AspNetCore/test/">
+    <Project Path="MS.Microservice.AspNetCore/test/MS.Microservice.AspNetCore.Tests/MS.Microservice.AspNetCore.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Caching/" />
+  <Folder Name="/MS.Microservice.Caching/src/">
+    <Project Path="MS.Microservice.Caching/src/MS.Microservice.Caching/MS.Microservice.Caching.csproj" />
+    <Project Path="MS.Microservice.Caching/src/MS.Microservice.Caching.Redis/MS.Microservice.Caching.Redis.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Caching/test/">
+    <Project Path="MS.Microservice.Caching/test/MS.Microservice.Caching.Tests/MS.Microservice.Caching.Tests.csproj" />
+    <Project Path="MS.Microservice.Caching/test/MS.Microservice.Caching.Redis.Tests/MS.Microservice.Caching.Redis.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Documents/" />
+  <Folder Name="/MS.Microservice.Documents/src/">
+    <Project Path="MS.Microservice.Documents/src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+    <Project Path="MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
+  </Folder>
+  <Folder Name="/MS.Microservice.Documents/test/">
+    <Project Path="MS.Microservice.Documents/test/MS.Microservice.Documents.Tests/MS.Microservice.Documents.Tests.csproj" />
+    <Project Path="MS.Microservice.Documents/test/MS.Microservice.Documents.Rendering.Tests/MS.Microservice.Documents.Rendering.Tests.csproj" />
   </Folder>
   <Folder Name="/MS.Microservice.AI/" />
   <Folder Name="/MS.Microservice.AI/src/">

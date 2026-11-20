@@ -4,7 +4,7 @@
 
 | 项目 | 本轮结论 | 证据或原因 |
 | --- | --- | --- |
-| AspNetCore | 提交 `0c4b8ca` | 授权权限检查分割字符串，单 claim 匹配由 342.8 ns / 344 B 降到 259.9 ns / 216 B；详见[项目说明](../src/MS.Microservice.AspNetCore/README.md#permission-check-cost)。 |
+| AspNetCore | 提交 `0c4b8ca` | 授权权限检查分割字符串，单 claim 匹配由 342.8 ns / 344 B 降到 259.9 ns / 216 B；详见[项目说明](../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/README.md#permission-check-cost)。 |
 | Audio | 提交 `6dec9ab` | 未知格式探测由 570.0 ns / 1160 B 降到 505.3 ns / 0 B；同时修正大于 2 GiB 的流长度先转 `int` 的溢出；详见[项目说明](../src/MS.Microservice.Audio/README.md)。 |
 | Core | 不改动 | 已使用的 HTTP 查询参数对象路径依赖 `PropertyAccessors` 运行时编译并缓存属性访问器。它已避免每次调用重复反射，但 IL 和表达树两种策略都不适用于 Native AOT。仅在这里换成另一种反射写法既不解决 AOT，也缺少收益证据。Core 测试 785 项通过。 |
 | Domain.Primitives | 不改动 | 只有实体、审计等契约，没有本程序集拥有的高频执行路径。作为 Core 依赖完成构建。 |

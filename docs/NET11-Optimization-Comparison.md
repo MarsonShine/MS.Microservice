@@ -25,7 +25,7 @@ C# 15 允许为外围循环命名，并从内部用 `break label;` 或 `continue
 | 现有路径 | 升级前控制方式 | .NET 11 后的判断 |
 | --- | --- | --- |
 | [ICollectionExtensions](../src/MS.Microservice.Core/Extension/ICollectionExtensions.cs) | 内层 `break` 只停止当前内层循环 | 保持原样；跳出外层会改变结果。 |
-| [ExternalIdentity](../src/MS.Microservice.AspNetCore/ExternalIdentity.cs) | 找到匹配后直接 `return` | 已退出方法，额外标签没有减少状态。 |
+| [ExternalIdentity](../MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/ExternalIdentity.cs) | 找到匹配后直接 `return` | 已退出方法，额外标签没有减少状态。 |
 | [JobExecutor](../MS.Microservice.Tasks/src/MS.Microservice.Tasks/JobExecutor.cs) | 针对当前队列结束扫描，并经 `finally` 释放资源 | 保持原有作用域；跨层跳转可能改变调度与清理。 |
 | [CsvHelper](../src/MS.Microservice.Excel/CsvHelper.cs) | `quote` 记录字段输出格式 | 不是跨层退出标志，不能替换为标签。 |
 

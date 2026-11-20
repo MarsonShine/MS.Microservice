@@ -9,7 +9,7 @@ COPY samples/Reference/MS.Microservice.Reference.Application/MS.Microservice.Ref
 COPY samples/Reference/MS.Microservice.Reference.Domain/MS.Microservice.Reference.Domain.csproj samples/Reference/MS.Microservice.Reference.Domain/
 COPY samples/Reference/MS.Microservice.Reference.Persistence/MS.Microservice.Reference.Persistence.csproj samples/Reference/MS.Microservice.Reference.Persistence/
 COPY samples/Reference/MS.Microservice.Reference.Web/MS.Microservice.Reference.Web.csproj samples/Reference/MS.Microservice.Reference.Web/
-COPY src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj src/MS.Microservice.AspNetCore/
+COPY MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/MS.Microservice.AspNetCore.csproj MS.Microservice.AspNetCore/src/MS.Microservice.AspNetCore/
 COPY src/MS.Microservice.Core/MS.Microservice.Core.csproj src/MS.Microservice.Core/
 COPY src/MS.Microservice.Domain.Primitives/MS.Microservice.Domain.Primitives.csproj src/MS.Microservice.Domain.Primitives/
 COPY src/MS.Microservice.Threading/MS.Microservice.Threading.csproj src/MS.Microservice.Threading/
