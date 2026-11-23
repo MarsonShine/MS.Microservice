@@ -1,28 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="348" viewBox="0 0 900 348" role="img" aria-labelledby="title description">
-  <title id="title">相同的一行 CSV，写入器收到几次调用？</title>
-  <desc id="description">原实现逐字段提交正文、分隔符、引号和换行，调用十六次。新实现暂存这一行的三十个 UTF-16 字符，调用写入器一次。两者都输出三十四字节 UTF-8。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="445" viewBox="0 0 900 445" role="img" aria-labelledby="title description">
+  <title id="title">1024 行 x，各自在什么时候交给 StreamWriter？</title>
+  <desc id="description">每行 x 加 CRLF 占三个 UTF-16 代码单元。逐行提交时，调用 StreamWriter.WriteAsync 1024 次。跨行暂存时，3072 个字符占 4096 容量的四分之三，末尾只需一次调用。两条路径都由 StreamWriter 编码后写入目标流。</desc>
   <style>
     text { font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif; fill:#183b46 }
-    .title {font-size:24px;font-weight:700}.body,.cell {font-size:16px}.head,.total {font-size:18px;font-weight:650}
-    .count {font:16px "Microsoft YaHei",sans-serif}.code {font:16px Consolas,"Microsoft YaHei",monospace}
+    .title { font-size:24px; font-weight:700 }
+    .label { font-size:18px; font-weight:650 }
+    .body { font-size:16px }
+    .code { font:17px Consolas,"Microsoft YaHei",monospace }
   </style>
-  <rect width="900" height="348" rx="16" fill="#f8faf9"/>
-  <text x="28" y="39" class="title">同一行 CSV，哪些字符一起交给 StreamWriter？</text>
-  <text x="28" y="71" class="body">五个字段，最后一列为空。↵ 表示字段内部的 LF，记录末尾另写 CRLF。</text>
-  <text x="30" y="109" class="head">旧版每个字段分别提交</text>
-  <g transform="translate(30,123)"><rect width="105" height="65" rx="7" fill="#e4edf5"/><text x="52.5" y="24" text-anchor="middle" class="cell">订单</text><text x="52.5" y="49" text-anchor="middle" class="count">1 次</text></g>
-<g transform="translate(143,123)"><rect width="105" height="65" rx="7" fill="#e4edf5"/><text x="52.5" y="24" text-anchor="middle" class="cell">x,y</text><text x="52.5" y="49" text-anchor="middle" class="count">4 次</text></g>
-<g transform="translate(256,123)"><rect width="105" height="65" rx="7" fill="#e4edf5"/><text x="52.5" y="24" text-anchor="middle" class="cell">say &quot;hi&quot;</text><text x="52.5" y="49" text-anchor="middle" class="count">4 次</text></g>
-<g transform="translate(369,123)"><rect width="105" height="65" rx="7" fill="#e4edf5"/><text x="52.5" y="24" text-anchor="middle" class="cell">a↵b</text><text x="52.5" y="49" text-anchor="middle" class="count">4 次</text></g>
-<g transform="translate(482,123)"><rect width="105" height="65" rx="7" fill="#e4edf5"/><text x="52.5" y="24" text-anchor="middle" class="cell">空字段</text><text x="52.5" y="49" text-anchor="middle" class="count">2 次</text></g>
-<g transform="translate(595,123)"><rect width="105" height="65" rx="7" fill="#e4edf5"/><text x="52.5" y="24" text-anchor="middle" class="cell">行结束</text><text x="52.5" y="49" text-anchor="middle" class="count">1 次</text></g>
-  <text x="739" y="160" class="total">合计 16 次</text>
-  <path d="M30 203h840" stroke="#c7d6d7"/>
-  <text x="30" y="233" class="head">新版填入同一个字符块</text>
-  <rect x="30" y="247" width="666" height="55" rx="7" fill="#d5eee4"/>
-  <text x="49" y="281" class="code">订单,&quot;x,y&quot;,&quot;say &quot;&quot;hi&quot;&quot;&quot;,&quot;a↵b&quot;,</text>
-  <text x="522" y="281" class="cell">+ CRLF = 30 字符</text>
-  <path d="M702 274h22m-5-5 5 5-5 5" stroke="#48606c" stroke-width="2" fill="none"/>
-  <text x="739" y="280" class="total">一批 1 次</text>
-  <text x="30" y="328" class="body">两种写法的 UTF-8 输出均为 34 字节。计数位置是 StreamWriter.WriteAsync。</text>
+  <rect width="900" height="445" rx="14" fill="#f8faf9"/>
+  <text x="28" y="39" class="title">1024 条短记录，哪一步少了 1023 次调用？</text>
+  <text x="28" y="70" class="body">输入为同一个字段 x，默认行结束符为 CRLF。每行占用 3 个 UTF-16 字符位置。</text>
+
+  <text x="28" y="112" class="label">逐行交给 StreamWriter</text>
+  <g fill="#e1ebf4">
+    <rect x="28" y="127" width="148" height="45" rx="6"/>
+    <rect x="185" y="127" width="148" height="45" rx="6"/>
+    <rect x="378" y="127" width="148" height="45" rx="6"/>
+  </g>
+  <g class="code" text-anchor="middle">
+    <text x="102" y="156">x\r\n</text>
+    <text x="259" y="156">x\r\n</text>
+    <text x="356" y="156">…</text>
+    <text x="452" y="156">x\r\n</text>
+  </g>
+  <g class="body" text-anchor="middle">
+    <text x="102" y="196">第 1 行</text>
+    <text x="259" y="196">第 2 行</text>
+    <text x="452" y="196">第 1024 行</text>
+  </g>
+  <text x="566" y="156" class="label">WriteAsync × 1024</text>
+  <text x="566" y="185" class="body">每次交出 3 个字符</text>
+  <path d="M28 215H872" stroke="#c7d6d7"/>
+
+  <text x="28" y="248" class="label">在 4096 个位置里跨行累积</text>
+  <rect x="28" y="265" width="500" height="44" rx="5" fill="#e3e9e9"/>
+  <path d="M33 265H403V309H33Q28 309 28 304V270Q28 265 33 265Z" fill="#bce5d4"/>
+  <text x="215" y="293" class="body" text-anchor="middle">已用 3072</text>
+  <text x="466" y="293" class="body" text-anchor="middle">可用 1024</text>
+  <text x="566" y="286" class="label">WriteAsync × 1</text>
+  <text x="566" y="315" class="body">枚举结束，一次交出 3072 个字符</text>
+  <text x="28" y="338" class="body">used 逐行增加：3 → 6 → 9 → … → 3072</text>
+  <path d="M28 358H872" stroke="#c7d6d7"/>
+
+  <text x="28" y="390" class="label">计数位置</text>
+  <text x="128" y="390" class="code">CsvHelper → StreamWriter.WriteAsync</text>
+  <text x="28" y="420" class="body">目标流实测（此输入）：两版均收到 1 次写入，共 3072 字节，另有 2 次刷新。</text>
 </svg>

@@ -20,6 +20,10 @@ writer 的编码决定输出 preamble。可定位流在非零位置写入不重�
 
 写入显式管理源枚举器和 writer。从枚举器获取、推进、记录处理、编码到刷新均可能失败。已有错误或取消时，分别尝试清理枚举器与 writer，不让清理错误覆盖原错误；正常路径的清理错误传播。清理可能刷新部分输出，因此发布必须由调用者控制。同步枚举器与不响应令牌的流不能强行取消。
 
+记录结束符也能留在字符块中。多条短记录可以一起交给 `StreamWriter`，成功完成 `WriteAsync` 时会提交尾块并刷新目标流。若消费者需要逐行可见，不能把写入记录结束符当作刷新信号。[逐行与跨行提交的代码对照](csv-performance.md)
+
+写出超长字段时，每段语法扫描最多处理 4096 个 UTF-16 代码单元，转义复制每段最多处理 2048 个，开始下一段前都检查取消。无需双写引号的超长正文直接将整段原字符串及令牌交给 `StreamWriter.WriteAsync`。本行结束时再检查取消，避免目标流在写入时触发取消后，写入器又调用源的 `MoveNext()`。[取消检查与直接写入的代码对照](csv-performance.md#长字段什么时候能响应取消)
+
 本接口不复用 MiniExcel 的宽松 CSV 映射，因为需要固定语法、原始换行、记录预算和异步生命周期。参照版本为 MiniExcel 1.42.0 的 [CsvReader](https://github.com/mini-software/MiniExcel/blob/70fd8e755dfc8220073e1fe5d1b8b5c3e058e463/src/MiniExcel/Csv/CsvReader.cs)及 [CsvWriter](https://github.com/mini-software/MiniExcel/blob/70fd8e755dfc8220073e1fe5d1b8b5c3e058e463/src/MiniExcel/Csv/CsvWriter.cs)。
 
 验证见 [CsvHelperTests](../../../test/MS.Microservice.Excel.Tests/CsvHelperTests.cs)，覆盖语法、BOM 双层处理、原始换行、分段流、预算边界、取消和源／writer 清理双重失败。它们验证 CSV 记录接口，不证明工作簿逐行解码能力。

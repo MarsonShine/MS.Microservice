@@ -1,9 +1,11 @@
 # 当前状态
-更新：2026-11-20
+更新：2026-11-23
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 39a704c
+Baseline: 1b02b69
+
+CSV 写入器已支持跨行复用字符块、自定义分隔符查找表复用和按引号密度转义，行末写入触发取消后会停止枚举。见[源码与示例](../src/MS.Microservice.Excel/docs/csv-performance.md)和[基准与回归验收](validation/CSV-WRITE-BLOCKS/summary.md)。
 
 EventSourcing 的 Lab 读取适配器和 Excel 的 CSV、工作簿、校验及颜色表已完成性能检查。见[前后基准与验收](validation/EVENTSOURCING-EXCEL-PERF/summary.md)。
 
