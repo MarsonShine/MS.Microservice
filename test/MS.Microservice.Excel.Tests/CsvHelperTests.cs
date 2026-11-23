@@ -284,6 +284,62 @@ public sealed class CsvHelperTests
     }
 
     [Fact]
+    public async Task WriteAsync_NestedExportWithChangedDelimiter_EachWriterQuotesItsOwnDelimiter()
+    {
+        // '+' (43) and ';' (59) replace one another in the same 16-slot syntax cache.
+        var plus = new CsvOptions { Delimiter = '+' };
+        IReadOnlyList<string?> row = ["a+b", "a;b", "a,b"];
+        var padding = new string('x', 16_384);
+        using var inner = new MemoryStream();
+        using var outer = new NestedExportStream(() =>
+            CsvHelper.WriteAsync(inner, [row], plus with { Delimiter = ';' }));
+
+        await CsvHelper.WriteAsync(outer, PlusRows(), plus);
+
+        const string plusRow = "\"a+b\"+a;b+a,b\r\n";
+        Assert.Equal(plusRow + padding + "\r\n" + plusRow, Encoding.UTF8.GetString(outer.ToArray()));
+        Assert.Equal("a+b;\"a;b\";a,b\r\n", Encoding.UTF8.GetString(inner.ToArray()));
+
+        IEnumerable<IReadOnlyList<string?>> PlusRows()
+        {
+            yield return row;
+            yield return [padding];
+            Assert.True(inner.Length > 0);
+            yield return row;
+        }
+    }
+
+    [Fact]
+    public async Task WriteAsync_ShortRowsEndingAtBlockBoundary_PreserveNewlineAndFinalBytes()
+    {
+        // 819 five-character rows leave one slot before the blank row's CRLF.
+        var prefix = Enumerable.Repeat<IReadOnlyList<string?>>(["abc"], 819);
+        var rows = prefix.Concat([[""], ["😀", "tail"]]);
+        using var output = new MemoryStream();
+
+        await CsvHelper.WriteAsync(output, rows);
+
+        var expected = string.Concat(Enumerable.Repeat("abc\r\n", 819)) + "\r\n😀,tail\r\n";
+        Assert.Equal(Encoding.UTF8.GetBytes(expected), output.ToArray());
+    }
+
+    [Theory]
+    [InlineData(4091, 1, 3)]
+    [InlineData(1, 32, 200)]
+    public async Task WriteAsync_MixedTextAndQuoteRunsAcrossBlocks_DoublesEveryQuote(int gap, int quotes, int repetitions)
+    {
+        var segment = new string('x', gap) + new string('"', quotes) + "😀";
+        var value = string.Concat(Enumerable.Repeat(segment, repetitions)) + new string('汉', 4097);
+        IReadOnlyList<string?>[] rows = [["x"], [value]];
+        using var output = new MemoryStream();
+
+        await CsvHelper.WriteAsync(output, rows);
+
+        var expected = "x\r\n\"" + value.Replace("\"", "\"\"") + "\"\r\n";
+        Assert.Equal(Encoding.UTF8.GetBytes(expected), output.ToArray());
+    }
+
+    [Fact]
     public async Task WriteAsync_EscapesQuotesAcrossOutputBlocksAndWritesOnlyTheLastValidCharacters()
     {
         string value = new string('"', 4096) + "😀\r\n";
@@ -409,18 +465,55 @@ public sealed class CsvHelperTests
         Assert.True(output.CanWrite);
     }
 
+    [Theory]
+    [InlineData('x')]
+    [InlineData('"')]
+    public async Task WriteAsync_CanceledDuringLongField_StopsWritingBeforeRequestingNextRecord(char character)
+    {
+        using var source = new CancellationTokenSource();
+        using var output = new CountingWriteStream(afterWrite: source.Cancel, honorCancellation: false);
+        var value = new string(character, 65_536);
+
+        var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            CsvHelper.WriteAsync(output, Rows(), cancellationToken: source.Token));
+
+        Assert.Equal(source.Token, error.CancellationToken);
+        Assert.True(output.CanWrite);
+        // One ASCII block triggers cancellation; disposal may flush StreamWriter's pending block.
+        Assert.InRange(output.BytesWritten, 1, 2 * 4096);
+        Assert.True(output.SawCancelableWrite);
+
+        IEnumerable<IReadOnlyList<string?>> Rows()
+        {
+            yield return [value];
+            throw new InvalidOperationException("Requested the next record after the destination canceled.");
+        }
+    }
+
     [Fact]
-    public async Task WriteAsync_CanceledDuringIo_PropagatesAndLeavesStreamOpen()
+    public async Task WriteAsync_CanceledDuringFullRowWrite_DoesNotRequestNextRecord()
     {
         using var source = new CancellationTokenSource();
         using var output = new CountingWriteStream(afterWrite: source.Cancel);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CsvHelper.WriteAsync(output,
-            new IReadOnlyList<string?>[] { new[] { new string('x', 9000) } }, cancellationToken: source.Token));
+        var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            CsvHelper.WriteAsync(output, Rows(), cancellationToken: source.Token));
 
-        Assert.True(output.CanWrite);
-        Assert.True(output.BytesWritten > 0);
+        Assert.Equal(source.Token, error.CancellationToken);
         Assert.True(output.SawCancelableWrite);
+
+        IEnumerable<IReadOnlyList<string?>> Rows()
+        {
+            // With CRLF, each row fills one CSV block. StreamWriter also buffers a block.
+            IReadOnlyList<string?> row = [new string('x', 4094)];
+            for (var index = 0; index < 3; index++)
+            {
+                if (source.IsCancellationRequested)
+                    throw new InvalidOperationException("Requested a record after the destination canceled.");
+                yield return row;
+            }
+            throw new InvalidOperationException("Expected a full block to reach the destination.");
+        }
     }
 
     [Fact]
@@ -703,7 +796,22 @@ public sealed class CsvHelperTests
         }
     }
 
-    private sealed class CountingWriteStream(Action? afterWrite = null) : Stream
+    private sealed class NestedExportStream(Func<Task> export) : MemoryStream
+    {
+        private bool _started;
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_started)
+            {
+                _started = true;
+                await export();
+            }
+            await base.WriteAsync(buffer, cancellationToken);
+        }
+    }
+
+    private sealed class CountingWriteStream(Action? afterWrite = null, bool honorCancellation = true) : Stream
     {
         private bool _disposed;
         public long BytesWritten { get; private set; }
@@ -728,8 +836,9 @@ public sealed class CsvHelperTests
 
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             SawCancelableWrite |= cancellationToken.CanBeCanceled;
+            if (honorCancellation)
+                cancellationToken.ThrowIfCancellationRequested();
             Write(buffer.Span);
             return ValueTask.CompletedTask;
         }

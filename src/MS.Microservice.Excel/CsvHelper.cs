@@ -19,7 +19,10 @@ public sealed class CsvFormatException(string message, long rowNumber, int colum
 public static class CsvHelper
 {
     private const int WriteBlockSize = 4096;
+    private const int MinCharsPerSparseQuote = 16;
     private static readonly SearchValues<char> CommaSyntax = SearchValues.Create(",\"\r\n");
+    // Bound retained tables even when callers supply arbitrary Unicode delimiters.
+    private static readonly SearchValues<char>?[] CustomSyntax = new SearchValues<char>?[16];
 
     /// <summary>
     /// Reads from the current position using the specified encoding, preserving field text and embedded newlines.
@@ -166,7 +169,8 @@ public static class CsvHelper
         cancellationToken.ThrowIfCancellationRequested();
 
         var writer = new StreamWriter(destination, options.Encoding, bufferSize: 4096, leaveOpen: true);
-        var syntax = options.Delimiter == ',' ? CommaSyntax : SearchValues.Create([options.Delimiter, '"', '\r', '\n']);
+        var delimiter = options.Delimiter;
+        var syntax = delimiter == ',' ? CommaSyntax : GetCustomSyntax(delimiter);
         var block = ArrayPool<char>.Shared.Rent(WriteBlockSize);
         int used = 0;
         int maximumUsed = 0;
@@ -209,7 +213,7 @@ public static class CsvHelper
                         throw new CsvFormatException("The record exceeds MaxRecordChars.", rowNumber, column + 1);
 
                     if (WriteBlockSize - used < 2) await WriteBlockAsync().ConfigureAwait(false);
-                    if (column != 0) block[used++] = options.Delimiter;
+                    if (column != 0) block[used++] = delimiter;
                     if (quote) block[used++] = '"';
                     if (quotes == 0)
                     {
@@ -226,15 +230,15 @@ public static class CsvHelper
                     {
                         for (int offset = 0; offset < value.Length;)
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             // Even an all-quote piece fits once every quote has been doubled.
                             int count = Math.Min(value.Length - offset, WriteBlockSize / 2);
                             if (2 * count > WriteBlockSize - used) await WriteBlockAsync().ConfigureAwait(false);
-                            for (int i = offset; i < offset + count; i++)
-                            {
-                                char c = value[i];
-                                block[used++] = c;
-                                if (c == '"') block[used++] = c;
-                            }
+                            var part = value.AsSpan(offset, count);
+                            var destinationPart = block.AsSpan(used);
+                            used += quotes <= value.Length / MinCharsPerSparseQuote
+                                ? CopySparseQuotes(part, destinationPart)
+                                : CopyDenseQuotes(part, destinationPart);
                             offset += count;
                         }
                     }
@@ -248,9 +252,11 @@ public static class CsvHelper
                 if (options.NewLine.Length > WriteBlockSize - used) await WriteBlockAsync().ConfigureAwait(false);
                 options.NewLine.CopyTo(0, block, used, options.NewLine.Length);
                 used += options.NewLine.Length;
-                await WriteBlockAsync().ConfigureAwait(false);
+                if (used == WriteBlockSize) await WriteBlockAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
+            await WriteBlockAsync().ConfigureAwait(false);
             var completedEnumerator = enumerator;
             enumerator = null;
             completedEnumerator.Dispose();
@@ -294,6 +300,45 @@ public static class CsvHelper
             used = 0;
             return writer.WriteAsync(block.AsMemory(0, count), cancellationToken);
         }
+    }
+
+    private static SearchValues<char> GetCustomSyntax(char delimiter)
+    {
+        // Validation excludes the three fixed syntax characters as delimiters.
+        ref var slot = ref CustomSyntax[delimiter % CustomSyntax.Length];
+        var syntax = Volatile.Read(ref slot);
+        if (syntax is null || !syntax.Contains(delimiter))
+        {
+            syntax = SearchValues.Create([delimiter, '"', '\r', '\n']);
+            Volatile.Write(ref slot, syntax);
+        }
+        return syntax;
+    }
+
+    private static int CopyDenseQuotes(ReadOnlySpan<char> source, Span<char> destination)
+    {
+        int written = 0;
+        foreach (char c in source)
+        {
+            destination[written++] = c;
+            if (c == '"') destination[written++] = c;
+        }
+        return written;
+    }
+
+    private static int CopySparseQuotes(ReadOnlySpan<char> source, Span<char> destination)
+    {
+        int written = 0;
+        int quote;
+        while ((quote = source.IndexOf('"')) >= 0)
+        {
+            source[..(quote + 1)].CopyTo(destination[written..]);
+            written += quote + 1;
+            destination[written++] = '"';
+            source = source[(quote + 1)..];
+        }
+        source.CopyTo(destination[written..]);
+        return written + source.Length;
     }
 
     private enum FieldState { Start, Unquoted, Quoted, AfterQuote }
