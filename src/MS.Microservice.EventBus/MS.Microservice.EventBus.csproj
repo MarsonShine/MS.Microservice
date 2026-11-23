@@ -3,7 +3,7 @@
 		<IsPackable>true</IsPackable>
 		<PackageId>MS.Microservice.EventBus</PackageId>
 		<Title>MS.Microservice EventBus</Title>
-		<Description>Reusable EventBus abstractions and an optimized in-memory subscription manager for MS.Microservice.</Description>
+		<Description>In-process event publishing, subscriptions, and scoped handler dispatch for MS.Microservice.</Description>
 		<Authors>MS.Microservice</Authors>
 		<PackageTags>eventbus;integration-events;messaging;microservices</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -11,7 +11,8 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />
-		<None Include="samples\basic-usage.md" Pack="true" PackagePath="contentFiles/any/any/samples/" />
+		<None Include="samples\basic-usage.md" Pack="true" PackagePath="contentFiles/any/any/samples/basic-usage.md;samples/basic-usage.md" />
+		<None Update="docs\subscription-performance.md;docs\assets\subscription-index.svg" Pack="true" PackagePath="%(Identity)" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="../MS.Microservice.Core/MS.Microservice.Core.csproj" />

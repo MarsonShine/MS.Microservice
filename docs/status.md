@@ -7,6 +7,10 @@ Baseline: 39a704c
 
 EventSourcing 的 Lab 读取适配器和 Excel 的 CSV、工作簿、校验及颜色表已完成性能检查。见[前后基准与验收](validation/EVENTSOURCING-EXCEL-PERF/summary.md)。
 
+EventBus 已优化订阅注册和并发名称查询，保留同名事件的首次类型绑定与处理器去重语义。见[源码图解](../src/MS.Microservice.EventBus/docs/subscription-performance.md)和[验收记录](validation/EVENTBUS-SUBSCRIPTIONS/summary.md)。
+
+EventBus 的进程内发布已接通本包处理器的 `Handle`，见[可运行示例](../src/MS.Microservice.EventBus/samples/basic-usage.md)和[消费验收](validation/EVENTBUS-DISPATCH/summary.md)。
+
 Core 已完成全模块性能检查，函数式链表保留不可变结构、惰性投影与左折叠。见[源码导读](../src/MS.Microservice.Core/docs/performance-review.md)和[验收记录](validation/CORE-PERFORMANCE/summary.md)。
 
 Audio 的 WAV 混音、单声道转立体声和多段合并已降低耗时与托管分配，见[优化笔记](../src/MS.Microservice.Audio/docs/wav-processing-performance.md)和[性能验收](validation/AUDIO-PROCESSING-PERF/summary.md)。

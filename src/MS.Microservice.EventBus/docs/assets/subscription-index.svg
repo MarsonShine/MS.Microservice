@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="400" viewBox="0 0 920 400" role="img" aria-labelledby="title desc">
+  <title id="title">一次订阅怎样进入消费快照</title>
+  <desc id="desc">OrderCreated 首先注册 A，再追加 B。按名称查询只读绑定的事件类型。发布时按真实类型取得有序快照，在作用域内依次执行 A 和 B。</desc>
+  <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#42606a"/></marker></defs>
+  <style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#1b3542}.title{font-size:24px;font-weight:700}.label{font-size:18px;font-weight:650}.note{font-size:15px}.code{font:16px Consolas,monospace}.edge{stroke:#42606a;fill:none;stroke-width:1.8;marker-end:url(#arrow)}</style>
+  <rect width="920" height="400" rx="14" fill="#f7faf9"/>
+  <text x="26" y="40" class="title">发布 OrderCreated 时，为什么 A 先于 B 执行？</text>
+  <text x="26" y="69" class="note">A、B 分别表示按顺序订阅同一事件类型的两个处理器。</text>
+  <path d="M26 86H894 M26 220H894" stroke="#c5d3d5"/>
+  <text x="26" y="119" class="label">注册 B · 写锁内</text>
+  <g fill="#d7e9f4"><rect x="26" y="134" width="205" height="66" rx="6"/><rect x="281" y="134" width="310" height="66" rx="6"/><rect x="641" y="134" width="253" height="66" rx="6"/></g>
+  <g text-anchor="middle"><text x="128" y="162" class="code">FirstHandler = A</text><text x="128" y="185" class="note">名称已绑定 OrderCreated</text><text x="436" y="162" class="code">Additional.AddLast(B)</text><text x="436" y="185" class="note">HandlerKey 定位 B 的链表节点</text><text x="768" y="162" class="code">Snapshot = null</text><text x="768" y="185" class="note">让下次发布看到此次变更</text></g>
+  <path class="edge" d="M236 167h37"/><path class="edge" d="M596 167h37"/>
+  <text x="26" y="255" class="label">发布 · 精确匹配运行时类型，锁外消费</text>
+  <g fill="#d9eee1"><rect x="26" y="273" width="285" height="60" rx="6"/><rect x="361" y="273" width="228" height="60" rx="6"/><rect x="641" y="273" width="253" height="60" rx="6"/></g>
+  <g text-anchor="middle"><text x="168" y="299" class="code">GetDispatchSnapshot</text><text x="168" y="321" class="note">取得有序数组 [A, B]</text><text x="475" y="310" class="code">await A.Handle(message)</text><text x="768" y="310" class="code">await B.Handle(message)</text></g>
+  <path class="edge" d="M316 303h37"/><path class="edge" d="M594 303h39"/>
+  <text x="26" y="372" class="note">A、B 在同一个发布作用域内解析。若 A 失败，发布方收到异常，本次 B 不会开始。</text>
+</svg>
