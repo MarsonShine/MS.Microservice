@@ -6,6 +6,7 @@ using MS.Microservice.Infrastructure.Utils.Excel;
 using NPOI.HSSF.Util;
 
 CsvCases.Run();
+if (args is ["--csv-only"]) return;
 WorkbookCases.Run();
 Bench.Measure("Color map construction", 512, () => new ExcelColorMap(),
     map => map.TryGetColor("Black", out var index) && index == HSSFColor.Black.Index);
