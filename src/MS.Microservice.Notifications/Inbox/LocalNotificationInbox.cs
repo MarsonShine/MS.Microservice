@@ -66,10 +66,13 @@ public sealed class LocalNotificationInbox
             }
             var key = Path.GetFileName(path);
             StoredFileKey.Validate(key);
-            var bytes = await ReadAsync(path, buffer, _options.MaximumScanBytes - totalBytes, cancellationToken).ConfigureAwait(false);
-            totalBytes += bytes.Length;
-            var notification = JsonSerializer.Deserialize<InboxNotification>(bytes.Span)
-                ?? throw new InvalidDataException("A stored notification is empty.");
+            var (notification, bytes) = await ReadJsonAsync<InboxNotification>(path, buffer,
+                _options.MaximumScanBytes - totalBytes, cancellationToken).ConfigureAwait(false);
+            totalBytes += bytes;
+            if (notification is null)
+            {
+                throw new InvalidDataException("The stored notification contains JSON null.");
+            }
             if (notification.Id != key || notification.CreatedAtUtc.Offset != TimeSpan.Zero || notification.ReadAtUtc is not null)
                 throw new InvalidDataException("Stored notification identity or timestamps are invalid.");
             ValidateContent(notification.Subject, notification.Body, notification.ActionPath);
@@ -145,43 +148,45 @@ public sealed class LocalNotificationInbox
         {
             return default;
         }
-        ReadOnlyMemory<byte> bytes;
         try
         {
-            bytes = await ReadAsync(path, buffer, remainingBytes, cancellationToken).ConfigureAwait(false);
+            var (time, bytes) = await ReadJsonAsync<DateTimeOffset>(path, buffer, remainingBytes, cancellationToken).ConfigureAwait(false);
+            if (time.Offset != TimeSpan.Zero)
+            {
+                throw new InvalidDataException("A read receipt must contain UTC time.");
+            }
+            return (time, bytes);
         }
         catch (FileNotFoundException)
         {
             return default;
         }
-        var time = JsonSerializer.Deserialize<DateTimeOffset>(bytes.Span);
-        if (time.Offset != TimeSpan.Zero)
-        {
-            throw new InvalidDataException("A read receipt must contain UTC time.");
-        }
-        return (time, bytes.Length);
     }
 
-    private async ValueTask<ReadOnlyMemory<byte>> ReadAsync(string path, ArrayBufferWriter<byte> buffer,
+    private async ValueTask<(T? Value, int Bytes)> ReadJsonAsync<T>(string path, ArrayBufferWriter<byte> buffer,
         long remainingBytes, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,
-            bufferSize: 1, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        long length = input.Length;
-        if (length > Math.Min(_options.MaximumNotificationBytes, remainingBytes))
+        buffer.ResetWrittenCount();
+        await using (var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,
+            bufferSize: 1, FileOptions.Asynchronous | FileOptions.SequentialScan))
         {
-            throw new InvalidDataException("Inbox data exceeds its encoded byte budget.");
+            long length = input.Length;
+            if (length > Math.Min(_options.MaximumNotificationBytes, remainingBytes))
+            {
+                throw new InvalidDataException("Inbox data exceeds its encoded byte budget.");
+            }
+            var memory = buffer.GetMemory(Math.Max(1, (int)length));
+            var data = memory[..(int)length];
+            await input.ReadExactlyAsync(data, cancellationToken).ConfigureAwait(false);
+            // Published files are immutable. EOF leaves data intact; any extra byte invalidates this read.
+            if (await input.ReadAsync(memory[..1], cancellationToken).ConfigureAwait(false) != 0)
+            {
+                throw new InvalidDataException("The published inbox file changed while being read.");
+            }
+            buffer.Advance(data.Length);
         }
-        var memory = buffer.GetMemory(Math.Max(1, (int)length));
-        var data = memory[..(int)length];
-        await input.ReadExactlyAsync(data, cancellationToken).ConfigureAwait(false);
-        // Published files are immutable. EOF leaves data intact; any extra byte invalidates this read.
-        if (await input.ReadAsync(memory[..1], cancellationToken).ConfigureAwait(false) != 0)
-        {
-            throw new InvalidDataException("The published inbox file changed while being read.");
-        }
-        return data;
+        return (JsonSerializer.Deserialize<T>(buffer.WrittenSpan), buffer.WrittenCount);
     }
 
     private string OwnerDirectory(string owner)

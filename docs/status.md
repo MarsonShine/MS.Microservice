@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 56de8f1
+Baseline: afd966d
+
+收件箱读取通知和已读回执时，在复用缓冲区内完成解析并返回值和单文件字节数。[代码对照](../src/MS.Microservice.Notifications/docs/notification-performance.md#为什么要在读取方法内把字节变成对象) · [回归与复测](validation/INBOX-JSON-BUFFER/summary.md)
 
 Swagger 的服务注册已按容器去重，Threading 的同键等待者直接复用在途任务，批处理按整数区间分发下标。见[Swagger 评审笔记](../src/MS.Microservice.Swagger/docs/performance-review.md)、[Threading 评审笔记](../src/MS.Microservice.Threading/docs/performance-review.md)和[性能及兼容性验收](validation/SWAGGER-THREADING-PERF/summary.md)。
 

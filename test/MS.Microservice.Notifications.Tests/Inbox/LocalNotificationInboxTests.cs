@@ -119,11 +119,13 @@ public sealed class LocalNotificationInboxTests : IDisposable
     [Fact]
     public async Task ScanByteBudget_IncludesReceiptsAndFailsRatherThanReturningPartialCounts()
     {
-        var message = await Inbox().PublishAsync("owner", "subject", "body");
-        await Inbox().MarkReadAsync("owner", message.Id);
-        await Inbox().PublishAsync("owner", "second", "body");
+        var message = await Inbox().PublishAsync("owner", "first", new string('中', 1024));
+        var readAt = await Inbox().MarkReadAsync("owner", message.Id);
+        var second = await Inbox(now: Now.AddSeconds(1)).PublishAsync("owner", "second", "short");
         var length = Directory.GetFiles(OwnerDirectory()).Sum(path => new FileInfo(path).Length);
-        Assert.Equal(2, (await Inbox(options: new() { MaximumScanBytes = length }).ListAsync("owner")).TotalCount);
+        var page = await Inbox(options: new() { MaximumScanBytes = length }).ListAsync("owner");
+        Assert.Equal((2, 1), (page.TotalCount, page.UnreadCount));
+        Assert.Equal(new[] { second, message with { ReadAtUtc = readAt } }, page.Items);
         await Assert.ThrowsAsync<InvalidDataException>(() => Inbox(options: new() { MaximumScanBytes = length - 1 }).ListAsync("owner"));
     }
 
@@ -194,10 +196,25 @@ public sealed class LocalNotificationInboxTests : IDisposable
     }
 
     [Fact]
-    public async Task CorruptReadReceiptDoesNotResetTheMessageToUnread()
+    public async Task EmptyNotificationAndJsonNullHaveDistinctDiagnostics()
     {
         var message = await Inbox().PublishAsync("owner", "subject", "body");
-        await File.WriteAllTextAsync(Path.Combine(OwnerDirectory(), message.Id[..32] + ".read"), "null");
+        var path = Path.Combine(OwnerDirectory(), message.Id);
+        await File.WriteAllBytesAsync(path, []);
+        await Assert.ThrowsAsync<JsonException>(() => Inbox().ListAsync("owner"));
+
+        await File.WriteAllTextAsync(path, "null");
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => Inbox().ListAsync("owner"));
+        Assert.Equal("The stored notification contains JSON null.", error.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("null")]
+    public async Task CorruptReadReceiptDoesNotResetTheMessageToUnread(string contents)
+    {
+        var message = await Inbox().PublishAsync("owner", "subject", "body");
+        await File.WriteAllTextAsync(Path.Combine(OwnerDirectory(), message.Id[..32] + ".read"), contents);
         await Assert.ThrowsAsync<JsonException>(() => Inbox().ListAsync("owner"));
         await Assert.ThrowsAsync<JsonException>(() => Inbox().MarkReadAsync("owner", message.Id));
     }
