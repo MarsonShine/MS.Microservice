@@ -52,7 +52,10 @@ public static class ProcessRunner
         try
         {
             var completed = await Task.WhenAny(all, fault.Task).WaitAsync(operation.Token).ConfigureAwait(false);
-            if (completed == fault.Task) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(await fault.Task).Throw();
+            if (completed == fault.Task)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(await fault.Task).Throw();
+            }
             await all.ConfigureAwait(false);
             operation.Token.ThrowIfCancellationRequested();
             return new(process.ExitCode, await output, await errors);
@@ -64,21 +67,48 @@ public static class ProcessRunner
                 : deadline.IsCancellationRequested ? new TimeoutException("Process execution timed out.", error) : error;
             var cleanupErrors = new List<Exception>();
             operation.Cancel();
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
-            catch (InvalidOperationException) { /* The process may have exited between the check and Kill. */ }
-            catch (Exception cleanup) { cleanupErrors.Add(cleanup); }
-            using var closing = new CancellationTokenSource(options.CleanupTimeout);
-            try { await process.WaitForExitAsync(closing.Token).ConfigureAwait(false); }
-            catch (Exception cleanup) { cleanupErrors.Add(cleanup); }
-            try { await all.WaitAsync(closing.Token).ConfigureAwait(false); }
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                /* The process may have exited between the check and Kill. */
+            }
             catch (Exception cleanup)
             {
-                if (!all.IsCompleted) cleanupErrors.Add(cleanup);
+                cleanupErrors.Add(cleanup);
+            }
+            using var closing = new CancellationTokenSource(options.CleanupTimeout);
+            try
+            {
+                await process.WaitForExitAsync(closing.Token).ConfigureAwait(false);
+            }
+            catch (Exception cleanup)
+            {
+                cleanupErrors.Add(cleanup);
+            }
+            try
+            {
+                await all.WaitAsync(closing.Token).ConfigureAwait(false);
+            }
+            catch (Exception cleanup)
+            {
+                if (!all.IsCompleted)
+                {
+                    cleanupErrors.Add(cleanup);
+                }
             }
             // Observe a late failure even when pipe closure outlives the cleanup deadline.
             _ = all.ContinueWith(t => { _ = t.Exception; }, CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            if (cleanupErrors.Count != 0) throw new AggregateException("Process cleanup failed.", new[] { primary }.Concat(cleanupErrors));
+            if (cleanupErrors.Count != 0)
+            {
+                throw new AggregateException("Process cleanup failed.", new[] { primary }.Concat(cleanupErrors));
+            }
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(primary).Throw();
             throw;
         }

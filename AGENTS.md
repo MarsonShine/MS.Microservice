@@ -49,6 +49,10 @@ Complete the fix when the invariant is restored and credible evidence covers the
 
 Briefly report the root cause, invariant, fix layer, changed behavior, verification performed or reused, and remaining uncertainty.
 
+## C# 控制流排版
+
+新增或修改 C# 控制流时使用 Allman 风格，每层缩进 4 个空格。`if`、`else if`、`else`、`for`、`foreach`、`while` 和 `do` 的语句体始终使用大括号，即使只有一条语句。控制语句头、左右大括号和块内语句分别占行。`else`、`catch` 和 `finally` 从新行开始。`try`、`catch` 和 `finally` 块即使只有一条语句或一行注释，也按多行排版。
+
 ## C# 扩展成员
 
 本仓库新增 C# 扩展方法时，统一使用 C# 14 引入的扩展块语法。例如，在静态类中用 `extension(ILogger logger)` 声明接收者，再在块内声明实例扩展方法。同一接收者的相关方法放在同一个块中。修改已有扩展方法时一并迁移该方法的旧式 `this` 首参数声明，保留原有可见性、调用方式和行为。
