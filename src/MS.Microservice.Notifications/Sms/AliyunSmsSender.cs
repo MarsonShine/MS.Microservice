@@ -55,10 +55,13 @@ public sealed class AliyunSmsSender
             throw new ArgumentException("Use an approved SMS_ template code.", nameof(message));
         if (message.OutId is not null) ValidateText(message.OutId, 256, nameof(message.OutId));
         string? parameters = null;
-        if (message.TemplateParameters is { Count: > 0 } values)
+        if (message.TemplateParameters is { Count: > 0 and var count } values)
         {
-            if (values.Count > 32) throw new ArgumentException("At most 32 template variables are supported.", nameof(message));
-            var snapshot = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (count > 32)
+            {
+                throw new ArgumentException("At most 32 template variables are supported.", nameof(message));
+            }
+            var snapshot = new Dictionary<string, string>(count, StringComparer.Ordinal);
             foreach (var pair in values)
             {
                 ValidateText(pair.Key, 64, "template variable name");

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 796 232" width="796" height="232" role="img" aria-labelledby="title desc">
+  <title id="title">按创建时间比较通知并保留最新三封</title>
+  <desc id="desc">请求跳过一封取两封。扫描完时刻为 10、20、30、40 的四封后，只保留 20、30、40。随后读到 50，淘汰最旧的 20。最后跳过 50，返回 40 和 30。</desc>
+  <rect width="796" height="232" rx="10" fill="#f7f9fb"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" fill="#243747" font-size="17">
+    <text x="21" y="35" font-weight="600">ListAsync(skip: 1, take: 2)</text>
+    <text x="305" y="35">最多保留 3 封。方格中是 CreatedAtUtc 的相对时刻。</text>
+    <text x="23" y="93">扫描前四封后</text><text x="23" y="154">又读到 50</text>
+    <text x="23" y="207">返回页面</text>
+  </g>
+  <g stroke="#8797a4" fill="#fff"><rect x="197" y="64" width="65" height="40" rx="5"/><rect x="274" y="64" width="65" height="40" rx="5"/><rect x="351" y="64" width="65" height="40" rx="5"/></g>
+  <g stroke="#49816e" fill="#ebf6f2"><rect x="197" y="126" width="65" height="40" rx="5"/><rect x="274" y="126" width="65" height="40" rx="5"/><rect x="351" y="126" width="65" height="40" rx="5"/></g>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="19" text-anchor="middle" fill="#203741">
+    <text x="229" y="91">20</text><text x="306" y="91">30</text><text x="383" y="91">40</text>
+    <text x="229" y="153">30</text><text x="306" y="153">40</text><text x="383" y="153">50</text>
+  </g>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17" fill="#243747">
+    <text x="449" y="91">10 已计入总数，正文可以释放。</text>
+    <text x="449" y="153">50 替换最旧的候选 20。</text>
+    <text x="197" y="207" font-weight="600">40，30</text><text x="449" y="207">50 是要跳过的最新一封。</text>
+  </g>
+</svg>

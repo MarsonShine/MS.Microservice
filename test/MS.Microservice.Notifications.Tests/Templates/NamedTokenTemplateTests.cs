@@ -40,9 +40,39 @@ public sealed class NamedTokenTemplateTests
         Assert.Throws<KeyNotFoundException>(() => NamedTokenTemplate.Render(template, new Dictionary<string, string?> { ["name"] = "value" }));
     }
 
+    [Fact]
+    public void Render_RespectsDictionaryComparersAndInterfaceImplementations()
+    {
+        foreach (var comparer in new IEqualityComparer<string>[] { StringComparer.OrdinalIgnoreCase, new IgnoreCaseComparer() })
+        {
+            var values = new Dictionary<string, string?>(comparer) { ["User.Name"] = "中文" };
+            Assert.Equal("中文/中文", NamedTokenTemplate.Render("{{user.name}}/{{USER.NAME}}", values));
+            var error = Assert.Throws<KeyNotFoundException>(() => NamedTokenTemplate.Render("{{Other.Name}}", values));
+            Assert.Equal("Missing template value: Other.Name", error.Message);
+        }
+        Assert.Equal("interface", NamedTokenTemplate.Render("{{other}}", new CustomLookup()));
+    }
+
+    private sealed class IgnoreCaseComparer : IEqualityComparer<string>
+    {
+        public bool Equals(string? x, string? y) => StringComparer.OrdinalIgnoreCase.Equals(x, y);
+        public int GetHashCode(string value) => StringComparer.OrdinalIgnoreCase.GetHashCode(value);
+    }
+
+    private sealed class CustomLookup : Dictionary<string, string?>, IReadOnlyDictionary<string, string?>
+    {
+        bool IReadOnlyDictionary<string, string?>.TryGetValue(string key, out string? value)
+        {
+            value = "interface";
+            return true;
+        }
+    }
+
     [Theory]
     [InlineData("{{name")]
     [InlineData("name}}")]
+    [InlineData("literal}} then {{valid}}")]
+    [InlineData("literal{ and } followed by }}")]
     [InlineData("{{}}")]
     [InlineData("{{ name }}")]
     [InlineData("{{a..b}}")]

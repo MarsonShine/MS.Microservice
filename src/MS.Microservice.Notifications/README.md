@@ -109,3 +109,4 @@ await inbox.MarkReadAsync(userId, message.Id, cancellationToken);
 - [SMTP、模板与异常处理](docs/email-and-templates-design.md)
 - [短信协议、超时与回执](docs/aliyun-sms-design.md)
 - [站内通知的持久化与并发规则](docs/local-inbox-design.md)
+- [收件箱分页、已读回执与模板的性能笔记](docs/notification-performance.md)

@@ -58,6 +58,53 @@ public sealed class LocalNotificationInboxTests : IDisposable
     }
 
     [Fact]
+    public async Task ListingPastEndWithLargeOffsetStillValidatesAllBodiesAndReceipts()
+    {
+        var oldest = await Inbox().PublishAsync("owner", "oldest", new string('x', 9000));
+        var latest = await Inbox(now: Now.AddMinutes(1)).PublishAsync("owner", "latest", "short");
+        await Inbox().MarkReadAsync("owner", oldest.Id);
+        var inbox = Inbox(options: new() { MaximumScanEntries = int.MaxValue });
+        var top = await inbox.ListAsync("owner", take: 1);
+        Assert.Equal(latest, Assert.Single(top.Items));
+        Assert.Equal((2, 1), (top.TotalCount, top.UnreadCount));
+
+        var pastEnd = await inbox.ListAsync("owner", skip: int.MaxValue, take: 2);
+        Assert.Empty(pastEnd.Items);
+        Assert.Equal((2, 1), (pastEnd.TotalCount, pastEnd.UnreadCount));
+        await File.WriteAllTextAsync(Path.Combine(OwnerDirectory(), oldest.Id[..32] + ".read"), "broken");
+        await Assert.ThrowsAsync<JsonException>(() => inbox.ListAsync("owner", take: 1));
+        await Assert.ThrowsAsync<JsonException>(() => inbox.ListAsync("owner", skip: int.MaxValue, take: 2));
+    }
+
+    [Fact]
+    public async Task ExistingReceiptDoesNotRequestAnotherTimestamp()
+    {
+        var message = await Inbox().PublishAsync("owner", "subject", "body");
+        var original = await Inbox().MarkReadAsync("owner", message.Id);
+        var reopened = new LocalNotificationInbox(_root, timeProvider: new UnexpectedClock());
+        Assert.Equal(original, await reopened.MarkReadAsync("owner", message.Id));
+    }
+
+    [Fact]
+    public async Task DirectoryAtReceiptPathIsNotAnUnreadNotification()
+    {
+        var message = await Inbox().PublishAsync("owner", "subject", "body");
+        Directory.CreateDirectory(Path.Combine(OwnerDirectory(), message.Id[..32] + ".read"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => Inbox().ListAsync("owner"));
+    }
+
+    [Fact]
+    public async Task AnUnreadablePublishedReceiptPropagatesTheReadFailure()
+    {
+        var message = await Inbox().PublishAsync("owner", "subject", "body");
+        await Inbox().MarkReadAsync("owner", message.Id);
+        var path = Path.Combine(OwnerDirectory(), message.Id[..32] + ".read");
+        using var exclusive = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        await Assert.ThrowsAnyAsync<IOException>(() => Inbox().ListAsync("owner"));
+        await Assert.ThrowsAnyAsync<IOException>(() => Inbox().MarkReadAsync("owner", message.Id));
+    }
+
+    [Fact]
     public async Task ExactEncodedBudgetsWorkAndOneByteOverIsRejectedWithoutPublication()
     {
         var sample = await Inbox().PublishAsync("sample", "subject", "body");
@@ -166,6 +213,10 @@ public sealed class LocalNotificationInboxTests : IDisposable
 
     private string OwnerDirectory() => Assert.Single(Directory.GetDirectories(_root));
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider { public override DateTimeOffset GetUtcNow() => now; }
+    private sealed class UnexpectedClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => throw new InvalidOperationException("Only an unpublished receipt needs a time.");
+    }
 
     public void Dispose()
     {

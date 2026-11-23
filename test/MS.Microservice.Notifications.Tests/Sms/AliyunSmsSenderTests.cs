@@ -115,11 +115,13 @@ public sealed class AliyunSmsSenderTests
         Assert.Empty(server.Requests);
     }
 
-    [Fact]
-    public async Task EncodedTemplateBudgetUsesActualJsonBytes()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(32)]
+    public async Task EncodedTemplateBudgetUsesActualJsonBytes(int count)
     {
         await using var server = await SmsServer.StartAsync();
-        var values = new Dictionary<string, string> { ["code"] = "123456" };
+        var values = Enumerable.Range(0, count).ToDictionary(index => $"item_{index}", index => $"编号{index:D6} & +");
         var length = JsonSerializer.SerializeToUtf8Bytes(values).Length;
         await server.Sender(templateBudget: length).SendAsync(Message() with { TemplateParameters = values });
         await Assert.ThrowsAsync<ArgumentException>(() => server.Sender(templateBudget: length - 1).SendAsync(Message() with { TemplateParameters = values }));
