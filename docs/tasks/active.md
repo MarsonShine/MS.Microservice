@@ -3,7 +3,9 @@ Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
 
-最近完成的收件箱 JSON 读取调整见[回归与复测](../validation/INBOX-JSON-BUFFER/summary.md)。
+最近完成的 ArrayBufferWriter 指南见[示例验证记录](../validation/ARRAY-BUFFER-WRITER-GUIDE/summary.md)。
+
+收件箱 JSON 读取调整见[回归与复测](../validation/INBOX-JSON-BUFFER/summary.md)。
 
 Swagger 与 Threading 性能检查见[代码、基准与回归记录](../validation/SWAGGER-THREADING-PERF/summary.md)。
 

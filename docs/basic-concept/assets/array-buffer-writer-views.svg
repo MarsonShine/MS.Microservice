@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 792 284" width="792" height="284" role="img" aria-labelledby="title description">
+  <title id="title">复用同一个数组后，当前输出、旧视图和快照读到了什么</title>
+  <desc id="description">容量为八。写入 ABCDE 时保存长度为五的旧视图及独立副本。重置后写 XYZ，数组前五格变为 XYZDE，当前只提交三格；清除后三格归零，之前的 D、E 仍在，副本一直为 ABCDE。</desc>
+  <defs>
+    <rect id="cell" width="41" height="31" rx="4"/>
+    <g id="five"><use href="#cell"/><use href="#cell" x="47"/><use href="#cell" x="94"/><use href="#cell" x="141"/><use href="#cell" x="188"/></g>
+    <g id="three"><use href="#cell"/><use href="#cell" x="47"/><use href="#cell" x="94"/></g>
+  </defs>
+  <rect width="792" height="284" rx="9" fill="#f6f8fa"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16" fill="#243848">
+    <text x="19" y="29" font-weight="600">ShowReuse · 同一个容量为 8 的数组（只画前 5 格）</text>
+    <text x="19" y="65">操作</text><text x="210" y="65">数组中的字节</text><text x="474" y="65">当前 WrittenSpan</text><text x="645" y="65">先前的 view</text>
+    <text x="19" y="103">写入 ABCDE</text><text x="19" y="155">重置，再写入 XYZ</text><text x="19" y="207">调用 Clear()</text>
+    <text x="474" y="103">ABCDE（5）</text><text x="474" y="155">XYZ（3）</text><text x="474" y="207">空（0）</text>
+    <text x="645" y="103">ABCDE</text><text x="645" y="155">XYZDE</text><text x="645" y="207">00 00 00 D E</text>
+    <text x="19" y="259">绿色是已提交区域。00 表示零字节。独立数组 snapshot 在三行中都保存 ABCDE。</text>
+  </g>
+  <g fill="#e0f3e9" stroke="#658b77"><use href="#five" x="210" y="81"/><use href="#three" x="210" y="133"/></g>
+  <g fill="#edf0f3" stroke="#aab5be"><use href="#cell" x="351" y="133"/><use href="#cell" x="398" y="133"/><use href="#five" x="210" y="185"/></g>
+  <g text-anchor="middle" font-family="Consolas, monospace" font-size="17" fill="#203846">
+    <text y="103"><tspan x="230">A</tspan><tspan x="277">B</tspan><tspan x="324">C</tspan><tspan x="371">D</tspan><tspan x="418">E</tspan></text>
+    <text y="155"><tspan x="230">X</tspan><tspan x="277">Y</tspan><tspan x="324">Z</tspan><tspan x="371">D</tspan><tspan x="418">E</tspan></text>
+    <text y="207"><tspan x="230">00</tspan><tspan x="277">00</tspan><tspan x="324">00</tspan><tspan x="371">D</tspan><tspan x="418">E</tspan></text>
+  </g>
+</svg>

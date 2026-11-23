@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: afd966d
+Baseline: 56f8ba6
+
+[ArrayBufferWriter 使用指南](basic-concept/array-buffer-writer.md)收录五组可运行示例，可对照收件箱的缓冲区复用与 JSON 输出阅读。[示例验证记录](validation/ARRAY-BUFFER-WRITER-GUIDE/summary.md)
 
 收件箱读取通知和已读回执时，在复用缓冲区内完成解析并返回值和单文件字节数。[代码对照](../src/MS.Microservice.Notifications/docs/notification-performance.md#为什么要在读取方法内把字节变成对象) · [回归与复测](validation/INBOX-JSON-BUFFER/summary.md)
 

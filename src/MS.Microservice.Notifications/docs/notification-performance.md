@@ -41,6 +41,8 @@ else
 
 ## 为什么要在读取方法内把字节变成对象
 
+第一次接触 `ArrayBufferWriter<T>`，可以先运行[使用指南中的五组示例](../../../docs/basic-concept/array-buffer-writer.md)，再对照下面的收件箱代码。
+
 最初复用数组的版本在两个方法之间传递一段 `ReadOnlyMemory<byte>`。读完通知后，调用方必须先解析它，再用同一工作区读回执。
 
 ```csharp
