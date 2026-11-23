@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="../shared/MeasuredOperation.cs" Link="MeasuredOperation.cs" />
+    <ProjectReference Include="../../src/MS.Microservice.Swagger/MS.Microservice.Swagger.csproj" />
+  </ItemGroup>
+</Project>

@@ -2,27 +2,23 @@ namespace MS.Microservice.Swagger;
 
 internal static class SwaggerPathBuilder
 {
-    public static string BuildRouteTemplate(string? routePrefix)
+    public static string BuildRouteTemplate(string normalizedPrefix)
     {
-        var prefix = NormalizeRoutePrefix(routePrefix);
-        return string.IsNullOrEmpty(prefix)
+        return normalizedPrefix.Length == 0
             ? "{documentName}/swagger.json"
-            : $"{prefix}/{{documentName}}/swagger.json";
+            : $"{normalizedPrefix}/{{documentName}}/swagger.json";
     }
 
-    public static string BuildJsonEndpoint(string? routePrefix, string documentName)
+    public static string BuildJsonEndpoint(string normalizedPrefix, string documentName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(documentName);
 
-        var prefix = NormalizeRoutePrefix(routePrefix);
-        return string.IsNullOrEmpty(prefix)
+        return normalizedPrefix.Length == 0
             ? $"/{documentName}/swagger.json"
-            : $"/{prefix}/{documentName}/swagger.json";
+            : $"/{normalizedPrefix}/{documentName}/swagger.json";
     }
 
-    public static string NormalizeUiRoutePrefix(string? routePrefix) => NormalizeRoutePrefix(routePrefix);
-
-    private static string NormalizeRoutePrefix(string? routePrefix)
+    public static string NormalizeRoutePrefix(string? routePrefix)
     {
         if (routePrefix is null)
         {

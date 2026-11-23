@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 800 190" width="800" height="190">
+  <title id="title">两次 AddPlatformSwagger 调用对同一服务集合的影响</title>
+  <desc id="desc">第一次登记 first 和基础服务，第二次继续登记 second。两项用户配置均按顺序运行，本包的 Swagger MVC 约定只有一个。</desc>
+  <rect width="800" height="190" rx="8" fill="#f6f8fa"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16" fill="#203746">
+    <text x="19" y="29" font-weight="600">同一个 IServiceCollection</text>
+    <text x="18" y="75">第一次调用</text><text x="18" y="131">第二次调用</text>
+  </g>
+  <g stroke="#51816c" fill="#edf6f1"><rect x="140" y="46" width="242" height="43" rx="5"/><rect x="140" y="103" width="242" height="43" rx="5"/></g>
+  <g stroke="#899baa" fill="#fff"><rect x="404" y="46" width="370" height="43" rx="5"/><rect x="404" y="103" width="370" height="43" rx="5"/></g>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16" fill="#203746" text-anchor="middle">
+    <text x="261" y="74">登记配置 first</text><text x="261" y="131">登记配置 second</text>
+    <text x="589" y="74">集合内没有标记，安装 SwaggerGen</text><text x="589" y="131">已有 PlatformConfigurator，跳过安装</text>
+    <text x="261" y="174">解析选项时依次运行 first、second</text><text x="589" y="174">该集合内只安装一次平台基础服务</text>
+  </g>
+</svg>

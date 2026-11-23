@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -6,23 +5,29 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class SwaggerServiceCollectionExtensions
 {
-    public static IServiceCollection AddPlatformSwagger(
-        this IServiceCollection services,
-        Action<MS.Microservice.Swagger.SwaggerOptions>? setupAction = null)
+    private static readonly ServiceDescriptor PlatformConfigurator =
+        ServiceDescriptor.Transient<IConfigureOptions<SwaggerGenOptions>, MS.Microservice.Swagger.ConfigureSwaggerGenOptions>();
+
+    extension(IServiceCollection services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.AddOptions<MS.Microservice.Swagger.SwaggerOptions>();
-        if (setupAction is not null)
+        public IServiceCollection AddPlatformSwagger(Action<MS.Microservice.Swagger.SwaggerOptions>? setupAction = null)
         {
-            services.Configure(setupAction);
+            ArgumentNullException.ThrowIfNull(services);
+
+            if (setupAction is not null)
+            {
+                services.Configure(setupAction);
+            }
+
+            if (!services.Contains(PlatformConfigurator))
+            {
+                services.AddOptions();
+                services.AddEndpointsApiExplorer();
+                services.AddSwaggerGen();
+                services.Add(PlatformConfigurator);
+            }
+
+            return services;
         }
-
-        services.AddEndpointsApiExplorer();
-        services.TryAddEnumerable(
-            ServiceDescriptor.Transient<IConfigureOptions<SwaggerGenOptions>, MS.Microservice.Swagger.ConfigureSwaggerGenOptions>());
-        services.AddSwaggerGen();
-
-        return services;
     }
 }

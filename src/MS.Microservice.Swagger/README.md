@@ -2,6 +2,8 @@
 
 Reusable Swagger and OpenAPI integration for ASP.NET Core services.
 
+[Code review of registration and route configuration costs (中文)](docs/performance-review.md)
+
 ### What This Package Solves
 
 This package extracts Swagger registration and Swagger UI wiring into a standalone reusable component.
