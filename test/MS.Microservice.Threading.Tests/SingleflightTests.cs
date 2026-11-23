@@ -9,6 +9,26 @@ public class SingleflightTests
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(10);
 
     [Fact]
+    public async Task InvalidAndPreCanceledCallsReturnFailedTasksBeforeRunningAFactory()
+    {
+        var manager = new SingleflightManager();
+        using var stop = new CancellationTokenSource();
+        stop.Cancel();
+        static Task<int> UnexpectedFactory() => throw new InvalidOperationException("Factory ran before validation.");
+
+        var missingKey = manager.ExecuteOnceAsync(null!, UnexpectedFactory, stop.Token);
+        var missingFactory = manager.ExecuteOnceAsync<int>("key", null!, stop.Token);
+        var canceled = manager.ExecuteOnceAsync("key", UnexpectedFactory, stop.Token);
+
+        await Assert.ThrowsAsync<ArgumentNullException>("key", () => missingKey);
+        await Assert.ThrowsAsync<ArgumentNullException>("action", () => missingFactory);
+        var error = await Assert.ThrowsAsync<OperationCanceledException>(() => canceled);
+        Assert.True(canceled.IsCanceled);
+        Assert.Equal(stop.Token, error.CancellationToken);
+        Assert.Equal(42, await manager.ExecuteOnceAsync("key", () => Task.FromResult(42)));
+    }
+
+    [Fact]
     public async Task ConcurrentCallersShareOnlyTheInFlightResult()
     {
         var manager = new SingleflightManager();

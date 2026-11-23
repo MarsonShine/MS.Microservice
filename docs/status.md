@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 4ba9bd9
+Baseline: 56de8f1
+
+Swagger 的服务注册已按容器去重，Threading 的同键等待者直接复用在途任务，批处理按整数区间分发下标。见[Swagger 评审笔记](../src/MS.Microservice.Swagger/docs/performance-review.md)、[Threading 评审笔记](../src/MS.Microservice.Threading/docs/performance-review.md)和[性能及兼容性验收](validation/SWAGGER-THREADING-PERF/summary.md)。
 
 Notifications 的收件箱分页、回执、模板和短信参数，以及 Search 的长文档摘要、指纹和分页签名已完成优化。见[通知笔记](../src/MS.Microservice.Notifications/docs/notification-performance.md)、[搜索笔记](../src/MS.Microservice.Search/docs/search-performance.md)和[同机基准与兼容性验收](validation/NOTIFICATIONS-SEARCH-PERF/summary.md)。
 

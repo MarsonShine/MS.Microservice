@@ -3,7 +3,7 @@
 仅依赖 .NET 的并发协调工具，包含批量处理、同键请求合并和异步名额租约。
 
 ## BatchProcessing
-仅依赖 .NET，复用 Parallel.ForEachAsync。CollectAsync 接受稳定的有限 IReadOnlyList、异步处理函数和显式正整数 maxConcurrency，返回按输入索引排序的逐项结果（Index、Value、Error、IsSuccess）。
+CollectAsync 接受稳定的有限 IReadOnlyList、异步处理函数和显式正整数 maxConcurrency，使用 Parallel.ForAsync 分发整数下标，按输入顺序返回逐项结果（Index、Value、Error、IsSuccess）。[批处理与同键任务的代码评审](docs/performance-review.md)
 
 ```csharp
 var results = await BatchProcessing.CollectAsync<string, string>(paths,

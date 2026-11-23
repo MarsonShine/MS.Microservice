@@ -50,6 +50,33 @@ public class BatchTests
         Assert.Empty(await BatchProcessing.CollectAsync<int,int>([],(x,t)=>ValueTask.FromResult(x),1));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(()=>BatchProcessing.CollectAsync<int,int>([],(x,t)=>ValueTask.FromResult(x),0));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EmptyBatchObservesCancellationBeforeAndDuringCount(bool cancelBeforeCall)
+    {
+        using var stop = new CancellationTokenSource();
+        var items = Substitute.For<IReadOnlyList<int>>();
+        var reads = 0;
+        items.Count.Returns(_ =>
+        {
+            reads++;
+            stop.Cancel();
+            return 0;
+        });
+        if (cancelBeforeCall)
+        {
+            stop.Cancel();
+        }
+        var pending = BatchProcessing.CollectAsync<int, int>(items, static (_, _) =>
+            throw new InvalidOperationException("No items should be dispatched."), 1, stop.Token);
+
+        var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        Assert.Equal(stop.Token, error.CancellationToken);
+        Assert.True(pending.IsCanceled);
+        Assert.Equal(cancelBeforeCall ? 0 : 1, reads);
+    }
     [Theory] [InlineData(false)] [InlineData(true)]
     public async Task AudioLegacyEntryPointsStillCompleteOtherItemsAndPropagateFailure(bool alias)
     {

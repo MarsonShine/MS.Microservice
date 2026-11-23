@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace MS.Microservice.Threading;
 
 public sealed record BatchItemResult<T>(int Index, T? Value, Exception? Error)
@@ -16,15 +18,26 @@ public static class BatchProcessing
         ArgumentNullException.ThrowIfNull(process);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrency);
         cancellationToken.ThrowIfCancellationRequested();
-        var results = new BatchItemResult<TResult>[items.Count];
-        await Parallel.ForEachAsync(Enumerable.Range(0, items.Count),
+        int count = items.Count;
+        if (count == 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ReadOnlyCollection<BatchItemResult<TResult>>.Empty;
+        }
+        var results = new BatchItemResult<TResult>[count];
+        await Parallel.ForAsync(0, count,
             new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency, CancellationToken = cancellationToken },
             async (index, token) =>
             {
                 token.ThrowIfCancellationRequested();
-                try { results[index] = new(index, await process(items[index], token).ConfigureAwait(false), null); }
+                try
+                {
+                    results[index] = new(index, await process(items[index], token).ConfigureAwait(false), null);
+                }
                 catch (Exception error) when (!cancellationToken.IsCancellationRequested)
-                { results[index] = new(index, default, error); }
+                {
+                    results[index] = new(index, default, error);
+                }
             }).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         return Array.AsReadOnly(results);

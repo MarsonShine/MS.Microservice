@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 800 236" width="800" height="236">
+  <title id="title">三个调用共享一份尚未完成的 Task</title>
+  <desc id="desc">首个调用获得字典登记后运行工厂。第二个调用直接等待同一个任务，第三个调用通过自己的取消令牌退出等待。工厂完成后其余两个调用仍收到结果 42。</desc>
+  <defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#415d70"/></marker></defs>
+  <rect width="800" height="236" rx="8" fill="#f6f8fa"/>
+  <g fill="#203746" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16">
+    <text x="20" y="30" font-weight="bold">ExecuteOnceAsync 同一键、同一结果类型，工厂尚未完成</text>
+    <text x="20" y="77">首个调用</text><text x="20" y="135">跟随者 A</text><text x="20" y="192">跟随者 B</text>
+  </g>
+  <g stroke="#415d70" stroke-width="2" marker-end="url(#arr)" fill="none">
+    <path d="M108 72H216"/><path d="M420 72H535"/><path d="M108 130H248V94"/>
+    <path d="M108 187H216"/><path d="M420 187H535"/>
+  </g>
+  <g fill="#edf6f1" stroke="#57836e"><rect x="218" y="49" width="202" height="45" rx="6"/><rect x="537" y="49" width="242" height="45" rx="6"/></g>
+  <g fill="#fff" stroke="#8093a1"><rect x="218" y="164" width="202" height="45" rx="6"/><rect x="537" y="164" width="242" height="45" rx="6"/></g>
+  <g text-anchor="middle" fill="#203746" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16">
+    <text x="319" y="78">登记 Task&lt;int&gt;，运行工厂</text><text x="658" y="78">首个调用和 A 都得到 42</text>
+    <text x="319" y="192">共享任务.WaitAsync(token)</text><text x="658" y="192">B 得到取消，工厂继续</text>
+    <text x="373" y="137">查到同一个 Task&lt;int&gt;</text>
+  </g>
+</svg>
