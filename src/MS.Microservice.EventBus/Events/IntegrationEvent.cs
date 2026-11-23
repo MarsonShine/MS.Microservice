@@ -1,8 +1,8 @@
 namespace MS.Microservice.EventBus.Events;
 
 /// <summary>
-/// Compatibility base for existing EventBus consumers. New contracts should derive from
-/// <see cref="Core.Messaging.IntegrationEvent" /> directly.
+/// Base event accepted by this EventBus, with identity and timestamp supplied by
+/// <see cref="Core.Messaging.IntegrationEvent" />.
 /// </summary>
 public class IntegrationEvent : Core.Messaging.IntegrationEvent
 {

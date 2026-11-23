@@ -9,6 +9,13 @@ public interface IEventBus
 {
 	void Publish(IntegrationEvent @event);
 
+	/// <summary>Publishes an event. Existing synchronous adapters use their Publish implementation.</summary>
+	Task PublishAsync(IntegrationEvent @event)
+	{
+		Publish(@event);
+		return Task.CompletedTask;
+	}
+
 	void Subscribe<TEvent, THandler>()
 		where TEvent : IntegrationEvent
 		where THandler : IIntegrationEventHandler<TEvent>;
