@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 1b02b69
+Baseline: 4ba9bd9
+
+Notifications 的收件箱分页、回执、模板和短信参数，以及 Search 的长文档摘要、指纹和分页签名已完成优化。见[通知笔记](../src/MS.Microservice.Notifications/docs/notification-performance.md)、[搜索笔记](../src/MS.Microservice.Search/docs/search-performance.md)和[同机基准与兼容性验收](validation/NOTIFICATIONS-SEARCH-PERF/summary.md)。
 
 CSV 写入器已支持跨行复用字符块、自定义分隔符查找表复用和按引号密度转义，行末写入触发取消后会停止枚举。见[源码与示例](../src/MS.Microservice.Excel/docs/csv-performance.md)和[基准与回归验收](validation/CSV-WRITE-BLOCKS/summary.md)。
 

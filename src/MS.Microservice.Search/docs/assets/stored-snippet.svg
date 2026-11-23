@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 796 232" width="796" height="232" role="img" aria-labelledby="title desc">
+  <title id="title">一份长正文在 BuildDocument 中用于全文匹配和摘要返回</title>
+  <desc id="desc">完整 Content 仍进入 body 的全文分析器。body_text 过去保存整篇原文，现在新写文档只保存最多 1000 个 UTF-16 码元，Search 再按请求的 SnippetLength 截取。</desc>
+  <defs><marker id="arrow" viewBox="0 0 8 8" markerWidth="7" markerHeight="7" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#516579"/></marker></defs>
+  <rect width="796" height="232" rx="10" fill="#f7f9fb"/>
+  <g stroke="#516579" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M178 110H203V61H229"/><path d="M203 110V166H229"/>
+    <path d="M500 61H537"/><path d="M500 166H537"/>
+  </g>
+  <g fill="#fff" stroke="#8a9aa9"><rect x="12" y="70" width="166" height="80" rx="8"/><rect x="231" y="21" width="269" height="80" rx="8"/><rect x="539" y="21" width="244" height="80" rx="8"/></g>
+  <g fill="#ebf6f2" stroke="#44846e"><rect x="231" y="126" width="269" height="80" rx="8"/><rect x="539" y="126" width="244" height="80" rx="8"/></g>
+  <g fill="#223649" text-anchor="middle" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">
+    <text x="95" y="103" font-weight="600">Content</text><text x="95" y="130">完整原文</text>
+    <text x="365" y="54" font-weight="600">body · 全文分析</text><text x="365" y="81">从整篇正文提取词项</text>
+    <text x="661" y="54" font-weight="600">查询命中</text><text x="661" y="81">末尾的词也能被搜到</text>
+    <text x="365" y="158" font-weight="600">body_text · 摘要原文</text><text x="365" y="186">新写入最多 1000 个码元</text>
+    <text x="661" y="158" font-weight="600">Search 返回摘要</text><text x="661" y="186">按 SnippetLength 截取</text>
+  </g>
+</svg>

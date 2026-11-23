@@ -1,6 +1,6 @@
-# 通知组件的性能验收
+# 通知和搜索组件的性能验收
 
-2026 年 11 月 23 日，在同一台 Windows 10 x64 机器上比较基线 `4ba9bd9` 和本次修改。[通知性能笔记](../../../src/MS.Microservice.Notifications/docs/notification-performance.md)
+2026 年 11 月 23 日，在同一台 Windows 10 x64 机器上比较基线 `4ba9bd9` 和本次修改。基准从公开方法发起调用，分别核对返回内容、记录顺序、计数及回执。两个模块各有一篇从代码到数据的讲解。[通知性能笔记](../../../src/MS.Microservice.Notifications/docs/notification-performance.md) · [搜索性能笔记](../../../src/MS.Microservice.Search/docs/search-performance.md)
 
 ## 复测方法
 
@@ -9,6 +9,7 @@
 ```powershell
 $env:DOTNET_TieredCompilation = '0'
 dotnet run -c Release --project benchmarks/MS.Microservice.Notifications.Benchmarks
+dotnet run -c Release --project benchmarks/MS.Microservice.Search.Benchmarks -- --long-documents
 ```
 
 ## 收件箱和模板
@@ -33,6 +34,31 @@ dotnet run -c Release --project benchmarks/MS.Microservice.Notifications.Benchma
 
 另用局部探针测成功准备参数的情况。8 个变量时，检查、快照、JSON 序列化和构造 SDK 所需字符串合计 3.853 → 3.536 µs，2416 → 1864 B；32 个变量时为 14.029 → 13.675 µs，7504 → 6592 B。每组预热两轮、交错测十一批，每批 768 次，取三个进程的中位数。该探针在准备出字符串后停止。SMTP 则核查了消息构造、信封收件人、TLS、单次连接与接受后清理的调用链；现有回环测试覆盖真实协议交互。两种发送通道都没有测量外部服务的响应或最终投递延时。
 
+## 搜索长文档
+
+两版各自建立并发布 12 篇文档，每篇 131072 个 UTF-16 码元，含高度重复的中英文和表情。查询每批运行 40 次，指纹重放每批 24 次。首页返回 8 条；带游标的末页返回余下 4 条。命中和分配数据适用于这个固定语料与本地热查询。[基准源码](../../../benchmarks/MS.Microservice.Search.Benchmarks/LongDocumentCases.cs)
+
+| 操作 | 旧 µs/次 | 新 µs/次 | 旧 B/次 | 新 B/次 |
+| --- | ---: | ---: | ---: | ---: |
+| 同版本重放 | 1149.779 | 969.163 | 195055 | 13208 |
+| 重放旧版本 | 1156.329 | 952.554 | 195034 | 13208 |
+| 首页，无摘要 | 1528.862 | 123.675 | 119835 | 110821 |
+| 首页，每条返回 160 码元摘要 | 3947.422 | 153.958 | 3668086 | 141867 |
+| 带游标的末页，无摘要 | 807.925 | 135.095 | 156885 | 152043 |
+| 只有一条命中 | 248.478 | 65.385 | 118932 | 116873 |
+| 没有命中 | 30.625 | 32.895 | 49697 | 48686 |
+
+搜索无命中时分配少了 1011 B，耗时却多了 2.270 µs。这组数据支持省掉游标签名分配，不能据此声称空查询也会变快。两份新建索引在一次 `Publish` 后文件总长为 29791 和 16322 B。高度重复的原文有利于压缩，文件总长和计时都不能直接外推到任意语料、冷缓存或同时写入的服务。
+
+## 旧索引和旧游标
+
+用基线 DLL 建立磁盘索引并保存首屏游标，再用新 DLL 打开同一目录。包含 NFC、路径分隔符和扩展名归一化的旧游标能继续翻页；同版本原文被判为重复，只改千字摘要以后的正文会报版本冲突。新版写入较高版本并发布后，旧游标按约定失效。分别用新旧 DLL 重新打开包含两代文档的索引，正文末尾的词均能命中，截断处的代理对完整，分页和新版本指纹均可读。另有仓库回归测试直接核对基线指纹的十六进制值。[索引测试](../../../test/MS.Microservice.Search.Tests/DocumentSearchIndexTests.cs)
+
 ## 回归测试
 
-`dotnet test test/MS.Microservice.Notifications.Tests -c Release` 通过 83 项，失败 0 项，跳过 0 项。
+| Release 验收命令 | 通过 | 失败 | 跳过 |
+| --- | ---: | ---: | ---: |
+| `dotnet test test/MS.Microservice.Notifications.Tests -c Release` | 83 | 0 | 0 |
+| `dotnet test test/MS.Microservice.Search.Tests -c Release` | 7 | 0 | 0 |
+
+通知用例覆盖同一回执并发发布、重复标记不再取时钟、深页与越过末页的计数、页外损坏与不可读回执、不同字典比较器、32 个短信变量的精确编码预算。搜索覆盖混合索引段、Unicode 摘要边界、旧指纹、可搜的长文末尾和分页一致性。性能复测使用的最终 Search DLL 的 SHA-256 为 `29BA913DC636B1AA6993263FEB47E15CCDBDB8CEC06453AD31A782CA07FB57CF`；Notifications 的最终 DLL 为 `387A279A1F2602C888B021B0A5D1AB7B556D3A0A650D620AD9972159428ADFC5`。收件箱及模板数据在短信单独修改前采集，两条调用路径的代码在该修改前后一致。

@@ -10,6 +10,12 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using MS.Microservice.Search;
 
+if (args is ["--long-documents"])
+{
+    LongDocumentCases.Run();
+    return;
+}
+
 const int seed = 20261014;
 var count = Number("--metadata", 1_000_000);
 var contentCount = Number("--content", 100_000);

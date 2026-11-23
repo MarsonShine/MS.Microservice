@@ -13,6 +13,7 @@ namespace MS.Microservice.Search;
 public sealed partial class DocumentSearchIndex
 {
     private static readonly HashSet<string> ResultFields = ["id", "version", "name", "path", "length", "modified"];
+    private static readonly HashSet<string> ResultFieldsWithSnippet = new(ResultFields) { "body_text" };
 
     /// <summary>Searches a committed snapshot; Fast omits the total, while Exact counts every match with identical ordering.</summary>
     public SearchResult Search(SearchRequest request, CancellationToken cancellationToken = default)
@@ -23,18 +24,17 @@ public sealed partial class DocumentSearchIndex
         var order = request.Sort ?? SearchSort.Path;
         ValidateRequest(request, match, order);
         cancellationToken.ThrowIfCancellationRequested();
-        var query = BuildQuery(request, match);
-        var signature = Hash(_identity, request.Scope, request.Target == SearchTarget.Path ? NormalizePath(request.Query) : Normalize(request.Query),
-            request.Target.ToString(), match.ToString(), order.ToString(),
-            request.Extension is null ? "<any>" : Normalize(request.Extension.TrimStart('.')),
-            request.DirectoryPrefix is null ? "<any>" : DirectoryPrefix(request.DirectoryPrefix),
-            request.ModifiedFromUtc?.UtcTicks.ToString(CultureInfo.InvariantCulture) ?? "",
-            request.ModifiedToUtc?.UtcTicks.ToString(CultureInfo.InvariantCulture) ?? "");
+        var text = request.Target == SearchTarget.Path ? NormalizePath(request.Query) : Normalize(request.Query);
+        var extension = request.Extension is null ? null : Normalize(request.Extension.TrimStart('.'));
+        var directoryPrefix = request.DirectoryPrefix is null ? null : DirectoryPrefix(request.DirectoryPrefix);
+        var query = BuildQuery(request, match, text, extension, directoryPrefix);
+        string? signature = null;
         var searcher = _searchers.Acquire();
         try
         {
             var generation = ((DirectoryReader)searcher.IndexReader).Version;
-            var cursor = ReadCursor(request.Cursor, generation, signature, searcher.IndexReader.MaxDoc);
+            var cursor = request.Cursor is null ? null :
+                ReadCursor(request.Cursor, generation, CursorSignature(), searcher.IndexReader.MaxDoc);
             ITopDocsCollector top;
             ICollector collector;
             if (order == SearchSort.Path)
@@ -56,18 +56,18 @@ public sealed partial class DocumentSearchIndex
             searcher.Search(query, new CancellationCollector(collector, cancellationToken));
             var found = top.GetTopDocs();
             var hasMore = found.ScoreDocs.Length > request.Limit;
-            var fields = request.SnippetLength == 0 ? ResultFields : new HashSet<string>(ResultFields) { "body_text" };
+            var fields = request.SnippetLength == 0 ? ResultFields : ResultFieldsWithSnippet;
             var results = new List<SearchHit>(Math.Min(request.Limit, found.ScoreDocs.Length));
             foreach (var hit in found.ScoreDocs.Take(request.Limit))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var document = searcher.Doc(hit.Doc, fields);
-                var text = document.Get("body_text");
+                var snippet = document.Get("body_text");
                 var modified = document.Get("modified");
                 results.Add(new(document.Get("id"), long.Parse(document.Get("version"), CultureInfo.InvariantCulture),
                     document.Get("name"), document.Get("path"), long.Parse(document.Get("length"), CultureInfo.InvariantCulture),
                     modified is null ? null : new DateTimeOffset(long.Parse(modified, CultureInfo.InvariantCulture), TimeSpan.Zero),
-                    text is null ? null : Excerpt(text, request.SnippetLength),
+                    snippet is null ? null : Excerpt(snippet, request.SnippetLength),
                     order == SearchSort.Relevance ? hit.Score : null));
             }
             string? next = null;
@@ -75,19 +75,26 @@ public sealed partial class DocumentSearchIndex
             {
                 var last = results[^1];
                 var lastScore = found.ScoreDocs[results.Count - 1];
-                next = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new CursorData(generation, signature,
+                next = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new CursorData(generation, CursorSignature(),
                     lastScore.Doc, order == SearchSort.Relevance ? lastScore.Score : 0, NormalizePath(last.Path), last.DocumentId)));
             }
             return new(generation, order, results.AsReadOnly(), hasMore,
                 request.CountMode == SearchCountMode.Exact ? found.TotalHits : null, next);
         }
-        finally { _searchers.Release(searcher); }
+        finally
+        {
+            _searchers.Release(searcher);
+        }
+
+        string CursorSignature() => signature ??= Hash(_identity, request.Scope, text,
+            request.Target.ToString(), match.ToString(), order.ToString(), extension ?? "<any>", directoryPrefix ?? "<any>",
+            request.ModifiedFromUtc?.UtcTicks.ToString(CultureInfo.InvariantCulture) ?? "",
+            request.ModifiedToUtc?.UtcTicks.ToString(CultureInfo.InvariantCulture) ?? "");
     }
 
-    private Query BuildQuery(SearchRequest request, SearchMatch match)
+    private Query BuildQuery(SearchRequest request, SearchMatch match, string text, string? extension, string? directoryPrefix)
     {
         var field = request.Target switch { SearchTarget.FileName => "name", SearchTarget.Path => "path", _ => "body" };
-        var text = request.Target == SearchTarget.Path ? NormalizePath(request.Query) : Normalize(request.Query);
         Query query;
         if (request.Target != SearchTarget.Content)
         {
@@ -120,13 +127,14 @@ public sealed partial class DocumentSearchIndex
             { new TermQuery(new Term("scope", Hash(request.Scope))), Occur.MUST },
             { new TermQuery(new Term("live", "1")), Occur.MUST }
         };
-        if (request.Extension is not null)
-            filtered.Add(new TermQuery(new Term("extension", Normalize(request.Extension.TrimStart('.')))), Occur.MUST);
-        if (request.DirectoryPrefix is not null)
+        if (extension is not null)
         {
-            var prefix = DirectoryPrefix(request.DirectoryPrefix);
-            var fieldName = "path_g" + Math.Min(3, prefix.EnumerateRunes().Count());
-            var tokens = Tokens(fieldName, prefix);
+            filtered.Add(new TermQuery(new Term("extension", extension)), Occur.MUST);
+        }
+        if (directoryPrefix is not null)
+        {
+            var fieldName = "path_g" + Math.Min(3, directoryPrefix.EnumerateRunes().Count());
+            var tokens = Tokens(fieldName, directoryPrefix);
             SpanQuery[] terms = tokens.Select(token => (SpanQuery)new SpanTermQuery(new Term(fieldName, token.Term))).ToArray();
             filtered.Add(new SpanFirstQuery(terms.Length == 1 ? terms[0] : new SpanNearQuery(terms, 0, true), tokens.Count), Occur.MUST);
         }
@@ -162,8 +170,10 @@ public sealed partial class DocumentSearchIndex
         ValidateText(request.Scope, 256, nameof(request.Scope));
         ValidateText(request.Query, 256, nameof(request.Query));
         if (!Enum.IsDefined(request.Target) || !Enum.IsDefined(match) || !Enum.IsDefined(order) || !Enum.IsDefined(request.CountMode)
-            || request.Limit is < 1 or > 200 || request.SnippetLength is < 0 or > 1000)
+            || request.Limit is < 1 or > 200 || request.SnippetLength is < 0 or > MaximumSnippetLength)
+        {
             throw new ArgumentOutOfRangeException(nameof(request));
+        }
         if (request.Target != SearchTarget.Content && (match is not (SearchMatch.Contains or SearchMatch.Prefix) || order != SearchSort.Path)
             || request.Target == SearchTarget.Content && match is not (SearchMatch.AllTerms or SearchMatch.Phrase))
             throw new ArgumentException("Metadata supports Contains/Prefix with Path order; content supports AllTerms/Phrase.", nameof(request));
@@ -183,9 +193,8 @@ public sealed partial class DocumentSearchIndex
         return value[..end];
     }
 
-    private static CursorData? ReadCursor(string? value, long generation, string signature, int maxDoc)
+    private static CursorData ReadCursor(string value, long generation, string signature, int maxDoc)
     {
-        if (value is null) return null;
         CursorData? cursor;
         try { cursor = JsonSerializer.Deserialize<CursorData>(Convert.FromBase64String(value)); }
         catch (Exception error) when (error is FormatException or JsonException)

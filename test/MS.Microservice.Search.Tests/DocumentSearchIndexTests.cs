@@ -10,6 +10,34 @@ namespace MS.Microservice.Search.Tests;
 public sealed class DocumentSearchIndexTests
 {
     [Fact]
+    public void LongBodyKeepsItsOriginalFingerprintAndSearchableTailWhileStoringOnlyTheUsableExcerpt()
+    {
+        using var fixture = new IndexFixture();
+        var prefix = new string('a', 999);
+        var content = prefix + "😀" + new string('b', 3092) + "🦋 tailmatch";
+        var source = new SearchDocument("s", "1", 1, "résumé.txt", "/résumé.txt", content, LengthBytes: 17);
+        using (var index = fixture.Open())
+        {
+            index.ApplyBatch([SearchChange.Upsert(source)]);
+            index.Publish();
+        }
+        using (var directory = FSDirectory.Open(fixture.Path))
+        using (var reader = DirectoryReader.Open(directory))
+        {
+            var stored = reader.Document(0);
+            Assert.Equal(prefix, stored.Get("body_text"));
+            // The second surrogate pair straddles byte 4096 of the legacy length-prefixed UTF-8 input.
+            Assert.Equal("3317A5F9569EBFE99307B47973CF944DE17A5E63D0394DE34E34EEEE77371637", stored.Get("fingerprint"));
+        }
+        using var reopened = fixture.Open();
+        var hit = Assert.Single(reopened.Search(new("s", "tailmatch", SearchTarget.Content, SnippetLength: 1000)).Items);
+        Assert.Equal(prefix, hit.Snippet);
+        Assert.Equal(1, reopened.ApplyBatch([SearchChange.Upsert(source)]).Unchanged);
+        Assert.Throws<SearchVersionConflictException>(() =>
+            reopened.ApplyBatch([SearchChange.Upsert(source with { Content = content + "!" })]));
+    }
+
+    [Fact]
     public void RevisionsAndTombstonesSurviveRestart_WithoutCrossScopeUpdatesOrResurrection()
     {
         using var fixture = new IndexFixture();

@@ -22,6 +22,7 @@ namespace MS.Microservice.Search;
 public sealed partial class DocumentSearchIndex : IDisposable
 {
     private const string Schema = "ms-document-search/1";
+    private const int MaximumSnippetLength = 1000;
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly Sort PathSort = new(new SortField("path_sort", SortFieldType.STRING), new SortField("id_sort", SortFieldType.STRING));
     private readonly SearchIndexOptions _options;
@@ -220,13 +221,14 @@ public sealed partial class DocumentSearchIndex : IDisposable
         document.Add(new StoredField("length", source.LengthBytes));
         document.Add(new StringField("extension", Normalize(System.IO.Path.GetExtension(source.FileName).TrimStart('.')), Field.Store.NO));
         if (source.ModifiedAtUtc is { } modified) document.Add(new Int64Field("modified", modified.UtcTicks, Field.Store.YES));
+        var name = Normalize(source.FileName);
         for (var gram = 1; gram <= 3; gram++)
         {
-            document.Add(new TextField($"name_g{gram}", Normalize(source.FileName), Field.Store.NO));
+            document.Add(new TextField($"name_g{gram}", name, Field.Store.NO));
             document.Add(new TextField($"path_g{gram}", path, Field.Store.NO));
         }
         document.Add(new TextField("body", Normalize(source.Content), Field.Store.NO));
-        document.Add(new StoredField("body_text", source.Content));
+        document.Add(new StoredField("body_text", Excerpt(source.Content, MaximumSnippetLength)));
         return document;
     }
 
@@ -258,18 +260,25 @@ public sealed partial class DocumentSearchIndex : IDisposable
 
     private static string Normalize(string value) => value.Normalize(NormalizationForm.FormC).ToLowerInvariant();
     private static string NormalizePath(string value) => Normalize(value.Replace('\\', '/'));
-    private static string Hash(params string[] parts)
+    private static string Hash(params ReadOnlySpan<string> parts)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        Span<byte> length = stackalloc byte[4];
+        Span<byte> buffer = stackalloc byte[4096];
         foreach (var part in parts)
         {
-            var bytes = Utf8.GetBytes(part);
-            BinaryPrimitives.WriteInt32BigEndian(length, bytes.Length);
-            hash.AppendData(length);
-            hash.AppendData(bytes);
+            // Keep the original strict UTF-8 length prefix and character boundaries.
+            BinaryPrimitives.WriteInt32BigEndian(buffer, Utf8.GetByteCount(part));
+            hash.AppendData(buffer[..sizeof(int)]);
+            var remaining = part.AsSpan();
+            while (!remaining.IsEmpty)
+            {
+                System.Text.Unicode.Utf8.FromUtf16(remaining, buffer, out var charsRead, out var bytesWritten);
+                hash.AppendData(buffer[..bytesWritten]);
+                remaining = remaining[charsRead..];
+            }
         }
-        return Convert.ToHexString(hash.GetHashAndReset());
+        hash.GetHashAndReset(buffer);
+        return Convert.ToHexString(buffer[..SHA256.HashSizeInBytes]);
     }
 
     private Operation Enter()

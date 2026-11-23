@@ -29,7 +29,7 @@ var text = index.Search(new SearchRequest("tenant-42:user-7", "采购设备", Se
 var counted = index.Search(new SearchRequest("tenant-42:user-7", "合同", CountMode: SearchCountMode.Exact));
 ```
 
-每个索引目录使用一个长期存活实例；它允许并发查询，串行处理写入和发布，并持有单写者锁。宿主必须传入可信的绝对目录，保护索引文件访问权限。索引保存明文元数据和正文，使用者只能读取经过宿主认证／授权得到的 Scope。
+每个索引目录使用一个长期存活实例；它允许并发查询，串行处理写入和发布，并持有单写者锁。宿主必须传入可信的绝对目录，保护索引文件访问权限。索引未经加密，包含元数据、全文词项和用于摘要的原文前缀。历史索引也可能包含完整原文。使用者只能读取经过宿主认证／授权得到的 Scope。
 
 | 查询参数 | 默认值 | 行为 |
 |---|---|---|
@@ -72,4 +72,4 @@ index.Publish();
 
 同步接口检查取消令牌，不能强制中断正在进行的 Lucene 提交、合并或文件 I/O。使用本地文件系统；首版没有跨进程写入、多机共享索引或索引文件保密能力。Lucene.NET 依赖版本为 4.8.0-beta00018；目录格式不兼容时会拒绝打开，应从权威源重建。
 
-概念、版本及删除处理、排序与总数策略见[实现设计](docs/search-design.md)。性能测量条件、Fast／Exact 分项与复现命令见[基准说明](../../benchmarks/MS.Microservice.Search.Benchmarks/README.md)。
+概念、版本及删除处理、排序与总数策略见[实现设计](docs/search-design.md)。长正文的指纹、摘要和分页签名开销见[前后代码与测量笔记](docs/search-performance.md)。Fast／Exact 的测量条件和复现命令见[基准说明](../../benchmarks/MS.Microservice.Search.Benchmarks/README.md)。
