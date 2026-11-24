@@ -17,28 +17,42 @@ internal sealed class RequestLogContextEnricher : ILogEventEnricher
             return;
         }
 
-        AddPropertyIfValue(logEvent, propertyFactory, RequestLogDefaults.RequestIdPropertyName, context.RequestId);
-        AddPropertyIfValue(logEvent, propertyFactory, RequestLogDefaults.PlatformIdPropertyName, context.PlatformId);
-        AddPropertyIfValue(logEvent, propertyFactory, RequestLogDefaults.UserFlagPropertyName, context.UserFlag);
-        AddPropertyIfValue(logEvent, propertyFactory, RequestLogDefaults.MethodPropertyName, context.Method);
-        AddPropertyIfValue(logEvent, propertyFactory, RequestLogDefaults.PathPropertyName, context.Path);
+        // The request field names are distinct, so an initially empty event cannot have a collision.
+        var hasEventProperties = logEvent.Properties.Count != 0;
+        SetString(RequestLogDefaults.RequestIdPropertyName, context.RequestId);
+        SetString(RequestLogDefaults.PlatformIdPropertyName, context.PlatformId);
+        SetString(RequestLogDefaults.UserFlagPropertyName, context.UserFlag);
+        SetString(RequestLogDefaults.MethodPropertyName, context.Method);
+        SetString(RequestLogDefaults.PathPropertyName, context.Path);
 
-        if (context.StatusCode.HasValue)
+        if (context.StatusCode is int statusCode)
         {
-            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(RequestLogDefaults.StatusCodePropertyName, context.StatusCode.Value));
+            SetProperty(RequestLogDefaults.StatusCodePropertyName, statusCode);
         }
 
-        if (context.ElapsedMilliseconds.HasValue)
+        if (context.ElapsedMilliseconds is long elapsed)
         {
-            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(RequestLogDefaults.ElapsedMillisecondsPropertyName, context.ElapsedMilliseconds.Value));
+            SetProperty(RequestLogDefaults.ElapsedMillisecondsPropertyName, elapsed);
         }
-    }
 
-    private static void AddPropertyIfValue(LogEvent logEvent, ILogEventPropertyFactory propertyFactory, string propertyName, string? value)
-    {
-        if (!string.IsNullOrWhiteSpace(value))
+        void SetString(string name, string? value)
         {
-            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(propertyName, value));
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                SetProperty(name, value);
+            }
+        }
+
+        void SetProperty(string name, object value)
+        {
+            if (hasEventProperties)
+            {
+                logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(name, value));
+            }
+            else
+            {
+                logEvent.AddPropertyIfAbsent(propertyFactory, name, value);
+            }
         }
     }
 }

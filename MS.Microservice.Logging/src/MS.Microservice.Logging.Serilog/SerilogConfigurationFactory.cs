@@ -49,7 +49,7 @@ internal static class SerilogConfigurationFactory
         LogLevel.Warning => LogEventLevel.Warning,
         LogLevel.Error => LogEventLevel.Error,
         LogLevel.Critical => LogEventLevel.Fatal,
-        LogLevel.None => LogEventLevel.Fatal,
+        LogLevel.None => LevelAlias.Off,
         _ => LogEventLevel.Information,
     };
 }

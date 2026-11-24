@@ -58,6 +58,38 @@ public sealed class MsSerilogProviderTests
     }
 
     [Fact]
+    public void ConfigureMsSerilog_ShouldOverrideOnlyFieldsPresentInTheCurrentContext()
+    {
+        var sink = new CollectingSink();
+        using var host = Host.CreateDefaultBuilder()
+            .ConfigureMsSerilog(options =>
+            {
+                options.ReadFromConfiguration = false;
+                options.UseConsoleSink = false;
+                options.ConfigureLogger = (_, configuration) => configuration.WriteTo.Sink(sink);
+            })
+            .Build();
+        var logger = host.Services.GetRequiredService<global::Serilog.ILogger>();
+        var context = new RequestLogContext { RequestId = "ambient", PlatformId = " ", ElapsedMilliseconds = 0 };
+        using (RequestLogScope.Push(context))
+        {
+            logger.Information("{requestId} {platformId} {statusCode}", "template", "platform", 418);
+            context.StatusCode = 204;
+            context.ElapsedMilliseconds = 10;
+            logger.Information("{statusCode} {elapsedMs}", 418, -1);
+        }
+
+        var first = sink.Events[0].Properties;
+        Assert.Equal("ambient", Assert.IsType<ScalarValue>(first["requestId"]).Value);
+        Assert.Equal("platform", Assert.IsType<ScalarValue>(first["platformId"]).Value);
+        Assert.Equal(418, Assert.IsType<ScalarValue>(first["statusCode"]).Value);
+        Assert.Equal(0L, Assert.IsType<ScalarValue>(first["elapsedMs"]).Value);
+        var second = sink.Events[1].Properties;
+        Assert.Equal(204, Assert.IsType<ScalarValue>(second["statusCode"]).Value);
+        Assert.Equal(10L, Assert.IsType<ScalarValue>(second["elapsedMs"]).Value);
+    }
+
+    [Fact]
     public void ConfigureMsSerilog_ShouldLeaveRequestPropertiesAbsent_WhenNoAmbientContextExists()
     {
         var sink = new CollectingSink();
@@ -97,6 +129,7 @@ public sealed class MsSerilogProviderTests
             options.UseConsoleSink = false;
             options.ConfigureLogger = (_, loggerConfiguration) =>
             {
+                loggerConfiguration.MinimumLevel.Override("Explicit.Override", LogEventLevel.Verbose);
                 loggerConfiguration.WriteTo.Sink(sink);
             };
         });
@@ -106,6 +139,11 @@ public sealed class MsSerilogProviderTests
 
         logger.LogCritical("should not be written");
 
+        var nativeLogger = host.Services.GetRequiredService<global::Serilog.ILogger>();
+        Assert.False(nativeLogger.IsEnabled(LogEventLevel.Fatal));
+        var overridden = nativeLogger.ForContext("SourceContext", "Explicit.Override.Category");
+        Assert.True(overridden.IsEnabled(LogEventLevel.Fatal));
+        overridden.Fatal("also filtered");
         sink.Events.Should().BeEmpty();
     }
 
