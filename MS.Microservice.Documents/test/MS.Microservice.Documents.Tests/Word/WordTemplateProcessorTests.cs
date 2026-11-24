@@ -310,7 +310,7 @@ public sealed class WordTemplateProcessorTests
             using var input = new MemoryStream(bytes);
             using var output = new MemoryStream();
             var task = _processor.FillAsync(input, output, Values(value), new()
-            { Limits = new() { MaximumOutputBytes = (int)baselineOutput.Length + difference } });
+            { Limits = new() { MaximumInputBytes = bytes.Length, MaximumOutputBytes = (int)baselineOutput.Length + difference } });
             if (difference == 0)
             {
                 await task;

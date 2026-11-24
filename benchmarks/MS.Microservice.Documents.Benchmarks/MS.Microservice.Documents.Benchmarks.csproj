@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../shared/MeasuredOperation.cs" Link="MeasuredOperation.cs" />
+    <ProjectReference Include="../../MS.Microservice.Documents/src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+  </ItemGroup>
+</Project>

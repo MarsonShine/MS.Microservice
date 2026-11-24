@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 205" width="760" height="205" role="img" aria-labelledby="title desc">
+  <title id="title">普通 XML 部件在读取校验和文本提取时的数据流</title>
+  <desc id="desc">旧的包校验从同一 ZIP 条目先读到末尾计数，再重新打开解析。旧的文本提取则先把全部展开内容写入暂存流。现在二者都由 ExpandedPartStream 在 XmlReader 读取时计数。</desc>
+  <rect width="760" height="205" rx="8" fill="#f4f7fa"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16" fill="#233846">
+    <text x="18" y="30" font-weight="600">同一份 word/document.xml</text>
+    <text x="18" y="69">旧 · 包校验</text><text x="156" y="69">解压并计数到 EOF</text><text x="375" y="69">→</text><text x="416" y="69">重新打开条目，解压并解析 XML</text>
+    <text x="18" y="106">旧 · 文本提取</text><text x="156" y="106">完整解压到 BoundedBuffer</text><text x="375" y="106">→</text><text x="416" y="106">XmlReader 读取暂存内容</text>
+    <rect x="12" y="127" width="736" height="62" rx="6" fill="#e5f3ec" stroke="#579177"/>
+    <text x="22" y="165" font-weight="600">新 · 两个入口</text><text x="156" y="165">ZIP 解压流</text><text x="266" y="165">→</text><text x="302" y="165">ExpandedPartStream 计数</text><text x="531" y="165">→</text><text x="566" y="165">XmlReader 解析</text>
+  </g>
+</svg>

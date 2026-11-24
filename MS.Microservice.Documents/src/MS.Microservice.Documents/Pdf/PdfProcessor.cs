@@ -83,7 +83,7 @@ public sealed partial class PdfProcessor
             using var part = new PdfDocument();
             CopyMetadata(source.Document, part);
             part.AddPage(source.Document.Pages[page]);
-            yield return new(page + 1, Save(part, options, source.IsEncrypted, cancellationToken));
+            yield return new(page + 1, Save(part, options, source.IsEncrypted, cancellationToken).ToArray());
         }
     }
 

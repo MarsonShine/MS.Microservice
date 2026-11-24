@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
+using MS.Microservice.Documents.Internal;
 
 namespace MS.Microservice.Documents.Word;
 
@@ -56,34 +57,46 @@ internal static class WordPackage
             node => (string)node.Attribute("Extension")!, node => (string)node.Attribute("ContentType")!, StringComparer.OrdinalIgnoreCase) ?? [];
         var overrides = contentTypes.Root?.Elements(ns + "Override").ToDictionary(
             node => ((string)node.Attribute("PartName")!).TrimStart('/'), node => (string)node.Attribute("ContentType")!, StringComparer.OrdinalIgnoreCase) ?? [];
-        var buffer = new byte[81920];
+        byte[]? binaryScratch = null;
         long actual = 0;
         foreach (var entry in archive.Entries)
         {
-            using (var stream = entry.Open())
-            {
-                int read;
-                while ((read = await stream.ReadAsync(buffer.AsMemory(0,
-                    1 + (int)Math.Min(buffer.Length - 1, limits.MaximumExpandedBytes - actual)), cancellationToken).ConfigureAwait(false)) != 0)
-                {
-                    if (read > limits.MaximumExpandedBytes - actual) throw new InvalidDataException("Expanded DOCX exceeds the byte limit.");
-                    actual += read;
-                }
-            }
             overrides.TryGetValue(entry.FullName, out var type);
-            if (type is null) defaults.TryGetValue(Path.GetExtension(entry.FullName).TrimStart('.'), out type);
-            if (!entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
-                && !entry.FullName.EndsWith(".rels", StringComparison.OrdinalIgnoreCase)
-                && type?.EndsWith("xml", StringComparison.OrdinalIgnoreCase) != true) continue;
-            using var xmlStream = entry.Open();
-            using var xml = XmlReader.Create(xmlStream, XmlSettings(limits));
-            while (await xml.ReadAsync().ConfigureAwait(false))
+            if (type is null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (xml.Depth == 0 && type?.Contains(".wordprocessingml.", StringComparison.OrdinalIgnoreCase) == true
-                    && xml.NamespaceURI == "http://purl.oclc.org/ooxml/wordprocessingml/main")
-                    throw new NotSupportedException("Strict DOCX is not supported.");
+                defaults.TryGetValue(Path.GetExtension(entry.FullName).TrimStart('.'), out type);
             }
+            using var stream = new ExpandedPartStream(entry.Open(), limits.MaximumExpandedBytes - actual, cancellationToken);
+            if (entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                || entry.FullName.EndsWith(".rels", StringComparison.OrdinalIgnoreCase)
+                || type?.EndsWith("xml", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                try
+                {
+                    using var xml = XmlReader.Create(stream, XmlSettings(limits));
+                    while (await xml.ReadAsync().ConfigureAwait(false))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (xml.Depth == 0 && type?.Contains(".wordprocessingml.", StringComparison.OrdinalIgnoreCase) == true
+                            && xml.NamespaceURI == "http://purl.oclc.org/ooxml/wordprocessingml/main")
+                        {
+                            throw new NotSupportedException("Strict DOCX is not supported.");
+                        }
+                    }
+                }
+                catch (Exception error) when (error is XmlException or NotSupportedException)
+                {
+                    // As before, a corrupt or oversized entry takes precedence over its XML error.
+                    await stream.DrainAsync().ConfigureAwait(false);
+                    throw;
+                }
+                await stream.DrainAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                await stream.DrainAsync(binaryScratch ??= new byte[81920]).ConfigureAwait(false);
+            }
+            actual += stream.BytesRead;
         }
         data.Position = 0;
     }

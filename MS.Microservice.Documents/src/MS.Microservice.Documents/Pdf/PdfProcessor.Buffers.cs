@@ -33,7 +33,7 @@ public sealed partial class PdfProcessor
             throw new ArgumentException("PDF output passwords must contain 1 to 127 UTF-8 bytes, including after normalization.");
     }
 
-    private static UglyToad.PdfPig.PdfDocument OpenContent(byte[] bytes, string? password, out string? resolvedPassword)
+    private static UglyToad.PdfPig.PdfDocument OpenContent(ReadOnlyMemory<byte> bytes, string? password, out string? resolvedPassword)
     {
         resolvedPassword = password;
         try { return UglyToad.PdfPig.PdfDocument.Open(bytes, new UglyToad.PdfPig.ParsingOptions { Password = password ?? string.Empty }); }
@@ -74,24 +74,17 @@ public sealed partial class PdfProcessor
         }
     }
 
-    private static async Task<byte[]> ReadAsync(
+    private static Task<byte[]> ReadAsync(
         Stream input, PdfLimits limits, CancellationToken cancellationToken, long? remainingMergeBytes = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (!input.CanRead) throw new ArgumentException("Input must be readable.", nameof(input));
         cancellationToken.ThrowIfCancellationRequested();
         var maximumBytes = (int)Math.Min(limits.MaximumInputBytes, remainingMergeBytes ?? limits.MaximumInputBytes);
-        using var data = new BoundedBuffer(maximumBytes, "PDF");
-        var buffer = new byte[(int)Math.Min(81920L, (long)maximumBytes + 1)];
-        int read;
-        while ((read = await input.ReadAsync(buffer.AsMemory(0,
-            (int)Math.Min(buffer.Length, (long)maximumBytes - data.Length + 1)), cancellationToken).ConfigureAwait(false)) != 0)
-            data.Write(buffer, 0, read);
-        cancellationToken.ThrowIfCancellationRequested();
-        return data.ToArray();
+        return BoundedBuffer.ReadSnapshotAsync(input, maximumBytes, "PDF", cancellationToken);
     }
 
-    private static byte[] Save(PdfDocument document, PdfOptions options, bool sourceEncrypted, CancellationToken cancellationToken)
+    private static ReadOnlyMemory<byte> Save(PdfDocument document, PdfOptions options, bool sourceEncrypted, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (sourceEncrypted && options.OutputUserPassword is null && !options.AllowUnencryptedOutput)
@@ -106,7 +99,8 @@ public sealed partial class PdfProcessor
         var expectedPages = document.PageCount;
         document.Save(output, closeStream: false);
         cancellationToken.ThrowIfCancellationRequested();
-        var bytes = output.ToArray();
+        // The private array remains owned by this result. Exclude the stream's spare capacity.
+        var bytes = output.GetBuffer().AsMemory(0, checked((int)output.Length));
         if (options.OutputUserPassword is not null)
         {
             var requiresPassword = false;

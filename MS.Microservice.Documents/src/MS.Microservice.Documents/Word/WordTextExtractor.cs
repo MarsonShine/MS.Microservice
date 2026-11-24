@@ -27,7 +27,7 @@ public sealed class WordTextExtractor
             throw new ArgumentException("Word text extraction limits must be positive.", nameof(options));
         cancellationToken.ThrowIfCancellationRequested();
         using var input = new BoundedBuffer(options.MaximumInputBytes, "DOCX input");
-        await CopyBoundedAsync(source, input, options.MaximumInputBytes, cancellationToken).ConfigureAwait(false);
+        await input.ReadFromAsync(source, cancellationToken).ConfigureAwait(false);
         input.Position = 0;
         using var archive = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: true);
         if (archive.Entries.Count > options.MaximumEntries) throw new InvalidDataException("DOCX has too many ZIP entries.");
@@ -75,7 +75,19 @@ public sealed class WordTextExtractor
                     await reader.StoryAsync(path, kind == "header" ? "hdr" : "ftr", text, null, cancellationToken).ConfigureAwait(false);
             }
         }
-        return text.ToString().TrimEnd('\n', '\t');
+        // Find the last content character without repeatedly shrinking across StringBuilder chunks.
+        int offset = 0;
+        int length = 0;
+        foreach (var chunk in text.GetChunks())
+        {
+            int last = chunk.Span.LastIndexOfAnyExcept('\n', '\t');
+            if (last >= 0)
+            {
+                length = offset + last + 1;
+            }
+            offset += chunk.Length;
+        }
+        return text.ToString(0, length);
     }
 
     private static bool IsRelationship(string type, string name) =>
@@ -97,35 +109,38 @@ public sealed class WordTextExtractor
         return path;
     }
 
-    private static async Task CopyBoundedAsync(Stream source, BoundedBuffer destination, int maximumBytes, CancellationToken cancellationToken)
-    {
-        var buffer = new byte[(int)Math.Min(81920L, (long)maximumBytes + 1)];
-        int read;
-        while ((read = await source.ReadAsync(buffer.AsMemory(0,
-            (int)Math.Min(buffer.Length, (long)maximumBytes - destination.Length + 1)), cancellationToken).ConfigureAwait(false)) != 0)
-            destination.Write(buffer, 0, read);
-    }
-
     private sealed record Relationship(string Type, string Target, bool External);
 
     private sealed class PackageReader(Dictionary<string, ZipArchiveEntry> entries, WordTextExtractionOptions options)
     {
         private int _remainingBytes = options.MaximumExpandedXmlBytes;
 
-        private async Task<BoundedBuffer> ReadAsync(string path, CancellationToken cancellationToken)
+        private async Task<T> ReadXmlAsync<T>(string path, Func<XmlReader, Task<T>> parse, CancellationToken cancellationToken)
         {
-            if (!entries.TryGetValue(path, out var entry)) throw new InvalidDataException($"Missing DOCX part: {path}");
-            if (entry.Length > _remainingBytes) throw new InvalidDataException("Expanded DOCX XML exceeds the byte limit.");
-            var buffer = new BoundedBuffer(_remainingBytes, "Expanded DOCX XML");
+            if (!entries.TryGetValue(path, out var entry))
+            {
+                throw new InvalidDataException($"Missing DOCX part: {path}");
+            }
+            if (entry.Length > _remainingBytes)
+            {
+                throw new InvalidDataException("Expanded DOCX XML exceeds the byte limit.");
+            }
+            using var part = new ExpandedPartStream(entry.Open(), _remainingBytes, cancellationToken);
+            using var xml = CreateReader(part);
+            T result;
             try
             {
-                using var stream = entry.Open();
-                await CopyBoundedAsync(stream, buffer, _remainingBytes, cancellationToken).ConfigureAwait(false);
-                _remainingBytes -= (int)buffer.Length;
-                buffer.Position = 0;
-                return buffer;
+                result = await parse(xml).ConfigureAwait(false);
             }
-            catch { buffer.Dispose(); throw; }
+            catch (Exception error) when (error is XmlException or InvalidDataException)
+            {
+                // A corrupt or over-budget compressed entry previously failed before XML parsing.
+                await part.DrainAsync().ConfigureAwait(false);
+                throw;
+            }
+            await part.DrainAsync().ConfigureAwait(false);
+            _remainingBytes -= (int)part.BytesRead;
+            return result;
         }
 
         private XmlReader CreateReader(Stream stream) => XmlReader.Create(stream, new XmlReaderSettings
@@ -134,12 +149,8 @@ public sealed class WordTextExtractor
             MaxCharactersInDocument = options.MaximumXmlCharactersPerPart
         });
 
-        internal async Task<XDocument> XmlAsync(string path, CancellationToken cancellationToken)
-        {
-            using var buffer = await ReadAsync(path, cancellationToken).ConfigureAwait(false);
-            using var xml = CreateReader(buffer);
-            return await XDocument.LoadAsync(xml, LoadOptions.None, cancellationToken).ConfigureAwait(false);
-        }
+        internal Task<XDocument> XmlAsync(string path, CancellationToken cancellationToken) =>
+            ReadXmlAsync(path, xml => XDocument.LoadAsync(xml, LoadOptions.None, cancellationToken), cancellationToken);
 
         internal async Task<Dictionary<string, Relationship>> RelationshipsAsync(string path, CancellationToken cancellationToken)
         {
@@ -158,8 +169,17 @@ public sealed class WordTextExtractor
 
         internal async Task StoryAsync(string path, string root, StringBuilder text, HashSet<string>? references, CancellationToken cancellationToken)
         {
-            using var buffer = await ReadAsync(path, cancellationToken).ConfigureAwait(false);
-            using var xml = CreateReader(buffer);
+            var found = await ReadXmlAsync(path, xml => ReadStoryAsync(xml, root, text, references, cancellationToken), cancellationToken)
+                .ConfigureAwait(false);
+            if (!found)
+            {
+                throw new InvalidDataException($"Missing DOCX {root} root.");
+            }
+        }
+
+        private async Task<bool> ReadStoryAsync(XmlReader xml, string root, StringBuilder text, HashSet<string>? references,
+            CancellationToken cancellationToken)
+        {
             var validRoot = false;
             var bodyDepth = root == "document" ? -1 : 0;
             var textDepth = -1;
@@ -217,7 +237,7 @@ public sealed class WordTextExtractor
                     case "tr" when xml.IsEmptyElement: Append(text, "\n"); break;
                 }
             }
-            if (!validRoot) throw new InvalidDataException($"Missing DOCX {root} root.");
+            return validRoot;
         }
 
         private void Append(StringBuilder text, string value)

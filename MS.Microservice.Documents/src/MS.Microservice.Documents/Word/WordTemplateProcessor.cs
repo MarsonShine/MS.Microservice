@@ -27,16 +27,11 @@ public sealed class WordTemplateProcessor
             throw new ArgumentException("Word template limits must be positive and policies valid.", nameof(options));
         cancellationToken.ThrowIfCancellationRequested();
         var supplied = new Dictionary<string, string?>(values, StringComparer.Ordinal);
-        using var source = new BoundedBuffer(limits.MaximumInputBytes, "DOCX input");
-        var buffer = new byte[(int)Math.Min(81920L, (long)limits.MaximumInputBytes + 1)];
-        int read;
-        while ((read = await template.ReadAsync(buffer.AsMemory(0,
-            (int)Math.Min(buffer.Length, (long)limits.MaximumInputBytes - source.Length + 1)), cancellationToken).ConfigureAwait(false)) != 0)
-            source.Write(buffer, 0, read);
-        await WordPackage.CheckAsync(source, limits, cancellationToken).ConfigureAwait(false);
-        using var edited = new BoundedBuffer(limits.MaximumOutputBytes, "DOCX output");
-        source.Position = 0;
-        await source.CopyToAsync(edited, cancellationToken).ConfigureAwait(false);
+        using var edited = new BoundedBuffer(limits.MaximumInputBytes, "DOCX input");
+        await edited.ReadFromAsync(template, cancellationToken).ConfigureAwait(false);
+        await WordPackage.CheckAsync(edited, limits, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        edited.ChangeWriteLimit(limits.MaximumOutputBytes, "DOCX output");
         edited.Position = 0;
         var filled = 0;
         using (var document = WordprocessingDocument.Open(edited, true, WordPackage.Settings(limits)))

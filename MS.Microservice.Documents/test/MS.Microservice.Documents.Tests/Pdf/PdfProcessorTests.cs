@@ -492,11 +492,14 @@ public sealed class PdfProcessorTests
     public async Task Streams_CurrentPositionsAndNonseekableShortReadsRemainSupported()
     {
         var bytes = CreatePdf(["Original"]);
-        using var input = new MemoryStream([99, 98, .. bytes]) { Position = 2 };
+        byte[] backing = [97, 99, 98, .. bytes, 0xff, 0xff];
+        using var input = new MemoryStream(backing, 1, 2 + bytes.Length, writable: false) { Position = 2 };
         using var output = new MemoryStream();
         output.WriteByte(97);
         await _processor.SelectPagesAsync(input, output, [1]);
-        using var selected = new ShortReadStream(output.ToArray()[1..]);
+        var selectedBytes = output.ToArray()[1..];
+        Assert.EndsWith("%%EOF", System.Text.Encoding.ASCII.GetString(selectedBytes).TrimEnd('\r', '\n'));
+        using var selected = new ShortReadStream(selectedBytes);
         var text = await _processor.ExtractTextAsync(selected);
 
         Assert.Equal(97, output.ToArray()[0]);

@@ -4,6 +4,8 @@
 
 HTML 转 PDF 位于可选的 [Documents.Rendering](../MS.Microservice.Documents.Rendering/README.md) 组件，目前支持 Windows；普通 PDF／DOCX 使用者无需引用它。
 
+关于 XML 展开、模板工作副本和 PDF 输出数组的开销，见[性能代码评审](docs/performance-review.md)。
+
 | 功能 | 方法 | 结果 |
 | --- | --- | --- |
 | 元数据 | `InspectAsync` | 标题、作者、加密状态、页尺寸与旋转 |

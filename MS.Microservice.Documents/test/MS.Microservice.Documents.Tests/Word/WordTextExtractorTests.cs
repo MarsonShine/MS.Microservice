@@ -48,6 +48,37 @@ public sealed class WordTextExtractorTests
     }
 
     [Fact]
+    public async Task Extract_ChargesActualXmlBytesAcrossStoriesAndTrimsOnlyTheFinalSeparators()
+    {
+        string body = new string('中', 32_768) + "😀";
+        var bytes = Package($"<w:p><w:r><w:t>{body}</w:t></w:r></w:p><w:sectPr><w:footerReference r:id='F'/></w:sectPr>", new()
+        {
+            ["word/_rels/document.xml.rels"] = Relations("<Relationship Id='F' Type='" + RelNs + "/footer' Target='footer.xml'/>"),
+            ["word/footer.xml"] = $"<w:ftr xmlns:w='{WordNs}'><w:p><w:r><w:t>Footer</w:t><w:tab/><w:br/></w:r></w:p></w:ftr>"
+        });
+        using var input = new MemoryStream(bytes);
+        int expanded;
+        using (var archive = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: true))
+        {
+            expanded = checked((int)archive.Entries.Sum(entry => entry.Length));
+        }
+        input.Position = 0;
+        Assert.Equal(body + "\nFooter", await _extractor.ExtractAsync(input, new() { MaximumExpandedXmlBytes = expanded }));
+        input.Position = 0;
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            _extractor.ExtractAsync(input, new() { MaximumExpandedXmlBytes = expanded - 1 }));
+    }
+
+    [Fact]
+    public async Task Extract_TrimsSeparatorOnlyChunksWithoutLosingTheLastTextChunk()
+    {
+        const string content = "start\t中😀 ";
+        string tail = string.Concat(Enumerable.Repeat("<w:tab/><w:br/>", 10_000));
+        using var input = new MemoryStream(Package($"<w:p><w:r><w:t xml:space='preserve'>{content}</w:t>{tail}</w:r></w:p>"));
+        Assert.Equal(content, await _extractor.ExtractAsync(input));
+    }
+
+    [Fact]
     public async Task Extract_ReadsSignedAndProtectedDocumentsWithoutInvokingTemplateWritePolicies()
     {
         using var input = new MemoryStream();
