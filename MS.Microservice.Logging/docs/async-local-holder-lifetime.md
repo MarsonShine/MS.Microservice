@@ -116,7 +116,7 @@ Console.WriteLine("已排队任务：" + await work);
 
 Holder 控制的是**以后通过 `RequestLogScope.Current` 进行的查找**。如果代码在释放前执行 `var saved = RequestLogScope.Current`，之后直接使用 `saved`，Holder 无法收回那个引用。任务自行建立的新日志作用域也不会随原请求的作用域一起清空。调用方仍应按进入顺序的逆序释放嵌套作用域。
 
-从模块根目录运行 [基准程序](../benchmarks/MS.Microservice.Logging.Core.Benchmarks/Program.cs)，在 Windows x64、.NET 10.0.12、Release 下，每场景测 7 轮、每轮 20 万次，取中位数：
+下表是采用独立释放句柄时的历史测量。在 Windows x64、.NET 10.0.12、Release 下，[基准程序](../benchmarks/MS.Microservice.Logging.Core.Benchmarks/Program.cs)每场景测 7 轮、每轮 20 万次，取中位数。当前版本由 Holder 自身承担释放职责，见[.NET 11 的实现与复测](request-logging-performance.md)。
 
 | 普通 Push/Dispose | 耗时 | 托管分配 |
 | --- | ---: | ---: |

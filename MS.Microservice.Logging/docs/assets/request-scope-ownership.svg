@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="258" viewBox="0 0 800 258" role="img" aria-labelledby="title desc">
+  <title id="title">请求作用域的引用与释放</title>
+  <desc id="desc">Push 后，当前执行流、已捕获的子流和 IDisposable 句柄指向同一个 ScopeState。Dispose 将 _context 清空，子流再读取时得到 null，释放方恢复外层作用域。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#45647b"/></marker>
+  </defs>
+  <rect width="800" height="258" rx="10" fill="#f6f9fc"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" fill="#17384c">
+    <text x="24" y="32" font-size="19" font-weight="600">Push 之后</text>
+    <text x="467" y="32" font-size="19" font-weight="600">Dispose 之后</text>
+    <path d="M437 18 V237" stroke="#c9d8e3"/>
+    <g fill="#fff" stroke="#b1c4d2">
+      <rect x="24" y="53" width="177" height="40" rx="6"/>
+      <rect x="24" y="112" width="177" height="40" rx="6"/>
+      <rect x="24" y="171" width="177" height="40" rx="6"/>
+    </g>
+    <g font-size="15" text-anchor="middle">
+      <text x="112" y="79">当前流的 AsyncLocal 值</text>
+      <text x="112" y="138">子流捕获的 AsyncLocal 值</text>
+      <text x="112" y="197">Push 返回的 IDisposable</text>
+    </g>
+    <g fill="none" stroke="#45647b" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M202 73 H226 V112 H251"/>
+      <path d="M202 132 H251"/>
+      <path d="M202 191 H226 V152 H251"/>
+    </g>
+    <rect x="254" y="89" width="158" height="85" rx="7" fill="#dcefe8" stroke="#6e998b"/>
+    <text x="333" y="121" text-anchor="middle" font-size="18" font-weight="600">ScopeState</text>
+    <text x="333" y="151" text-anchor="middle" font-size="15">_context → context</text>
+    <text x="24" y="238" font-size="13" fill="#4c6577">context 指向 RequestId 为 req-42 的请求对象。</text>
+    <g font-size="16">
+      <text x="467" y="76">Interlocked.Exchange 清空 _context</text>
+      <path d="M475 88 V111" stroke="#45647b" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="467" y="138">子流再次读取 Current 得到 null</text>
+      <text x="467" y="181">首次释放的执行流恢复 _priorState</text>
+      <text x="467" y="210">随后断开节点对父作用域的引用</text>
+    </g>
+  </g>
+</svg>

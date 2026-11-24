@@ -3,6 +3,8 @@ Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
 
+Logging 四个项目的耗时、分配和宿主回归结果见[验收记录](../validation/LOGGING-HOT-PATHS/summary.md)。
+
 最近完成的文档处理与渲染性能检查见[基准与回归记录](../validation/DOCUMENTS-RENDERING-PERF/summary.md)。
 
 ArrayBufferWriter 指南见[示例验证记录](../validation/ARRAY-BUFFER-WRITER-GUIDE/summary.md)。

@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: f4c88f4
+Baseline: ac6b66a
+
+Logging 的请求作用域每次少分配 32 B，NLog 请求字段改为单次读取，Serilog 提前过滤已关闭的等级并减少空属性事件的分配。见[代码解析](../MS.Microservice.Logging/docs/request-logging-performance.md)和[性能与回归验收](validation/LOGGING-HOT-PATHS/summary.md)。
 
 Documents 与 Documents.Rendering 已优化 DOCX 展开与模板工作副本、PDF 快照、HTML 资源准备和输出帧复制。见[文档处理点评](../MS.Microservice.Documents/src/MS.Microservice.Documents/docs/performance-review.md)、[渲染点评](../MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/docs/performance-review.md)和[测试与新旧基准](validation/DOCUMENTS-RENDERING-PERF/summary.md)。
 

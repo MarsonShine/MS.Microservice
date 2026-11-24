@@ -6,6 +6,8 @@ Logging 负责应用日志上下文与后端接入，不负责业务身份验证
 源码在 src、对应测试在 test，[设计说明](docs/design.md)在 docs。
 在本目录执行 dotnet test MS.Microservice.Logging.slnx -c Release。
 
+[请求日志性能实测与代码解析](docs/request-logging-performance.md)沿一次 HTTP 请求说明作用域分配、状态码采样，以及 NLog 和 Serilog 写入字段的成本。
+
 Core 不依赖 ASP.NET Core 或具体日志后端，AspNetCore 负责请求边界，
 NLog/Serilog 是可选后端。这样 Worker 可以只使用 Core，Web 可以按需选择中间件和后端，
 无需为切换日志后端修改业务代码。

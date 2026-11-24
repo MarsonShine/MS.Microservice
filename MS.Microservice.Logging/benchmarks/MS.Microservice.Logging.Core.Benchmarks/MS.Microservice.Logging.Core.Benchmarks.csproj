@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../src/MS.Microservice.Logging.AspNetCore/MS.Microservice.Logging.AspNetCore.csproj" />
     <ProjectReference Include="../../src/MS.Microservice.Logging.Core/MS.Microservice.Logging.Core.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Logging.NLog/MS.Microservice.Logging.NLog.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Logging.Serilog/MS.Microservice.Logging.Serilog.csproj" />
   </ItemGroup>
 </Project>
