@@ -6,6 +6,7 @@ namespace MS.Microservice.Documents.Rendering;
 public sealed class HtmlPdfRenderer
 {
     private readonly HtmlBrowserOptions _browser;
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private static readonly HashSet<string> AssetTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/webp", "text/css", "font/woff", "font/woff2", "font/ttf", "font/otf" };
 
     public HtmlPdfRenderer(HtmlBrowserOptions browser)
@@ -27,14 +28,14 @@ public sealed class HtmlPdfRenderer
         ArgumentNullException.ThrowIfNull(destination);
         if (!destination.CanWrite) throw new ArgumentException("Output must be writable.", nameof(destination));
         cancellationToken.ThrowIfCancellationRequested();
-        var request = Snapshot(html, _browser, options ?? new());
+        var request = PrepareRequest(html, _browser, options ?? new(), copyAssetContents: true);
         var (bytes, pages) = await RenderWorkerSupervisor.RunAsync(request, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         await destination.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
         return new(pages, bytes.Length);
     }
 
-    internal static HtmlWorkerRequest Snapshot(string html, HtmlBrowserOptions browser, HtmlPdfOptions options)
+    internal static HtmlWorkerRequest PrepareRequest(string html, HtmlBrowserOptions browser, HtmlPdfOptions options, bool copyAssetContents)
     {
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(options.Assets);
@@ -48,8 +49,10 @@ public sealed class HtmlPdfRenderer
             || !double.IsFinite(options.MarginMillimeters) || options.MarginMillimeters < 0
             || options.MarginMillimeters * 2 >= Math.Min(options.WidthMillimeters, options.HeightMillimeters))
             throw new ArgumentException("HTML rendering limits, timeout, paper dimensions or margins are invalid.", nameof(options));
-        if (html.Length > limits.MaximumHtmlBytes || new UTF8Encoding(false, true).GetByteCount(html) > limits.MaximumHtmlBytes)
+        if (html.Length > limits.MaximumHtmlBytes || StrictUtf8.GetByteCount(html) > limits.MaximumHtmlBytes)
+        {
             throw new InvalidDataException("HTML exceeds the UTF-8 input limit.");
+        }
         if (options.Assets.Count > limits.MaximumAssets) throw new InvalidDataException("Too many HTML assets.");
         var assets = new Dictionary<string, HtmlPdfAsset>(StringComparer.Ordinal);
         long total = 0;
@@ -61,8 +64,12 @@ public sealed class HtmlPdfRenderer
             if (asset.Content.Length > limits.MaximumAssetBytes || asset.Content.Length > limits.MaximumTotalAssetBytes - total)
                 throw new InvalidDataException("HTML assets exceed the configured byte limits.");
             total += asset.Content.Length;
-            _ = new UTF8Encoding(false, true).GetByteCount(name);
-            assets.Add(name, asset with { ContentType = asset.ContentType.ToLowerInvariant(), Content = asset.Content.ToArray() });
+            _ = StrictUtf8.GetByteCount(name);
+            assets.Add(name, asset with
+            {
+                ContentType = asset.ContentType.ToLowerInvariant(),
+                Content = copyAssetContents ? asset.Content.ToArray() : asset.Content
+            });
         }
         return new(html, browser, options with { Assets = assets });
     }

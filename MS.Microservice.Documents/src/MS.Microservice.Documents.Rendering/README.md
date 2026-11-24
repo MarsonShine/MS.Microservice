@@ -6,6 +6,8 @@
 
 ## HTML 转 PDF
 
+关于 HTML 资源的所有权、worker 输出帧与实际 Edge 渲染的测量，见[性能代码评审](docs/performance-review.md)。
+
 ```csharp
 using MS.Microservice.Documents.Rendering;
 

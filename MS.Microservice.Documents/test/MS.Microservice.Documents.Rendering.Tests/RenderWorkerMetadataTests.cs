@@ -9,6 +9,27 @@ public sealed class RenderWorkerMetadataTests : IDisposable
     public RenderWorkerMetadataTests() => Directory.CreateDirectory(_directory);
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
+    [Theory]
+    [InlineData(9)]
+    [InlineData(256)]
+    public async Task OutputFrameIncludesOnlyBytesReadAcrossShortPipeReads(int maximum)
+    {
+        byte[] frame = [2, 0, 0, 0, 37, 80, 68, 70, 45];
+        using var pipe = new ShortReads(frame);
+        var result = await RenderWorkerSupervisor.ReadOutputAsync(pipe, maximum, "HTML", CancellationToken.None);
+        Assert.Equal(frame, result.ToArray());
+
+        pipe.Position = 0;
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            RenderWorkerSupervisor.ReadOutputAsync(pipe, frame.Length - 1, "HTML", CancellationToken.None));
+    }
+
+    private sealed class ShortReads(byte[] bytes) : MemoryStream(bytes, writable: false)
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => base.ReadAsync(buffer[..Math.Min(2, buffer.Length)], cancellationToken);
+    }
+
     [Fact]
     public void Metadata_UsesConsumerPairWithSpacesAndMultipleDotsBeforeFrameworkMetadata()
     {

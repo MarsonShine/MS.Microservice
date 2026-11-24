@@ -13,7 +13,8 @@ internal static class HtmlRenderWorker
     {
         var raw = await JsonSerializer.DeserializeAsync<HtmlWorkerRequest>(Console.OpenStandardInput()).ConfigureAwait(false)
             ?? throw new InvalidDataException("Missing HTML worker request.");
-        var request = HtmlPdfRenderer.Snapshot(raw.Html, raw.Browser, raw.Options);
+        // Deserialization gives this worker exclusive ownership of the asset bytes.
+        var request = HtmlPdfRenderer.PrepareRequest(raw.Html, raw.Browser, raw.Options, copyAssetContents: false);
         foreach (var asset in request.Options.Assets.Values.Where(asset => asset.ContentType.StartsWith("image/", StringComparison.Ordinal)))
         {
             RenderImageValidator.Validate(asset.Content, asset.ContentType, request.Options.Limits.MaximumImagePixels);

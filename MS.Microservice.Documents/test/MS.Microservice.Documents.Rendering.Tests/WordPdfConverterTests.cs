@@ -21,6 +21,17 @@ public sealed class WordPdfConverterTests : IDisposable
         LibreOfficeExecutablePath = native ? OfficePath! : Environment.ProcessPath!, TemporaryDirectory = _temporary, DotNetHostPath = dotnet ?? "dotnet"
     });
 
+    [Fact]
+    public async Task ReadDocxInputSnapshotsOnlyTheRemainingBytesOfAnArraySegment()
+    {
+        byte[] backing = [9, 8, 1, 2, 3, 7];
+        using var input = new MemoryStream(backing, 1, 4, writable: false) { Position = 1 };
+        var snapshot = await WordPdfConverter.ReadAsync(input, 3, "DOCX input");
+        Array.Fill(backing, (byte)0);
+        Assert.Equal(new byte[] { 1, 2, 3 }, snapshot);
+        Assert.Equal(input.Length, input.Position);
+    }
+
     [LibreOfficeFact]
     public async Task Convert_RealUnicodeTableHeadersImagePaginationNonSeekableAndPrefix()
     {

@@ -9,15 +9,15 @@ namespace MS.Microservice.Documents.Rendering;
 
 internal static class RenderWorkerSupervisor
 {
-    internal static Task<(byte[] Pdf, int Pages)> RunAsync(HtmlWorkerRequest request, CancellationToken cancellationToken) =>
+    internal static Task<(ReadOnlyMemory<byte> Pdf, int Pages)> RunAsync(HtmlWorkerRequest request, CancellationToken cancellationToken) =>
         RunCoreAsync(request, request.Browser.DotNetHostPath, request.Browser.TemporaryDirectory, "--html-worker", request.Options.Timeout,
             request.Options.Limits.MaximumPdfBytes, request.Options.Limits.MaximumPages, cancellationToken);
 
-    internal static Task<(byte[] Pdf, int Pages)> RunAsync(WordWorkerRequest request, CancellationToken cancellationToken) =>
+    internal static Task<(ReadOnlyMemory<byte> Pdf, int Pages)> RunAsync(WordWorkerRequest request, CancellationToken cancellationToken) =>
         RunCoreAsync(request, request.Office.DotNetHostPath, request.Office.TemporaryDirectory, "--word-worker", request.Options.Timeout,
             request.Options.Limits.MaximumPdfBytes, request.Options.Limits.MaximumPages, cancellationToken);
 
-    private static async Task<(byte[] Pdf, int Pages)> RunCoreAsync<TRequest>(TRequest request, string dotnetHost, string temporaryDirectory,
+    private static async Task<(ReadOnlyMemory<byte> Pdf, int Pages)> RunCoreAsync<TRequest>(TRequest request, string dotnetHost, string temporaryDirectory,
         string mode, TimeSpan processingTimeout, int maximumPdfBytes, int maximumPages, CancellationToken cancellationToken)
     {
         var label = mode == "--html-worker" ? "HTML" : "DOCX";
@@ -34,7 +34,7 @@ internal static class RenderWorkerSupervisor
         var cleanupErrors = new List<Exception>();
         WindowsProcessJob? processJob = null;
         Exception? failure = null;
-        byte[]? wire = null;
+        ReadOnlyMemory<byte> wire = default;
         Task? all = null;
         var started = false;
         try
@@ -100,8 +100,11 @@ internal static class RenderWorkerSupervisor
         if (cleanupErrors.Count != 0)
             throw new AggregateException($"{label} worker cleanup failed; retained directory: {job}", failure is null ? cleanupErrors : [failure, .. cleanupErrors]);
         if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
-        if (wire is null || wire.Length < 5) throw new InvalidDataException($"The {label} worker returned an incomplete result.");
-        var pages = BinaryPrimitives.ReadInt32LittleEndian(wire);
+        if (wire.Length < 5)
+        {
+            throw new InvalidDataException($"The {label} worker returned an incomplete result.");
+        }
+        var pages = BinaryPrimitives.ReadInt32LittleEndian(wire.Span);
         if (pages < 1 || pages > maximumPages) throw new InvalidDataException($"The {label} worker returned an invalid page count.");
         return (wire[4..], pages);
     }
@@ -141,7 +144,7 @@ internal static class RenderWorkerSupervisor
         finally { process.StandardInput.Close(); }
     }
 
-    private static async Task<byte[]> ReadOutputAsync(Stream stream, int maximum, string label, CancellationToken cancellationToken)
+    internal static async Task<ReadOnlyMemory<byte>> ReadOutputAsync(Stream stream, int maximum, string label, CancellationToken cancellationToken)
     {
         using var output = new MemoryStream();
         var buffer = new byte[Math.Min(81920, maximum)];
@@ -153,7 +156,8 @@ internal static class RenderWorkerSupervisor
             if (required > output.Capacity) output.Capacity = (int)Math.Min(maximum, Math.Max(required, Math.Max(256L, output.Capacity * 2L)));
             output.Write(buffer, 0, read);
         }
-        return output.ToArray();
+        // The result owns this array after the stream is disposed. Only the written prefix belongs to the frame.
+        return output.GetBuffer().AsMemory(0, (int)output.Length);
     }
 
     internal static async Task ReadDiagnosticsAsync(StreamReader stream, StringBuilder target, CancellationToken cancellationToken)

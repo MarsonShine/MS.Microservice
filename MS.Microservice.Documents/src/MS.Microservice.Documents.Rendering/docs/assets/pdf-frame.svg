@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 198" width="760" height="198" role="img" aria-labelledby="title desc">
+  <title id="title">父进程返回的 PDF 是接收缓冲区的一段视图</title>
+  <desc id="desc">接收数组从左到右是四字节页数、PDF 正文、未用容量。wire 限定前两段，wire[4..] 只选择 PDF 正文。</desc>
+  <rect width="760" height="198" rx="8" fill="#f5f7f9"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="16" fill="#243746">
+    <text x="18" y="28" font-weight="600">ReadOutputAsync · 接收数组（示意宽度）</text>
+    <rect x="18" y="48" width="132" height="42" fill="#e3edf8" stroke="#6e8da5"/>
+    <rect x="150" y="48" width="432" height="42" fill="#e4f4eb" stroke="#54876c"/>
+    <rect x="582" y="48" width="159" height="42" fill="#eceff1" stroke="#9aa8b0"/>
+    <text x="84" y="75" text-anchor="middle">页数 · 4 B</text><text x="366" y="75" text-anchor="middle">PDF 正文 · N 字节</text><text x="662" y="75" text-anchor="middle">未用容量</text>
+    <path d="M18 99v7h564v-7" stroke="#536c83" fill="none"/><text x="300" y="132" text-anchor="middle">wire 长度 = output.Length = 4 + N</text>
+    <path d="M150 146v7h432v-7" stroke="#448264" fill="none"/><text x="366" y="179" text-anchor="middle">wire[4..] · 交给 destination.WriteAsync 的 N 字节</text>
+  </g>
+</svg>

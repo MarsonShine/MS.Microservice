@@ -2,6 +2,6 @@
   <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable></PropertyGroup>
   <ItemGroup>
     <Compile Include="../shared/MeasuredOperation.cs" Link="MeasuredOperation.cs" />
-    <ProjectReference Include="../../MS.Microservice.Documents/src/MS.Microservice.Documents/MS.Microservice.Documents.csproj" />
+    <ProjectReference Include="../../MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/MS.Microservice.Documents.Rendering.csproj" />
   </ItemGroup>
 </Project>

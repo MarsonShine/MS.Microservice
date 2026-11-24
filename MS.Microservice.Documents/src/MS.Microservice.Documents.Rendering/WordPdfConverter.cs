@@ -44,14 +44,6 @@ public sealed class WordPdfConverter
         return options;
     }
 
-    internal static async Task<byte[]> ReadAsync(Stream input, int maximum, string format, CancellationToken cancellationToken = default)
-    {
-        using var output = new BoundedBuffer(maximum, format);
-        var buffer = new byte[(int)Math.Min(81920L, (long)maximum + 1)];
-        int read;
-        while ((read = await input.ReadAsync(buffer.AsMemory(0,
-            (int)Math.Min(buffer.Length, (long)maximum - output.Length + 1)), cancellationToken).ConfigureAwait(false)) != 0)
-            output.Write(buffer, 0, read);
-        return output.ToArray();
-    }
+    internal static Task<byte[]> ReadAsync(Stream input, int maximum, string format, CancellationToken cancellationToken = default)
+        => BoundedBuffer.ReadSnapshotAsync(input, maximum, format, cancellationToken);
 }

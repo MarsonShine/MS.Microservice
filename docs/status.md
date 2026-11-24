@@ -1,9 +1,11 @@
 # 当前状态
-更新：2026-11-23
+更新：2026-11-24
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 56f8ba6
+Baseline: f4c88f4
+
+Documents 与 Documents.Rendering 已优化 DOCX 展开与模板工作副本、PDF 快照、HTML 资源准备和输出帧复制。见[文档处理点评](../MS.Microservice.Documents/src/MS.Microservice.Documents/docs/performance-review.md)、[渲染点评](../MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/docs/performance-review.md)和[测试与新旧基准](validation/DOCUMENTS-RENDERING-PERF/summary.md)。
 
 [ArrayBufferWriter 使用指南](basic-concept/array-buffer-writer.md)收录五组可运行示例，可对照收件箱的缓冲区复用与 JSON 输出阅读。[示例验证记录](validation/ARRAY-BUFFER-WRITER-GUIDE/summary.md)
 

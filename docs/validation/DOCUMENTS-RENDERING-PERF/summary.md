@@ -1,10 +1,11 @@
-# 文档处理的性能验收
+# 文档处理和渲染的性能验收
 
-2026 年 11 月 24 日，在 Windows 10 x64、Intel Core i5-9400、.NET SDK 11.0.100 上，用从 Git `f4c88f4` 单独构建的旧模块与本次修改作对照。以下 MB 采用十进制，MiB 表示 1048576 字节。[Documents 代码点评](../../../MS.Microservice.Documents/src/MS.Microservice.Documents/docs/performance-review.md)
+2026 年 11 月 24 日，在 Windows 10 x64、Intel Core i5-9400、.NET SDK 11.0.100 上，用从 Git `f4c88f4` 单独构建的旧模块与本次修改作对照。以下 MB 采用十进制，MiB 表示 1048576 字节。[Documents 代码点评](../../../MS.Microservice.Documents/src/MS.Microservice.Documents/docs/performance-review.md) · [Rendering 代码点评](../../../MS.Microservice.Documents/src/MS.Microservice.Documents.Rendering/docs/performance-review.md)
 
 ```powershell
 $env:DOTNET_TieredCompilation = '0'
 dotnet run -c Release --project benchmarks/MS.Microservice.Documents.Benchmarks
+dotnet run -c Release --project benchmarks/MS.Microservice.Documents.Benchmarks -- --render
 ```
 
 相同驱动分别加载新旧模块，以固定内容构造输入。每个场景预热一批，再测七批，取每个进程的中位数后再按版本取中位数。每批在计时外校验末次结果。`GC.GetTotalAllocatedBytes(true)` 的差值计入被测进程所有线程的托管分配；不同进程的分配不会自动相加。[基准入口](../../../benchmarks/MS.Microservice.Documents.Benchmarks/Program.cs) · [输入与校验](../../../benchmarks/MS.Microservice.Documents.Benchmarks/Fixtures.cs)
@@ -29,8 +30,29 @@ dotnet run -c Release --project benchmarks/MS.Microservice.Documents.Benchmarks
 
 两个局部探针解释这些结果。对同一含约 1 MiB XML 的包，给 `WordPackage.CheckAsync` 的压缩输入流加字节计数，包大小 1002656 B，新旧分别读取 1006870 和 2009296 B。另在含 `hello` 和 524288 个尾部换行的 `StringBuilder` 上比较裁尾，在计时前建好分块。逐字符缩短再生成字符串耗时约 3735 µs，分配 6912192 B；逐块定位后生成结果约 76 µs、688 B。后者的选择依据是跨块长尾情况，普通正文的整体效果以上表公开入口为准。
 
+## Rendering 的三种测量边界
+
+| 场景 | 旧耗时 | 新耗时 | 旧托管 B/次 | 新托管 B/次 |
+| --- | ---: | ---: | ---: | ---: |
+| worker 准备资源，空字典 | 0.122 µs | 0.093 µs | 288 | 192 |
+| worker 准备资源，32 份 128 B CSS | 7.388 µs | 4.633 µs | 12584 | 4552 |
+| worker 准备资源，4 份 256 KiB CSS | 169.044 µs | 0.709 µs | 1050318 | 920 |
+| 父进程准备同样的 4 份大 CSS | 226.238 µs | 213.997 µs | 1050720 | 1050265 |
+| 父进程接收并切出 4096 B PDF 正文 | 4.042 µs | 2.919 µs | 94456 | 86216 |
+| 父进程接收并切出 8 MiB PDF 正文 | 8529.425 µs | 5546.625 µs | 37749300 | 20972024 |
+| 真实 Edge 从 HTML 生成一页 PDF | 3723.230 ms | 3652.950 ms | 25842996 | 18484808 |
+
+前四行在独立进程中直接测同一资源准备逻辑，方法委托在计时前绑定；父端输入大写 MIME，worker 输入模拟父端归一化后的 MIME。对照名称、MIME、资源内容及数组归属。中间两行使用固定内存流输入，包含四字节页数头，逐字节验证切出的正文。局部测量均为每版三个进程，仅反映表中这一阶段。收集帧的收益不会消除调用方快照、JSON 传输和浏览器排版等成本。
+
+最后一行通过公开 `HtmlPdfRenderer.RenderAsync` 实际启动 worker 和 Edge 157.0.4341.46。输入内嵌 3670168 B JPEG，输出 3679597 B；回读确认 1 页、指定文本与 1 张图片。每版两个进程，旧新、新旧交错；每进程 1 次预热、7 次测量，共 32 次真实渲染。两个旧进程的耗时中位分别为 3760.726 和 3685.734 ms，新版为 3665.368 和 3640.533 ms；托管 B 是父进程读数。这里使用的候选与最终版在 Word 文本提取的尾部分隔符处理上有差异，该方法不在此次 HTML 调用链上。
+
+另起进程用相同输入各做两次渲染，约每 50 ms 对可见进程的私有提交字节求和，取观察到的最大值。包含父进程时，旧版为 **751.1、763.8 MiB**，新版为 **774.0、790.5 MiB**；只计子进程时分别为 **709.0、721.9 MiB** 和 **731.9、748.4 MiB**。采样可能错过瞬时峰值，这四次运行也不足以分离浏览器本身的波动。在这份语料上可以确认父进程少分配约 7.36 MB，整棵进程树的峰值未见下降。
+
 ## 回归测试
 
 | Release 命令 | 通过 | 失败 | 跳过 |
 | --- | ---: | ---: | ---: |
 | `dotnet test MS.Microservice.Documents/test/MS.Microservice.Documents.Tests -c Release` | 126 | 0 | 0 |
+| `dotnet test MS.Microservice.Documents/test/MS.Microservice.Documents.Rendering.Tests -c Release` | 99 | 0 | 6 |
+
+新增及扩充的用例覆盖实际展开字节精确上限和超限探测、XML 读取期间取消、跨页眉页脚的计费、跨块尾部分隔符、模板独立输入输出预算、带非零偏移的 PDF 输入、外部资源数组快照与 worker 私有数组复用，以及分段读取协议帧时只发布有效前缀。现有 Windows Job 和真实 Edge 测试验证了打印、文本、图片、取消与清理。六个跳过项需要本机缺少的 LibreOffice；本轮没有验证真实 Writer 排版的速度、峰值或视觉效果。

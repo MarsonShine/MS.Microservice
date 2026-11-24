@@ -1,8 +1,35 @@
 using MS.Microservice.Documents.Pdf;
+using MS.Microservice.Documents.Rendering;
 using MS.Microservice.Documents.Word;
 using PdfDocument = UglyToad.PdfPig.PdfDocument;
 
 byte[] photo = Fixtures.Photo();
+if (args is ["--render"])
+{
+    // The consumer runs on Windows with Microsoft Edge installed. The worker starts a fresh browser per call.
+    var renderer = new HtmlPdfRenderer(new HtmlBrowserOptions { Channel = HtmlBrowserChannel.MicrosoftEdge });
+    var options = new HtmlPdfOptions
+    {
+        Assets = new Dictionary<string, HtmlPdfAsset> { ["photo.jpg"] = new("image/jpeg", photo) }
+    };
+    const string html = "<h1>Fixture</h1><img src='photo.jpg' width='300' height='300'>";
+    using var output = new MemoryStream();
+    MeasuredOperation.Run("Edge / one page with embedded photo", 1, () =>
+    {
+        output.SetLength(0);
+        return renderer.RenderAsync(html, output, options).GetAwaiter().GetResult();
+    }, result =>
+    {
+        output.Position = 0;
+        using var pdf = PdfDocument.Open(output);
+        var page = pdf.GetPage(1);
+        return result.Bytes == output.Length && result.Pages == 1 && pdf.NumberOfPages == 1
+            && page.Text.Contains("Fixture", StringComparison.Ordinal) && page.NumberOfImages == 1;
+    });
+    Console.WriteLine($"Rendered PDF: {output.Length} B; JPEG: {photo.Length} B");
+    return;
+}
+
 var extractor = new WordTextExtractor();
 var longText = string.Concat(Enumerable.Repeat("Report 正文 🐈 ", 65_536));
 foreach (var (headers, title, iterations) in new[] { (0, "Report", 24), (12, "Report", 24), (0, longText, 2) })

@@ -21,6 +21,30 @@ public sealed class HtmlPdfRendererTests : IDisposable
     public HtmlPdfRendererTests() => Directory.CreateDirectory(_temporary);
     public void Dispose() => Directory.Delete(_temporary, recursive: true);
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PreparingAssetsValidatesBothOwnersAndOnlyCopiesCallerOwnedBytes(bool copyAssetContents)
+    {
+        byte[] content = [1, 2, 3];
+        var options = new HtmlPdfOptions
+        {
+            Assets = new Dictionary<string, HtmlPdfAsset>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["layout.css"] = new("TEXT/CSS", content)
+            }
+        };
+        var request = HtmlPdfRenderer.PrepareRequest("HTML", new(), options, copyAssetContents);
+        var asset = request.Options.Assets["layout.css"];
+        Assert.False(request.Options.Assets.ContainsKey("LAYOUT.CSS"));
+        Assert.Equal("text/css", asset.ContentType);
+        Assert.Equal(content, asset.Content);
+        Assert.Equal(!copyAssetContents, ReferenceEquals(content, asset.Content));
+
+        var limited = options with { Limits = new() { MaximumAssetBytes = content.Length - 1 } };
+        Assert.Throws<InvalidDataException>(() => HtmlPdfRenderer.PrepareRequest("HTML", new(), limited, copyAssetContents));
+    }
+
     [BrowserFact]
     public async Task Render_RealUnicodePaginationStylesFontImageAndCallerPrefix()
     {
