@@ -1,54 +1,80 @@
-# 渲染进程的资源快照与 PDF 回传代码评审
+# 一页 PDF 回到调用方之前要复制几次
 
-一次 HTML 打印涉及调用方、父进程、.NET worker 和浏览器。对带 3.67 MB 照片的一页文档，父进程每次调用的托管分配减少约 7.36 MB。要找到这笔开销，从 `RenderAsync` 往下跟两处边界：谁会改动输入图片，谁会继续持有输出 PDF。[完整进程与分段基准](../../../../docs/validation/DOCUMENTS-RENDERING-PERF/summary.md)
+浏览器完成排版后，PDF 还要经过 worker 的标准输出才能交到调用方手中。旧版在父进程里已经收齐 PDF，准备写入目标流时却又复制了两份几乎一样的字节。要找出这两次复制，先看 worker 发回的数据长什么样。
 
-## 同一份资源为什么只在父进程复制正文
+## 从带页数头的帧中取出 PDF
 
-> 评审位置：`HtmlPdfRenderer` 与 `HtmlRenderWorker.RunAsync` 都调用资源准备逻辑。两次调用时，`asset.Content` 指向的是同一个数组吗？
+worker 往标准输出先写一个四字节的小端整数，表示页数，再写 PDF 正文。父进程必须把二者分开。例如，两页 PDF 的帧以 `02 00 00 00 25 50 44 46 …` 开头。前四个字节表示 2；目标流的第一个字节应该是 `25`，即 `%PDF` 的百分号。
 
-旧版统一调用 `Snapshot(...)`，每个资产都执行 `Content = asset.Content.ToArray()`。父进程收到的是调用方可以改写的 `byte[]`，渲染开始后仍要异步传输，因而必须先固定内容。worker 则从标准输入反序列化出自己的数组。再复制一份，正好把每张图片、每份 CSS 的字节重搬一遍。
+两版都先收齐这一帧，再把页数与正文交给调用方。旧版的额外工作发生在收齐以后：
 
 ```csharp
-// RenderAsync：调用方拥有原数组
-PrepareRequest(html, _browser, options ?? new(), copyAssetContents: true);
-// worker：raw 已由 JSON 反序列化到本进程
-PrepareRequest(raw.Html, raw.Browser, raw.Options, copyAssetContents: false);
-// PrepareRequest 在写入新资源字典时决定是否复制正文
-Content = copyAssetContents ? asset.Content.ToArray() : asset.Content
+// ReadOutputAsync：output 是已经收完整帧的 MemoryStream
+return output.ToArray();
 ```
 
-两个入口都校验资源路径、种类、数量和字节预算，都产生按序数比较的新字典并归一化 MIME。每个名称和 HTML 本身仍作严格 UTF-8 计数，计数时复用一个只读使用的编码实例。worker 的图片格式和像素校验仍在启动打印之前。这里的判断依据是数组的所有权；即使调用方提供的字典只读，它的值里仍可能有可变数组。[父进程调用与资源准备](../HtmlPdfRenderer.cs#L31) · [worker 调用](../HtmlRenderWorker.cs#L17)
-
-用四份各 256 KiB 的 CSS 调用 worker 的准备方法，单次分配从约 **1050318 B 降至 920 B**，耗时从 **169.044 降至 0.709 µs**。只测这一段时，省掉的就是约 1 MiB 内容复制及编码实例分配。若走父进程入口，仍要为四份正文付出约 1 MiB 的快照成本。这个实验不包含 JSON 传输、浏览器启动和排版。
-
-## 一样的 wire[4..] 为什么不再复制 PDF
-
-> 评审位置：`RenderWorkerSupervisor.ReadOutputAsync`。worker 的 stdout 以四个小端字节报告页数，后面紧接 PDF；最终调用方只需要 PDF。切片到底复制多少，取决于 `wire` 的类型。
-
 ```csharp
-// 旧：ReadOutputAsync 返回 byte[]
-return output.ToArray();              // 复制页数头和全部 PDF
-// RunCoreAsync 收到 byte[] wire，再次复制剩下的 PDF：
+// RunCoreAsync：上一步给了它一个 byte[] wire
+var pages = BinaryPrimitives.ReadInt32LittleEndian(wire);
+// 页数检查通过
 return (wire[4..], pages);
 ```
 
+第一句 `ToArray()` 会分配新数组，把 `output` 中有效的字节全部复制进去，连四字节页数头也一起复制。第二句看起来只是“从下标 4 开始”，但 **C# 对数组做范围切片会创建新数组**。于是刚复制过的 PDF，又从 `wire` 被复制到只含正文的返回值。假设正文长 `N`，两步一共要新建容量为 `N + 4` 和 `N` 的两个数组，CPU 也要读写对应数量的字节。
+
+新版保留相同的协议和下标，只改了交给下一步的数据表示：
+
+```diff
+  // ReadOutputAsync 的返回类型：byte[] → ReadOnlyMemory<byte>
+- return output.ToArray();
++ return output.GetBuffer().AsMemory(0, (int)output.Length);
+```
+
 ```csharp
-// 新：ReadOutputAsync 返回 ReadOnlyMemory<byte>
-return output.GetBuffer().AsMemory(0, (int)output.Length);
-// RunCoreAsync 收到有效的内存区间
+// RunCoreAsync：现在 wire 是 ReadOnlyMemory<byte>
 var pages = BinaryPrimitives.ReadInt32LittleEndian(wire.Span);
-// 校验页数后
+// 页数检查通过
 return (wire[4..], pages);
 ```
 
-![页数头、PDF 和备用容量在同一数组中的位置，以及最终写给调用方的有效区间](assets/pdf-frame.svg)
+`GetBuffer()` 取的是 `MemoryStream` 已经写过的底层数组。有一个细节不能省：流扩容后，数组的 `Capacity` 可能大于实际的 `Length`。`AsMemory(0, Length)` 先把有效帧限定到真正收到的末尾；对这种视图执行 `[4..]`，只是把起点往后移四格、长度减四。两段视图都指向原数组，既不会把页数头发出去，也不会把数组尾部的备用空间写进 PDF。[接收缓冲](../RenderWorkerSupervisor.cs#L147) · [拆帧并返回正文](../RenderWorkerSupervisor.cs#L103)
 
-第一次界定长度排除数组的备用容量，第二次切片跳过协议头。对 8 MiB PDF，旧版两个结果数组的数据区合计 `(4 + N) + N` 字节；新版的两个内存视图持有同一份私有数组，释放暂存流不会回收或覆盖这块数组。测接收和切片一段，分配从 **37749300 B 降至 20972024 B**。剩余开销包含管道读缓冲和暂存流扩容。备用容量会随视图活到目标流写完，所以这个分配差不能直接推算常驻内存或峰值。[收集有效前缀](../RenderWorkerSupervisor.cs#L147) · [检查页数并切片](../RenderWorkerSupervisor.cs#L103)
+![从同一接收数组取两个视图：wire 含四字节头和正文，wire[4..] 只含正文，备用容量不参与写入](assets/pdf-frame.svg)
 
-为什么仍然先接收完整结果？worker 可能在产生部分 stdout 后失败，父进程还需要检查退出码、清理进程树与私有目录，最后校验帧和页数。边收边直接写入调用方的流，会让失败的渲染提前留下结果。HTML 和 Word 两个入口都在监督层成功返回后才发布；目标流本身在最终写入时失败，仍可能留下部分 PDF。[Word 转换入口](../WordPdfConverter.cs) · [监督层回归](../../../test/MS.Microservice.Documents.Rendering.Tests/RenderWorkerMetadataTests.cs)
+这段视图可以交给异步写入，因为每次渲染都有自己的暂存流，直到 `await destination.WriteAsync(...)` 完成，底层数组都由这次调用持有，也没有其他写入者会覆盖它。[父进程的最终写入](../HtmlPdfRenderer.cs#L31)
 
-## 哪些成本仍由排版引擎承担
+暂存流仍要保留到 worker 成功退出、资源清理完成且帧校验通过。这样即使 worker 在输出一半时退出，也不会把半份 PDF 交给调用方。[Word 和 HTML 共用的监督逻辑](../RenderWorkerSupervisor.cs) · [短读和帧边界测试](../../../test/MS.Microservice.Documents.Rendering.Tests/RenderWorkerMetadataTests.cs)
 
-Word 输入和输出文件读取现在共用 Documents 的有界快照逻辑。普通 `MemoryStream` 在预算内可以按剩余长度一次读取独立数组，文件、ZIP 部件流与其他不可寻址输入继续按实际读取量检查上限。[Word 的读取入口](../WordPdfConverter.cs#L48) · [快照的适用条件](../../MS.Microservice.Documents/docs/performance-review.md#pdf-快照在哪里需要独占数组)
+## 图片的第一次复制为什么要留着
 
-真实 Edge 端到端测试中，每次冷启动 worker 与浏览器，输出 1 页、3679597 B 的 PDF。耗时从 **3.72 变为 3.65 秒**，远小于只测数组复制时的相对差别。独立采样中，新版两次进程树峰值私有提交量反而较高。这里可以确认父进程少分配了内存，整棵进程树的峰值和外部引擎速度需在真实语料及并发条件下另行测量。[端到端读数与峰值采样口径](../../../../docs/validation/DOCUMENTS-RENDERING-PERF/summary.md)
+一张图片在 `HtmlPdfAsset.Content` 中是一个可变的 `byte[]`。旧版的父进程和 worker 都调用 `Snapshot`，两次都对每份资源执行同一行：
+
+```csharp
+Content = asset.Content.ToArray()
+```
+
+放在父进程，这句有明确作用。设调用方把一张图片交给 `RenderAsync`，异步传输期间又复用了原数组去装下一张图。如果父进程只是把字典复制一份，两个字典里的 `Content` 仍指向同一数组，worker 实际收到的内容就可能改变。父进程需要在传输前固定字节，即使用的是只读字典也一样。
+
+但是跟过进程边界再看一次：worker 从标准输入反序列化 JSON，`raw.Options.Assets` 里的字节已经位于 **worker 自己的堆**。调用方改写父进程里的图片，影响不到这份数据。此时再执行 `ToArray()`，只会让 worker 多分配一份同样长的数组。新版在两个调用点明确表达这个区别：
+
+```csharp
+// HtmlPdfRenderer.RenderAsync：父进程在传输前固定调用方提供的内容
+var request = PrepareRequest(html, _browser, options ?? new(), copyAssetContents: true);
+```
+
+```csharp
+// HtmlRenderWorker.RunAsync：raw 来自本进程刚完成的 JSON 反序列化
+var request = HtmlPdfRenderer.PrepareRequest(raw.Html, raw.Browser, raw.Options, copyAssetContents: false);
+```
+
+```diff
+  // PrepareRequest 创建新字典、检查名称和预算、归一化 MIME 时：
+- Content = asset.Content.ToArray()
++ Content = copyAssetContents ? asset.Content.ToArray() : asset.Content
+```
+
+`false` 只控制最后的字节复制。路径、MIME、数量、字节数仍在两端校验，图片在 worker 内还要检查格式和像素数。另一个小改动也在这段循环里：原来对 HTML 和每个资源名调用 `new UTF8Encoding(false, true).GetByteCount(...)`，现在用共享的 `StrictUtf8.GetByteCount(...)`。严格 UTF-8 的判定相同，资源数增加时少创建一串相同配置的编码对象。[父进程与资源循环](../HtmlPdfRenderer.cs#L31) · [worker 入口](../HtmlRenderWorker.cs#L17)
+
+Word 转 PDF 也走同一条输出协议。它在输入端复用了 Documents 的有界快照逻辑：预算内的普通 `MemoryStream` 直接填充精确长度数组，其他流仍按实际读取量计费。[Word 读取入口](../WordPdfConverter.cs#L48) · [快照的适用条件](../../MS.Microservice.Documents/docs/performance-review.md#pdf-快照在哪里需要独占数组)
+
+[性能基准](../../../../benchmarks/MS.Microservice.Documents.Benchmarks/Program.cs) · [验收记录](../../../../docs/validation/DOCUMENTS-RENDERING-PERF/summary.md)
