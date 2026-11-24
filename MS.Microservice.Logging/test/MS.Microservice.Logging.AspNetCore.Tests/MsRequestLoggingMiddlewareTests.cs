@@ -80,6 +80,27 @@ public sealed class MsRequestLoggingMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_UsesOneStatusSnapshotForContextAndCompletionEvent()
+    {
+        var response = new CountingResponseFeature { StatusCode = StatusCodes.Status202Accepted };
+        var context = new DefaultHttpContext();
+        context.Features.Set<IHttpResponseFeature>(response);
+        RequestLogContext? captured = null;
+        var logger = new TestLogger<MsRequestLoggingMiddleware>();
+        var middleware = CreateMiddleware(_ =>
+        {
+            captured = RequestLogScope.Current;
+            return Task.CompletedTask;
+        }, logger);
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(1, response.StatusReads);
+        Assert.Equal(StatusCodes.Status202Accepted, captured!.StatusCode);
+        Assert.Equal(captured.StatusCode, Assert.Single(logger.Entries).Fields["StatusCode"]);
+    }
+
+    [Fact]
     public async Task InvokeAsync_ShouldStillRestoreAmbientContextAndLog_WhenNextThrows()
     {
         var timeProvider = new ControlledTimeProvider(DateTimeOffset.Parse("2026-06-03T00:00:00Z"));
@@ -269,9 +290,11 @@ public sealed class MsRequestLoggingMiddlewareTests
             EmitCompletionLog = false,
         });
 
+        RequestLogContext? captured = null;
         var middleware = new MsRequestLoggingMiddleware(
             next: context =>
             {
+                captured = RequestLogScope.Current;
                 context.Response.StatusCode = StatusCodes.Status201Created;
                 timeProvider.Advance(TimeSpan.FromMilliseconds(30));
                 return Task.CompletedTask;
@@ -286,6 +309,8 @@ public sealed class MsRequestLoggingMiddlewareTests
 
         await middleware.InvokeAsync(httpContext);
 
+        Assert.Equal(StatusCodes.Status201Created, captured!.StatusCode);
+        Assert.Equal(30L, captured.ElapsedMilliseconds);
         logger.Entries.Should().BeEmpty();
         RequestLogScope.Current.Should().BeNull();
     }
@@ -294,6 +319,21 @@ public sealed class MsRequestLoggingMiddlewareTests
         TestLogger<MsRequestLoggingMiddleware> logger, bool emitCompletionLog = true)
         => new(next, TimeProvider.System, logger,
             Options.Create(new AspNetCoreRequestLoggingOptions { EmitCompletionLog = emitCompletionLog }));
+
+    private sealed class CountingResponseFeature : HttpResponseFeature, IHttpResponseFeature
+    {
+        public int StatusReads { get; private set; }
+
+        int IHttpResponseFeature.StatusCode
+        {
+            get
+            {
+                StatusReads++;
+                return base.StatusCode;
+            }
+            set => base.StatusCode = value;
+        }
+    }
 
     private sealed class StartedResponseFeature : HttpResponseFeature
     {

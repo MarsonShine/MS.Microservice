@@ -15,38 +15,27 @@ public static class RequestLogScope
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var priorState = CurrentState.Value;
-        var currentState = new ScopeState(context);
+        var currentState = new ScopeState(context, CurrentState.Value);
         CurrentState.Value = currentState;
-        return new PopWhenDisposed(currentState, priorState);
+        return currentState;
     }
 
-    private sealed class ScopeState(RequestLogContext context)
+    private sealed class ScopeState(RequestLogContext context, ScopeState? priorState) : IDisposable
     {
         private RequestLogContext? _context = context;
+        private ScopeState? _priorState = priorState;
 
         public RequestLogContext? Context => Volatile.Read(ref _context);
 
-        public void Clear() => Volatile.Write(ref _context, null);
-    }
-
-    private sealed class PopWhenDisposed(ScopeState currentState, ScopeState? priorState) : IDisposable
-    {
-        private ScopeState? _currentState = currentState;
-        private ScopeState? _priorState = priorState;
-        private int _disposed;
-
         public void Dispose()
         {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            // Clearing the shared context also elects the one flow that restores the parent.
+            if (Interlocked.Exchange(ref _context, null) is null)
             {
                 return;
             }
 
-            // Child execution contexts can still hold this state after the current flow exits.
-            _currentState!.Clear();
             CurrentState.Value = _priorState;
-            _currentState = null;
             _priorState = null;
         }
     }

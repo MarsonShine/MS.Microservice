@@ -48,35 +48,44 @@ public sealed class MsRequestLoggingMiddleware(
         finally
         {
             var canceled = context.RequestAborted.IsCancellationRequested;
-            requestLogContext.StatusCode = (failureType is not null || canceled) && !context.Response.HasStarted
-                ? null : context.Response.StatusCode;
-            requestLogContext.ElapsedMilliseconds = (long)_timeProvider.GetElapsedTime(startTimestamp).TotalMilliseconds;
+            var response = context.Response;
+            int? statusCode = (failureType is not null || canceled) && !response.HasStarted
+                ? null : response.StatusCode;
+            requestLogContext.StatusCode = statusCode;
+            var elapsed = (long)_timeProvider.GetElapsedTime(startTimestamp).TotalMilliseconds;
+            requestLogContext.ElapsedMilliseconds = elapsed;
 
             if (_options.EmitCompletionLog)
             {
                 var path = requestLogContext.Path ?? string.Empty;
-                var elapsed = requestLogContext.ElapsedMilliseconds.Value;
                 if (canceled)
-                    CanceledRequest(_logger, requestLogContext.Method, path, elapsed, requestLogContext.StatusCode, failureType, null);
+                {
+                    CanceledRequest(_logger, requestLogContext.Method, path, elapsed, statusCode, failureType, null);
+                }
                 else if (failureType is not null)
-                    FailedRequest(_logger, requestLogContext.Method, path, elapsed, requestLogContext.StatusCode, failureType, null);
+                {
+                    FailedRequest(_logger, requestLogContext.Method, path, elapsed, statusCode, failureType, null);
+                }
                 else
-                    _logger.LogHttpRequest(requestLogContext.Method, path, context.Response.StatusCode, elapsed);
+                {
+                    _logger.LogHttpRequest(requestLogContext.Method, path, statusCode!.Value, elapsed);
+                }
             }
         }
     }
 
     private RequestLogContext CreateRequestLogContext(HttpContext context)
     {
-        var headers = context.Request.Headers;
+        var request = context.Request;
+        var headers = request.Headers;
 
         return new RequestLogContext
         {
             RequestId = TryGetHeaderValue(headers, _options.RequestIdHeaderName),
             PlatformId = TryGetHeaderValue(headers, _options.PlatformIdHeaderName),
             UserFlag = TryGetHeaderValue(headers, _options.UserFlagHeaderName),
-            Method = context.Request.Method,
-            Path = context.Request.Path.Value ?? string.Empty,
+            Method = request.Method,
+            Path = request.Path.Value ?? string.Empty,
         };
     }
 
