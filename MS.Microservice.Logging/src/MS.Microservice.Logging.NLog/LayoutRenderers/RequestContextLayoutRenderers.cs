@@ -44,9 +44,10 @@ public sealed class NetAddressLayoutRenderer : LayoutRenderer
 {
     protected override void Append(StringBuilder builder, LogEventInfo logEvent)
     {
-        if (!string.IsNullOrWhiteSpace(NLogProviderState.NetworkAddress))
+        var address = NLogProviderState.NetworkAddress;
+        if (!string.IsNullOrWhiteSpace(address))
         {
-            builder.Append(NLogProviderState.NetworkAddress);
+            builder.Append(address);
         }
     }
 }
@@ -56,9 +57,10 @@ public sealed class RequestIdLayoutRenderer : LayoutRenderer
 {
     protected override void Append(StringBuilder builder, LogEventInfo logEvent)
     {
-        if (!string.IsNullOrWhiteSpace(RequestLogScope.Current?.RequestId))
+        var requestId = RequestLogScope.Current?.RequestId;
+        if (!string.IsNullOrWhiteSpace(requestId))
         {
-            builder.Append(RequestLogScope.Current!.RequestId);
+            builder.Append(requestId);
         }
     }
 }
@@ -68,9 +70,10 @@ public sealed class PlatformIdLayoutRenderer : LayoutRenderer
 {
     protected override void Append(StringBuilder builder, LogEventInfo logEvent)
     {
-        if (!string.IsNullOrWhiteSpace(RequestLogScope.Current?.PlatformId))
+        var platformId = RequestLogScope.Current?.PlatformId;
+        if (!string.IsNullOrWhiteSpace(platformId))
         {
-            builder.Append(RequestLogScope.Current!.PlatformId);
+            builder.Append(platformId);
         }
     }
 }
@@ -80,9 +83,10 @@ public sealed class UserFlagLayoutRenderer : LayoutRenderer
 {
     protected override void Append(StringBuilder builder, LogEventInfo logEvent)
     {
-        if (!string.IsNullOrWhiteSpace(RequestLogScope.Current?.UserFlag))
+        var userFlag = RequestLogScope.Current?.UserFlag;
+        if (!string.IsNullOrWhiteSpace(userFlag))
         {
-            builder.Append(RequestLogScope.Current!.UserFlag);
+            builder.Append(userFlag);
         }
     }
 }

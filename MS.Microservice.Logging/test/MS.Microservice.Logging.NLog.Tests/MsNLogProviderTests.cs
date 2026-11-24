@@ -87,10 +87,18 @@ public sealed class MsNLogProviderTests : IDisposable
             logger.LogInformation("hello nlog");
         }
 
+        using (RequestLogScope.Push(new RequestLogContext { RequestId = " ", UserFlag = "next" }))
+        {
+            logger.LogInformation("partial");
+        }
+
+        logger.LogInformation("after scope");
         global::NLog.LogManager.Flush();
 
-        memoryTarget.Logs.Should().ContainSingle();
-        memoryTarget.Logs[0].Should().Be("rid=req-001|pid=platform-a|uflag=u-flag|dur=64ms|msg=hello nlog");
+        memoryTarget.Logs.Should().Equal(
+            "rid=req-001|pid=platform-a|uflag=u-flag|dur=64ms|msg=hello nlog",
+            "rid=|pid=|uflag=next|dur=|msg=partial",
+            "rid=|pid=|uflag=|dur=|msg=after scope");
     }
 
     [Fact]
