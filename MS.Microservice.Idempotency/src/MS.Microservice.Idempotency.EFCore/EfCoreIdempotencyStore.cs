@@ -1,4 +1,8 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MS.Microservice.Idempotency.EFCore;
 
@@ -36,17 +40,36 @@ public union IdempotencyLookupResult(IdempotencyMissing, IdempotencyResponse, Id
 /// <summary>Stores a response in the caller-owned business transaction; it never commits that transaction.</summary>
 public sealed class EfCoreIdempotencyStore<TContext>(TContext context, TimeProvider clock) where TContext : DbContext
 {
+    private sealed record StoredResponse(string RequestHash, long? CompletedAtUtcTicks, int? StatusCode,
+        string? ContentType, string? Location, byte[]? Body);
+
+    private static readonly Expression<Func<TContext, string, string, string, CancellationToken, StoredResponse?>> Lookup =
+        (db, scope, key, fingerprint, token) => db.Set<IdempotencyRecord>().AsNoTracking()
+            .Where(row => row.ScopeHash == scope && row.KeyHash == key)
+            .Select(row => new StoredResponse(row.RequestHash, row.CompletedAtUtcTicks, row.StatusCode,
+                row.ContentType, row.Location, row.RequestHash == fingerprint ? row.Body : null))
+            .SingleOrDefault();
+
     /// <summary>Returns a typed result for the request key without changing the caller's transaction.</summary>
     public async Task<IdempotencyLookupResult> FindResultAsync(IdempotencyRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         EnsureModel();
-        var record = await context.Set<IdempotencyRecord>().AsNoTracking().SingleOrDefaultAsync(
-            row => row.ScopeHash == request.ScopeHash && row.KeyHash == request.KeyHash, cancellationToken);
+        // Use the host provider's cache and its model/options key, just as ordinary LINQ queries do.
+        var key = context.GetService<ICompiledQueryCacheKeyGenerator>().GenerateCacheKey(Lookup, async: true);
+        var query = context.GetService<IMemoryCache>().GetOrCreate((typeof(StoredResponse), key), static entry =>
+        {
+            entry.SetSize(10); // EF's default cache accounts for a compiled query as 10 units.
+            return EF.CompileAsyncQuery(Lookup);
+        })!;
+        var record = await query(context, request.ScopeHash, request.KeyHash, request.RequestHash, cancellationToken);
         if (record is null) return IdempotencyMissing.Instance;
+        // A database collation may consider two distinct hash strings equal.
         if (!string.Equals(record.RequestHash, request.RequestHash, StringComparison.Ordinal))
+        {
             return IdempotencyDifferentRequest.Instance;
+        }
         if (record.CompletedAtUtcTicks is null || record.StatusCode is null || record.Body is null)
             throw new InvalidOperationException("A committed idempotency record has no completed response.");
         return new IdempotencyResponse(record.StatusCode.Value, record.ContentType, record.Body, record.Location);

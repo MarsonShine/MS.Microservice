@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 157880b
+Baseline: ddbe305
+
+Idempotency 现可在栈缓冲中生成兼容历史记录的指纹，重试时按指纹选择响应正文。见[查询图解与新旧基准](../MS.Microservice.Idempotency/docs/lookup-performance.md)及[模块、宿主与编译模型验收](validation/IDEMPOTENCY-LOOKUP-PERF/summary.md)。
 
 Persistence 在一次保存内复用审计 JSON 写入缓冲；Tasks 收尾时只读取尝试历史与重排所需的字段。见[审计批次的分配与字节预算](validation/PERSISTENCE-AUDIT-BUFFERS/summary.md)和[任务完成事务的大、小正文对照](validation/TASKS-FINALIZATION-PERF/summary.md)。
 

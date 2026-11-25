@@ -1,6 +1,8 @@
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Xunit;
 
 namespace MS.Microservice.Idempotency.EFCore.Tests;
@@ -8,6 +10,79 @@ namespace MS.Microservice.Idempotency.EFCore.Tests;
 public sealed class EfCoreIdempotencyStoreTests
 {
     private static readonly DateTimeOffset InitialTime = new(2026, 9, 23, 0, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task FingerprintsRemainCompatibleWithExistingRecords()
+    {
+        await using var database = await Database.OpenAsync();
+        await using var context = database.CreateContext();
+        var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
+        var operation = new string('a', 125) + "._-";
+        var key = string.Concat(Enumerable.Range('!', '~' - '!' + 1).Select(i => (char)i).Where(c => c != ','))
+            .PadRight(IdempotencyRequest.MaximumKeyLength, '!');
+        byte[] body = [0, 255, 1];
+        foreach (var actor in new[] { "issuer\0用户🙂", new string('界', 340) + "🙂", "broken\ud800" })
+        {
+            context.Add(new IdempotencyRecord
+            {
+                ScopeHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(operation + "\0" + actor))),
+                KeyHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key))),
+                RequestHash = Convert.ToHexString(SHA256.HashData(body)),
+                CompletedAtUtcTicks = InitialTime.UtcTicks, StatusCode = 201, Body = body
+            });
+            await context.SaveChangesAsync();
+            var result = await store.FindResultAsync(IdempotencyRequest.Create(operation, actor, key, body));
+            Assert.Equal(body, Assert.IsType<IdempotencyResponse>(result.Value).Body.ToArray());
+        }
+    }
+
+    [Fact]
+    public async Task CaseInsensitiveDatabaseComparisonCannotAuthorizeReplay()
+    {
+        await using var database = await Database.OpenAsync();
+        var request = Request("first");
+        await SaveAsync(database, request);
+        await using var context = database.CreateContext();
+        var record = await context.Set<IdempotencyRecord>().SingleAsync();
+        var originalHash = record.RequestHash;
+        record.RequestHash = originalHash.ToLowerInvariant();
+        await context.SaveChangesAsync();
+        Assert.NotEqual(originalHash, record.RequestHash);
+        Assert.True(await context.Set<IdempotencyRecord>().AnyAsync(row => row.RequestHash == originalHash));
+
+        var store = new EfCoreIdempotencyStore<TestContext>(context, new ManualClock());
+        Assert.IsType<IdempotencyDifferentRequest>((await store.FindResultAsync(request)).Value);
+    }
+
+    [Fact]
+    public async Task SharedCacheKeepsLookupsSeparateForDifferentHostModels()
+    {
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<TestContext>().UseSqlite(connection)
+            .UseMemoryCache(cache).EnableServiceProviderCaching(false).Options;
+        await using var visible = new TestContext(options);
+        await visible.Database.EnsureCreatedAsync();
+        var writer = new EfCoreIdempotencyStore<TestContext>(visible, new ManualClock());
+        var request = Request("one");
+        await using (var transaction = await visible.Database.BeginTransactionAsync())
+        {
+            await writer.ClaimAndExecuteAsync(request, TimeSpan.FromHours(1), _ => Task.FromResult(Response()));
+            await transaction.CommitAsync();
+        }
+        Assert.IsType<IdempotencyResponse>((await writer.FindResultAsync(request)).Value);
+
+        var separateOptions = new DbContextOptionsBuilder<TestContext>().UseSqlite(connection)
+            .EnableServiceProviderCaching(false).Options;
+        await using var modelSource = new TestContext(separateOptions, hideRecords: true);
+        var hiddenOptions = new DbContextOptionsBuilder<TestContext>(options).UseModel(modelSource.Model).Options;
+        await using var hidden = new TestContext(hiddenOptions);
+        Assert.NotSame(visible.Model, hidden.Model);
+        var reader = new EfCoreIdempotencyStore<TestContext>(hidden, new ManualClock());
+        Assert.IsType<IdempotencyMissing>((await reader.FindResultAsync(request)).Value);
+        Assert.IsType<IdempotencyResponse>((await writer.FindResultAsync(request)).Value);
+    }
 
     [Fact]
     public async Task TypedLookupPreservesMissingReplayAndConflictAndOriginalContract()
@@ -338,7 +413,7 @@ public sealed class EfCoreIdempotencyStoreTests
 
     private sealed class BusinessRow { public int Id { get; set; } }
 
-    private sealed class TestContext(DbContextOptions<TestContext> options) : DbContext(options)
+    private sealed class TestContext(DbContextOptions<TestContext> options, bool hideRecords = false) : DbContext(options)
     {
         public DbSet<BusinessRow> BusinessRows => Set<BusinessRow>();
 
@@ -346,6 +421,11 @@ public sealed class EfCoreIdempotencyStoreTests
         {
             model.Entity<BusinessRow>().HasKey(row => row.Id);
             model.AddHttpIdempotency();
+            model.Entity<IdempotencyRecord>().Property(row => row.RequestHash).UseCollation("NOCASE");
+            if (hideRecords)
+            {
+                model.Entity<IdempotencyRecord>().HasQueryFilter(row => false);
+            }
         }
     }
 

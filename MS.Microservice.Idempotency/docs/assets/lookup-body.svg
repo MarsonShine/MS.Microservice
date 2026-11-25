@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="790" height="176" viewBox="0 0 790 176" role="img" aria-labelledby="title">
+  <title id="title">相同请求键下，数据库如何返回正文，应用如何确定回放或冲突</title>
+  <rect width="790" height="176" rx="8" fill="#f4f7fa"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15" fill="#163748">
+    <text x="18" y="26" font-weight="600">数据库：按 ScopeHash 和 KeyHash 找到记录</text>
+    <text x="506" y="26" font-weight="600">应用：逐字符核对指纹</text>
+    <g fill="#e2edf4"><rect x="18" y="45" width="176" height="44" rx="6"/><rect x="18" y="111" width="176" height="44" rx="6"/></g>
+    <text x="29" y="72">指纹匹配</text><text x="29" y="138">指纹不同</text>
+    <g fill="#d7ebe2"><rect x="231" y="45" width="212" height="44" rx="6"/><rect x="231" y="111" width="212" height="44" rx="6"/></g>
+    <text x="244" y="72">返回指纹、元数据和正文</text><text x="244" y="138">返回指纹、元数据及 NULL</text>
+    <rect x="506" y="45" width="263" height="44" rx="6" fill="#d7ebe2"/><rect x="506" y="111" width="263" height="44" rx="6" fill="#faead7"/>
+    <text x="518" y="72">相同且快照完整 → 回放</text><text x="518" y="138">不同 → 报告键冲突</text>
+  </g>
+  <g fill="none" stroke="#4b6274" stroke-width="2">
+    <path d="M196 67h30m-7 -5 7 5 -7 5 M196 133h30m-7 -5 7 5 -7 5"/>
+    <path d="M446 67h52m-7 -5 7 5 -7 5 M446 133h52m-7 -5 7 5 -7 5"/>
+  </g>
+</svg>
