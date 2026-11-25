@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="208" viewBox="0 0 780 208" role="img" aria-labelledby="title desc">
+  <title id="title">同一次保存如何复用 UTF-8 缓冲区</title>
+  <desc id="desc">先把长记录写入缓冲区并生成第一条独立字符串，然后重置写入位置，再写短记录。第二条字符串只取本次有效字节。每次的有效长度计入批次预算。</desc>
+  <rect width="780" height="208" rx="9" fill="#f4f8fa"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" fill="#17384c" font-size="15">
+    <text x="18" y="28" font-weight="600">一次 SaveChanges</text>
+    <text x="146" y="28">同一块 UTF-8 工作缓冲区</text>
+    <text x="543" y="28">各审计记录持有的字符串</text>
+    <text x="18" y="73">第一条（长）</text><text x="18" y="148">第二条（短）</text>
+    <g stroke="#9cb0bb" fill="#fff">
+      <rect x="145" y="48" width="278" height="37" rx="4"/>
+      <rect x="145" y="123" width="278" height="37" rx="4"/>
+    </g>
+    <rect x="146" y="49" width="248" height="35" rx="3" fill="#c3dfd2"/>
+    <rect x="146" y="124" width="107" height="35" rx="3" fill="#c3dfd2"/>
+    <text x="154" y="72">本条有效字节</text><text x="154" y="147">本条有效字节</text>
+    <text x="267" y="147" fill="#5b6d79">可复用空间</text>
+    <text x="145" y="110" font-size="14">写入位置回到起点</text>
+    <g fill="none" stroke="#4c6575" stroke-width="2">
+      <path d="M432 67h88m-9 -6 9 6 -9 6"/><path d="M432 142h88m-9 -6 9 6 -9 6"/>
+    </g>
+    <rect x="535" y="48" width="225" height="37" rx="4" fill="#dde8f2"/>
+    <rect x="535" y="123" width="225" height="37" rx="4" fill="#dde8f2"/>
+    <text x="547" y="72">第一条的 ChangesJson</text><text x="547" y="147">第二条的 ChangesJson</text>
+    <text x="18" y="190" fill="#465d6a" font-size="14">每生成一条字符串，将本条有效字节数计入批次预算。</text>
+  </g>
+</svg>

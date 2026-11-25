@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -188,6 +189,49 @@ public sealed class AutomaticAuditingTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => context.SaveChangesAsync(new CancellationToken(true)));
         await context.SaveChangesAsync();
         Assert.Single(await context.ForAuditScope("scope").ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    public async Task RecordAndBatchBudgetsCountCompleteEscapedJson(int recordAdjustment, int batchAdjustment)
+    {
+        var status = new string('长', 70) + "\"";
+        static string OrderJson(string value) => JsonSerializer.Serialize(new[]
+        {
+            new { field = "Status", beforeKnown = true, before = "Pending", after = value }
+        });
+        var orderJson = OrderJson(status);
+        var stockJson = JsonSerializer.Serialize(new[]
+        {
+            new { field = "Available", beforeKnown = true, before = 100, after = 99 }
+        });
+        var orderBytes = Encoding.UTF8.GetByteCount(orderJson);
+        await using var fixture = await Fixture.Create();
+        await using var context = fixture.Context(new()
+        {
+            MaximumRecordBytes = orderBytes + recordAdjustment,
+            MaximumBatchBytes = orderBytes + Encoding.UTF8.GetByteCount(stockJson) + batchAdjustment
+        });
+        using var operation = fixture.Operation.Begin("scope", "actor", "edit");
+        var order = await context.Orders.SingleAsync();
+        order.Status = status;
+        (await context.Stock.SingleAsync()).Available = 99;
+        if (recordAdjustment < 0 || batchAdjustment < 0)
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => context.SaveChangesAsync());
+            Assert.Empty(await context.ForAuditScope("scope").ToListAsync());
+            Assert.True(context.ChangeTracker.AutoDetectChangesEnabled);
+            order.Status = "OK";
+            orderJson = OrderJson(order.Status);
+        }
+
+        await context.SaveChangesAsync();
+        var records = await context.ForAuditScope("scope").ToDictionaryAsync(record => record.ResourceType);
+        Assert.Equal(2, records.Count);
+        Assert.Equal(orderJson, records["order"].ChangesJson);
+        Assert.Equal(stockJson, records["stock"].ChangesJson);
     }
 
     [Fact]

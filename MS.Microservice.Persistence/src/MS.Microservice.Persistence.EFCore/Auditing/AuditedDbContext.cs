@@ -65,6 +65,8 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
         if (_saving) throw new InvalidOperationException("An audited context cannot save recursively or concurrently.");
         _saving = true;
         var batch = new SaveBatch(this, ChangeTracker.AutoDetectChangesEnabled);
+        ArrayBufferWriter<byte>? buffer = null;
+        Utf8JsonWriter? writer = null;
         try
         {
             token.ThrowIfCancellationRequested();
@@ -93,10 +95,17 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
                 if (Model.FindEntityType(typeof(AuditRecord)) is null) throw new InvalidOperationException("Call AddAuditRecords in the host model.");
                 if (sequence == 0) { sequence = _operation.NextSaveSequence(); scopeHash = AuditRecord.HashScope(operation.Scope); }
                 var resourceId = ResourceId(entry, rule.Keys);
-                var json = Changes(entry, fields, oldKnown, rule.Protection);
-                bytes += Encoding.UTF8.GetByteCount(json);
+                buffer ??= new ArrayBufferWriter<byte>();
+                writer ??= new Utf8JsonWriter(buffer);
+                WriteChanges(writer, entry, fields, oldKnown, rule.Protection);
+                bytes += buffer.WrittenCount;
                 if (batch.Records.Count == _limits.MaximumRecordsPerSave || bytes > _limits.MaximumBatchBytes)
+                {
                     throw new InvalidOperationException("Audit changes exceed the per-save budget.");
+                }
+                var json = Encoding.UTF8.GetString(buffer.WrittenSpan);
+                buffer.ResetWrittenCount();
+                writer.Reset();
                 var kind = entry.State switch { EntityState.Added => AuditChangeKind.Created,
                     EntityState.Deleted => AuditChangeKind.Deleted, _ => AuditChangeKind.Updated };
                 batch.Records.Add(new(operation, scopeHash!, sequence, rule.Resource, resourceId, kind, occurred, json));
@@ -105,13 +114,21 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
             if (batch.Records.Count > 0) Set<AuditRecord>().AddRange(batch.Records);
             return batch;
         }
-        catch { batch.RemovePending(); batch.Dispose(); throw; }
+        catch
+        {
+            batch.RemovePending();
+            batch.Dispose();
+            throw;
+        }
+        finally
+        {
+            writer?.Dispose();
+        }
     }
 
-    private string Changes(EntityEntry entry, IProperty[] fields, bool oldKnown, Dictionary<IProperty, SensitiveKind>? protection)
+    private void WriteChanges(Utf8JsonWriter writer, EntityEntry entry, IProperty[] fields, bool oldKnown,
+        Dictionary<IProperty, SensitiveKind>? protection)
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        using var writer = new Utf8JsonWriter(buffer);
         writer.WriteStartArray();
         foreach (var property in fields)
         {
@@ -131,9 +148,12 @@ public abstract class AuditedDbContext : Microsoft.EntityFrameworkCore.DbContext
             if (writer.BytesCommitted + writer.BytesPending > _limits.MaximumRecordBytes)
                 throw new InvalidOperationException("An audit record exceeds the byte budget.");
         }
-        writer.WriteEndArray(); writer.Flush();
-        if (buffer.WrittenCount > _limits.MaximumRecordBytes) throw new InvalidOperationException("An audit record exceeds the byte budget.");
-        return Encoding.UTF8.GetString(buffer.WrittenSpan);
+        writer.WriteEndArray();
+        writer.Flush();
+        if (writer.BytesCommitted > _limits.MaximumRecordBytes)
+        {
+            throw new InvalidOperationException("An audit record exceeds the byte budget.");
+        }
     }
 
     private static string ResourceId(EntityEntry entry, IProperty[] keys)

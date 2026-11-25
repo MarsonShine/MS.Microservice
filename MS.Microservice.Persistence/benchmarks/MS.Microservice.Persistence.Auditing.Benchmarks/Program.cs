@@ -11,6 +11,12 @@ using MS.Microservice.Persistence.Auditing.Benchmarks;
 using MS.Microservice.Persistence.EFCore.Auditing;
 using Npgsql;
 
+if (args is ["--sqlite-capture"])
+{
+    SqliteCapture.Run();
+    return;
+}
+
 var connectionString = Environment.GetEnvironmentVariable("AUDIT_BENCHMARK_CONNECTION")
     ?? throw new InvalidOperationException("Set AUDIT_BENCHMARK_CONNECTION outside the repository.");
 if (args.Contains("--initialize"))

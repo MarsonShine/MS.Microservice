@@ -57,3 +57,16 @@ EF 的 SavingChanges 回调发生在默认变更检测之前。单独放入一�
 宿主负责字段敏感性、访问权限、保留期、分区和清理。当前提供按 Scope+Operation、Scope+Resource+时间的索引，没有新增调度器或审计查询服务。批量 SQL、其他 ORM 和其他 DbContext 的变更不会被该上下文观察。生产发布须显式执行宿主迁移，不由组件运行 DDL。真实性防篡改、跨库聚合和审计失败的降级策略不在本版契约中；声明的审计失败会阻止相应保存。
 
 性能必须区分无审计写入和有审计写入，也应区分采集与数据库 I/O。[PostgreSQL 性能记录](automatic-auditing-performance.md)报告实际结果和未达到的目标；[基准程序](../benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks/README.md)提供复现入口，不能用 SQLite 的事务测试替代性能验收。
+
+### 一次保存中的两条 JSON
+
+假设订单的 `Status` 从 `Pending` 变成 70 个“长”字后跟一个双引号，库存的 `Available` 从 100 变成 99。旧实现为两条记录分别创建缓冲区和 JSON 写入器，生成字符串后又扫描字符串计算 UTF-8 长度。现在同步和异步保存都在 `Prepare` 遇到第一条待审计记录时创建 `ArrayBufferWriter<byte>` 和 `Utf8JsonWriter`。每条记录在 `WriteChanges` 中写完末尾的 `]` 并刷新，`WrittenCount` 已经包含字段名、转义字符和 JSON 标点的所有字节。[采集实现](../src/MS.Microservice.Persistence.EFCore/Auditing/AuditedDbContext.cs)
+
+| 本次写入 | 当前记录的 UTF-8 字节 | 累计用于批次预算的字节 |
+| --- | ---: | ---: |
+| 订单状态，含转义后的中文及引号 | 495 | 495 |
+| 库存数量，含两个 JSON 数值 | 66 | 561 |
+
+![同一次保存先写长记录再写短记录，每条字符串只取各自有效的 UTF-8 字节](assets/audit-buffer-reuse.svg)
+
+设置单条上限 495 B、批次上限 561 B 时，两条都能保存。若把批次上限降到 560 B，则此次保存会在附加审计实体前失败。每次通过检查后，`Encoding.UTF8.GetString(buffer.WrittenSpan)` 为该记录生成独立字符串。`ResetWrittenCount()` 和 `writer.Reset()` 把下一条记录的写入位置和 JSON 状态复位。第二条只取自己的 66 B。缓冲区仅用于本次采集，结束或异常退出时即可回收。[字节边界与重试测试](../test/MS.Microservice.Persistence.EFCore.Tests/AutomaticAuditingTests.cs) · [SQLite 采集基准与测量结果](../../docs/validation/PERSISTENCE-AUDIT-BUFFERS/summary.md)

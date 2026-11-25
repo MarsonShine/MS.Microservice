@@ -34,3 +34,11 @@ dotnet run --project MS.Microservice.Persistence/benchmarks/MS.Microservice.Pers
 这是包含上下文／操作创建、跟踪查询、事务、保存、提交和释放的数据库工作流耗时，不是 HTTP TPS。分配量使用进程级差值，存在运行时后台分配；阶段计时不能当成纯 CPU 时间。普通 EF 在 SavingChanges 回调之后检测变化，而审计基类在回调之前检测和采集，因此 `MeanBeforeCallbackMs` 只用于观察开启模式的采集上界，不直接比较两种检测实现。
 
 测量不修改服务器的 fsync、同步提交、WAL 或复制配置。共享测试库的磁盘、网络和其他负载会影响尾延迟；单次结果不能证明所有业务场景满足固定百分比。测试和结果解释见 [性能记录](../../docs/automatic-auditing-performance.md)，采集实现见 [技术设计](../../docs/automatic-auditing.md)。
+
+## 本地 SQLite 审计采集
+
+```powershell
+dotnet run --project MS.Microservice.Persistence/benchmarks/MS.Microservice.Persistence.Auditing.Benchmarks -c Release -- --sqlite-capture
+```
+
+此入口使用进程内 SQLite。每次保存用独立上下文，更新 1 条或 32 条已跟踪的审批记录，在两段各 512 个 ASCII 字符的备注间切换。计时从同步 `SaveChanges()` 调用前开始，到 EF 的 `SavingChanges` 回调为止。随后照常写入数据库，核对每次保存的受影响行数和最后的审计总数。预热 20 次，再测 7 轮，每轮 40 次，分别报告各轮平均耗时和当前线程托管分配的中位数。单位为微秒/次保存和字节/次保存。[新旧实现的测量结果](../../../docs/validation/PERSISTENCE-AUDIT-BUFFERS/summary.md)
