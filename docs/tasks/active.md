@@ -3,6 +3,8 @@ Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
 
+Persistence 和 Tasks 的首批优化已完成。[审计缓冲验收](../validation/PERSISTENCE-AUDIT-BUFFERS/summary.md) · [任务终态查询验收](../validation/TASKS-FINALIZATION-PERF/summary.md)
+
 Messaging 的死信摘要、路由键与正文编码已完成第一轮优化，见[同机基准与回归记录](../validation/MESSAGING-PAYLOAD-COSTS/summary.md)。
 
 Media 条码识别和 BiRefNet 抠图的第一批优化见[新旧基准、输出及回归结果](../validation/MEDIA-PIXEL-BUFFERS/summary.md)。

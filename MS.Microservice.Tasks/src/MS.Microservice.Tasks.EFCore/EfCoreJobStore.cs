@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Security.Cryptography;
 using System.Text;
 using System.Transactions;
@@ -11,6 +12,13 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
     : IJobStore, IJobRetentionStore where TContext : DbContext
 {
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+    private sealed record FinalizationState(JobState State, int Progress, string? ProgressMessage, string? ErrorCode,
+        string? ResultReference, int AttemptCount, int MaximumAttempts);
+
+    private static readonly Expression<Func<JobEntry, FinalizationState>> SelectFinalizationState =
+        entry => new FinalizationState(entry.State, entry.Progress, entry.ProgressMessage, entry.ErrorCode,
+            entry.ResultReference, entry.AttemptCount, entry.MaximumAttempts);
+
     public async Task<JobSnapshot> SubmitAsync(JobSubmission submission, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(submission);
@@ -146,10 +154,10 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
     public Task<JobExecutionStatus> GetExecutionStatusAsync(JobAttemptToken attempt,
         CancellationToken cancellationToken = default)
     {
-        ValidateAttempt(attempt);
+        var hash = ValidateAttempt(attempt);
         return IndependentlyAsync(async context =>
         {
-            var requested = await Owned(context, attempt).Select(entry => (bool?)entry.CancellationRequested)
+            var requested = await Owned(context, hash, attempt).Select(entry => (bool?)entry.CancellationRequested)
                 .SingleOrDefaultAsync(cancellationToken);
             return requested is null ? JobExecutionStatus.Ended
                 : requested.Value ? JobExecutionStatus.CancellationRequested : JobExecutionStatus.Running;
@@ -159,20 +167,20 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
     public Task<bool> ReportProgressAsync(JobAttemptToken attempt, int progress, string? message = null,
         CancellationToken cancellationToken = default)
     {
-        ValidateAttempt(attempt);
+        var hash = ValidateAttempt(attempt);
         if (progress is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(progress));
         if (message?.Length > 1024) throw new ArgumentOutOfRangeException(nameof(message));
         return IndependentlyAsync(async context =>
         {
             var now = clock.GetUtcNow().UtcTicks;
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-            var changed = await Owned(context, attempt).Where(entry => !entry.CancellationRequested && entry.Progress <= progress)
+            var changed = await Owned(context, hash, attempt).Where(entry => !entry.CancellationRequested && entry.Progress <= progress)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(entry => entry.Progress, progress)
                     .SetProperty(entry => entry.ProgressMessage, message)
                     .SetProperty(entry => entry.UpdatedAtUtcTicks, now)
                     .SetProperty(entry => entry.Version, entry => entry.Version + 1), cancellationToken);
             if (changed == 0) return false;
-            var updated = await CurrentAttempt(context, attempt).ExecuteUpdateAsync(setters => setters
+            var updated = await CurrentAttempt(context, hash, attempt).ExecuteUpdateAsync(setters => setters
                 .SetProperty(entry => entry.Progress, progress).SetProperty(entry => entry.ProgressMessage, message), cancellationToken);
             RequireAttempt(updated);
             await transaction.CommitAsync(cancellationToken);
@@ -284,13 +292,13 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
     private Task<bool> FinishAsync(JobAttemptToken attempt, JobState finalState, string? errorCode,
         string? resultReference, CancellationToken cancellationToken, bool requeueInterrupted = false)
     {
-        ValidateAttempt(attempt);
+        var hash = ValidateAttempt(attempt);
         return IndependentlyAsync(async context =>
         {
             var now = clock.GetUtcNow().UtcTicks;
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             // Evaluate cancellation in the same UPDATE that publishes success: the first committed transition wins.
-            var changed = await Owned(context, attempt).ExecuteUpdateAsync(setters => setters
+            var changed = await Owned(context, hash, attempt).ExecuteUpdateAsync(setters => setters
                 .SetProperty(entry => entry.State, entry => entry.CancellationRequested ? JobState.Cancelled : finalState)
                 .SetProperty(entry => entry.Progress, entry => !entry.CancellationRequested && finalState == JobState.Succeeded ? 100 : entry.Progress)
                 .SetProperty(entry => entry.ErrorCode, entry => entry.CancellationRequested ? null : errorCode)
@@ -299,16 +307,18 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
                 .SetProperty(entry => entry.FinishedAtUtcTicks, now).SetProperty(entry => entry.UpdatedAtUtcTicks, now)
                 .SetProperty(entry => entry.Version, entry => entry.Version + 1), cancellationToken);
             if (changed == 0) return false;
-            var job = await FindAsync(context, attempt.Scope, attempt.JobId, cancellationToken)
+            var job = await Jobs(context)
+                .Where(entry => entry.ScopeHash == hash && entry.Id == attempt.JobId)
+                .Select(SelectFinalizationState)
+                .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new InvalidOperationException("A completed job disappeared inside its transaction.");
-            var updated = await CurrentAttempt(context, attempt).ExecuteUpdateAsync(setters => setters
+            var updated = await CurrentAttempt(context, hash, attempt).ExecuteUpdateAsync(setters => setters
                 .SetProperty(entry => entry.State, job.State).SetProperty(entry => entry.Progress, job.Progress)
                 .SetProperty(entry => entry.ProgressMessage, job.ProgressMessage).SetProperty(entry => entry.FinishedAtUtcTicks, now)
                 .SetProperty(entry => entry.ErrorCode, job.ErrorCode).SetProperty(entry => entry.ResultReference, job.ResultReference), cancellationToken);
             RequireAttempt(updated);
             if (requeueInterrupted && job.State == JobState.Interrupted && job.AttemptCount < job.MaximumAttempts)
             {
-                var hash = ScopeHash(attempt.Scope);
                 await Jobs(context).Where(entry => entry.ScopeHash == hash && entry.Id == attempt.JobId
                         && entry.State == JobState.Interrupted).ExecuteUpdateAsync(setters => setters
                         .SetProperty(entry => entry.State, JobState.Queued).SetProperty(entry => entry.Progress, 0)
@@ -363,16 +373,14 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
         return Jobs(context).SingleOrDefaultAsync(entry => entry.ScopeHash == hash && entry.Id == id, token);
     }
 
-    private static IQueryable<JobEntry> Owned(TContext context, JobAttemptToken attempt)
+    private static IQueryable<JobEntry> Owned(TContext context, string hash, JobAttemptToken attempt)
     {
-        var hash = ScopeHash(attempt.Scope);
         return Jobs(context).Where(entry => entry.ScopeHash == hash && entry.Id == attempt.JobId
             && entry.State == JobState.Running && entry.AttemptToken == attempt.Token);
     }
 
-    private static IQueryable<JobAttemptEntry> CurrentAttempt(TContext context, JobAttemptToken attempt)
+    private static IQueryable<JobAttemptEntry> CurrentAttempt(TContext context, string hash, JobAttemptToken attempt)
     {
-        var hash = ScopeHash(attempt.Scope);
         return context.Set<JobAttemptEntry>().Where(entry => entry.ScopeHash == hash && entry.JobId == attempt.JobId
             && entry.Token == attempt.Token && entry.State == JobState.Running);
     }
@@ -390,10 +398,14 @@ public sealed class EfCoreJobStore<TContext>(TContext stagingContext, IServiceSc
         return ScopeHash(scope);
     }
 
-    private static void ValidateAttempt(JobAttemptToken attempt)
+    private static string ValidateAttempt(JobAttemptToken attempt)
     {
-        _ = Identity(attempt.Scope, attempt.JobId);
-        if (attempt.Token == Guid.Empty) throw new ArgumentException("An execution requires a nonempty token.", nameof(attempt));
+        var hash = Identity(attempt.Scope, attempt.JobId);
+        if (attempt.Token == Guid.Empty)
+        {
+            throw new ArgumentException("An execution requires a nonempty token.", nameof(attempt));
+        }
+        return hash;
     }
 
     private static void ValidateTake(int take)

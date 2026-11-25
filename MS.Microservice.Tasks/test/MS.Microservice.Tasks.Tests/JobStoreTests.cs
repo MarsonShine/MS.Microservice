@@ -1,6 +1,8 @@
+using System.Data.Common;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Tasks.EFCore;
 using Xunit;
@@ -132,6 +134,40 @@ public sealed class JobStoreTests
         Assert.All(history, attempt => Assert.Equal(JobState.Failed, attempt.State));
         Assert.All(history, attempt => Assert.NotNull(attempt.FinishedAtUtc));
         Assert.Empty(await store.GetAttemptsAsync("other-owner", submission.JobId));
+    }
+
+    [Fact]
+    public async Task CompletionReadsAttemptStateWithoutLoadingTheStoredPayload()
+    {
+        var queries = new QueryRecorder();
+        await using var fixture = await JobDatabase.CreateAsync(interceptors: [queries]);
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var store = scope.ServiceProvider.GetRequiredService<IJobStore>();
+        var submission = JobSubmission.Create(Guid.NewGuid(), "owner", "report.export", 1, new { report = 1 });
+        await store.SubmitAsync(submission);
+        var execution = Assert.IsType<JobExecution>(await store.TryStartAsync(submission.Scope, submission.JobId));
+
+        queries.Selects.Clear();
+        Assert.True(await store.CompleteAsync(execution.Attempt, "report"));
+
+        var query = Assert.Single(queries.Selects);
+        Assert.Contains("ProgressMessage", query);
+        Assert.DoesNotContain("PayloadJson", query);
+    }
+
+    private sealed class QueryRecorder : DbCommandInterceptor
+    {
+        public List<string> Selects { get; } = [];
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            {
+                Selects.Add(command.CommandText);
+            }
+            return ValueTask.FromResult(result);
+        }
     }
 
     [Fact]

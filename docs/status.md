@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: e7de6e2
+Baseline: 157880b
+
+Persistence 在一次保存内复用审计 JSON 写入缓冲；Tasks 收尾时只读取尝试历史与重排所需的字段。见[审计批次的分配与字节预算](validation/PERSISTENCE-AUDIT-BUFFERS/summary.md)和[任务完成事务的大、小正文对照](validation/TASKS-FINALIZATION-PERF/summary.md)。
 
 Messaging 的 RabbitMQ 编码器先检查正文大小，SelfManaged 的死信列表仅读取摘要字段。[查询图解、基准与回归验收](validation/MESSAGING-PAYLOAD-COSTS/summary.md)
 

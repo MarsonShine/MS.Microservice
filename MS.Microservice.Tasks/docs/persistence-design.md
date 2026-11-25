@@ -36,6 +36,18 @@ GetDue 只查找已到时的 Queued 候选，不授予执行资格。TryStart �
 
 Retry 仅接受 Failed、Cancelled、Interrupted 且尚有次数的 Job，将其重新排队并清除本次进度、错误、取消标记和结果引用，保留旧 Attempt。Running 不能重试；旧 Token 即使继续回报也无法更新新执行。最大次数约束的是实际领取执行的数量，排队时取消不消耗执行次数。
 
+### 终态写入要从 Jobs 读哪些列
+
+一次 `CompleteAsync` 可以在处理完 128 KiB JSON 后只返回一个很短的结果引用。过去，`FinishAsync` 先更新任务，再用 `FindAsync` 读取整个 `JobEntry`。SQLite 驱动会为 `PayloadJson` 构造新的 .NET 字符串。处理器已经结束，这份正文读回来之后就被丢弃了。
+
+现在 `FinishAsync` 用 `SelectFinalizationState` 只读七列。这段列投影表达式在同一种 DbContext 类型的调用之间复用，查询仍由当前 DbContext 根据宿主模型生成。`State`、`Progress`、`ProgressMessage`、`ErrorCode`、`ResultReference` 复制到本次 `JobAttempts` 记录。`RecoverAsync` 还根据 `AttemptCount` 和 `MaximumAttempts` 决定能否重排。读到的是事务中刚更新的状态，所以取消先提交时，尝试历史也会得到 `Cancelled` 和空结果引用。
+
+![FinishAsync 在一个事务内更新 Jobs，回读七列，再写入 JobAttempts。](assets/finalization-projection.svg)
+
+`ValidateAttempt` 会先检查 JobId，再按严格 UTF-8 计算 Scope 的 SHA-256，最后检查 Token。现在它把哈希交给同次操作的各条查询。一次成功完成从四次哈希降到一次，进度写入从三次降到一次，状态轮询从两次降到一次。所有权更新仍在 SQL 中同时匹配 Scope 哈希、JobId、Running 状态和 Token。失败、中断和恢复也使用这条终态写入路径。[存储实现](../src/MS.Microservice.Tasks.EFCore/EfCoreJobStore.cs)
+
+本机 SQLite 通过公共 `CompleteAsync` 分别测量了 32 B 和 128 KiB JSON 任务的完整终态事务。输入大小、运行命令、耗时与托管分配见[性能与兼容性验收](../../docs/validation/TASKS-FINALIZATION-PERF/summary.md)。
+
 ## 终态保留与并发清理
 
 `IJobRetentionStore` 是独立的可选契约，已有 `IJobStore` 实现无需增加成员。EF 存储把两个接口注册为同一个 scoped 实例，清理仍通过独立 scope 和干净的 DbContext 执行，拒绝调用方已有事务或 ambient transaction。
