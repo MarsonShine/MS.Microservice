@@ -40,6 +40,14 @@ public sealed class WireAndPublisherTests
     public void LimitsAreMeasuredInUtf8Bytes()
         => Assert.Throws<PermanentMessageException>(() => RabbitMqWireCodec.Encode(Message("中文"), 3));
 
+    [Fact]
+    public void EncodeAcceptsTheExactByteLimitAndRetainsStrictPayloadEncoding()
+    {
+        var encoded = RabbitMqWireCodec.Encode(Message("中🙂"), 7);
+        Assert.Equal(Encoding.UTF8.GetBytes("中🙂"), encoded.Body);
+        Assert.Throws<EncoderFallbackException>(() => RabbitMqWireCodec.Encode(Message("中\ud800"), 1));
+    }
+
     [Theory]
     [InlineData("correlation", 201)]
     [InlineData("traceparent", 129)]
@@ -162,7 +170,7 @@ public sealed class WireAndPublisherTests
         await connection.Received().CreateChannelAsync(Arg.Is<CreateChannelOptions>(x =>
             x.PublisherConfirmationsEnabled && x.PublisherConfirmationTrackingEnabled), Arg.Any<CancellationToken>());
         await channel.Received().BasicPublishAsync("ms.events", "profile.changed.v1", true,
-            Arg.Is<BasicProperties>(x => x.Persistent && x.MessageId == message.Id.ToString("N")),
+            Arg.Is<BasicProperties>(x => x.Persistent && x.Type == "profile.changed.v1" && x.MessageId == message.Id.ToString("N")),
             Arg.Any<ReadOnlyMemory<byte>>(), Arg.Any<CancellationToken>());
     }
 

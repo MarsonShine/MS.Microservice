@@ -1,6 +1,17 @@
 using System.Diagnostics;
 using MS.Microservice.Messaging;
 
+if (args is ["--wire"])
+{
+    WireBenchmarks.Run();
+    return;
+}
+if (args is ["--dead-letters"])
+{
+    await DeadLetterBenchmarks.RunAsync();
+    return;
+}
+
 const int iterations = 200_000;
 const int rounds = 5;
 

@@ -4,5 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/MS.Microservice.Messaging.Abstractions/MS.Microservice.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Messaging.RabbitMQ/MS.Microservice.Messaging.RabbitMQ.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Messaging.SelfManaged.EFCore/MS.Microservice.Messaging.SelfManaged.EFCore.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 </Project>

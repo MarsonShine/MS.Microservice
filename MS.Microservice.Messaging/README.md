@@ -15,6 +15,8 @@
 [契约名与路由键](docs/contract-routing-key.md)说明注册时如何检查完整路由键的字节范围。
 Dependencies 中的 Reference 类库用于真实业务测试，不是消息组件的运行依赖。
 
+[消息正文的分配与查询实测](../docs/validation/MESSAGING-PAYLOAD-COSTS/summary.md)对照了 RabbitMQ 的字节上限检查，以及 SelfManaged 如何读取死信摘要。
+
 在本目录构建：
 
     dotnet build MS.Microservice.Messaging.slnx -c Release

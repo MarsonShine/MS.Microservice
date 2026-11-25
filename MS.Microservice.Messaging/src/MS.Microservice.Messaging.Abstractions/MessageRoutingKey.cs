@@ -18,8 +18,20 @@ public static class MessageRoutingKey
     public static bool IsValid([NotNullWhen(true)] string? name, int version)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length > MaxContractNameLength || version <= 0)
+        {
             return false;
-        try { return Utf8.GetByteCount(Format(name, version)) < MaxUtf8BytesExclusive; }
-        catch (EncoderFallbackException) { return false; }
+        }
+
+        try
+        {
+            // ".v" and all digits of a positive Int32 are single-byte UTF-8 characters.
+            Span<char> digits = stackalloc char[10];
+            version.TryFormat(digits, out var digitCount, provider: CultureInfo.InvariantCulture);
+            return Utf8.GetByteCount(name) + 2 + digitCount < MaxUtf8BytesExclusive;
+        }
+        catch (EncoderFallbackException)
+        {
+            return false;
+        }
     }
 }

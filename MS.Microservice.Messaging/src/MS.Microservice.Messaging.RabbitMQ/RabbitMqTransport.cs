@@ -16,7 +16,7 @@ public sealed class RabbitMqTransport(RabbitMqOptions options, IConnectionFactor
     public Task SendConfirmedAsync(SerializedMessage message, CancellationToken cancellationToken)
     {
         var encoded = RabbitMqWireCodec.Encode(message, options.MaxMessageBytes);
-        return SendEnvelopeConfirmedAsync(RabbitMqWireCodec.RoutingKey(message), encoded.Properties, encoded.Body, cancellationToken);
+        return SendEnvelopeConfirmedAsync(encoded.Properties.Type!, encoded.Properties, encoded.Body, cancellationToken);
     }
 
     /// <summary>Confirms an adapter-owned envelope while preserving that framework's wire metadata.</summary>

@@ -11,15 +11,20 @@ internal sealed class SelfManagedFailedMessageOperations<TContext>(TContext cont
     {
         if (limit is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(limit));
         var outgoing = await context.Set<OutboxEntry>().AsNoTracking().Where(x => x.State == OutboxState.DeadLettered)
-            .OrderBy(x => x.CompletedAtUtc).Take(limit).ToListAsync(cancellationToken);
+            .OrderBy(x => x.CompletedAtUtc).Take(limit)
+            .Select(x => new { x.Id, x.ContractName, x.ContractVersion, Consumer = (string?)null,
+                FailedAt = x.CompletedAtUtc ?? x.CreatedAtUtc, x.ErrorCode })
+            .ToListAsync(cancellationToken);
         var incoming = await context.Set<InboxEntry>().AsNoTracking().Where(x => x.State == InboxState.DeadLettered)
-            .OrderBy(x => x.CompletedAtUtc).Take(limit).ToListAsync(cancellationToken);
-        return outgoing.Select(x => new FailedMessage($"outbox:{x.Id:N}", x.Id, x.ContractName, x.ContractVersion,
-                null, Utc(x.CompletedAtUtc ?? x.CreatedAtUtc), x.ErrorCode ?? "unknown"))
-            .Concat(incoming.Select(x => new FailedMessage($"inbox:{x.MessageId:N}:{Uri.EscapeDataString(x.Consumer)}",
-                x.MessageId, x.ContractName, x.ContractVersion, x.Consumer,
-                Utc(x.CompletedAtUtc ?? x.ReceivedAtUtc), x.ErrorCode ?? "unknown")))
-            .OrderBy(x => x.FailedAtUtc).Take(limit).ToArray();
+            .OrderBy(x => x.CompletedAtUtc).Take(limit)
+            .Select(x => new { Id = x.MessageId, x.ContractName, x.ContractVersion, Consumer = (string?)x.Consumer,
+                FailedAt = x.CompletedAtUtc ?? x.ReceivedAtUtc, x.ErrorCode })
+            .ToListAsync(cancellationToken);
+        return outgoing.Concat(incoming).OrderBy(x => x.FailedAt).Take(limit)
+            .Select(x => new FailedMessage(
+                x.Consumer is null ? $"outbox:{x.Id:N}" : $"inbox:{x.Id:N}:{Uri.EscapeDataString(x.Consumer)}",
+                x.Id, x.ContractName, x.ContractVersion, x.Consumer, Utc(x.FailedAt), x.ErrorCode ?? "unknown"))
+            .ToArray();
     }
 
     public async Task<ReplayResult> ReplayAsync(string failureId, CancellationToken cancellationToken = default)

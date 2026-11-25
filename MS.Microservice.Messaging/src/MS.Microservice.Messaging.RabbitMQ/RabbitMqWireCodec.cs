@@ -19,14 +19,19 @@ internal static class RabbitMqWireCodec
             throw new PermanentMessageException("message_limits_exceeded");
         if (!MessageMetadataLimits.AreValid(message.CorrelationId, message.TraceParent, message.TraceState))
             throw new PermanentMessageException("message_limits_exceeded");
-        var body = Utf8.GetBytes(message.Payload);
-        if (body.Length > maxBytes)
+        var byteCount = Utf8.GetByteCount(message.Payload);
+        if (byteCount > maxBytes)
+        {
             throw new PermanentMessageException("message_limits_exceeded");
+        }
+
+        var body = GC.AllocateUninitializedArray<byte>(byteCount);
+        Utf8.GetBytes(message.Payload.AsSpan(), body);
         return (new BasicProperties
         {
             Persistent = true, ContentType = "application/json", MessageId = message.Id.ToString("N"),
             Type = RoutingKey(message), CorrelationId = message.CorrelationId,
-            Headers = new Dictionary<string, object?>
+            Headers = new Dictionary<string, object?>(5)
             {
                 ["ms-contract-name"] = message.ContractName,
                 ["ms-contract-version"] = message.ContractVersion,

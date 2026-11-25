@@ -1,9 +1,11 @@
 # 当前状态
-更新：2026-11-24
+更新：2026-11-25
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: 30f704b
+Baseline: e7de6e2
+
+Messaging 的 RabbitMQ 编码器先检查正文大小，SelfManaged 的死信列表仅读取摘要字段。[查询图解、基准与回归验收](validation/MESSAGING-PAYLOAD-COSTS/summary.md)
 
 Media 条码识别直接填充 ZXing 亮度平面，BiRefNet 抠图复用本次推理的输出张量计算概率。见[条码缓冲示意图](../MS.Microservice.Media/docs/codes.md)、[抠图资源边界](../MS.Microservice.Media/docs/background-removal-design.md)和[耗时、分配与输出对照](validation/MEDIA-PIXEL-BUFFERS/summary.md)。
 

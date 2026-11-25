@@ -3,6 +3,8 @@ Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
 
+Messaging 的死信摘要、路由键与正文编码已完成第一轮优化，见[同机基准与回归记录](../validation/MESSAGING-PAYLOAD-COSTS/summary.md)。
+
 Media 条码识别和 BiRefNet 抠图的第一批优化见[新旧基准、输出及回归结果](../validation/MEDIA-PIXEL-BUFFERS/summary.md)。
 
 Logging 四个项目的耗时、分配和宿主回归结果见[验收记录](../validation/LOGGING-HOT-PATHS/summary.md)。

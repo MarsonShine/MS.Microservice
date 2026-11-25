@@ -5,5 +5,8 @@
     <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
-  <ItemGroup><InternalsVisibleTo Include="MS.Microservice.Messaging.RabbitMQ.Tests" /></ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MS.Microservice.Messaging.RabbitMQ.Tests" />
+    <InternalsVisibleTo Include="MS.Microservice.Messaging.Benchmarks" />
+  </ItemGroup>
 </Project>

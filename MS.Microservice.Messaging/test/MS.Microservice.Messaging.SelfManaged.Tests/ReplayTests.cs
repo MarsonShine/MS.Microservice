@@ -8,6 +8,39 @@ namespace MS.Microservice.Messaging.SelfManaged.Tests;
 
 public sealed class ReplayTests
 {
+    [Fact]
+    public async Task ListMergesFailureTimesAndPreservesSourceIdentityAtTheLimit()
+    {
+        await using var connection = await OpenAsync();
+        var services = new ServiceCollection();
+        services.AddScoped(_ => new BusinessContext(connection));
+        services.AddSelfManagedMessaging<BusinessContext>(ReceiverTests.Topology());
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<BusinessContext>();
+        await context.Database.EnsureCreatedAsync();
+        var message = Registry().Serialize(NewEvent());
+        var time = message.OccurredAtUtc.UtcDateTime;
+        var outgoing = OutboxEntry.From(message, time);
+        outgoing.State = OutboxState.DeadLettered;
+        const string consumer = "audit:%消息";
+        var incoming = new InboxEntry
+        {
+            MessageId = message.Id, ContractName = message.ContractName, ContractVersion = message.ContractVersion,
+            Consumer = consumer, State = InboxState.DeadLettered, ReceivedAtUtc = time.AddHours(-1),
+            CompletedAtUtc = time, ErrorCode = "handler"
+        };
+        context.AddRange(outgoing, incoming);
+        await context.SaveChangesAsync();
+        var failures = scope.ServiceProvider.GetRequiredService<IFailedMessageOperations>();
+        var expectedOut = new FailedMessage($"outbox:{message.Id:N}", message.Id, message.ContractName,
+            message.ContractVersion, null, message.OccurredAtUtc, "unknown");
+        var expectedIn = new FailedMessage($"inbox:{message.Id:N}:{Uri.EscapeDataString(consumer)}", message.Id,
+            message.ContractName, message.ContractVersion, consumer, message.OccurredAtUtc, "handler");
+        Assert.Equal(expectedOut, Assert.Single(await failures.ListAsync(1)));
+        Assert.Equal(new[] { expectedOut, expectedIn }, await failures.ListAsync(2));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
