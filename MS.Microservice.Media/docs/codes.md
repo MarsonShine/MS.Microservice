@@ -12,7 +12,11 @@ DataMatrix 在默认 margin 下补一模块静区，因为引擎默认零。显�
 
 ## 识别坐标
 
-透明输入先合成白底，再生成 RGB／灰度读取缓冲。组件自行遍历四个旋转方向，把定位点逆变换回 EXIF 校正后的显示坐标，避免[通用自动旋转接口](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/BarcodeReaderGeneric.cs)直接返回旋转后坐标。
+解码器给出经过 EXIF 校正的预乘 RGBA 位图。以一个半透明红色像素 `(128, 0, 0, 128)` 为例，每个颜色通道加上 `255 - 128` 并限制到 255，得到白底上的 `(255, 127, 127)`。旧路径把这种三通道值写入整张 RGB24 数组，随后 ZXing 再遍历它。现在 `WhiteBackgroundLuminanceSource` 按 `RowBytes` 切行，把三个合成值按 ZXing 自身的 RGB24 权重加权、右移，直接写入一个亮度字节。上一行末尾的对齐填充不会进入下一行的计算。[实现](../src/MS.Microservice.Media/Codes/CodeProcessor.cs)
+
+![条码识别的新旧缓冲路径，省去每像素三字节的 RGB24 数组](assets/barcode-luminance.svg)
+
+以 1280×720 的图片为例，消去的 RGB24 数组有效载荷为 2,764,800 字节。亮度平面填完后即可释放原生位图。组件保留 EXIF 校正后的宽高，自行遍历最多四个方向，并将定位点逆变换回显示坐标。[同机测量](../../docs/validation/MEDIA-PIXEL-BUFFERS/summary.md) · [ZXing 的通用自动旋转接口](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/BarcodeReaderGeneric.cs)
 
 [PDF417](https://github.com/micjahn/ZXing.Net/blob/v0.16.11.0/Source/lib/pdf417/PDF417Reader.cs)还会在内部旋转检测；必须在多码递归裁剪前，按其元数据把坐标还原。该规则只适用于 PDF417，一维码扫描反向的同名元数据不能重复应用。
 
@@ -20,6 +24,6 @@ DataMatrix 在默认 margin 下补一模块静区，因为引擎默认零。显�
 
 ## 资源与回归
 
-编码文本、输入编码字节、图片尺寸／像素以及工作缓冲均有各自约束；识别另有 RGB 和灰度缓冲，宿主需按并发量配置图片预算。调用方流保持打开，取消在像素处理、I/O 和同步 ZXing 调用前后观察；引擎内部不能被中途打断。
+编码文本、输入字节、图片尺寸和像素数各有上限。宿主估算并发内存时还需计入解码位图、亮度平面和 ZXing 在二值化、裁剪或旋转时使用的工作空间。像素转换逐行检查取消，I/O 和同步识别调用前后也会观察取消信号。调用方流保持打开。
 
 [CodeProcessorTests](../test/MS.Microservice.Media.Tests/Codes/CodeProcessorTests.cs) 的跨格式旋转与定位点回归是升级 ZXing 的必要检查。还应保留整像素矩阵、默认／零静区、UTF-16 边界、EAN/UPC 等价格式和多码结果用例。批量调用由应用编排，不在该无状态组件中增加调度框架。

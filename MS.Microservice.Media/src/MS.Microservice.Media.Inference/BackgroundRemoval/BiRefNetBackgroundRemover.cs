@@ -66,7 +66,8 @@ public sealed class BiRefNetBackgroundRemover : IAsyncDisposable
                 var shape = value.GetTensorTypeAndShape();
                 if (shape.ElementDataType != TensorElementType.Float || !shape.Shape.SequenceEqual(new long[] { 1, 1, ModelSize, ModelSize }))
                     throw new InvalidDataException("The model returned an unexpected mask tensor.");
-                var probabilities = BackgroundPixels.Probabilities(value.GetTensorDataAsSpan<float>(), ModelSize, cancellationToken);
+                var probabilities = value.GetTensorMutableDataAsSpan<float>();
+                BackgroundPixels.ApplySigmoid(probabilities, ModelSize, cancellationToken);
                 using var output = BackgroundPixels.CreateStraightBitmap(source.Width, source.Height);
                 using var mask = softMaskPng is null ? null : ImageCodec.CreateBitmap(source.Width, source.Height, _limits);
                 var statistics = BackgroundPixels.Compose(source, output, mask, probabilities, ModelSize, cancellationToken);

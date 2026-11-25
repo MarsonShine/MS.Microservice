@@ -52,12 +52,13 @@ public sealed class BackgroundPixelsTests
     [Fact]
     public void StableSigmoid_HandlesLargeFiniteValuesAndRejectsWrongShape()
     {
-        var values = BackgroundPixels.Probabilities([-1000, 0, 1000, MathF.Log(3)], 2, default);
+        float[] values = [-1000, 0, 1000, MathF.Log(3)];
+        BackgroundPixels.ApplySigmoid(values, 2, default);
         Assert.Equal(0, values[0]);
         Assert.Equal(.5f, values[1]);
         Assert.Equal(1, values[2]);
         Assert.Equal(.75f, values[3], 6);
-        Assert.Throws<InvalidDataException>(() => BackgroundPixels.Probabilities([1, 2, 3], 2, default));
+        Assert.Throws<InvalidDataException>(() => BackgroundPixels.ApplySigmoid([1, 2, 3], 2, default));
     }
 
     [Theory]
@@ -65,7 +66,7 @@ public sealed class BackgroundPixelsTests
     [InlineData(float.PositiveInfinity)]
     [InlineData(float.NegativeInfinity)]
     public void NonFiniteLogits_AreRejectedBeforeOutput(float value) =>
-        Assert.Throws<InvalidDataException>(() => BackgroundPixels.Probabilities([0, 0, value, 0], 2, default));
+        Assert.Throws<InvalidDataException>(() => BackgroundPixels.ApplySigmoid([0, 0, value, 0], 2, default));
 
     [Fact]
     public void HalfPixelMaskResize_IncludesBordersAndUsesOneFinalAlphaForBothOutputs()
@@ -148,7 +149,7 @@ public sealed class BackgroundPixelsTests
         using var source = BackgroundPixels.CreateStraightBitmap(1, 1);
         using var output = BackgroundPixels.CreateStraightBitmap(1, 1);
         Assert.ThrowsAny<OperationCanceledException>(() => BackgroundPixels.CreateTensor(source, 1, cancellation.Token));
-        Assert.ThrowsAny<OperationCanceledException>(() => BackgroundPixels.Probabilities([0], 1, cancellation.Token));
+        Assert.ThrowsAny<OperationCanceledException>(() => BackgroundPixels.ApplySigmoid([0], 1, cancellation.Token));
         Assert.ThrowsAny<OperationCanceledException>(() => BackgroundPixels.Compose(source, output, null, [.5f], 1, cancellation.Token));
     }
 

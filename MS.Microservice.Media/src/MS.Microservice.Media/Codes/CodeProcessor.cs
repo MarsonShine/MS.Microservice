@@ -85,23 +85,13 @@ public sealed class CodeProcessor
         options ??= new CodeReadingOptions();
         var formats = (options.Formats ?? Enum.GetValues<CodeFormat>()).Select(ToBarcodeFormat).Distinct().ToList();
         if (formats.Count == 0) throw new ArgumentException("Choose at least one code format.", nameof(options));
-        using var bitmap = await ImageCodec.DecodeAsync(input, options.Limits, cancellationToken).ConfigureAwait(false);
-        var rgb = new byte[checked(bitmap.Width * bitmap.Height * 3)];
-        var pixels = bitmap.GetPixelSpan();
-        for (var y = 0; y < bitmap.Height; y++)
+        LuminanceSource luminance;
+        using (var bitmap = await ImageCodec.DecodeAsync(input, options.Limits, cancellationToken).ConfigureAwait(false))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            for (var x = 0; x < bitmap.Width; x++)
-            {
-                var source = y * bitmap.RowBytes + x * 4;
-                var target = (y * bitmap.Width + x) * 3;
-                var white = 255 - pixels[source + 3];
-                // ImageCodec guarantees RGBA premultiplied pixels. Flatten alpha onto white.
-                rgb[target] = (byte)Math.Min(255, pixels[source] + white);
-                rgb[target + 1] = (byte)Math.Min(255, pixels[source + 1] + white);
-                rgb[target + 2] = (byte)Math.Min(255, pixels[source + 2] + white);
-            }
+            luminance = new WhiteBackgroundLuminanceSource(bitmap, cancellationToken);
         }
+        var width = luminance.Width;
+        var height = luminance.Height;
         var reader = new BarcodeReaderGeneric(new FrameReader(), null, null)
         {
             AutoRotate = false,
@@ -112,8 +102,6 @@ public sealed class CodeProcessor
         };
         // Own rotation so points stay in the displayed frame; ZXing's outer AutoRotate does not remap them.
         reader.Options.Hints[DecodeHintType.TRY_HARDER_WITHOUT_ROTATION] = true;
-        LuminanceSource luminance = new RGBLuminanceSource(rgb, bitmap.Width, bitmap.Height,
-            RGBLuminanceSource.BitmapFormat.RGB24);
         Result[]? results = null;
         var turns = 0;
         var attempts = options.AutoRotate ? 4 : 1;
@@ -127,7 +115,33 @@ public sealed class CodeProcessor
         }
         return (results ?? []).Select(result => new DecodedCode(result.Text, FromBarcodeFormat(result.BarcodeFormat),
             Array.AsReadOnly((result.ResultPoints ?? []).Where(point => point is not null)
-                .Select(point => RestorePoint(point, turns, bitmap.Width, bitmap.Height)).ToArray()))).ToArray();
+                .Select(point => RestorePoint(point, turns, width, height)).ToArray()))).ToArray();
+    }
+
+    internal sealed class WhiteBackgroundLuminanceSource : RGBLuminanceSource
+    {
+        internal WhiteBackgroundLuminanceSource(SKBitmap bitmap, CancellationToken cancellationToken)
+            : base(bitmap.Width, bitmap.Height)
+        {
+            var pixels = bitmap.GetPixelSpan();
+            var stride = bitmap.RowBytes;
+            for (var y = 0; y < Height; y++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var row = pixels.Slice(y * stride, Width * 4);
+                var target = luminances.AsSpan(y * Width, Width);
+                for (var x = 0; x < target.Length; x++)
+                {
+                    var i = x * 4;
+                    // Use ZXing's RGB24 weights on the same white-composited channels.
+                    var white = 255 - row[i + 3];
+                    var red = Math.Min(255, row[i] + white);
+                    var green = Math.Min(255, row[i + 1] + white);
+                    var blue = Math.Min(255, row[i + 2] + white);
+                    target[x] = (byte)((red * RChannelWeight + green * GChannelWeight + blue * BChannelWeight) >> ChannelWeight);
+                }
+            }
+        }
     }
 
     private static CodePoint RestorePoint(ResultPoint point, int counterClockwiseTurns, int width, int height)

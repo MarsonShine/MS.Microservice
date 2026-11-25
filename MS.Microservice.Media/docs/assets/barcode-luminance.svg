@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="218" viewBox="0 0 740 218" role="img" aria-labelledby="title desc">
+  <title id="title">条码识别的像素缓冲</title>
+  <desc id="desc">旧路径把解码位图先转换为 RGB24，再转为亮度。新路径从同样的预乘 RGBA 位图直接填充亮度平面，在识别前释放位图。N 表示像素数。</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="m0 0 10 5-10 5z" fill="#415b72"/></marker></defs>
+  <rect width="740" height="218" rx="8" fill="#f7fafc"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" fill="#17384c">
+    <text x="16" y="26" font-size="17" font-weight="600">从解码后的像素到 ZXing 识别</text>
+    <g text-anchor="middle" font-size="15">
+      <text x="35" y="72">旧</text><text x="35" y="151">新</text>
+      <g fill="#e5edf6" stroke="#a0b5c8">
+        <rect x="64" y="44" width="145" height="48" rx="5"/><rect x="64" y="123" width="145" height="48" rx="5"/>
+      </g>
+      <text x="136" y="73">预乘 RGBA 位图</text><text x="136" y="152">预乘 RGBA 位图</text>
+      <rect x="260" y="44" width="144" height="48" rx="5" fill="#fbead5" stroke="#c7a47d"/>
+      <text x="332" y="73">RGB24 · 3N 字节</text>
+      <g fill="#dcf0e7" stroke="#8fb8a2">
+        <rect x="456" y="44" width="144" height="48" rx="5"/><rect x="456" y="123" width="144" height="48" rx="5"/>
+      </g>
+      <text x="528" y="73">亮度 · N 字节</text><text x="528" y="152">亮度 · N 字节</text>
+      <text x="685" y="73">识别</text><text x="685" y="152">识别</text>
+    </g>
+    <g fill="none" stroke="#415b72" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M211 68h45"/><path d="M406 68h46"/><path d="M602 68h57"/>
+      <path d="M211 147h241"/><path d="M602 147h57"/>
+    </g>
+    <text x="332" y="137" text-anchor="middle" font-size="14">逐行合成白底并计算亮度</text>
+    <text x="64" y="199" font-size="14">N = 显示宽度 × 高度。新路径填完亮度平面就释放原生位图。</text>
+  </g>
+</svg>

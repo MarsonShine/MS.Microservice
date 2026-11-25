@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/MS.Microservice.Media/MS.Microservice.Media.csproj" />
+    <ProjectReference Include="../../src/MS.Microservice.Media.Inference/MS.Microservice.Media.Inference.csproj" />
+  </ItemGroup>
+</Project>

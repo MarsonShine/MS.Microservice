@@ -28,10 +28,12 @@ internal static class BackgroundPixels
         return tensor;
     }
 
-    internal static float[] Probabilities(ReadOnlySpan<float> logits, int size, CancellationToken token)
+    internal static void ApplySigmoid(Span<float> logits, int size, CancellationToken token)
     {
-        if (logits.Length != size * size) throw new InvalidDataException("The model mask shape is invalid.");
-        var mask = new float[logits.Length];
+        if (logits.Length != size * size)
+        {
+            throw new InvalidDataException("The model mask shape is invalid.");
+        }
         for (var y = 0; y < size; y++)
         {
             token.ThrowIfCancellationRequested();
@@ -39,12 +41,14 @@ internal static class BackgroundPixels
             {
                 var index = y * size + x;
                 var value = logits[index];
-                if (!float.IsFinite(value)) throw new InvalidDataException("The model returned non-finite mask logits.");
+                if (!float.IsFinite(value))
+                {
+                    throw new InvalidDataException("The model returned non-finite mask logits.");
+                }
                 var exponential = MathF.Exp(value >= 0 ? -value : value);
-                mask[index] = value >= 0 ? 1 / (1 + exponential) : exponential / (1 + exponential);
+                logits[index] = value >= 0 ? 1 / (1 + exponential) : exponential / (1 + exponential);
             }
         }
-        return mask;
     }
 
     internal static (int NonTransparent, double MeanAlpha) Compose(SKBitmap source, SKBitmap output, SKBitmap? softMask,

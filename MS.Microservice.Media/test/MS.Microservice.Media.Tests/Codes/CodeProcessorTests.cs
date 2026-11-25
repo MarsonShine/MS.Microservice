@@ -296,6 +296,25 @@ public sealed class CodeProcessorTests
     }
 
     [Fact]
+    public void LuminanceMatchesZxingRgb24AfterWhiteCompositingPaddedRows()
+    {
+        using var bitmap = new SKBitmap();
+        var info = new SKImageInfo(3, 2, SKColorType.Rgba8888, SKAlphaType.Premul);
+        Assert.True(bitmap.TryAllocPixels(info, 16));
+        Span<byte> pixels = bitmap.GetPixelSpan();
+        ReadOnlySpan<byte> first = [0, 0, 0, 0, 128, 0, 0, 128, 0, 255, 0, 255];
+        ReadOnlySpan<byte> second = [0, 0, 1, 1, 13, 65, 43, 127, 0, 0, 254, 254];
+        first.CopyTo(pixels);
+        second.CopyTo(pixels[bitmap.RowBytes..]);
+
+        byte[] whiteRgb = [255, 255, 255, 255, 127, 127, 0, 255, 0, 254, 254, 255, 141, 193, 171, 1, 1, 255];
+        var expected = new ZXing.RGBLuminanceSource(whiteRgb, 3, 2, ZXing.RGBLuminanceSource.BitmapFormat.RGB24);
+        var actual = new CodeProcessor.WhiteBackgroundLuminanceSource(bitmap, default);
+
+        Assert.Equal(expected.Matrix, actual.Matrix);
+    }
+
+    [Fact]
     public async Task ExifOrientationAndTransparentBackgroundUseSharedImageDecoder()
     {
         using var generated = await Generate("EXIF-123", new() { Width = 256, Height = 256 });

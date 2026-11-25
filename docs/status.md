@@ -3,7 +3,9 @@
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: ac6b66a
+Baseline: 30f704b
+
+Media 条码识别直接填充 ZXing 亮度平面，BiRefNet 抠图复用本次推理的输出张量计算概率。见[条码缓冲示意图](../MS.Microservice.Media/docs/codes.md)、[抠图资源边界](../MS.Microservice.Media/docs/background-removal-design.md)和[耗时、分配与输出对照](validation/MEDIA-PIXEL-BUFFERS/summary.md)。
 
 Logging 的请求作用域每次少分配 32 B，NLog 请求字段改为单次读取，Serilog 提前过滤已关闭的等级并减少空属性事件的分配。见[代码解析](../MS.Microservice.Logging/docs/request-logging-performance.md)和[性能与回归验收](validation/LOGGING-HOT-PATHS/summary.md)。
 
