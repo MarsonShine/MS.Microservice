@@ -192,4 +192,4 @@ Lab 默认没有共享后端，shared TTL 字段表示策略配置，不代表�
 | Core 弱引用容器 | 保留在 `Core.Memory`，作为内存生命周期工具，不承担业务缓存职责 |
 
 依赖、回源与失效流程、监测替换的完整取舍见[设计文档](docs/design.md)。
-本地热路径、指标监听和键构建的实测开销见[性能记录](../../../docs/components/cache-sensitive-performance.md)，不等同于共享后端容量或完整接口延迟。
+新建键与复用预建键的耗时、分配和字节示例见[缓存键性能说明](docs/key-performance.md)。本地监测与指标监听的早期对照见[性能记录](../../../docs/components/cache-sensitive-performance.md)。

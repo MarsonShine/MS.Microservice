@@ -3,6 +3,8 @@ Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
 
+Caching 建键的耗时、分配及兼容性检查已完成，见[验收记录](../validation/CACHING-KEY-PERF/summary.md)。
+
 Idempotency 请求指纹、回放和冲突查询的性能优化见[验收记录](../validation/IDEMPOTENCY-LOOKUP-PERF/summary.md)。
 
 Persistence 和 Tasks 的首批优化已完成。[审计缓冲验收](../validation/PERSISTENCE-AUDIT-BUFFERS/summary.md) · [任务终态查询验收](../validation/TASKS-FINALIZATION-PERF/summary.md)

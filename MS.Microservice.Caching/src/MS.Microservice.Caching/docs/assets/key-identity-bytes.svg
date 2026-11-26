@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 164" width="740" height="164" role="img" aria-labelledby="title desc">
+  <title id="title">写入 SHA-256 的 30 个 UTF-8 字节</title>
+  <desc id="desc">类型占偏移 0 至 15。作用域占偏移 16 至 24。资源标识占偏移 25 至 29。每段的十进制长度前缀按 UTF-16 代码单元计数。</desc>
+  <rect width="740" height="164" rx="8" fill="#f5f8fa"/>
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif" fill="#17384c" font-size="15">
+    <text x="20" y="28" font-weight="bold">SHA-256 输入</text><text x="156" y="28">按写入顺序排列，数字为字节偏移</text>
+    <rect x="20" y="44" width="373" height="65" fill="#dbe7f2" stroke="#8daabe"/>
+    <rect x="393" y="44" width="210" height="65" fill="#dbede2" stroke="#8bae9a"/>
+    <rect x="603" y="44" width="117" height="65" fill="#f5e7d4" stroke="#c1a37a"/>
+    <text x="34" y="69">类型 · 0–15</text><text x="34" y="94">13:System.String</text>
+    <text x="406" y="69">作用域 · 16–24</text><text x="406" y="94">3: + 租 + U+1F680</text>
+    <text x="614" y="69">标识 · 25–29</text><text x="614" y="94">3:a:b</text>
+    <text x="20" y="140">16 字节</text><text x="393" y="140">9 字节</text><text x="603" y="140">5 字节</text>
+  </g>
+</svg>

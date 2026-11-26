@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
@@ -31,6 +32,8 @@ public sealed class GovernedCache : IGovernedCache, IDisposable
 {
     public const string MeterName = "MS.Microservice.Caching";
     private static readonly UTF8Encoding Utf8 = new(false, true);
+    private static readonly SearchValues<char> NameCharacters =
+        SearchValues.Create("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-");
     private static readonly Meter Meter = new(MeterName);
     private static readonly Counter<long> Loads = Meter.CreateCounter<long>("cache.source.loads");
     private static readonly Counter<long> Requests = Meter.CreateCounter<long>("cache.requests");
@@ -58,11 +61,46 @@ public sealed class GovernedCache : IGovernedCache, IDisposable
         ValidateName(region, nameof(region));
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);
         ArgumentException.ThrowIfNullOrWhiteSpace(resourceId);
-        if (scope.Length > 256 || resourceId.Length > 512) throw new ArgumentOutOfRangeException(nameof(resourceId));
-        var type = typeof(T).FullName!;
-        var identity = $"{type.Length}:{type}{scope.Length}:{scope}{resourceId.Length}:{resourceId}";
-        var hash = Convert.ToHexStringLower(SHA256.HashData(Utf8.GetBytes(identity)));
-        return new(_application, $"{_application}/{region}/{hash}", region, policy ?? _defaultPolicy);
+        if (scope.Length > 256 || resourceId.Length > 512)
+        {
+            throw new ArgumentOutOfRangeException(nameof(resourceId));
+        }
+
+        Span<byte> digest = stackalloc byte[SHA256.HashSizeInBytes];
+        HashIdentity(typeof(T).FullName!, scope, resourceId, digest);
+        Span<char> suffix = stackalloc char[1 + SHA256.HashSizeInBytes * 2];
+        suffix[0] = '/';
+        Convert.TryToHexStringLower(digest, suffix[1..], out _);
+        return new(_application, string.Concat(_application, "/", region, suffix), region, policy ?? _defaultPolicy);
+    }
+
+    private static void HashIdentity(string type, string scope, string resourceId, Span<byte> digest)
+    {
+        // Each field starts with at most ten decimal digits (UTF-16 length) and a colon.
+        var capacity = checked(Utf8.GetMaxByteCount(type.Length + scope.Length + resourceId.Length) + 3 * 11);
+        byte[]? rented = null;
+        Span<byte> bytes = capacity <= 512 ? stackalloc byte[capacity] : (rented = ArrayPool<byte>.Shared.Rent(capacity));
+        try
+        {
+            var used = WriteField(type, bytes);
+            used += WriteField(scope, bytes[used..]);
+            used += WriteField(resourceId, bytes[used..]);
+            SHA256.HashData(bytes[..used], digest);
+        }
+        finally
+        {
+            if (rented is not null)
+            {
+                ArrayPool<byte>.Shared.Return(rented, clearArray: true);
+            }
+        }
+    }
+
+    private static int WriteField(string value, Span<byte> destination)
+    {
+        value.Length.TryFormat(destination, out var digits);
+        destination[digits] = (byte)':';
+        return digits + 1 + Utf8.GetBytes(value, destination[(digits + 1)..]);
     }
 
     public ValueTask<T> GetOrCreateAsync<T, TState>(CacheKey<T> key, TState state,
@@ -111,8 +149,10 @@ public sealed class GovernedCache : IGovernedCache, IDisposable
     private static void ValidateName(string value, string parameter)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, parameter);
-        if (value.Length > 64 || value.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not '.' and not '-' and not '_'))
+        if (value.Length > 64 || value.AsSpan().ContainsAnyExcept(NameCharacters))
+        {
             throw new ArgumentException("Use 1–64 ASCII letters/digits/dots/hyphens/underscores.", parameter);
+        }
     }
     public void Dispose() => _loadBudget.Dispose();
     private readonly record struct LoadState<T, TState>(GovernedCache Owner, string Region, TState State,

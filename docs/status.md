@@ -1,9 +1,11 @@
 # 当前状态
-更新：2026-11-25
+更新：2026-11-26
 Status: idle
 Task: none
 Next: EF Core 升级仍等待 PostgreSQL 提供程序支持。Azure 部署变更继续用 Lab 验证。
-Baseline: ddbe305
+Baseline: 469a76a
+
+Caching 建键直接写入带长度前缀的 UTF-8 临时缓冲，短输入即时建键并命中的分配从 616 降至 232 B/次。[键格式与基准](../MS.Microservice.Caching/src/MS.Microservice.Caching/docs/key-performance.md) · [实库和宿主验收](validation/CACHING-KEY-PERF/summary.md)
 
 Idempotency 现可在栈缓冲中生成兼容历史记录的指纹，重试时按指纹选择响应正文。见[查询图解与新旧基准](../MS.Microservice.Idempotency/docs/lookup-performance.md)及[模块、宿主与编译模型验收](validation/IDEMPOTENCY-LOOKUP-PERF/summary.md)。
 

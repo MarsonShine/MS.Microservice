@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using MS.Microservice.Caching;
@@ -5,6 +7,50 @@ using Xunit;
 
 public sealed class GovernedCacheTests
 {
+    [Fact]
+    public async Task GeneratedKeyReadsAndInvalidatesAnEntryWrittenUnderTheOriginalPhysicalKey()
+    {
+        using var services = Services();
+        var cache = services.GetRequiredService<IGovernedCache>();
+        var backend = services.GetRequiredService<HybridCache>();
+        const string original = "MS.Microservice/test.v1/dba475a631e522810af2c5c26bdd70a388543aee1cd949711fd2f46fa3f632db";
+        await backend.SetAsync(original, "existing");
+
+        var key = cache.CreateKey<string>("test.v1", "owner", "sample");
+        Assert.Equal(original, key.Value);
+        Assert.Equal("existing", await cache.GetOrCreateAsync(key, static _ =>
+            throw new InvalidOperationException("The existing key should be a hit.")));
+        await cache.RemoveAsync(key);
+        Assert.Equal("updated", await backend.GetOrCreateAsync<string>(original, static _ => ValueTask.FromResult("updated")));
+    }
+
+    [Fact]
+    public void UnicodeLengthsAndGenericTypeNamesMatchTheOriginalKeyFormat()
+    {
+        using var services = Services();
+        var cache = services.GetRequiredService<IGovernedCache>();
+        var scope = new string('界', 253) + ":🙂";
+        var id = new string('文', 509) + "\0🚀";
+        var type = typeof(Dictionary<string, List<int?>>).FullName!;
+        var identity = $"{type.Length}:{type}{scope.Length}:{scope}{id.Length}:{id}";
+        var expected = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
+
+        var key = cache.CreateKey<Dictionary<string, List<int?>>>("old.v2", scope, id, CachePolicy.Bypass);
+        Assert.Equal($"MS.Microservice/old.v2/{expected}", key.Value);
+        Assert.Same(CachePolicy.Bypass, key.Policy);
+        Assert.Throws<ArgumentOutOfRangeException>(() => cache.CreateKey<int>("old.v2", scope + "x", id));
+        Assert.Throws<ArgumentOutOfRangeException>(() => cache.CreateKey<int>("old.v2", scope, id + "x"));
+    }
+
+    [Fact]
+    public void InvalidUtf16InEitherIdentityFieldIsRejected()
+    {
+        using var services = Services();
+        var cache = services.GetRequiredService<IGovernedCache>();
+        Assert.Throws<EncoderFallbackException>(() => cache.CreateKey<int>("test.v1", "\ud800", "id"));
+        Assert.Throws<EncoderFallbackException>(() => cache.CreateKey<int>("test.v1", "scope", new string('x', 500) + "\udc00"));
+    }
+
     [Fact]
     public async Task EmptyNullAndDefaultValuesAreCachedAndKeysIsolateScopeTypeAndSeparators()
     {
